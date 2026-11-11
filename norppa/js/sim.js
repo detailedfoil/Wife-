@@ -11,6 +11,7 @@
 
   /* Tuning. Rates are points per hour on a 0 to 100 scale. */
   const T = {
+    earnRate: PN.ECON.earn,
     foodAwake: 7, foodAsleep: 3,
     joyAwake: 5, joyAsleep: 1.5,
     energyAwake: 6, energyAsleep: 14,
@@ -58,7 +59,7 @@
       sick: false, wellMs: 0, starveMs: 0, filthMs: 0,
       grudge: 0, griefUntil: 0, neglectMs: 0,
       poops: [], poopT: 1.5,
-      coins: 40,
+      coins: 40, coinCarry: 0,
       pantry: { muikku: 5, ahven: 2 },
       owned: { lantern: true }, placed: { lantern: true },
       wearing: { head: null, neck: null, face: null },
@@ -112,13 +113,22 @@
     return true;
   }
 
+  /* Everything earned goes through here, so the whole economy can be tuned in one place.
+     Fractions carry over, so small rewards (like a poo) still pay out now and then. */
+  function earn(state, n) {
+    const raw = n * T.earnRate + (state.coinCarry || 0);
+    const got = Math.floor(raw + 1e-9);
+    state.coinCarry = raw - got;
+    state.coins += got;
+    return got;
+  }
+
   function addXp(state, n) {
     state.xp += n;
     const L = level(state).level;
     while (state.maxLevel < L) {
       state.maxLevel++;
-      const coins = 10 * state.maxLevel;
-      state.coins += coins;
+      const coins = earn(state, 10 * state.maxLevel);
       emit('level', { level: state.maxLevel, coins });
     }
     if (L >= 3) learn(state, 'ystava');
@@ -129,7 +139,7 @@
     PN.DATA.AWARDS.forEach((a) => {
       if (!state.awards[a.id] && a.test(state)) {
         state.awards[a.id] = Date.now();
-        state.coins += a.c;
+        state.coins += a.c; /* already scaled in data.js */
         emit('award', { id: a.id });
       }
     });
@@ -370,7 +380,7 @@
     if (i < 0 || i >= state.poops.length) return no('none');
     state.poops.splice(i, 1);
     state.stats.clean = pct(state.stats.clean + 5);
-    state.coins += 1;
+    earn(state, 1);
     state.counters.poops++;
     addXp(state, 2);
     learn(state, 'kakka');
@@ -450,12 +460,11 @@
       const isNew = !state.trinkets[id];
       state.trinkets[id] = (state.trinkets[id] || 0) + 1;
       let coins = 0;
-      if (!isNew) { coins = 4 + 4 * PN.items[id].rarity; state.coins += coins; }
+      if (!isNew) coins = earn(state, 4 + 4 * PN.items[id].rarity);
       learn(state, 'aarre');
       loot = { kind: 'trinket', id, n: 1, isNew, coins };
     } else if (r < 0.95) {
-      const n = 5 + Math.floor(rnd(state) * 16);
-      state.coins += n;
+      const n = earn(state, 5 + Math.floor(rnd(state) * 16));
       loot = { kind: 'coins', n };
     } else loot = { kind: 'none' };
     check(state);
@@ -482,7 +491,7 @@
       coins = clamp(34 - score, 8, 26);
       if (!c.bestPairs || score < c.bestPairs) { c.bestPairs = score; best = true; }
     }
-    state.coins += coins;
+    coins = earn(state, coins);
     s.energy = pct(s.energy - 8);
     s.joy = pct(s.joy + 14);
     c.games++;
@@ -545,7 +554,7 @@
   /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then. */
   function canBorrow(state, now) {
     const hasFood = Object.keys(state.pantry).some((id) => state.pantry[id] > 0 && PN.items[id] && PN.items[id].kind !== 'med');
-    return !hasFood && state.coins < 3 && now >= state.handoutAt;
+    return !hasFood && state.coins < 6 && now >= state.handoutAt;
   }
   function borrow(state, now) {
     if (!canBorrow(state, now)) return no('notyet');
@@ -563,8 +572,7 @@
     state.gift.last = today;
     if (state.grudge > 0) { state.gift.streak = 0; return { withheld: true }; }
     state.gift.streak = kept ? state.gift.streak + 1 : 1;
-    const coins = 15 + 5 * Math.min(state.gift.streak, 7);
-    state.coins += coins;
+    const coins = earn(state, 15 + 5 * Math.min(state.gift.streak, 7));
     const id = pickFish(state, 2);
     const isNew = giveFish(state, id, 2);
     addXp(state, 10);
@@ -584,7 +592,7 @@
     if (!canEvolve(state)) return no('notyet');
     state.stage++;
     if (state.stage === 2) state.nextPupAt = now + T.firstPupDelay;
-    state.coins += 50;
+    earn(state, 50);
     learn(state, 'onnea');
     check(state);
     return ok({ stage: state.stage });
@@ -623,12 +631,12 @@
     state.pups.splice(i, 1);
     state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown' });
     state.counters.pupsGrown++;
-    state.coins += 100;
+    const farewell = earn(state, 100);
     state.nextPupAt = Math.max(state.nextPupAt, now + DAY);
     addXp(state, 40);
     learn(state, 'heihei');
     check(state);
-    return ok({ name: p.name, coins: 100 });
+    return ok({ name: p.name, coins: farewell });
   }
 
   /* One word for how the seal feels right now. */

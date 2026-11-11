@@ -216,6 +216,15 @@
     { fi: 'norppa', en: 'grown seal' },
   ];
 
+  /* Economy dial. Shop prices are doubled and earnings cut to two thirds, so everything
+     takes about three times as long to afford. Change these two numbers to retune. */
+  const ECON = { price: 2, earn: 2 / 3 };
+  PN.ECON = ECON;
+  [FISH, FOODS, WEAR, DECOR].forEach((list) => list.forEach((x) => {
+    if (x.price) x.price = Math.round(x.price * ECON.price);
+  }));
+  AWARDS.forEach((a) => { a.c = Math.max(1, Math.round(a.c * ECON.earn)); });
+
   /* One lookup for everything that can be owned, eaten or found. */
   const items = {};
   FISH.forEach((f) => { items[f.id] = Object.assign({ kind: 'fish', joy: 2 }, f); });
