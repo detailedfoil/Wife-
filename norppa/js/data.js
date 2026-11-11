@@ -216,14 +216,15 @@
     { fi: 'norppa', en: 'grown seal' },
   ];
 
-  /* Economy dial. Shop prices are doubled and earnings cut to two thirds, so everything
-     takes about three times as long to afford. Cosmetics (wear and decor) cost a further 2x on top.
+  /* Economy dial. Shop prices are doubled and earnings cut to two thirds. Cosmetics (wear and decor)
+     cost a further 6x on top, so 12x their base price. Every fish fills a quarter less.
      Change these numbers to retune. */
-  const ECON = { price: 2, cosmetic: 2, earn: 2 / 3 };
+  const ECON = { price: 2, cosmetic: 6, earn: 2 / 3, fishFood: 0.75 };
   PN.ECON = ECON;
   [FISH, FOODS, WEAR, DECOR].forEach((list) => list.forEach((x) => {
     if (x.price) x.price = Math.round(x.price * ECON.price * (list === WEAR || list === DECOR ? ECON.cosmetic : 1));
   }));
+  FISH.forEach((f) => { f.food = Math.max(3, Math.round(f.food * ECON.fishFood)); });
   AWARDS.forEach((a) => { a.c = Math.max(1, Math.round(a.c * ECON.earn)); });
 
   /* One lookup for everything that can be owned, eaten or found. */
