@@ -2,7 +2,7 @@
    The bars, the dock, slide-up sheets (food, play, shop, album, settings), messages and toasts. */
 (function (PN) {
   'use strict';
-  const S = PN.Sim, D = PN.DATA;
+  const S = PN.Sim, D = PN.DATA, tr = PN.L;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const UI = PN.UI = {};
@@ -46,6 +46,7 @@
     sound: '<path d="M4 10v4h3l5 4V6L7 10H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>',
     music: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
     lamp: '<path d="M9 21h6M8 6h8l1.5 9h-11L8 6zM10 6V4h4v2M12 15v3"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/>',
   };
   const ic = UI.ic = (n) => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (I[n] || I.star) + '</svg>';
   const thumb = (id) => '<img src="' + PN.Thumbs.get(id) + '" alt="">';
@@ -69,7 +70,7 @@
       const st = G().state, k = b.dataset.stat, v = Math.round(st.stats[k]);
       const words = { food: ['Tummy', 'fish'], joy: ['Happiness', 'heart'], energy: ['Energy', 'bolt'], clean: ['Cleanliness', 'drop'] }[k];
       const tip = { food: 'Feed to fill it.', joy: 'Stroke, play and treats lift it.', energy: 'Sleep brings it back.', clean: 'A wash or a dive sorts it.' }[k];
-      UI.toast('<b>' + words[0] + ' ' + v + '%</b> ' + (v < 60 ? tip : 'Doing fine.'), words[1]);
+      UI.toast('<b>' + tr(words[0]) + ' ' + v + pc() + '</b> ' + tr(v < 60 ? tip : 'Doing fine.'), words[1]);
     });
     $('plate').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('profile'); });
     $('bAlbum').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('album'); });
@@ -87,8 +88,8 @@
   UI.refresh = function () {
     const st = G().state; if (!st) return;
     const L = S.level(st);
-    $('pName').textContent = st.name || 'Little one';
-    $('pSub').textContent = 'Level ' + L.level + ' ' + D.STAGES[st.stage].fi;
+    $('pName').textContent = st.name || tr('Little one');
+    $('pSub').textContent = tr('Level {0} {1}', L.level, D.STAGES[st.stage].fi);
     $('pXp').style.width = Math.round(L.frac * 100) + '%';
     $('coinN').textContent = st.coins;
     document.querySelectorAll('#meters .meter').forEach((m) => {
@@ -96,7 +97,7 @@
       m.querySelector('i').style.width = Math.max(3, v) + '%';
       m.classList.toggle('low', v < 25);
     });
-    $('sleepLabel').textContent = st.asleep ? 'Wake' : 'Sleep';
+    $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
     const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
     document.querySelectorAll('#dock button').forEach((b) => {
       b.classList.toggle('need', !!need[b.dataset.act]);
@@ -114,6 +115,7 @@
     if (UI.sheetName === 'play') UI.renderSheet(true);
   };
   const temp = (t) => (t < 0 ? '−' + Math.abs(t) : t) + '°';
+  const pc = () => (PN.isFi() ? ' %' : '%');
   function skyWord(env) {
     if (env.aurora > 0.3) return { icon: 'aurora', text: 'northern lights' };
     if (env.snowing) return { icon: 'snow', text: env.precip > 0.55 ? 'heavy snow' : 'snow' };
@@ -128,7 +130,7 @@
     if (env.polarNight) extra = ' It is <em>kaamos</em>, the polar night: the sun stays below the horizon.';
     else if (env.midnightSun) extra = ' It is the time of <em>yötön yö</em>, when the sun does not set.';
     else if (env.blue) extra = ' This is <em>sininen hetki</em>, the blue moment.';
-    UI.toast('<b>' + temp(env.temp) + 'C</b> and ' + c.text + ' at the lake.' + extra, c.icon, '', 4200);
+    UI.toast(tr('<b>{0}C</b> and {1} at the lake.', temp(env.temp), tr(c.text)) + (extra ? tr(extra) : ''), c.icon, '', 4200);
   };
 
   /* ---------- toasts and floating numbers ---------- */
@@ -202,16 +204,16 @@
     setTimeout(() => { if (!UI.sheetName) sh.hidden = true; }, 300);
     PN.Audio.play('close');
   };
-  const TITLES = { play: 'Play', shop: 'Shop', album: 'Album', settings: 'Settings' };
-  const TABS = { shop: [['food', 'Food'], ['wear', 'Wear'], ['home', 'For the shore']], album: [['fish', 'Fish'], ['finds', 'Finds'], ['words', 'Words'], ['awards', 'Awards'], ['family', 'Family']] };
+  const TITLES = { play: 'sheet|Play', shop: 'Shop', album: 'Album', settings: 'Settings' };
+  const TABS = { shop: [['food', 'Food'], ['wear', 'tab|Wear'], ['home', 'For the shore']], album: [['fish', 'tab|Fish'], ['finds', 'Finds'], ['words', 'Words'], ['awards', 'Awards'], ['family', 'Family']] };
   UI.renderSheet = function (soft) {
     const name = UI.sheetName, st = G().state;
     if (!name) return;
     const body = $('sheetBody'), keep = body.scrollTop;
-    $('sheetTitle').textContent = name === 'feed' ? 'Feed ' + st.name : name === 'profile' ? st.name : TITLES[name];
+    $('sheetTitle').textContent = name === 'feed' ? tr('Feed {0}', st.name) : name === 'profile' ? st.name : tr(TITLES[name]);
     const tabs = TABS[name];
     $('sheetTabs').hidden = !tabs;
-    if (tabs) $('sheetTabs').innerHTML = tabs.map((t) => '<button class="tab' + (t[0] === UI.tab ? ' on' : '') + '" data-tab="' + t[0] + '">' + t[1] + '</button>').join('');
+    if (tabs) $('sheetTabs').innerHTML = tabs.map((t) => '<button class="tab' + (t[0] === UI.tab ? ' on' : '') + '" data-tab="' + t[0] + '">' + tr(t[1]) + '</button>').join('');
     const html = VIEWS[name](st);
     if (soft && html === body._last) return;
     body._last = html; body.innerHTML = html;
@@ -219,7 +221,7 @@
   };
 
   const cell = (id, inner, cls, act) => '<button class="cell ' + (cls || '') + '" data-do="' + act + '" data-id="' + id + '">' + inner + '</button>';
-  const names = (it) => '<b>' + esc(it.fi) + '</b><small>' + esc(it.en) + '</small>';
+  const names = (it) => '<b>' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
   const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + '">' + ic(o.icon) + '</span><span class="txt"><b>'
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
@@ -230,25 +232,32 @@
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
       const order = { fish: 0, food: 1, med: 2 };
       ids.sort((a, b) => order[PN.items[a].kind] - order[PN.items[b].kind] || (PN.items[a].food || 0) - (PN.items[b].food || 0));
-      const fav = st.favKnown ? 'Favourite: <b>' + PN.items[st.fav].fi.toLowerCase() + '</b>.' : 'There is one fish ' + esc(st.name) + ' loves best. Try them all to find it.';
-      if (!ids.length) return '<p class="lead">The larder is empty. Catch fish in Fish Rain, send ' + esc(st.name) + ' diving, or buy some.</p><div class="btn-row"><button class="btn small" data-do="goto" data-id="play">Play</button><button class="btn small ghost" data-do="goto" data-id="shop">Shop</button></div>';
-      return '<p class="lead">Tummy ' + Math.round(st.stats.food) + '%. ' + fav + '</p><div class="grid">' + ids.map((id) => {
+      const fav = st.favKnown ? tr('Favourite: <b>{0}</b>.', PN.items[st.fav].fi.toLowerCase()) : tr('There is one fish {0} loves best. Try them all to find it.', esc(st.name));
+      if (!ids.length) {
+        const spare = S.canBorrow(st, Date.now());
+        return '<p class="lead">' + tr('The larder is empty. Catch fish in Fish Rain, send {0} diving, or buy some.', esc(st.name))
+          + (spare ? tr(' With no coins either, the neighbours will spare a few fish.') : '') + '</p><div class="btn-row">'
+          + (spare ? '<button class="btn small" data-do="borrow">' + tr('Ask the neighbours') + '</button>' : '<button class="btn small" data-do="goto" data-id="play">' + tr('Play') + '</button>')
+          + '<button class="btn small ghost" data-do="goto" data-id="shop">' + tr('Shop') + '</button></div>';
+      }
+      return '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p><div class="grid">' + ids.map((id) => {
         const it = PN.items[id];
-        return cell(id, thumb(id) + names(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">medicine</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
+        return cell(id, thumb(id) + names(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
       }).join('') + '</div>';
     },
     play(st) {
       const now = Date.now(), can = S.canPlay(st), dive = S.canDive(st, now);
       const off = (c) => (c.ok ? '' : ' off');
+      const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
-      h += row({ icon: 'ball', tint: 'rose', title: 'Ball', text: 'A quick bounce on the nose, right here.', act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? 'asleep' : '' });
-      h += row({ icon: 'fish', tint: 'sea', title: 'Fish Rain', text: 'Slide left and right to catch the fish. You keep some of the catch.', act: 'game', id: 'catch', cls: off(can), side: can.ok ? (st.counters.bestCatch ? 'best ' + st.counters.bestCatch : '') : WHY[can.why] });
-      h += row({ icon: 'up', tint: 'warm', title: 'Nose Ball', text: 'Keep the ball in the air for as long as you can.', act: 'game', id: 'ball', cls: off(can), side: can.ok ? (st.counters.bestBall ? 'best ' + st.counters.bestBall : '') : WHY[can.why] });
-      h += row({ icon: 'cards', tint: 'leaf', title: 'Fish Pairs', text: 'Match the fish and pick up their Finnish names.', act: 'game', id: 'pairs', cls: off(can), side: can.ok ? (st.counters.bestPairs ? 'best ' + st.counters.bestPairs + ' turns' : '') : WHY[can.why] });
-      h += row({ icon: 'dive', tint: 'sea', title: 'Dive', text: 'Send ' + esc(st.name) + ' down the ice hole and see what comes back up.', act: 'dive', cls: off(dive), side: dive.ok ? 'ready' : dive.why === 'wait' ? mins(st.dive.readyAt - now) : WHY[dive.why] });
+      h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
+      h += row({ icon: 'fish', tint: 'sea', title: tr('Fish Rain'), text: tr('Slide left and right to catch the fish. You keep some of the catch.'), act: 'game', id: 'catch', cls: off(can), side: can.ok ? (st.counters.bestCatch ? tr('best {0}', st.counters.bestCatch) : '') : why(can) });
+      h += row({ icon: 'up', tint: 'warm', title: tr('Nose Ball'), text: tr('Keep the ball in the air for as long as you can.'), act: 'game', id: 'ball', cls: off(can), side: can.ok ? (st.counters.bestBall ? tr('best {0}', st.counters.bestBall) : '') : why(can) });
+      h += row({ icon: 'cards', tint: 'leaf', title: tr('Fish Pairs'), text: tr('Match the fish and pick up their Finnish names.'), act: 'game', id: 'pairs', cls: off(can), side: can.ok ? (st.counters.bestPairs ? tr('best {0} turns', st.counters.bestPairs) : '') : why(can) });
+      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       if (st.owned.sauna) {
         const wait = now < st.saunaAt;
-        h += row({ icon: 'steam', tint: 'warm', title: 'Sauna', text: 'Steam away the dirt and the grumps.', act: 'sauna', cls: wait || st.asleep ? 'off' : '', side: st.asleep ? 'asleep' : wait ? mins(st.saunaAt - now) : 'ready' });
+        h += row({ icon: 'steam', tint: 'warm', title: tr('Sauna'), text: tr('Steam away the dirt and the grumps.'), act: 'sauna', cls: wait || st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : wait ? mins(st.saunaAt - now) : tr('ready') });
       }
       return h + '</div>';
     },
@@ -257,16 +266,16 @@
       const price = (it) => coinTag(it.price, st.coins >= it.price ? 'buy' : 'cant');
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
-        h = '<p class="lead">Fresh from the village. Tap to buy one.</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + names(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
+        h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + names(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
       } else if (UI.tab === 'wear') {
-        h = '<p class="lead">Tap something you own to put it on or take it off.</p><div class="grid">' + D.WEAR.map((it) => {
+        h = '<p class="lead">' + tr('Tap something you own to put it on or take it off.') + '</p><div class="grid">' + D.WEAR.map((it) => {
           const own = st.owned[it.id], on = st.wearing[it.slot] === it.id;
-          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + (on ? 'Wearing' : 'Wear') + '</span>' : price(it)), '', own ? 'wear' : 'buy');
+          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(on ? 'Wearing' : 'tag|Wear') + '</span>' : price(it)), '', own ? 'wear' : 'buy');
         }).join('') + '</div>';
       } else {
-        h = '<p class="lead">Things for the shore. Tap one you own to put it out or tidy it away.</p><div class="grid">' + D.DECOR.map((it) => {
+        h = '<p class="lead">' + tr('Things for the shore. Tap one you own to put it out or tidy it away.') + '</p><div class="grid">' + D.DECOR.map((it) => {
           const own = st.owned[it.id], on = st.placed[it.id];
-          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + (on ? 'Out' : 'Put out') + '</span>' : price(it)), '', own ? 'place' : 'buy');
+          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(on ? 'Out' : 'Put out') + '</span>' : price(it)), '', own ? 'place' : 'buy');
         }).join('') + '</div>';
       }
       return h;
@@ -276,60 +285,67 @@
       if (t === 'fish' || t === 'finds') {
         const list = t === 'fish' ? D.FISH : D.TRINKETS, have = t === 'fish' ? st.fish : st.trinkets;
         const n = list.filter((x) => have[x.id]).length;
-        return '<p class="lead">' + n + ' of ' + list.length + (t === 'fish' ? ' fish discovered. Fish Rain, dives and gifts bring new ones.' : ' treasures found. They turn up on dives.') + '</p><div class="grid">'
+        return '<p class="lead">' + tr(t === 'fish' ? '{0} of {1} fish discovered. Fish Rain, dives and gifts bring new ones.' : '{0} of {1} treasures found. They turn up on dives.', n, list.length) + '</p><div class="grid">'
           + list.map((it) => (have[it.id] ? cell(it.id, thumb(it.id) + names(it) + (t === 'fish' ? '' : have[it.id] > 1 ? '<span class="count">' + have[it.id] + '</span>' : ''), '', 'info')
-            : cell(it.id, thumb(it.id) + '<b>?</b><small>not found yet</small>', 'locked', 'none'))).join('') + '</div>';
+            : cell(it.id, thumb(it.id) + '<b>?</b><small>' + tr('not found yet') + '</small>', 'locked', 'none'))).join('') + '</div>';
       }
       if (t === 'words') {
         const got = D.WORDS.filter((w) => st.words[w.id]);
-        return '<p class="lead">' + got.length + ' of ' + D.WORDS.length + ' Finnish words learned.</p><div class="rows">'
-          + got.map((w) => '<div class="row"><span class="txt"><span class="word-fi">' + esc(w.fi) + '</span><span class="d"><b style="display:inline;font:inherit;font-weight:800;color:var(--ink)">' + esc(w.en) + '</b>' + (w.note ? '. ' + esc(w.note) : '') + '</span></span></div>').join('')
-          + (got.length < D.WORDS.length ? '<div class="row locked"><span class="txt"><b>' + (D.WORDS.length - got.length) + ' more to find</b><span class="d">New words turn up as you play, and as the sky and seasons change.</span></span></div>' : '') + '</div>';
+        return '<p class="lead">' + tr('{0} of {1} Finnish words learned.', got.length, D.WORDS.length) + '</p><div class="rows">'
+          + got.map((w) => { const note = PN.wordNote(w); return '<div class="row"><span class="txt"><span class="word-fi">' + esc(w.fi) + '</span><span class="d"><b style="display:inline;font:inherit;font-weight:800;color:var(--ink)">' + esc(w.en) + '</b>' + (note ? '. ' + esc(note) : '') + '</span></span></div>'; }).join('')
+          + (got.length < D.WORDS.length ? '<div class="row locked"><span class="txt"><b>' + tr('{0} more to find', D.WORDS.length - got.length) + '</b><span class="d">' + tr('New words turn up as you play, and as the sky and seasons change.') + '</span></span></div>' : '') + '</div>';
       }
       if (t === 'awards') {
         const n = D.AWARDS.filter((a) => st.awards[a.id]).length;
-        return '<p class="lead">' + n + ' of ' + D.AWARDS.length + ' awards.</p><div class="rows">' + D.AWARDS.map((a) => row({ icon: st.awards[a.id] ? 'star' : 'star', cls: st.awards[a.id] ? 'done' : 'locked',
-          title: esc(a.t), text: esc(a.d), side: st.awards[a.id] ? 'done' : '+' + a.c })).join('') + '</div>';
+        return '<p class="lead">' + tr('{0} of {1} awards.', n, D.AWARDS.length) + '</p><div class="rows">' + D.AWARDS.map((a) => row({ icon: 'star', cls: st.awards[a.id] ? 'done' : 'locked',
+          title: esc(PN.awardTitle(a)), text: esc(PN.awardText(a)), side: st.awards[a.id] ? tr('done') : '+' + a.c })).join('') + '</div>';
       }
       // family
-      const day = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+      const day = (ms) => new Date(ms).toLocaleDateString(PN.isFi() ? 'fi-FI' : undefined, { day: 'numeric', month: 'short' });
       let h = '';
       if (!st.pups.length && !st.family.length) {
-        return '<p class="lead">No pups yet.</p><div class="rows">' + row({ icon: 'seal', title: 'One day, perhaps', text: 'A grown seal who is happy, well fed and at friendship level ' + S.T.pupLevel + ' may have a pup of her own.' }) + '</div>';
+        return '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
       }
       h += '<div class="rows">';
       st.pups.forEach((p) => {
         const left = Math.max(0, S.T.pupGrow - p.grownMs);
-        h += row({ icon: 'seal', tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: p.sick ? 'Poorly. Feed ' + esc(st.name) + ' so she can nurse, and give cloudberry juice.' : p.ready ? 'Ready to set off into the lake.' : p.food < 20 ? 'Hungry. Pups feed from their mother, so keep ' + esc(st.name) + ' well fed.' : 'Growing well. About ' + mins(left).replace(/ \d+ min$/, '') + ' of good care to go.',
-          side: 'born ' + day(p.bornAt) });
+        h += row({ icon: 'seal', tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
+          : p.food < 20 ? tr('Hungry. Pups feed from their mother, so keep {0} well fed.', esc(st.name)) : tr('Growing well. About {0} of good care to go.', mins(left).replace(/ \d+ min$/, '')),
+          side: tr('born {0}', day(p.bornAt)) });
       });
       st.family.slice().reverse().forEach((f) => {
-        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name), text: f.fate === 'grown' ? 'Grew up and swims the lake.' : 'Did not make it. Remembered always.', side: day(f.bornAt) + ' to ' + day(f.endAt) });
+        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name), text: tr(f.fate === 'grown' ? 'Grew up and swims the lake.' : 'Did not make it. Remembered always.'), side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)) });
       });
-      return h + '</div><p class="note">Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.</p>';
+      return h + '</div><p class="note">' + tr('Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.') + '</p>';
     },
     profile(st) {
-      const L = S.level(st), days = Math.floor((Date.now() - st.createdAt) / S.DAY);
-      const moods = { sleep: 'fast asleep', sick: 'poorly', sulk: 'sulking', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a wash', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
-      const line = (a, b) => '<div class="statline"><span>' + a + '</span><b>' + b + '</b></div>';
-      let next = '';
-      if (st.stage < 2) next = '<p class="note">Becomes a ' + D.STAGES[st.stage + 1].en + ' at friendship level ' + S.T.stageLevel[st.stage] + ', given enough days of good care. Time spent hungry, dirty or unhappy does not count.</p>';
-      else next = '<p class="note">Fully grown. With friendship level ' + S.T.pupLevel + ' and a happy, well-fed life, a pup may arrive.</p>';
-      return line('Kind', D.STAGES[st.stage].fi + ' (' + D.STAGES[st.stage].en + ')') + line('Age', days < 1 ? 'less than a day' : days + (days === 1 ? ' day' : ' days'))
-        + line('Friendship', 'level ' + L.level + ' (' + Math.floor(L.into) + ' of ' + L.need + ')') + line('Mood', moods[S.mood(st)])
-        + line('Favourite food', st.favKnown ? PN.items[st.fav].fi + ' (' + PN.items[st.fav].en.toLowerCase() + ')' : 'not found yet')
+      const lv = S.level(st), days = Math.floor((Date.now() - st.createdAt) / S.DAY), fi = PN.isFi();
+      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|sulking', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a wash', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
+      const line = (a, b) => '<div class="statline"><span>' + tr(a) + '</span><b>' + b + '</b></div>';
+      const stage = D.STAGES[st.stage], favIt = PN.items[st.fav];
+      let next;
+      if (st.stage < 2) {
+        const nx = D.STAGES[st.stage + 1];
+        next = tr('Becomes a {0} at friendship level {1}, given enough days of good care. Time spent hungry, dirty or unhappy does not count.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage]);
+      } else next = tr('Fully grown. With friendship level {0} and a happy, well-fed life, a pup may arrive.', S.T.pupLevel);
+      return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
+        + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', tr(moods[S.mood(st)]))
+        + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
         + line('Strokes', st.counters.pets) + line('Meals', st.counters.feeds) + line('Dives', st.counters.dives) + line('Games played', st.counters.games)
         + (st.counters.pupsGrown + st.counters.pupsLost ? line('Pups raised', st.counters.pupsGrown) + line('Pups lost', st.counters.pupsLost) : '')
-        + next + '<div class="btn-row"><button class="btn small ghost" data-do="rename">Change name</button></div>';
+        + '<p class="note">' + next + '</p><div class="btn-row"><button class="btn small ghost" data-do="rename">' + tr('Change name') + '</button></div>';
     },
     settings(st) {
-      const tog = (k, label, icon, text) => '<button class="row" data-do="toggle" data-id="' + k + '"><span class="ic-wrap">' + ic(icon) + '</span><span class="txt"><b>' + label + '</b><span class="d">' + text + '</span></span><span class="toggle' + (st.settings[k] ? ' on' : '') + '"></span></button>';
-      const seg = ['live', 'day', 'night'].map((m) => '<button class="' + (st.settings.sky === m ? 'on' : '') + '" data-do="sky" data-id="' + m + '">' + { live: 'Real time', day: 'Day', night: 'Night' }[m] + '</button>').join('');
+      const tog = (k, label, icon, text) => '<button class="row" data-do="toggle" data-id="' + k + '"><span class="ic-wrap">' + ic(icon) + '</span><span class="txt"><b>' + tr(label) + '</b><span class="d">' + tr(text) + '</span></span><span class="toggle' + (st.settings[k] ? ' on' : '') + '"></span></button>';
+      const seg = ['live', 'day', 'night'].map((m) => '<button class="' + (st.settings.sky === m ? 'on' : '') + '" data-do="sky" data-id="' + m + '">' + tr({ live: 'Real time', day: 'Day', night: 'Night' }[m]) + '</button>').join('');
+      const lang = ['en', 'fi'].map((m) => '<button class="' + (PN.lang === m ? 'on' : '') + '" data-do="lang" data-id="' + m + '">' + { en: 'English', fi: 'Suomi' }[m] + '</button>').join('');
       return '<div class="rows">' + tog('sound', 'Sound', 'sound', 'Squeaks, splashes and chimes.') + tog('music', 'Music', 'music', 'A kantele, the Finnish lap harp, plays now and then.')
-        + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>Sky</b><span class="d">Real time follows your clock and the calendar, the way it is in Lapland.</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
-        + '<div class="row"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>Move to another device</b><span class="d">Your seal is saved on this device only. A save code lets you carry it to another one.</span><span class="btn-row"><button class="btn small ghost" data-do="export">Get save code</button><button class="btn small ghost" data-do="import">Use a save code</button></span></span></div>'
-        + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>Start over</b><span class="d">Say goodbye to ' + esc(st.name) + ' and begin again with a new pup.</span><span class="btn-row"><button class="btn small ghost" data-do="reset">Start over</button></span></span></div>'
-        + '</div><p class="note">Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.</p>';
+        + (navigator.vibrate ? tog('haptics', 'Buzz', 'bolt', 'A little buzz under your finger when you stroke and tap.') : '')
+        + '<div class="row"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Language') + '</b><span class="d">' + tr('Play in English or in Finnish.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + lang + '</span></span></div>'
+        + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time follows your clock and the calendar, the way it is in Lapland.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
+        + '<div class="row"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>' + tr('Move to another device') + '</b><span class="d">' + tr('Your seal is saved on this device only. A save code lets you carry it to another one.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="export">' + tr('Get save code') + '</button><button class="btn small ghost" data-do="import">' + tr('Use a save code') + '</button></span></span></div>'
+        + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
+        + '</div><p class="note">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + '</p>';
     },
   };
 
@@ -342,12 +358,14 @@
     else if (act === 'place') game.place(id);
     else if (act === 'info') UI.itemInfo(id);
     else if (act === 'goto') UI.openSheet(id);
+    else if (act === 'borrow') game.borrow();
     else if (act === 'ball') { UI.closeSheet(); game.playBall(); }
     else if (act === 'game') game.startGame(id);
     else if (act === 'dive') game.dive();
     else if (act === 'sauna') game.sauna();
     else if (act === 'toggle') game.setSetting(id, !game.state.settings[id]);
     else if (act === 'sky') game.setSetting('sky', id);
+    else if (act === 'lang') game.setSetting('lang', id);
     else if (act === 'rename') game.rename();
     else if (act === 'export') game.exportSave();
     else if (act === 'import') game.importSave();
@@ -358,7 +376,8 @@
   const RARE = ['', 'Common', 'Uncommon', 'Rare', 'Very rare', 'Legendary'];
   UI.itemInfo = function (id) {
     const it = PN.items[id];
-    return UI.modal({ art: PN.Thumbs.get(id), title: esc(it.fi), html: '<p><b>' + esc(it.en) + '</b>' + (it.rarity ? ', ' + RARE[it.rarity].toLowerCase() : '') + '</p><p>' + esc(it.note || '') + '</p>', actions: [{ label: 'Lovely', value: 1 }] });
+    const line = PN.isFi() ? (it.rarity ? tr(RARE[it.rarity]) + '.' : '') : '<b>' + esc(it.en) + '</b>' + (it.rarity ? ', ' + RARE[it.rarity].toLowerCase() : '');
+    return UI.modal({ art: PN.Thumbs.get(id), title: esc(it.fi), html: (line ? '<p>' + line + '</p>' : '') + '<p>' + esc(PN.itemNote(it)) + '</p>', actions: [{ label: tr('Lovely'), value: 1 }] });
   };
 
   /* ---------- messages ---------- */
@@ -393,14 +412,14 @@
   /* Ask for a name, with a dice for ideas. Resolves with the name, or null if cancelled. */
   UI.askName = function (o) {
     let idx = Math.floor(Math.random() * D.NAMES.length);
-    const html = (o.text ? '<p>' + o.text + '</p>' : '') + '<div class="pick"><input class="field" id="nameIn" maxlength="14" autocomplete="off" autocapitalize="words" spellcheck="false" value="' + esc(o.initial || '') + '" placeholder="Name">'
-      + '<button class="round" id="nameDice" type="button" aria-label="Suggest a name">' + ic('dice') + '</button></div><p class="means" id="nameMeans"></p>';
+    const html = (o.text ? '<p>' + o.text + '</p>' : '') + '<div class="pick"><input class="field" id="nameIn" maxlength="14" autocomplete="off" autocapitalize="words" spellcheck="false" value="' + esc(o.initial || '') + '" placeholder="' + tr('Name') + '">'
+      + '<button class="round" id="nameDice" type="button" aria-label="' + tr('Suggest a name') + '">' + ic('dice') + '</button></div><p class="means" id="nameMeans"></p>';
     return UI.modal({
       title: o.title, html, art: o.art,
-      actions: [{ label: o.ok || 'That is the one', value: 'ok' }].concat(o.cancel ? [{ label: o.cancel, value: 'no' }] : []),
+      actions: [{ label: o.ok || tr('That is the one'), value: 'ok' }].concat(o.cancel ? [{ label: o.cancel, value: 'no' }] : []),
       onOpen(card) {
         const input = card.querySelector('#nameIn'), means = card.querySelector('#nameMeans');
-        const suggest = () => { idx = (idx + 1 + Math.floor(Math.random() * 3)) % D.NAMES.length; input.value = D.NAMES[idx][0]; means.textContent = D.NAMES[idx][0] + ' means ' + D.NAMES[idx][1] + '.'; PN.Audio.play('pop'); };
+        const suggest = () => { idx = (idx + 1 + Math.floor(Math.random() * 3)) % D.NAMES.length; input.value = D.NAMES[idx][0]; means.textContent = tr('{0} means {1}.', D.NAMES[idx][0], D.NAMES[idx][1]); PN.Audio.play('pop'); };
         card.querySelector('#nameDice').addEventListener('click', suggest);
         input.addEventListener('input', () => { means.textContent = ''; });
         if (!o.initial) suggest();
@@ -413,17 +432,31 @@
     });
   };
 
+  let titleInfo = null;
   UI.title = {
     ready(isNew, onGo) {
-      $('titleSub').textContent = isNew ? 'A little seal is waiting under the snow.' : '';
+      titleInfo = { isNew, note: onGo.note };
       const go = $('titleGo');
-      go.textContent = isNew ? 'Meet your seal' : 'Play';
-      go.hidden = false; $('titleFoot').hidden = !isNew;
+      go.hidden = false; $('titleFoot').hidden = !isNew; $('titleLang').hidden = false;
+      $('titleSub').removeAttribute('data-l');
+      UI.title.label();
       go.addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('pop'); onGo(); }, { once: true });
+      $('titleLang').addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('tap'); G().setLang(PN.lang === 'fi' ? 'en' : 'fi'); });
+    },
+    label() {
+      if (!titleInfo) return;
+      $('titleSub').textContent = titleInfo.isNew ? tr('A little seal is waiting under the snow.') : (titleInfo.note ? titleInfo.note() : '');
+      $('titleGo').textContent = tr(titleInfo.isNew ? 'Meet your seal' : 'title|Play');
     },
     hide() { const t = $('title'); t.classList.add('gone'); setTimeout(() => { t.hidden = true; }, 750); },
     show() { const t = $('title'); t.hidden = false; t.classList.remove('gone'); },
   };
+  /* Change language everywhere at once. */
+  UI.setLang = function (lang) {
+    PN.setLang(lang);
+    UI.title.label();
+    if (G() && G().state) { UI.refresh(); if (UI.sheetName) UI.renderSheet(); }
+  };
   UI.fade = (on) => new Promise((r) => { $('fade').classList.toggle('on', on); setTimeout(r, 520); });
-  UI.esc = esc; UI.thumb = thumb; UI.temp = temp;
+  UI.esc = esc; UI.thumb = thumb; UI.temp = temp; UI.mins = mins;
 })(window.PN = window.PN || {});

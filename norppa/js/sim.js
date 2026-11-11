@@ -67,8 +67,8 @@
       pups: [], family: [], nextPupAt: 0, pupSeq: 0,
       fav: 'muikku', favKnown: false,
       gift: { last: dayKey(now), streak: 1 },
-      dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0,
-      petWin: { t0: 0, n: 0 },
+      dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0,
+      petWin: { t0: 0, n: 0 }, ballWin: { t0: 0, n: 0 },
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
       settings: { sound: true, music: true, sky: 'live', haptics: true },
@@ -86,7 +86,7 @@
         const v = src[k];
         if (dst[k] === undefined || dst[k] === null && v !== null && typeof v === 'object') dst[k] = v;
         else if (v && typeof v === 'object' && !Array.isArray(v) && typeof dst[k] === 'object' && !Array.isArray(dst[k])
-          && ['stats', 'counters', 'settings', 'wearing', 'gift', 'dive', 'petWin'].indexOf(k) >= 0) fill(dst[k], v);
+          && ['stats', 'counters', 'settings', 'wearing', 'gift', 'dive', 'petWin', 'ballWin'].indexOf(k) >= 0) fill(dst[k], v);
       });
       return dst;
     };
@@ -388,7 +388,8 @@
     s.joy = pct(s.joy + (fresh ? 8 : 2));
     s.energy = pct(s.energy - 2);
     state.counters.balls++;
-    if (fresh) addXp(state, 3);
+    if (now - state.ballWin.t0 > H) state.ballWin = { t0: now, n: 0 };
+    if (fresh && state.ballWin.n < 6) { state.ballWin.n++; addXp(state, 3); }   // fun any time, friendship points a few times an hour
     learn(state, 'pallo');
     check(state);
     return ok({});
@@ -541,6 +542,19 @@
     return ok({});
   }
 
+  /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then. */
+  function canBorrow(state, now) {
+    const hasFood = Object.keys(state.pantry).some((id) => state.pantry[id] > 0 && PN.items[id] && PN.items[id].kind !== 'med');
+    return !hasFood && state.coins < 3 && now >= state.handoutAt;
+  }
+  function borrow(state, now) {
+    if (!canBorrow(state, now)) return no('notyet');
+    state.handoutAt = now + 4 * H;
+    giveFish(state, 'muikku', 3);
+    learn(state, 'kiitos');
+    return ok({ id: 'muikku', n: 3 });
+  }
+
   /* First visit of the day. */
   function dailyGift(state, now) {
     const today = dayKey(now);
@@ -663,5 +677,5 @@
   PN.Sim = { T, H, DAY, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, canDive, diveResult, gameReward,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
-    giveFish, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
+    giveFish, canBorrow, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

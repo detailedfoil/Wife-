@@ -3,7 +3,7 @@
    what the seal gets up to on its own, and what happened while you were away. */
 (function (PN) {
   'use strict';
-  const T = THREE, U = PN.U, W = PN.World, S = PN.Sim, D = PN.DATA, UI = PN.UI, FX = PN.FX, A = PN.Audio;
+  const T = THREE, U = PN.U, W = PN.World, S = PN.Sim, D = PN.DATA, UI = PN.UI, FX = PN.FX, A = PN.Audio, tr = PN.L;
   const $ = (id) => document.getElementById(id);
   const G = PN.Game = { state: null, seal: null, busy: false, ready: false };
   const Q = new URLSearchParams(location.search);
@@ -48,6 +48,7 @@
     const saved = S.load();
     const isNew = !saved || !saved.name;
     state = G.state = saved || S.newState(Date.now());
+    PN.setLang(state.settings.lang || PN.guessLang());
     let sum = null;
     if (!isNew) sum = S.advance(state, Date.now(), { away: true });
     S.drain();                            // the welcome-back note covers what happened; no flood of messages
@@ -72,7 +73,9 @@
     bindInput();
     last = performance.now();
     requestAnimationFrame(loop);
-    UI.title.ready(isNew, () => begin(isNew, sum));
+    const go = () => begin(isNew, sum);
+    if (!isNew) go.note = () => tr(state.asleep ? '{0} is asleep in the den.' : '{0} is waiting for you.', state.name);
+    UI.title.ready(isNew, go);
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* offline play is a bonus */ });
   }
 
@@ -120,14 +123,15 @@
     await seal.moveTo(W.HOME.x, W.HOME.z, { speed: 1.7, face: W.HOME_HEADING });
     seal.gesture('wave'); A.play('chirp');
     await wait(1.2);
-    const name = await UI.askName({ title: 'A little kuutti!', text: 'A ringed seal pup has wriggled out of the snow den. What will you call it?', ok: 'That is the one' });
+    const name = await UI.askName({ title: tr('A little kuutti!'), text: tr('A ringed seal pup has wriggled out of the snow den. What will you call it?'), ok: tr('That is the one') });
     state.name = name;
+    state.settings.lang = PN.lang;
     state.lastSeen = Date.now();
     S.learn(state, 'norppa'); S.learn(state, 'kuutti');
     S.save(state);
     UI.showHud(true); UI.refresh();
     seal.gesture('happy'); A.play('chirp'); FX.hearts(head(), 3);
-    UI.toast('Say hello to ' + nm() + '. Stroke with a finger.', 'heart', '', 5200);
+    UI.toast(tr('Say hello to {0}. Stroke with a finger.', nm()), 'heart', '', 5200);
     state.tut = 1;
     G.busy = false;
   }
@@ -135,44 +139,46 @@
   /* ---------- coming back ---------- */
   function span(ms) {
     const m = Math.round(ms / MIN);
-    if (m < 90) return m + ' minutes';
+    if (m < 90) return tr(m === 1 ? '{0} minute' : '{0} minutes', m);
     const h = Math.round(m / 60);
-    if (h < 36) return h + ' hours';
-    return Math.round(h / 24) + ' days';
+    if (h < 36) return tr('{0} hours', h);
+    return tr('{0} days', Math.round(h / 24));
   }
   function welcomeBack(sum) {
     if (!sum || sum.ms < 20 * MIN) return Promise.resolve();
     const hour = new Date().getHours(), lines = [];
     const add = (icon, text, cls) => lines.push('<div class="' + (cls || '') + '">' + UI.ic(icon) + '<span>' + text + '</span></div>');
+    const one = (n, a, b) => tr(Math.round(n) === 1 ? a : b, Math.round(n));
     let bad = false;
-    if (sum.sleptH >= 1) add('zzz', 'Slept for about ' + Math.round(sum.sleptH) + (Math.round(sum.sleptH) === 1 ? ' hour.' : ' hours.'));
-    if (sum.pupLost.length) { bad = true; sum.pupLost.forEach((n) => add('heart', '<b>' + UI.esc(n) + '</b> went too long without milk and did not make it.', 'bad')); }
-    if (sum.sick && state.sick) { bad = true; add('med', plain() + ' has fallen poorly. Cloudberry juice or steady care will mend it.', 'bad'); }
-    if (sum.pupSick.length) { bad = true; sum.pupSick.forEach((n) => { if (state.pups.some((p) => p.name === n && p.sick)) add('med', '<b>' + UI.esc(n) + '</b> is poorly from hunger. Feed ' + plain() + ' so she can nurse.', 'bad'); }); }
-    if (sum.neglectH >= 1) { bad = true; add('clock', 'Was left with an empty bar for ' + Math.round(sum.neglectH) + (Math.round(sum.neglectH) === 1 ? ' hour.' : ' hours.'), 'bad'); }
-    else if (state.stats.food < 25 && !state.asleep) add('fish', 'Got hungry waiting for you.');
-    if (sum.xpLost > 0) add('heart', 'Friendship slipped by ' + sum.xpLost + (sum.xpLost === 1 ? ' point.' : ' points.'), 'bad');
-    if (state.grudge > 0) { bad = true; add('grump', plain() + ' is sulking. Food and gentle strokes will win it round.', 'bad'); }
-    if (sum.cured) add('check', 'Got over being poorly.', 'good');
-    sum.pupWell.forEach((n) => add('check', '<b>' + UI.esc(n) + '</b> is feeling better.', 'good'));
-    if (sum.poops > 0) add('poo', 'Left ' + (sum.poops === 1 ? 'a little present' : sum.poops + ' little presents') + ' on the shore.');
-    if (!bad) add('heart', state.asleep ? 'All is well.' : 'All is well, and ' + plain() + ' is glad to see you.', 'good');
+    if (sum.sleptH >= 1) add('zzz', one(sum.sleptH, 'Slept for about {0} hour.', 'Slept for about {0} hours.'));
+    if (sum.pupLost.length) { bad = true; sum.pupLost.forEach((n) => add('heart', tr('<b>{0}</b> went too long without milk and did not make it.', UI.esc(n)), 'bad')); }
+    if (sum.sick && state.sick) { bad = true; add('med', tr('{0} has fallen poorly. Cloudberry juice or steady care will mend it.', plain()), 'bad'); }
+    if (sum.pupSick.length) { bad = true; sum.pupSick.forEach((n) => { if (state.pups.some((p) => p.name === n && p.sick)) add('med', tr('<b>{0}</b> is poorly from hunger. Feed {1} so she can nurse.', UI.esc(n), plain()), 'bad'); }); }
+    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left with an empty bar for {0} hour.', 'Was left with an empty bar for {0} hours.'), 'bad'); }
+    else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
+    if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
+    if (state.grudge > 0) { bad = true; add('grump', tr('{0} is sulking. Food and gentle strokes will win it round.', plain()), 'bad'); }
+    if (sum.cured) add('check', tr('Got over being poorly.'), 'good');
+    sum.pupWell.forEach((n) => add('check', tr('<b>{0}</b> is feeling better.', UI.esc(n)), 'good'));
+    if (sum.poops > 0) add('poo', sum.poops === 1 ? tr('Left a little present on the shore.') : tr('Left {0} little presents on the shore.', sum.poops));
+    if (!bad) add('heart', state.asleep ? tr('All is well.') : tr('All is well, and {0} is glad to see you.', plain()), 'good');
     if (sum.pupLost.length) A.play('lost'); else if (bad) A.play('sad'); else A.play('chirp');
     syncPups();
-    const title = bad ? 'While you were away' : hour >= 5 && hour < 11 ? 'Hyvää huomenta!' : 'Welcome back';
-    return UI.modal({ title, html: '<p>You were gone for ' + span(sum.ms) + '.</p><div class="away">' + lines.join('') + '</div>',
-      actions: [{ label: bad ? 'I am here now' : 'Hei, ' + plain() + '!', value: 1 }] }).then(() => { if (!bad && hour >= 5 && hour < 11) S.learn(state, 'huomenta'); });
+    const morning = hour >= 5 && hour < 11;
+    const title = bad ? tr('While you were away') : morning ? 'Hyvää huomenta!' : tr('Welcome back');
+    return UI.modal({ title, html: '<p>' + tr('You were gone for {0}.', span(sum.ms)) + '</p><div class="away">' + lines.join('') + '</div>',
+      actions: [{ label: bad ? tr('I am here now') : 'Hei, ' + plain() + '!', value: 1 }] }).then(() => { if (!bad && morning) S.learn(state, 'huomenta'); });
   }
 
   async function dailyGift() {
     const gift = S.dailyGift(state, Date.now());
     if (!gift) return;
-    if (gift.withheld) { UI.toast('No gift today. ' + nm() + ' is still cross with you.', 'grump', 'bad', 4500); return; }
+    if (gift.withheld) { UI.toast(tr('No gift today. {0} is still cross with you.', nm()), 'grump', 'bad', 4500); return; }
     const it = PN.items[gift.fish];
     A.play('sparkle');
-    await UI.modal({ art: PN.Thumbs.get(gift.fish), title: 'A gift for today',
-      html: '<p>' + (gift.streak > 1 ? 'Day <b>' + gift.streak + '</b> in a row. ' : '') + 'The village fisherman left something on the ice.</p><div class="loot">' + coinChip(gift.coins) + itemChip(gift.fish, gift.n) + '</div>'
-        + (gift.isNew ? '<p>' + UI.esc(it.fi) + ' is new for the album.</p>' : ''),
+    await UI.modal({ art: PN.Thumbs.get(gift.fish), title: tr('A gift for today'),
+      html: '<p>' + (gift.streak > 1 ? tr('Day <b>{0}</b> in a row. ', gift.streak) : '') + tr('The village fisherman left something on the ice.') + '</p><div class="loot">' + coinChip(gift.coins) + itemChip(gift.fish, gift.n) + '</div>'
+        + (gift.isNew ? '<p>' + tr('{0} is new for the album.', UI.esc(it.fi)) + '</p>' : ''),
       actions: [{ label: 'Kiitos!', value: 1 }] });
     S.save(state);
   }
@@ -259,34 +265,35 @@
       const e = list[i];
       if (e.type === 'word') {
         const w = D.words[e.id];
-        UI.toast('<em>' + UI.esc(w.fi) + '</em> means ' + UI.esc(w.en) + '.', 'book', 'word', 3600);
+        UI.toast(tr('<em>{0}</em> means {1}.', UI.esc(w.fi), UI.esc(w.en)), 'book', 'word', 3600);
         A.play('word', 0.4);
       } else if (e.type === 'level') {
-        UI.toast('Friendship level <b>' + e.level + '</b>. +' + e.coins + ' coins', 'heart', '', 4000);
+        UI.toast(tr('Friendship level <b>{0}</b>. +{1} coins', e.level, e.coins), 'heart', '', 4000);
         A.play('level');
         if (!seal.asleep) { seal.gesture('happy'); FX.hearts(head(), 5); }
       } else if (e.type === 'award') {
         const a = D.awards[e.id];
-        UI.toast('Award: <b>' + UI.esc(a.t) + '</b>. +' + a.c + ' coins', 'star', '', 4200);
+        UI.toast(tr('Award: <b>{0}</b>. +{1} coins', UI.esc(PN.awardTitle(a)), a.c), 'star', '', 4200);
         A.play('award', 0.6);
       } else if (e.type === 'forgiven') {
-        UI.toast(nm() + ' has forgiven you.', 'heart', '', 3800);
+        UI.toast(tr('{0} has forgiven you.', nm()), 'heart', '', 3800);
         seal.sulk = false; seal.heading = W.HOME_HEADING;
         seal.gesture('happy', true); A.play('chirp'); FX.hearts(head(), 6);
       } else if (e.type === 'sick') {
-        UI.toast(nm() + ' has fallen poorly. Cloudberry juice from the shop will help.', 'med', 'bad', 5200);
+        UI.toast(tr('{0} has fallen poorly. Cloudberry juice from the shop will help.', nm()), 'med', 'bad', 5200);
         A.play('sneeze'); seal.gesture('sneeze');
       } else if (e.type === 'cured') {
-        UI.toast(nm() + ' is feeling better.', 'check', '', 3800);
+        UI.toast(tr('{0} is feeling better.', nm()), 'check', '', 3800);
         A.play('sparkle'); FX.sparkle(head(), 10);
       } else if (e.type === 'pupSick') {
-        UI.toast('<b>' + UI.esc(e.name) + '</b> is poorly from hunger. Feed ' + plain() + ' so she can nurse.', 'med', 'bad', 5600);
+        UI.toast(tr('<b>{0}</b> is poorly from hunger. Feed {1} so she can nurse.', UI.esc(e.name), plain()), 'med', 'bad', 5600);
         A.play('sad');
       } else if (e.type === 'pupLost') {
         A.play('lost');
         syncPups();
-        UI.modal({ title: 'Goodbye, ' + UI.esc(e.name), html: '<p>' + UI.esc(e.name) + ' went too long without milk and did not make it.</p><p>' + plain() + ' will be sad for a while. Keep her tummy full and it need not happen again.</p>',
-          actions: [{ label: 'I am sorry', value: 1 }] });
+        UI.modal({ title: tr('Goodbye, {0}', UI.esc(e.name)),
+          html: tr('<p>{0} went too long without milk and did not make it.</p><p>{1} will be sad for a while. Keep her tummy full and it need not happen again.</p>', UI.esc(e.name), plain()),
+          actions: [{ label: tr('I am sorry'), value: 1 }] });
       }
     }
   }
@@ -311,11 +318,11 @@
 
   function tutorial() {
     const c = state.counters, hint = (text, icon) => { tutT = -6; UI.toast(text, icon, '', 5600); };
-    if (state.tut === 1 && c.pets >= 4) { state.tut = 2; hint('When the tummy bar runs low, tap <b>Feed</b>.', 'fish'); }
-    else if (state.tut === 2 && c.feeds >= 1) { state.tut = 3; hint('Tap the hole in the ice to send ' + nm() + ' diving for finds.', 'dive'); }
-    else if (state.tut === 3 && c.dives >= 1) { state.tut = 4; hint('Games in <b>Play</b> earn coins for the shop.', 'ball'); }
-    else if (state.tut === 4 && c.games >= 1) { state.tut = 5; hint('Drag the sky to look around. It follows your real clock, as it would in Lapland.', 'sun'); }
-    else if (state.tut === 5 && state.poops.length) { state.tut = 6; hint('Tap a poo to clear it away.', 'poo'); }
+    if (state.tut === 1 && c.pets >= 4) { state.tut = 2; hint(tr('When the tummy bar runs low, tap <b>Feed</b>.'), 'fish'); }
+    else if (state.tut === 2 && c.feeds >= 1) { state.tut = 3; hint(tr('Tap the hole in the ice to send {0} diving for finds.', nm()), 'dive'); }
+    else if (state.tut === 3 && c.dives >= 1) { state.tut = 4; hint(tr('Games in <b>Play</b> earn coins for the shop.'), 'ball'); }
+    else if (state.tut === 4 && c.games >= 1) { state.tut = 5; hint(tr('Drag the sky to look around. It follows your real clock, as it would in Lapland.'), 'sun'); }
+    else if (state.tut === 5 && state.poops.length) { state.tut = 6; hint(tr('Tap a poo to clear it away.'), 'poo'); }
   }
 
   /* ---------- what the seal does by itself ---------- */
@@ -398,15 +405,16 @@
   }
 
   /* ---------- pups ---------- */
-  /* Where each pup sits: either side of mother on the shore, tucked in front of her at the den. */
+  /* Where each pup sits: by mother's flipper on the shore, in front of her nose at the den.
+     Both spots are in plain view, clear of her head and of anything put out on the shore. */
   function pupSlot(i, out) {
-    const side = i % 2 ? -1 : 1;
+    const odd = i % 2;
     if (seal.asleep || state.asleep) {
-      out.set(anchor.x + (i % 2 ? 0.3 : 1.05), 0, anchor.z + (i % 2 ? 1.2 : 0.5));
-      out.h = W.DEN.heading + side * 0.25;
+      out.set(anchor.x + (odd ? -0.25 : 1.05), 0, anchor.z + (odd ? 1.45 : 0.5));
+      out.h = W.DEN.heading + (odd ? -0.2 : 0.25);
     } else {
-      out.set(anchor.x + (side > 0 ? 1.15 : -1.1), 0, anchor.z + (side > 0 ? -0.45 : 0.2));
-      out.h = side > 0 ? -0.35 : 0.8;
+      out.set(anchor.x + (odd ? -1.5 : -0.65), 0, anchor.z + (odd ? 0 : 0.75));
+      out.h = odd ? 0.9 : 0.55;
     }
     return out;
   }
@@ -460,9 +468,9 @@
     UI.closeSheet();
     A.play('sparkle');
     seal.gesture('surprise');
-    await UI.modal({ title: 'A surprise in the den', html: '<p>' + plain() + ' has had a pup of her own: a tiny white kuutti.</p><p>Pups feed from their mother, so keep her tummy above a third. A hungry mother means a hungry pup.</p>',
-      actions: [{ label: 'Oh my!', value: 1 }] });
-    const name = await UI.askName({ title: 'Name the pup', text: 'What will the little one be called?', ok: 'Welcome, little one' });
+    await UI.modal({ title: tr('A surprise in the den'), html: tr('<p>{0} has had a pup of her own: a tiny white kuutti.</p><p>Pups feed from their mother, so keep her tummy above a third. A hungry mother means a hungry pup.</p>', plain()),
+      actions: [{ label: tr('Oh my!'), value: 1 }] });
+    const name = await UI.askName({ title: tr('Name the pup'), text: tr('What will the little one be called?'), ok: tr('Welcome, little one') });
     const p = S.addPup(state, Date.now(), name);
     syncPups();
     const ps = pups[p.id];
@@ -481,14 +489,14 @@
     if (!p || UI.modalOpen) return;
     A.play('tap');
     const left = Math.max(0, S.T.pupGrow - p.grownMs);
-    const how = p.sick ? 'Poorly from hunger. Feed ' + plain() + ' well so she can nurse, and give cloudberry juice.'
-      : p.ready ? 'Big and strong, and ready to swim off into the lake.'
-        : p.food < 20 ? 'Hungry. Pups feed from their mother whenever her tummy is above a third.'
-          : 'Growing well. About ' + span(left) + ' of good care to go.';
-    const acts = [{ label: 'Cuddle', value: 'cuddle' }];
-    if (p.ready) acts.unshift({ label: 'Wave goodbye', value: 'go' });
-    acts.push({ label: 'Close', value: 0 });
-    const v = await UI.modal({ title: UI.esc(p.name), html: '<p>' + how + '</p><p>Tummy <b>' + Math.round(p.food) + '%</b>, happiness <b>' + Math.round(p.joy) + '%</b>.</p>', actions: acts });
+    const how = p.sick ? tr('Poorly from hunger. Feed {0} well so she can nurse, and give cloudberry juice.', plain())
+      : p.ready ? tr('Big and strong, and ready to swim off into the lake.')
+        : p.food < 20 ? tr('Hungry. Pups feed from their mother whenever her tummy is above a third.')
+          : tr('Growing well. About {0} of good care to go.', span(left));
+    const acts = [{ label: tr('Cuddle'), value: 'cuddle' }];
+    if (p.ready) acts.unshift({ label: tr('Wave goodbye'), value: 'go' });
+    acts.push({ label: tr('Close'), value: 0 });
+    const v = await UI.modal({ title: UI.esc(p.name), html: '<p>' + how + '</p><p>' + tr('Tummy <b>{0}%</b>, happiness <b>{1}%</b>.', Math.round(p.food), Math.round(p.joy)) + '</p>', actions: acts });
     const idx = state.pups.indexOf(p);
     if (v === 'cuddle' && idx >= 0) cuddle(idx);
     else if (v === 'go' && idx >= 0) graduate(idx);
@@ -517,7 +525,7 @@
     await plunge(ps);
     const id = Object.keys(pups).find((k) => pups[k] === ps);
     if (id) removePup(id);
-    UI.toast('<b>' + UI.esc(r.name) + '</b> swims off into the lake. Hei hei! +' + r.coins + ' coins', 'star', '', 5200);
+    UI.toast(tr('<b>{0}</b> swims off into the lake. Hei hei! +{1} coins', UI.esc(r.name), r.coins), 'star', '', 5200);
     A.play('award');
     S.save(state); UI.refresh();
     G.busy = false;
@@ -564,7 +572,7 @@
     if (blocked()) return;
     const now = Date.now(), can = S.canDive(state, now);
     if (!can.ok) {
-      if (can.why === 'wait') { A.play('nope'); UI.toast(nm() + ' is catching a breath. Ready in ' + span(Math.max(MIN, state.dive.readyAt - now)) + '.', 'clock'); }
+      if (can.why === 'wait') { A.play('nope'); UI.toast(tr('{0} is catching a breath. Ready in {1}.', nm(), UI.mins(state.dive.readyAt - now)), 'clock'); }
       else refuse(can.why);
       return;
     }
@@ -605,32 +613,29 @@
   function showLoot(loot) {
     if (loot.kind === 'none') {
       A.play('bubble');
-      return UI.modal({ title: 'Nothing this time', html: '<p>Just a nose full of cold water. The lake keeps its secrets for now.</p>', actions: [{ label: 'Next time', value: 1 }] });
+      return UI.modal({ title: tr('Nothing this time'), html: '<p>' + tr('Just a nose full of cold water. The lake keeps its secrets for now.') + '</p>', actions: [{ label: tr('Next time'), value: 1 }] });
     }
     if (loot.kind === 'coins') {
       A.play('coin'); FX.coins(head(), 6);
-      return UI.modal({ title: 'Sunken coins', html: '<div class="bigscore">+' + loot.n + '</div><p>' + plain() + ' came up with a flipperful of coins.</p>', actions: [{ label: 'Kiitos!', value: 1 }] });
+      return UI.modal({ title: tr('Sunken coins'), html: '<div class="bigscore">+' + loot.n + '</div><p>' + tr('{0} came up with a flipperful of coins.', plain()) + '</p>', actions: [{ label: 'Kiitos!', value: 1 }] });
     }
-    const it = PN.items[loot.id];
+    const it = PN.items[loot.id], rare = tr(RARE[it.rarity]);
     A.play(loot.isNew ? 'award' : 'sparkle');
     if (loot.isNew) FX.sparkle(head(), 12);
-    let html = '<p><b>' + UI.esc(it.en) + '</b>' + (loot.n > 1 ? ' × ' + loot.n : '') + ', ' + RARE[it.rarity] + '.' + (loot.isNew ? ' New for the album!' : '') + '</p><p>' + UI.esc(it.note || '') + '</p>';
-    if (loot.kind === 'trinket' && loot.coins) html += '<div class="loot">' + coinChip(loot.coins) + '</div><p>You have this one already, so the village trader bought it.</p>';
-    return UI.modal({ art: PN.Thumbs.get(loot.id), title: UI.esc(it.fi), html, actions: [{ label: loot.kind === 'fish' ? 'Into the larder' : 'Into the album', value: 1 }] });
+    const what = PN.isFi() ? rare.charAt(0).toUpperCase() + rare.slice(1) + (loot.n > 1 ? ', ' + loot.n + ' kpl' : '') + '.'
+      : '<b>' + UI.esc(it.en) + '</b>' + (loot.n > 1 ? ' × ' + loot.n : '') + ', ' + rare + '.';
+    let html = '<p>' + what + (loot.isNew ? tr(' New for the album!') : '') + '</p><p>' + UI.esc(PN.itemNote(it)) + '</p>';
+    if (loot.kind === 'trinket' && loot.coins) html += '<div class="loot">' + coinChip(loot.coins) + '</div><p>' + tr('You have this one already, so the village trader bought it.') + '</p>';
+    return UI.modal({ art: PN.Thumbs.get(loot.id), title: UI.esc(it.fi), html, actions: [{ label: tr(loot.kind === 'fish' ? 'Into the larder' : 'Into the album'), value: 1 }] });
   }
 
   /* ---------- looking after the seal ---------- */
-  const WHY = {
-    asleep: () => nm() + ' is fast asleep.',
-    sick: () => nm() + ' is poorly and needs rest.',
-    sulk: () => nm() + ' is sulking and will not play.',
-    tired: () => nm() + ' is too tired for that.',
-    wait: () => 'Not just yet.',
-  };
+  const WHY = { asleep: '{0} is fast asleep.', sick: '{0} is poorly and needs rest.', sulk: '{0} is sulking and will not play.', tired: '{0} is too tired for that.', wait: 'Not just yet.' };
+  const whyText = (why) => tr(WHY[why] || WHY.wait, nm());
   function refuse(why) {
     A.play('nope');
     if (!seal.asleep && why !== 'asleep') seal.gesture('no');
-    UI.toast((WHY[why] || WHY.wait)(), why === 'asleep' ? 'zzz' : why === 'sick' ? 'med' : why === 'sulk' ? 'grump' : 'clock');
+    UI.toast(whyText(why), why === 'asleep' ? 'zzz' : why === 'sick' ? 'med' : why === 'sulk' ? 'grump' : 'clock');
   }
 
   /* Food flies in from the bottom of the screen and lands in the mouth. */
@@ -656,9 +661,9 @@
     const r = S.feed(state, id), it = PN.items[id];
     if (!r.ok) {
       A.play('nope');
-      if (r.why === 'asleep') UI.toast(WHY.asleep() + ' Wake first, or wait for morning.', 'zzz');
-      else if (r.why === 'full') { seal.gesture('no'); UI.toast(nm() + ' is full to the whiskers.', 'fish'); }
-      else if (r.why === 'notsick') UI.toast('Nobody is poorly. Save the juice for a rainy day.', 'med');
+      if (r.why === 'asleep') UI.toast(whyText('asleep') + tr(' Wake first, or wait for morning.'), 'zzz');
+      else if (r.why === 'full') { seal.gesture('no'); UI.toast(tr('{0} is full to the whiskers.', nm()), 'fish'); }
+      else if (r.why === 'notsick') UI.toast(tr('Nobody is poorly. Save the juice for a rainy day.'), 'med');
       return;
     }
     A.play('pop');
@@ -673,9 +678,17 @@
       else if (it.kind === 'food') FX.hearts(head(), 1);
       buzz(10);
     });
-    if (r.med) UI.toast('Cloudberry juice works wonders.', 'med');
-    else if (r.fav && state.counters.feeds < 400 && Math.random() < 0.35) UI.toast(UI.esc(it.fi) + ', the favourite!', 'heart');
+    if (r.med) UI.toast(tr('Cloudberry juice works wonders.'), 'med');
+    else if (r.fav && state.counters.feeds < 400 && Math.random() < 0.35) UI.toast(tr('{0}, the favourite!', UI.esc(it.fi)), 'heart');
     UI.renderSheet(); UI.refresh();
+  };
+
+  G.borrow = function () {
+    const r = S.borrow(state, Date.now());
+    if (!r.ok) { A.play('nope'); return; }
+    A.play('sparkle');
+    UI.toast(tr('The neighbours left {0} vendace on the ice. Kiitos!', r.n), 'fish', '', 4200);
+    UI.renderSheet(); UI.refresh(); save();
   };
 
   G.startWash = function () {
@@ -712,7 +725,7 @@
       seal.gesture('shake', true); A.play('splash');
       v1.copy(seal.g.position); v1.y += 0.6 * seal.size;
       FX.splash(v1, 10); FX.sparkle(head(), 8);
-      UI.toast('Squeaky clean.', 'bubbles');
+      UI.toast(tr('Squeaky clean.'), 'bubbles');
       buzz(15);
     }
     syncDirt(); UI.refresh();
@@ -724,12 +737,12 @@
     if (state.asleep) {
       const r = S.wake(state);
       if (!r.ok) return;
-      if (r.grumpy) UI.toast(nm() + ' was not done sleeping.', 'grump');
+      if (r.grumpy) UI.toast(tr('{0} was not done sleeping.', nm()), 'grump');
       else if (h >= 5 && h < 11) { UI.toast('Hyvää huomenta, ' + plain() + '!', 'sun'); S.learn(state, 'huomenta'); }
     } else {
       const r = S.tuck(state, now);
-      if (!r.ok) { A.play('nope'); seal.gesture('no'); UI.toast(nm() + ' is not sleepy yet.', 'zzz'); return; }
-      UI.toast(r.night ? 'Hyvää yötä, ' + plain() + '.' : 'Time for a nap.', 'moon');
+      if (!r.ok) { A.play('nope'); seal.gesture('no'); UI.toast(tr('{0} is not sleepy yet.', nm()), 'zzz'); return; }
+      UI.toast(r.night ? 'Hyvää yötä, ' + plain() + '.' : tr('Time for a nap.'), 'moon');
     }
     UI.closeSheet(); UI.refresh();
   };
@@ -738,7 +751,7 @@
     if (blocked()) return;
     const r = S.sauna(state, Date.now());
     if (!r.ok) {
-      if (r.why === 'wait') { A.play('nope'); UI.toast('The stones are still heating. Ready in ' + span(Math.max(MIN, state.saunaAt - Date.now())) + '.', 'steam'); }
+      if (r.why === 'wait') { A.play('nope'); UI.toast(tr('The stones are still heating. Ready in {0}.', UI.mins(state.saunaAt - Date.now())), 'steam'); }
       else refuse(r.why);
       return;
     }
@@ -751,7 +764,7 @@
     await UI.fade(false);
     for (let i = 0; i < 7; i++) { v1.copy(seal.g.position); v1.y += 0.5 * seal.size; FX.steam(v1); }
     seal.gesture('happy', true); A.play('chirp');
-    UI.toast('Ahh. Warm, clean and happy.', 'steam');
+    UI.toast(tr('Ahh. Warm, clean and happy.'), 'steam');
     G.busy = false;
     UI.refresh();
   };
@@ -842,15 +855,15 @@
     UI.refresh();
     if (!r) return;
     seal.gesture(r.best ? 'happy' : 'clap'); A.play(r.best ? 'award' : 'coin');
-    const title = { catch: 'Fish Rain', ball: 'Nose Ball', pairs: 'Fish Pairs' }[id];
-    const unit = id === 'catch' ? 'fish caught' : id === 'ball' ? (score === 1 ? 'bounce' : 'bounces') : 'turns';
-    let html = '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? '. <b>A new best!</b>' : '.') + '</p><div class="loot">' + coinChip(r.coins)
+    const title = tr({ catch: 'Fish Rain', ball: 'Nose Ball', pairs: 'Fish Pairs' }[id]);
+    const unit = tr(id === 'catch' ? 'fish caught' : id === 'ball' ? (score === 1 ? 'bounce' : 'bounces') : 'turns');
+    let html = '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
-    if (fresh.length) html += '<p>New for the album: ' + fresh.join(', ') + '.</p>';
-    else if (r.fish.length) html += '<p>The catch goes in the larder.</p>';
+    if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';
+    else if (r.fish.length) html += '<p>' + tr('The catch goes in the larder.') + '</p>';
     const again = S.canPlay(state).ok;
-    const v = await UI.modal({ title, html, actions: (again ? [{ label: 'Play again', value: 1 }] : []).concat([{ label: again ? 'Enough for now' : 'Lovely', value: 0 }]) });
+    const v = await UI.modal({ title, html, actions: (again ? [{ label: tr('Play again'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
     save();
     if (v === 1) G.startGame(id);
   };
@@ -860,7 +873,7 @@
     const r = S.buy(state, id), it = PN.items[id];
     if (!r.ok) {
       A.play('nope');
-      UI.toast(r.why === 'coins' ? 'Not enough coins yet. Games and dives earn more.' : 'That one is already yours.', 'coin', 'bad');
+      UI.toast(tr(r.why === 'coins' ? 'Not enough coins yet. Games and dives earn more.' : 'That one is already yours.'), 'coin', 'bad');
       return;
     }
     A.play('coin');
@@ -872,7 +885,7 @@
       W.setDecor(state.placed);
       W.decorAt(id, v1); v1.y += 0.6;
       FX.sparkle(v1, 12);
-      UI.toast(UI.esc(it.fi) + ' is out on the shore.', 'home');
+      UI.toast(tr('{0} is out on the shore.', UI.esc(it.fi)), 'home');
     }
     UI.renderSheet(); UI.refresh(); save();
   };
@@ -896,12 +909,18 @@
   /* ---------- settings ---------- */
   G.setSetting = function (k, val) {
     state.settings[k] = val;
+    if (k === 'lang') UI.setLang(val);
     applySettings();
     A.play('tap');
     UI.renderSheet(); save();
   };
+  /* From the first screen, before there is anything to save. */
+  G.setLang = function (lang) {
+    state.settings.lang = lang;
+    UI.setLang(lang);
+  };
   G.rename = async function () {
-    const name = await UI.askName({ title: 'A new name', text: 'What should ' + plain() + ' be called now?', initial: state.name, ok: 'Save name', cancel: 'Keep ' + plain() });
+    const name = await UI.askName({ title: tr('A new name'), text: tr('What should {0} be called now?', plain()), initial: state.name, ok: tr('Save name'), cancel: tr('Keep {0}', plain()) });
     if (!name) return;
     state.name = name;
     UI.renderSheet(); UI.refresh(); save();
@@ -909,8 +928,8 @@
   G.exportSave = async function () {
     save();
     const code = S.exportCode(state);
-    const v = await UI.modal({ title: 'Your save code', html: '<p>Copy this somewhere safe. On another phone or browser, open Settings and choose Use a save code.</p><textarea class="field" id="codeOut" readonly style="margin-top:12px">' + code + '</textarea>',
-      actions: [{ label: 'Copy the code', value: 'copy' }, { label: 'Close', value: 0 }],
+    const v = await UI.modal({ title: tr('Your save code'), html: '<p>' + tr('Copy this somewhere safe. On another phone or browser, open Settings and choose Use a save code.') + '</p><textarea class="field" id="codeOut" readonly style="margin-top:12px">' + code + '</textarea>',
+      actions: [{ label: tr('Copy the code'), value: 'copy' }, { label: tr('Close'), value: 0 }],
       result(val, card) {
         if (val !== 'copy') return val;
         const ta = card.querySelector('#codeOut');
@@ -920,23 +939,23 @@
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).catch(() => { /* the old way above usually worked */ });
         return ok || navigator.clipboard ? 'copied' : 'failed';
       } });
-    if (v === 'copied') UI.toast('Save code copied.', 'check');
-    else if (v === 'failed') UI.toast('Could not copy here. Press and hold the code to copy it.', 'book', 'bad', 4500);
+    if (v === 'copied') UI.toast(tr('Save code copied.'), 'check');
+    else if (v === 'failed') UI.toast(tr('Could not copy here. Press and hold the code to copy it.'), 'book', 'bad', 4500);
   };
   G.importSave = async function () {
-    const code = await UI.modal({ title: 'Use a save code', html: '<p>Paste a code from another device. It replaces the seal on this one.</p><textarea class="field" id="codeIn" placeholder="PN1..." autocomplete="off" spellcheck="false" style="margin-top:12px"></textarea>',
-      actions: [{ label: 'Bring this seal over', value: 'ok' }, { label: 'Cancel', value: 0 }],
+    const code = await UI.modal({ title: tr('Use a save code'), html: '<p>' + tr('Paste a code from another device. It replaces the seal on this one.') + '</p><textarea class="field" id="codeIn" placeholder="PN1..." autocomplete="off" spellcheck="false" style="margin-top:12px"></textarea>',
+      actions: [{ label: tr('Bring this seal over'), value: 'ok' }, { label: tr('Cancel'), value: 0 }],
       result(val, card) { return val === 'ok' ? card.querySelector('#codeIn').value : null; } });
     if (code == null) return;
     const loaded = S.importCode(code);
-    if (!loaded) { A.play('nope'); UI.toast('That code did not work. Check that all of it was copied.', 'book', 'bad', 4500); return; }
+    if (!loaded) { A.play('nope'); UI.toast(tr('That code did not work. Check that all of it was copied.'), 'book', 'bad', 4500); return; }
     noSave = true;
     S.save(loaded);
     location.reload();
   };
   G.resetGame = async function () {
-    const v = await UI.modal({ title: 'Start over?', html: '<p>This says goodbye to ' + plain() + ' for good, along with the coins, the album and everything on the shore.</p>',
-      actions: [{ label: 'Keep ' + plain(), value: 0 }, { label: 'Start over', value: 1 }] });
+    const v = await UI.modal({ title: tr('Start over?'), html: '<p>' + tr('This says goodbye to {0} for good, along with the coins, the album and everything on the shore.', plain()) + '</p>',
+      actions: [{ label: tr('Keep {0}', plain()), value: 0 }, { label: tr('Start over'), value: 1 }] });
     if (v !== 1) return;
     noSave = true;
     S.wipe();
@@ -960,8 +979,8 @@
     await UI.fade(false);
     const now = D.STAGES[state.stage];
     seal.gesture('happy', true); A.play('level'); FX.sparkle(head(), 14); FX.hearts(head(), 4);
-    await UI.modal({ title: plain() + ' has grown!', html: '<p>No longer a ' + before.fi + '. ' + plain() + ' is now a <b>' + now.fi + '</b>, a ' + now.en + '.</p><div class="loot">' + coinChip(50) + '</div>'
-      + (state.stage === 2 ? '<p>A happy, well-fed grown seal may one day have a pup of her own.</p>' : ''), actions: [{ label: 'Onnea!', value: 1 }] });
+    await UI.modal({ title: tr('{0} has grown!', plain()), html: tr('<p>No longer a {0}. {1} is now a <b>{2}</b>, a {3}.</p>', before.fi, plain(), now.fi, now.en) + '<div class="loot">' + coinChip(50) + '</div>'
+      + (state.stage === 2 ? tr('<p>A happy, well-fed grown seal may one day have a pup of her own.</p>') : ''), actions: [{ label: 'Onnea!', value: 1 }] });
     S.save(state); UI.refresh();
     G.busy = false;
   }
@@ -1053,7 +1072,7 @@
     if (G.busy) return;
     const type = hit && hit.pick.type, now = performance.now();
     if (!type) {
-      if (now - lastTapAt < 320) { W.resetView(); A.play('tap'); }
+      if (now - lastTapAt < 380) { W.resetView(); A.play('tap'); }
       lastTapAt = now;
       return;
     }

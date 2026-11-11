@@ -16,6 +16,7 @@ On a phone, open the link and choose "Add to Home Screen" to get it as an app wi
 - **Things to do.** Three mini-games (Fish Rain, Nose Ball, Fish Pairs), dives through the ice hole for fish and treasures, a daily gift and visit streak.
 - **Things to collect.** 14 fish, 12 treasures, 42 Finnish words, 37 awards, hats, scarves and things for the shore, up to a sauna.
 - **Sound.** Every squeak and splash is made on the spot with Web Audio, and a kantele plays now and then. Both can be turned off in Settings.
+- **English or Finnish.** Switch on the first screen or in Settings. Everything is translated: menus, messages, item notes, awards and the mini-games.
 
 ## Saving
 
@@ -31,6 +32,7 @@ norppa/
   index.html            the page
   css/style.css         the interface
   js/data.js            fish, food, clothes, decorations, words, awards
+  js/lang.js            the Finnish text
   js/sim.js             the rules: needs, time away, growing, pups, rewards, saving
   js/astro.js           sun, moon, season and weather for the date and time
   js/audio.js           sound effects and music

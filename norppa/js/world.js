@@ -202,7 +202,7 @@
   W.now = () => W.debugDate || new Date();
   const decor = {};
   const tmpC = new T.Color(), tmpC2 = new T.Color(), tmpV = new T.Vector3(), sunV = new T.Vector3(), moonV = new T.Vector3(), keyV = new T.Vector3();
-  let uniforms, hemi, key, fill, lampLight, fireLight, groundMat, iceMat, snowPts, snowUni, waterUni, treeSnow, denG, poopG, ballMesh;
+  let uniforms, hemi, key, fill, lampLight, fireLight, groundMat, iceMat, snowPts, snowUni, waterUni, treeSnow, denG, poopG, ballMesh, denMat, tunnelMat, rimG;
 
   W.init = function (canvas) {
     const renderer = W.renderer = new T.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -357,11 +357,11 @@
   }
 
   function buildDen(scene) {
-    const snow = U.mat(0xf2f6ff, { roughness: 1 });
+    const snow = denMat = new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1 });     // snow in winter, bare rock once it melts
     denG = W.denG = new T.Group();
     const mound = new T.Mesh(new T.SphereGeometry(1, 30, 14, 0, TAU, 0, Math.PI / 2), snow);
     mound.scale.set(1.75, 1.3, 1.6);
-    const tunnel = new T.Mesh(new T.CylinderGeometry(1.02, 1.02, 1.1, 22, 1, true, Math.PI / 2, Math.PI), new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1, side: T.DoubleSide }));
+    const tunnel = new T.Mesh(new T.CylinderGeometry(1.02, 1.02, 1.1, 22, 1, true, Math.PI / 2, Math.PI), tunnelMat = new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1, side: T.DoubleSide }));
     tunnel.rotation.x = Math.PI / 2; tunnel.position.z = 1.35;
     const rim = U.torus(0.93, 0.14, snow, 0, 0, 1.9, Math.PI, 22);
     const dark = new T.Mesh(new T.CircleGeometry(0.87, 24, 0, Math.PI), new T.MeshBasicMaterial({ color: 0x0b1430 }));
@@ -396,9 +396,11 @@
     const rim = new T.Mesh(new T.RingGeometry(0.8, 1.02, 40), U.mat(0xe4f1fb, { roughness: 0.5 }));
     rim.rotation.x = -Math.PI / 2; rim.position.y = 0.012; rim.receiveShadow = true;
     water.position.y = 0.02;
-    holeG.add(water, rim);
+    rimG = new T.Group();                          // the icy edge, only there while the lake is frozen
+    rimG.add(rim);
+    holeG.add(water, rimG);
     const r = U.rng(9), snow = U.mat(0xf2f6ff, { roughness: 1 });
-    for (let i = 0; i < 11; i++) { const a = i / 11 * TAU + r() * 0.3, d = 1.02 + r() * 0.12, s = 0.13 + r() * 0.12; holeG.add(U.ball(s, snow, Math.cos(a) * d, 0.02, Math.sin(a) * d, 1.4, 0.55, 1, 8)); }
+    for (let i = 0; i < 11; i++) { const a = i / 11 * TAU + r() * 0.3, d = 1.02 + r() * 0.12, s = 0.13 + r() * 0.12; rimG.add(U.ball(s, snow, Math.cos(a) * d, 0.02, Math.sin(a) * d, 1.4, 0.55, 1, 8)); }
     holeG.position.copy(W.HOLE);
     water.userData.pick = { type: 'hole' };
     W.holeWater = water;
@@ -643,6 +645,8 @@
     env.snow = se.snow; env.ice = se.ice; env.season = se.name;
     groundMat.color.setRGB(1, 1, 1).lerp(tmpC2.set(0x93a877), 1 - se.snow);
     treeSnow.visible = se.snow > 0.4;
+    denMat.color.set(0xf2f6ff).lerp(tmpC2.set(0xa9a595), 1 - se.snow); tunnelMat.color.copy(denMat.color);
+    rimG.visible = se.ice > 0.35;
     iceMat.color.setRGB(1, 1, 1).lerp(tmpC2.set(0x2f6a9a), 1 - se.ice);
     iceMat.roughness = U.lerp(0.1, 0.32, se.ice);
     iceMat.emissive.set(0x35ffa0).multiplyScalar(0.1 * auroraVis);

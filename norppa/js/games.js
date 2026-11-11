@@ -4,7 +4,7 @@
    Fish Pairs: a memory game that teaches the fish their Finnish names. */
 (function (PN) {
   'use strict';
-  const T = THREE, U = PN.U, W = PN.World, S = PN.Sim, D = PN.DATA, UI = PN.UI, FX = PN.FX, A = PN.Audio;
+  const T = THREE, U = PN.U, W = PN.World, S = PN.Sim, D = PN.DATA, UI = PN.UI, FX = PN.FX, A = PN.Audio, tr = PN.L;
   const $ = (id) => document.getElementById(id);
   const Games = PN.Games = { active: null };
 
@@ -82,12 +82,12 @@
     const seal = PN.Game.seal;
     UI.showHud(false);
     $('gamehud').hidden = false;
-    $('gScoreLabel').textContent = id === 'catch' ? 'Fish' : 'Bounces';
+    $('gScoreLabel').textContent = tr(id === 'catch' ? 'label|Fish' : 'Bounces');
     $('gTimeWrap').hidden = id !== 'catch';
     $('gScore').textContent = '0';
     $('gTime').textContent = GAME_LEN;
     $('gBig').textContent = '';
-    $('gHint').textContent = id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.';
+    $('gHint').textContent = tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');
     W.setCamMode('game');
     W.stage(true);
     W.ball.visible = false;
@@ -115,7 +115,7 @@
         g.said = n;
         if (n < 3) { big(String(3 - n)); A.play('tick'); }
         else {
-          big('Go!'); A.play('go');
+          big(tr('Go!')); A.play('go');
           g.phase = 'play'; g.clock = 0;
           s.halt(); s.g.position.z = LANE_Z; s.heading = 0;
           g.tx = s.g.position.x;
@@ -197,7 +197,7 @@
           g.stun = 0.9;
           s.gesture('shake', true); A.play('thud'); A.play('sneeze');
           FX.puff(p, 8, 0xffffff, 0.45);
-          big('Bonk!');
+          big(tr('Bonk!'));
           g.bigAt = g.clock;
         } else {
           g.score += it.gold ? 3 : 1;
@@ -238,7 +238,7 @@
       spawnCatch(prog);
     }
     fall(dt, false);
-    if (g.time <= 0) { g.phase = 'over'; g.clock = 0; big('Time!'); A.play('go'); }
+    if (g.time <= 0) { g.phase = 'over'; g.clock = 0; big(tr('Time!')); A.play('go'); }
   }
 
   /* ---------- Nose Ball ---------- */
@@ -273,7 +273,7 @@
       FX.puff(v1.set(b.x, floor - R + 0.05, nz), 6, 0xffffff, 0.4);
       s.gesture('surprise', true);
       g.phase = 'over'; g.clock = 0;
-      big(g.score >= 10 ? 'Wow!' : 'Oops!');
+      big(tr(g.score >= 10 ? 'Wow!' : 'Oops!'));
     }
   }
 
@@ -285,8 +285,8 @@
     g = { id: 'pairs', score: 0, open: [], found: 0, lock: false, caught: {} };
     $('pairsGrid').innerHTML = cards.map((id, i) => '<button class="pcard" data-id="' + id + '" aria-label="Card ' + (i + 1) + '"><span class="back"></span><span class="front"><img src="'
       + PN.Thumbs.get(id) + '" alt=""></span></button>').join('');
-    $('pairsTurns').textContent = '0 turns';
-    $('pairsWord').textContent = 'Find two of the same fish.';
+    $('pairsTurns').textContent = tr('{0} turns', 0);
+    $('pairsWord').textContent = tr('Find two of the same fish.');
     $('pairs').hidden = false;
   }
   function onCard(e) {
@@ -299,13 +299,13 @@
     const a = g.open[0], b = g.open[1];
     g.open = [];
     g.score++;
-    $('pairsTurns').textContent = g.score + (g.score === 1 ? ' turn' : ' turns');
+    $('pairsTurns').textContent = tr(g.score === 1 ? '{0} turn' : '{0} turns', g.score);
     if (a.dataset.id === b.dataset.id) {
       const it = PN.items[a.dataset.id];
       a.classList.add('done'); b.classList.add('done');
       g.found++;
       A.play('match');
-      $('pairsWord').innerHTML = '<b>' + UI.esc(it.fi) + '</b> is ' + UI.esc(it.en.toLowerCase()) + '.';
+      $('pairsWord').innerHTML = tr('<b>{0}</b> is {1}.', UI.esc(it.fi), UI.esc(it.en.toLowerCase()));
       if (g.found === 8) { g.lock = true; setTimeout(() => { if (g && g.id === 'pairs') finish(false); }, 950); }
     } else {
       g.lock = true;
