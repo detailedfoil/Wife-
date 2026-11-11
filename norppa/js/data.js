@@ -217,11 +217,12 @@
   ];
 
   /* Economy dial. Shop prices are doubled and earnings cut to two thirds, so everything
-     takes about three times as long to afford. Change these two numbers to retune. */
-  const ECON = { price: 2, earn: 2 / 3 };
+     takes about three times as long to afford. Cosmetics (wear and decor) cost a further 2x on top.
+     Change these numbers to retune. */
+  const ECON = { price: 2, cosmetic: 2, earn: 2 / 3 };
   PN.ECON = ECON;
   [FISH, FOODS, WEAR, DECOR].forEach((list) => list.forEach((x) => {
-    if (x.price) x.price = Math.round(x.price * ECON.price);
+    if (x.price) x.price = Math.round(x.price * ECON.price * (list === WEAR || list === DECOR ? ECON.cosmetic : 1));
   }));
   AWARDS.forEach((a) => { a.c = Math.max(1, Math.round(a.c * ECON.earn)); });
 

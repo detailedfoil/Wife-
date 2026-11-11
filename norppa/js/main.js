@@ -846,7 +846,7 @@
     seal.halt();
     PN.Games.start(id);
   };
-  G.endGame = async function (id, score, r) {
+  G.endGame = async function (id, score, r, found) {
     W.stage(false); W.setCamMode('home');
     UI.showHud(true);
     resetBall();
@@ -857,7 +857,9 @@
     seal.gesture(r.best ? 'happy' : 'clap'); A.play(r.best ? 'award' : 'coin');
     const title = tr({ catch: 'Fish Rain', ball: 'Nose Ball', pairs: 'Fish Pairs' }[id]);
     const unit = tr(id === 'catch' ? 'fish caught' : id === 'ball' ? (score === 1 ? 'bounce' : 'bounces') : 'turns');
-    let html = '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
+    const short = id === 'pairs' && found < 8;
+    let html = (short ? '<div class="bigscore">' + found + '/8</div><p>' + (found ? tr('Out of turns, but {0} pairs found.', found) : tr('Out of turns!')) + '</p>'
+      : '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p>') + '<div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';

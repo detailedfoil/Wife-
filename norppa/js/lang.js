@@ -93,6 +93,7 @@
     'Keep the ball in the air for as long as you can.': 'Pidä pallo ilmassa niin kauan kuin pystyt.',
     'Fish Pairs': 'Kalaparit',
     'Match the fish and pick up their Finnish names.': 'Etsi kalaparit ja opi kalojen nimet.',
+    'Match every fish within 20 turns and pick up their Finnish names.': 'Etsi kaikki kalaparit 20 vuorossa ja opi niiden suomenkieliset nimet.',
     'best {0} turns': 'paras {0} vuoroa',
     'Dive': 'Sukellus',
     'Send {0} down the ice hole and see what comes back up.': 'Lähetä norppa avantoon ja katso, mitä se tuo tullessaan.',
@@ -226,6 +227,10 @@
 
     // ----- things that happen -----
     '<em>{0}</em> means {1}.': '<em>{0}</em> on englanniksi {1}.',
+    '{0} turns left': '{0} vuoroa jäljellä',
+    '{0} turn left': '{0} vuoro jäljellä',
+    'Out of turns!': 'Vuorot loppuivat!',
+    'Out of turns, but {0} pairs found.': 'Vuorot loppuivat, mutta löysit {0} paria.',
     'Friendship level <b>{0}</b>. +{1} coins': 'Ystävyystaso <b>{0}</b>. +{1} kolikkoa',
     'Award: <b>{0}</b>. +{1} coins': 'Palkinto: <b>{0}</b>. +{1} kolikkoa',
     '{0} has forgiven you.': '{0} antoi sinulle anteeksi.',

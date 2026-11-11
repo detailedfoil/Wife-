@@ -12,20 +12,21 @@
   /* Tuning. Rates are points per hour on a 0 to 100 scale. */
   const T = {
     earnRate: PN.ECON.earn,
-    foodAwake: 7, foodAsleep: 3,
-    joyAwake: 5, joyAsleep: 1.5,
-    energyAwake: 6, energyAsleep: 14,
-    clean: 3.5, cleanPerPoop: 1.5,
-    poopEvery: 3.5, maxPoops: 6,
+    foodAwake: 8.5, foodAsleep: 3.5,
+    joyAwake: 6, joyAsleep: 1.8,
+    energyAwake: 6.5, energyAsleep: 14,
+    clean: 4, cleanPerPoop: 1.5,
+    poopEvery: 3, maxPoops: 6,
     awayMercy: 0.6,                       // needs fall slower while the game is closed
-    grudgePerH: 4, xpLossPerH: 6,         // what an hour at rock bottom costs
-    starveToSick: 16 * H, filthToSick: 20 * H, wellToCure: 3 * H,
+    grudgePerH: 5, xpLossPerH: 6,         // what an hour at rock bottom costs
+    starveToSick: 12 * H, filthToSick: 16 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 10, nurseCost: 1.5,
     pupFood: 6, pupJoy: 4,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
-    pupGrow: 3 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
-    stageAge: [1.5 * DAY, 4 * DAY], stageLevel: [4, 7], pupLevel: 8,
-    diveCooldown: 15 * 60e3, saunaCooldown: 30 * 60e3,
+    pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
+    stageAge: [2 * DAY, 6 * DAY], stageLevel: [5, 8], pupLevel: 9,
+    diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
+    gameEnergy: 12, catchKeep: 5, pairsTurns: 20,
     maxCatchUp: 14 * DAY,
   };
 
@@ -334,7 +335,7 @@
     const sulking = state.grudge > 0;
     s.joy = pct(s.joy + (sulking ? 0.5 : 1.5));
     state.counters.pets++;
-    soothe(state, 3);
+    soothe(state, 2);
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     check(state);
@@ -420,7 +421,7 @@
     return ok({});
   }
 
-  const FISH_W = [0, 60, 22, 9, 3, 0.7];
+  const FISH_W = [0, 64, 20, 7, 2, 0.45];
   function pickFish(state, maxRarity) {
     const list = PN.DATA.FISH.filter((f) => f.rarity <= (maxRarity || 5));
     let total = 0;
@@ -450,12 +451,12 @@
     let r = rnd(state), loot;
     if (state.counters.dives === 1) r = 0.1;          // first dive: fish for certain
     else if (state.counters.dives === 2) r = 0.7;     // second dive: a first treasure
-    if (r < 0.56) {
+    if (r < 0.5) {
       const id = state.counters.dives === 1 ? 'muikku' : pickFish(state);
-      const n = PN.items[id].rarity === 1 ? 1 + Math.floor(rnd(state) * 3) : 1;
+      const n = PN.items[id].rarity === 1 ? 1 + Math.floor(rnd(state) * 2) : 1;
       const isNew = giveFish(state, id, n);
       loot = { kind: 'fish', id, n, isNew };
-    } else if (r < 0.84) {
+    } else if (r < 0.8) {
       const id = pickTrinket(state);
       const isNew = !state.trinkets[id];
       state.trinkets[id] = (state.trinkets[id] || 0) + 1;
@@ -463,7 +464,7 @@
       if (!isNew) coins = earn(state, 4 + 4 * PN.items[id].rarity);
       learn(state, 'aarre');
       loot = { kind: 'trinket', id, n: 1, isNew, coins };
-    } else if (r < 0.95) {
+    } else if (r < 0.9) {
       const n = earn(state, 5 + Math.floor(rnd(state) * 16));
       loot = { kind: 'coins', n };
     } else loot = { kind: 'none' };
@@ -472,14 +473,14 @@
   }
 
   /* Rewards after a mini-game. fishMap: fish caught in Fish Rain. */
-  function gameReward(state, game, score, fishMap) {
+  function gameReward(state, game, score, fishMap, found) {
     const s = state.stats, c = state.counters;
     let coins = 0, best = false;
     const got = [];
     if (game === 'catch') {
       coins = Math.min(60, Math.round(score * 1.2));
       if (score > c.bestCatch) { c.bestCatch = score; best = score > 0; }
-      let left = 8;
+      let left = T.catchKeep;
       Object.keys(fishMap || {}).forEach((id) => {
         const n = Math.min(left, fishMap[id]);
         if (n > 0) { left -= n; got.push({ id, n, isNew: giveFish(state, id, n) }); }
@@ -488,11 +489,12 @@
       coins = Math.min(60, Math.round(score * 1.5));
       if (score > c.bestBall) { c.bestBall = score; best = score > 0; }
     } else if (game === 'pairs') {
-      coins = clamp(34 - score, 8, 26);
-      if (!c.bestPairs || score < c.bestPairs) { c.bestPairs = score; best = true; }
+      const done = found == null || found >= 8;
+      coins = done ? clamp(30 - score, 2, 22) : (found || 0);       // ran out of turns: a coin a pair
+      if (done && (!c.bestPairs || score < c.bestPairs)) { c.bestPairs = score; best = true; }
     }
     coins = earn(state, coins);
-    s.energy = pct(s.energy - 8);
+    s.energy = pct(s.energy - T.gameEnergy);
     s.joy = pct(s.joy + 14);
     c.games++;
     addXp(state, 8);

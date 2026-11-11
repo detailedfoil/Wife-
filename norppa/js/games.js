@@ -11,7 +11,7 @@
   const LANE_Z = 0.6;          // the seal slides along this line, facing the camera
   const HALF = 2.5;            // how far it can go either way
   const GAME_LEN = 40;         // seconds of Fish Rain
-  const FISH_W = [0, 60, 24, 10, 4, 1.2];
+  const FISH_W = [0, 64, 22, 8, 2.5, 0.7];
   const v1 = new T.Vector3(), look = new T.Vector3();
   const rs = (k) => (Math.random() - 0.5) * 2 * k;
   let g = null;                // the game in play
@@ -146,8 +146,8 @@
     if (key) g.tx = U.clamp(g.tx + key * 7 * dt, -HALF, HALF);
     if (g.stun > 0) { g.stun -= dt; g.vx = 0; }
     else {
-      const px = s.g.position.x, want = U.damp(px, g.tx, 16, dt);
-      const step = U.clamp(want - px, -10 * dt, 10 * dt);
+      const px = s.g.position.x, want = U.damp(px, g.tx, 12, dt);
+      const step = U.clamp(want - px, -8.5 * dt, 8.5 * dt);
       s.g.position.x = px + step;
       g.vx = step / Math.max(dt, 0.001);
     }
@@ -157,23 +157,34 @@
 
   /* ---------- Fish Rain ---------- */
   function spawnCatch(prog) {
-    const isBall = g.clock > 7 && Math.random() < 0.13;
+    const isBall = g.clock > 4 && Math.random() < 0.12 + 0.14 * prog;
     const holder = new T.Group();
     let it;
     if (isBall) {
       holder.add(snowball());
-      it = { m: holder, ball: true, v: 4.2 + prog * 1.6, spin: 0 };
+      it = { m: holder, ball: true, v: 4.8 + prog * 2.2, spin: 0 };
     } else {
       const f = pickFish(), model = fishCopy(f.id);
       holder.add(model);
       holder.rotation.z = -Math.PI / 2 + rs(0.35);          // nose down
       holder.scale.setScalar(1.75);
-      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 2.9 + prog * 2.3 + Math.random() * 0.9, spin: rs(5), inner: model };
+      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.4 + prog * 3 + Math.random() * 1.1, spin: rs(5), inner: model };
+      // Later on, some fish wriggle from side to side on the way down.
+      if (prog > 0.3 && Math.random() < 0.25 + 0.5 * prog) { it.sway = 0.35 + Math.random() * 0.55 * prog; it.swayF = 2 + Math.random() * 2; it.swayP = Math.random() * 6.3; }
     }
     const x = U.clamp(g.seal.g.position.x + rs(3.4), -HALF, HALF);
+    it.x0 = x;
     holder.position.set(x, skyTop(), g.z);
     W.scene.add(holder);
     g.items.push(it);
+  }
+  /* A snowball knocks the last fish caught back out of the score. */
+  function dropOne() {
+    if (g.score <= 0) return false;
+    g.score--;
+    const ids = Object.keys(g.caught).filter((k) => g.caught[k] > 0 && PN.items[k].rarity < 5);
+    if (ids.length) { const k = ids[Math.floor(Math.random() * ids.length)]; g.caught[k]--; if (!g.caught[k]) delete g.caught[k]; }
+    return true;
   }
   /* Just above the top edge of the screen, whatever shape the screen is. */
   const skyTop = () => W.cam.ty + Math.tan(W.camera.fov * Math.PI / 360) * W.cam.dist + 0.7;
@@ -190,14 +201,17 @@
     for (let i = g.items.length - 1; i >= 0; i--) {
       const it = g.items[i], p = it.m.position;
       p.y -= it.v * dt;
+      if (it.sway) p.x = U.clamp(it.x0 + Math.sin(g.clock * it.swayF + it.swayP) * it.sway, -HALF - 0.2, HALF + 0.2);
       if (it.inner) it.inner.rotation.x += it.spin * dt;
-      const reach = it.ball ? 0.42 * size + 0.3 : 0.5 * size + 0.34;
+      const reach = it.ball ? 0.44 * size + 0.32 : 0.42 * size + 0.28;
       if (!quiet && g.stun <= 0 && p.y < my + 0.5 && p.y > my - 0.45 * size - 0.25 && Math.abs(p.x - mx) < reach) {
         if (it.ball) {
-          g.stun = 0.9;
+          g.stun = 1.2;
           s.gesture('shake', true); A.play('thud'); A.play('sneeze');
           FX.puff(p, 8, 0xffffff, 0.45);
-          big(tr('Bonk!'));
+          const lost = dropOne();
+          big(tr('Bonk!') + (lost ? ' \u22121' : ''));
+          if (lost) setScore(g.score);
           g.bigAt = g.clock;
         } else {
           g.score += it.gold ? 3 : 1;
@@ -234,7 +248,7 @@
     if (g.bigAt != null && g.clock - g.bigAt > 0.7) { $('gBig').textContent = ''; g.bigAt = null; }
     g.spawn -= dt;
     if (g.spawn <= 0 && g.time > 1.2) {
-      g.spawn = U.lerp(0.9, 0.46, prog) * (0.75 + Math.random() * 0.5);
+      g.spawn = U.lerp(0.85, 0.4, prog) * (0.75 + Math.random() * 0.5);
       spawnCatch(prog);
     }
     fall(dt, false);
@@ -244,19 +258,21 @@
   /* ---------- Nose Ball ---------- */
   function updateBall(dt) {
     const s = g.seal, b = g.b, R = 0.36;
-    b.vy -= 7.2 * dt;
+    const grav = 7.2 + Math.min(4.8, g.score * 0.16);   // the ball comes down faster with every bounce
+    b.vy -= grav * dt;
     b.x += b.vx * dt; b.y += b.vy * dt;
     const wall = HALF + 0.35;
     if (b.x > wall) { b.x = wall; b.vx = -Math.abs(b.vx); A.play('tap', 0.1); }
     else if (b.x < -wall) { b.x = -wall; b.vx = Math.abs(b.vx); A.play('tap', 0.1); }
     s.noseA.getWorldPosition(v1);
     const top = v1.y + 0.1 * s.size, nx = v1.x, nz = v1.z;
-    if (b.vy < 0 && b.y - R < top && b.y - R > top - 0.6 && Math.abs(b.x - nx) < 0.45 * s.size + 0.42) {
+    if (b.vy < 0 && b.y - R < top && b.y - R > top - 0.6 && Math.abs(b.x - nx) < 0.4 * s.size + 0.34) {
       g.score++;
       setScore(g.score);
       b.y = top + R;
-      b.vy = 6.5 + Math.random() * 0.9;
-      b.vx = U.clamp((b.x - nx) * 3.3 + g.vx * 0.28 + rs(0.5 + Math.min(1.7, g.score * 0.06)), -3.7, 3.7);
+      const g2 = 7.2 + Math.min(4.8, g.score * 0.16);
+      b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
+      b.vx = U.clamp((b.x - nx) * 3.6 + g.vx * 0.28 + rs(0.7 + Math.min(2.4, g.score * 0.09)), -4.3, 4.3);
       s.gesture('boop', true);
       A.play('boing');
       FX.sparkle(v1.set(b.x, b.y - R, nz), 3);
@@ -282,10 +298,10 @@
     const st = PN.Game.state;
     const pool = shuffle(D.FISH.filter((f) => st.fish[f.id] || f.rarity <= 2).map((f) => f.id)).slice(0, 8);
     const cards = shuffle(pool.concat(pool));
-    g = { id: 'pairs', score: 0, open: [], found: 0, lock: false, caught: {} };
+    g = { id: 'pairs', score: 0, open: [], found: 0, lock: false, caught: {}, max: S.T.pairsTurns };
     $('pairsGrid').innerHTML = cards.map((id, i) => '<button class="pcard" data-id="' + id + '" aria-label="Card ' + (i + 1) + '"><span class="back"></span><span class="front"><img src="'
       + PN.Thumbs.get(id) + '" alt=""></span></button>').join('');
-    $('pairsTurns').textContent = tr('{0} turns', 0);
+    turnsLeft();
     $('pairsWord').textContent = tr('Find two of the same fish.');
     $('pairs').hidden = false;
   }
@@ -299,23 +315,34 @@
     const a = g.open[0], b = g.open[1];
     g.open = [];
     g.score++;
-    $('pairsTurns').textContent = tr(g.score === 1 ? '{0} turn' : '{0} turns', g.score);
+    turnsLeft();
     if (a.dataset.id === b.dataset.id) {
       const it = PN.items[a.dataset.id];
       a.classList.add('done'); b.classList.add('done');
       g.found++;
       A.play('match');
       $('pairsWord').innerHTML = tr('<b>{0}</b> is {1}.', UI.esc(it.fi), UI.esc(it.en.toLowerCase()));
-      if (g.found === 8) { g.lock = true; setTimeout(() => { if (g && g.id === 'pairs') finish(false); }, 950); }
+      if (g.found === 8) { g.lock = true; setTimeout(() => { if (g && g.id === 'pairs') finish(false); }, 950); return; }
     } else {
       g.lock = true;
-      setTimeout(() => { a.classList.remove('up'); b.classList.remove('up'); if (g) g.lock = false; }, 820);
+      setTimeout(() => { a.classList.remove('up'); b.classList.remove('up'); if (g && g.score < g.max) g.lock = false; }, 600);
     }
+    if (g.score >= g.max) {
+      g.lock = true;
+      A.play('nope');
+      $('pairsWord').innerHTML = '<b>' + tr('Out of turns!') + '</b>';
+      setTimeout(() => { if (g && g.id === 'pairs') finish(false); }, 1300);
+    }
+  }
+  function turnsLeft() {
+    const n = g.max - g.score, el = $('pairsTurns');
+    el.textContent = tr(n === 1 ? '{0} turn left' : '{0} turns left', n);
+    el.classList.toggle('low', n <= 3);
   }
 
   /* ---------- the end of any game ---------- */
   function finish(quit) {
-    const id = g.id, score = g.score, caught = g.caught;
+    const id = g.id, score = g.score, caught = g.caught, found = g.found;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
     g = null;
     Games.active = null;
@@ -323,7 +350,7 @@
     $('pairs').hidden = true;
     let reward = null;
     const counts = id === 'pairs' ? !quit : !(quit && score === 0);
-    if (counts) reward = S.gameReward(PN.Game.state, id, score, caught);
-    PN.Game.endGame(id, score, reward);
+    if (counts) reward = S.gameReward(PN.Game.state, id, score, caught, id === 'pairs' ? found : null);
+    PN.Game.endGame(id, score, reward, found);
   }
 })(window.PN = window.PN || {});
