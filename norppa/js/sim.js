@@ -26,7 +26,7 @@
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [5, 8], pupLevel: 9,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
-    gameEnergy: 12, catchKeep: 5, pairsTurns: 20,
+    gameEnergy: 12, catchKeepChance: 0.1, pairsTurns: 20,
     maxCatchUp: 14 * DAY,
   };
 
@@ -480,11 +480,13 @@
     if (game === 'catch') {
       coins = Math.min(60, Math.round(score * 1.2));
       if (score > c.bestCatch) { c.bestCatch = score; best = score > 0; }
-      let left = T.catchKeep;
-      Object.keys(fishMap || {}).forEach((id) => {
-        const n = Math.min(left, fishMap[id]);
-        if (n > 0) { left -= n; got.push({ id, n, isNew: giveFish(state, id, n) }); }
-      });
+      // Only now and then does the seal get to keep a fish from the round.
+      const caught = [];
+      Object.keys(fishMap || {}).forEach((id) => { for (let i = 0; i < fishMap[id]; i++) caught.push(id); });
+      if (caught.length && rnd(state) < T.catchKeepChance) {
+        const id = caught[Math.floor(rnd(state) * caught.length)];
+        got.push({ id, n: 1, isNew: giveFish(state, id, 1) });
+      }
     } else if (game === 'ball') {
       coins = Math.min(60, Math.round(score * 1.5));
       if (score > c.bestBall) { c.bestBall = score; best = score > 0; }

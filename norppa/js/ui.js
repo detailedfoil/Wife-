@@ -251,7 +251,7 @@
       const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
-      h += row({ icon: 'fish', tint: 'sea', title: tr('Fish Rain'), text: tr('Slide left and right to catch the fish. You keep some of the catch.'), act: 'game', id: 'catch', cls: off(can), side: can.ok ? (st.counters.bestCatch ? tr('best {0}', st.counters.bestCatch) : '') : why(can) });
+      h += row({ icon: 'fish', tint: 'sea', title: tr('Fish Rain'), text: tr('Slide left and right to catch the fish. Now and then you get to keep one.'), act: 'game', id: 'catch', cls: off(can), side: can.ok ? (st.counters.bestCatch ? tr('best {0}', st.counters.bestCatch) : '') : why(can) });
       h += row({ icon: 'up', tint: 'warm', title: tr('Nose Ball'), text: tr('Keep the ball in the air for as long as you can.'), act: 'game', id: 'ball', cls: off(can), side: can.ok ? (st.counters.bestBall ? tr('best {0}', st.counters.bestBall) : '') : why(can) });
       h += row({ icon: 'cards', tint: 'leaf', title: tr('Fish Pairs'), text: tr('Match every fish within 20 turns and pick up their Finnish names.'), act: 'game', id: 'pairs', cls: off(can), side: can.ok ? (st.counters.bestPairs ? tr('best {0} turns', st.counters.bestPairs) : '') : why(can) });
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });

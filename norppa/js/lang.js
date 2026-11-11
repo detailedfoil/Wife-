@@ -88,6 +88,7 @@
     'A quick bounce on the nose, right here.': 'Nopea pomputus nenällä, tässä ja nyt.',
     'Fish Rain': 'Kalasade',
     'Slide left and right to catch the fish. You keep some of the catch.': 'Liu’uta vasemmalle ja oikealle ja nappaa kalat. Osa saaliista jää sinulle.',
+    'Slide left and right to catch the fish. Now and then you get to keep one.': 'Liu’uta norppaa sivuttain ja nappaa kalat. Joskus saat pitää yhden.',
     'best {0}': 'paras {0}',
     'Nose Ball': 'Nenäpallo',
     'Keep the ball in the air for as long as you can.': 'Pidä pallo ilmassa niin kauan kuin pystyt.',
