@@ -166,7 +166,9 @@
     'Buzz': 'Värinä',
     'A little buzz under your finger when you stroke and tap.': 'Pieni värähdys sormen alla, kun silität ja napautat.',
     'Sky': 'Taivas',
-    'Real time follows your clock and the calendar, the way it is in Lapland.': 'Oikea aika seuraa kelloasi ja kalenteria, niin kuin Lapissa.',
+    'Real time shows the daylight and the weather over Inari in Lapland as they are right now.': 'Oikea aika näyttää Inarin päivänvalon ja sään sellaisina kuin ne juuri nyt ovat.',
+    'Live from Inari in Lapland, where it is {0}.': 'Suoraan Inarista, jossa kello on {0}.',
+    'Weather data by Open-Meteo.com.': 'Säätiedot: Open-Meteo.com.',
     'Real time': 'Oikea aika',
     'Day': 'Päivä',
     'Night': 'Yö',
@@ -243,7 +245,7 @@
     'When the tummy bar runs low, tap <b>Feed</b>.': 'Kun mahapalkki hupenee, napauta <b>Ruoki</b>.',
     'Tap the hole in the ice to send {0} diving for finds.': 'Napauta avantoa, niin {0} sukeltaa etsimään löytöjä.',
     'Games in <b>Play</b> earn coins for the shop.': '<b>Leiki</b>-valikon peleistä saa kolikoita kauppaan.',
-    'Drag the sky to look around. It follows your real clock, as it would in Lapland.': 'Katsele ympärillesi vetämällä taivasta. Se seuraa oikeaa kelloasi, niin kuin Lapissa.',
+    'Drag the sky to look around. It shows the real daylight and weather in Lapland right now.': 'Katsele ympärillesi vetämällä taivasta. Se näyttää Lapin oikean päivänvalon ja sään juuri nyt.',
     'Tap a poo to clear it away.': 'Napauta kakkaa, niin se siivotaan pois.',
 
     // ----- pups -----

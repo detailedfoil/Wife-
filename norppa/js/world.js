@@ -668,6 +668,7 @@
     env.polarNight = se.polarNight && mode === 'live'; env.midnightSun = se.midnightSun && mode === 'live';
     env.blue = sun.el > -8 && sun.el < -1.5 && se.snow > 0.5; env.starry = P.stars > 0.6 && cloud < 0.4; env.sunUp = sun.el > 0.5 && cloud < 0.8;
     env.hours = date.getHours() + date.getMinutes() / 60;
+    env.live = !!w.live && mode === 'live';
 
     updateCamera(dt, false);
   };
