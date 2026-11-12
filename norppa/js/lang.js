@@ -302,7 +302,6 @@
     'Unlock': 'Avaa',
     'Not now': 'Ei nyt',
     '{0} unlocked!': '{0} avattu!',
-    '{0} is full, so it all turned into pep. Energy +{1}.': '{0} on täynnä, joten kaikki muuttui virraksi. Energiaa +{1}.',
     '{0} came up in a huff. That water was cold.': '{0} nousi ylös murjottaen. Vesi oli kylmää.',
     'Nobody is poorly. Save the juice for a rainy day.': 'Kukaan ei ole kipeä. Säästä mehu pahan päivän varalle.',
     'Cloudberry juice works wonders.': 'Lakkamehu tekee ihmeitä.',

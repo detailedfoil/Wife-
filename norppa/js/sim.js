@@ -347,9 +347,7 @@
     if (state.asleep) return no('asleep');
     const before = s.food, fav = id === state.fav;
     state.pantry[id]--;
-    const over = Math.max(0, before + it.food - 100);   // what her tummy cannot hold becomes pep
     s.food = pct(s.food + it.food);
-    if (over > 0) s.energy = pct(s.energy + over);
     s.joy = pct(s.joy + (it.joy || 2) + (fav ? 8 : 0));
     if (fav && !state.favKnown) { state.favKnown = true; learn(state, 'herkku'); }
     state.counters.feeds++;
@@ -357,7 +355,7 @@
     addXp(state, before < 85 ? 4 : 1);
     learn(state, 'kala');
     check(state);
-    return ok({ fav, pep: Math.round(over) });
+    return ok({ fav });
   }
 
   function pet(state, now) {
