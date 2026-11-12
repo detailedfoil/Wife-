@@ -264,13 +264,13 @@
       const off = (c) => (c.ok ? '' : ' off');
       const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
+      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', S.price(st, gm.price)) });
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? (best ? tr('best {0}', best) : '') : why(can) });
       });
-      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       if (st.owned.sauna) {
         const wait = now < st.saunaAt;
         h += row({ icon: 'steam', tint: 'warm', title: tr('Sauna'), text: tr('Steam away the dirt and the grumps.'), act: 'sauna', cls: wait || st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : wait ? mins(st.saunaAt - now) : tr('ready') });
