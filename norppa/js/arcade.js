@@ -1,6 +1,6 @@
 /* Pikku Norppa: the arcade. Four mini-games, each on a little stage of its own.
    Swimmy Seal: tap to swim up, slip between the ice and the kelp.
-   Snowball Toss: pull back, aim, let go. Knock over the snowmen.
+   Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
@@ -266,154 +266,153 @@
     };
   })();
 
-  /* ================= Snowball Toss ================= */
+  /* ================= Snowball Toss =================
+     Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
+     Every throw has new wind, the bucket moves further back as the streak grows, and one miss ends it. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 36 * PI / 180, SX = 0, SY = 0.9, SZ = 1.5, CAM_Z = 7.6, AMMO = 12;
-    let view = null, targets = [], ball = null, dots = [], puffs = null;
-    let ammo = 0, wind = 0, combo = 0, aim = null, flying = false, thrown = 0, score = 0, endT = 0, hh = 0.25;
-    const bv = new T.Vector3();
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, RIM_Y = 0.62;
+    let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
+    let wind = 0, score = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
+    const bv = new T.Vector3(), bk = new T.Vector3();
 
     function build() {
       view = stage('#8cc4f3', '#fff0de', { ground: 0xdde8ff, hemi: 2.2, key: 1.5 });
       const sc = view.scene;
-      sc.fog = new T.Fog(0xeef3fa, 22, 62);
+      sc.fog = new T.Fog(0xeef3fa, 24, 64);
       const ground = new T.Mesh(new T.PlaneGeometry(140, 140), U.mat(0xf6f9ff, { roughness: 1 }));
       ground.rotation.x = -PI / 2;
       sc.add(ground);
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 26; i++) {
         const t = tree(1.6 + rnd() * 1.6);
-        const side = i < 20 ? 0 : i % 2 ? 1 : -1;
-        if (!side) t.position.set(-19 + i * 2 + rs(0.8), 0, -17 - rnd() * 8);
-        else t.position.set(side * (8 + rnd() * 6), 0, -14 + rnd() * 14);
+        const side = i < 16 ? 0 : i % 2 ? 1 : -1;
+        if (!side) t.position.set(-16 + i * 2 + rs(0.8), 0, -16 - rnd() * 8);
+        else t.position.set(side * (5 + rnd() * 6), 0, -12 + rnd() * 12);
         sc.add(t);
       }
-      for (let i = 0; i < 4; i++) {
-        const g = PN.Props.decor('snowman').g;
-        g.visible = false;
-        sc.add(g);
-        targets.push({ g, state: 'gone', t: 0.2 + i * 0.25, x: 0, x0: 0, z: 0, moving: false, ph: 0 });
-      }
-      ball = new T.Mesh(new T.SphereGeometry(0.16, 12, 10), U.mat(0xffffff, { roughness: 1 }));
-      ball.visible = false;
+      // a tin bucket, open at the top
+      const tin = new T.MeshStandardMaterial({ color: 0x9fb0c2, metalness: 0.55, roughness: 0.35, side: T.DoubleSide });
+      bucket = new T.Group();
+      bucket.add(U.mesh(new T.CylinderGeometry(RIM, RIM * 0.78, RIM_Y, 24, 1, true), tin, 0, RIM_Y / 2, 0));
+      bucket.add(U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 24), tin, 0, 0.02, 0), -PI / 2));
+      bucket.add(U.rot(U.torus(RIM, 0.025, U.mat(0xc7d3df, { metalness: 0.6, roughness: 0.3 }), 0, RIM_Y, 0, PI * 2, 32), PI / 2));
+      bucket.add(U.rot(U.torus(RIM * 0.92, 0.012, U.mat(0x7d8b99, { metalness: 0.6, roughness: 0.4 }), 0, RIM_Y + 0.18, 0, PI, 24), 0, 0, 0));
+      bucket.add(U.mesh(new T.CircleGeometry(0.75, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
+      bucket.children[bucket.children.length - 1].rotation.x = -PI / 2;
+      sc.add(bucket);
+      // a little flag shows which way the wind blows
+      flag = new T.Group();
+      flag.add(U.cyl(0.025, 0.025, 1.7, U.mat(PN.COL.woodDark), 0, 0.85, 0, 6));
+      cloth = new T.Group();
+      const c = U.mesh(new T.PlaneGeometry(0.55, 0.32, 6, 1), new T.MeshStandardMaterial({ color: PN.COL.red, side: T.DoubleSide, roughness: 0.8 }), 0.275, 0, 0);
+      cloth.add(c); cloth.userData.mesh = c;
+      cloth.position.y = 1.5;
+      flag.add(cloth);
+      sc.add(flag);
+      sealSpot = new T.Vector3();
+      ball = new T.Mesh(new T.SphereGeometry(BR, 14, 10), U.mat(0xffffff, { roughness: 1 }));
       sc.add(ball);
-      const dotM = U.glow(0x2f63c9, { transparent: true, opacity: 0.75 });
-      for (let i = 0; i < 7; i++) {
-        const d = new T.Mesh(new T.SphereGeometry(0.07 - i * 0.004, 8, 6), dotM);
-        d.visible = false;
-        sc.add(d); dots.push(d);
-      }
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
-    function spawn(tg) {
-      for (let tries = 0; tries < 10; tries++) {
-        const z = -3 - rnd() * 8, maxX = Math.tan(hh) * (CAM_Z - z) * 0.7, x = rs(maxX);
-        if (targets.some((o) => o !== tg && o.state !== 'gone' && Math.hypot(o.x0 - x, o.z - z) < 1.7)) continue;
-        tg.x0 = tg.x = x; tg.z = z;
-        tg.moving = score >= 3 && rnd() < 0.35;
-        tg.amp = Math.min(1.2, Math.max(0.3, maxX - Math.abs(x)));
-        break;
-      }
-      tg.ph = rnd() * 6; tg.state = 'in'; tg.t = 0;
-      tg.g.visible = true; tg.g.rotation.set(0, 0, 0); tg.g.scale.setScalar(0.01);
-      tg.g.position.set(tg.x, 0, tg.z);
+    /* New wind and maybe a new distance, ready for the next throw. */
+    function setUp() {
+      dist = score < 4 ? 5 : score < 9 ? 7 : score < 15 ? 9 : 10.5;
+      const top = score < 2 ? 1.2 : score < 6 ? 2.5 : score < 12 ? 3.6 : 4.5;
+      wind = score === 0 ? 0 : Math.round(rnd() * top * 10) / 10 * (rnd() < 0.5 ? -1 : 1);
+      bk.set(0, 0, SZ - dist);
+      bucket.position.copy(bk);
+      flag.position.set(0.95, 0, bk.z - 0.2);
+      view.rig.position.set(-1.05, 0, bk.z + 0.15);
+      K.time(wind ? Math.abs(wind).toFixed(1) + (wind > 0 ? ' →' : ' ←') : '0.0');
+      ball.position.set(0, SY, SZ); ball.visible = true; ball.scale.setScalar(1);
+      mode = 'ready'; rimHit = false;
     }
-    function newWind() {
-      if (thrown < 3) wind = 0;
-      else { wind = (0.9 + rnd() * 1.9) * (rnd() < 0.5 ? -1 : 1); if (rnd() < 0.15) wind = 0; }
-      const n = Math.round(Math.abs(wind) / 0.95);
-      K.hint(n ? tr('Wind') + ' ' + (wind > 0 ? '→' : '←').repeat(n) : tr('No wind'));
-    }
-    function launch() {
-      const v = 7.5 + 7 * aim.p, ch = Math.cos(ELEV) * v;
-      bv.set(Math.sin(aim.yaw) * ch, Math.sin(ELEV) * v, -Math.cos(aim.yaw) * ch);
-      ball.position.set(SX, SY, SZ); ball.visible = true;
-      flying = true; ammo--; K.time(ammo);
+    function launch(yaw) {
+      const v = Math.sqrt(GRAV * dist / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
+      bv.set(Math.sin(yaw) * ch, Math.sin(ELEV) * v, -Math.cos(yaw) * ch);
+      mode = 'fly'; prevY = SY; spin = 8;
       A.play('whoosh');
-      actor.gesture('boop', true);
+      K.hint('');
     }
-    function landed() {
-      flying = false; ball.visible = false; thrown++;
-      if (thrown % 3 === 0 && ammo > 0) newWind();
-      if (ammo <= 0) endT = 0.7;
+    function miss(text) {
+      if (mode === 'out') return;
+      mode = 'out'; wait = 0.9;
+      A.play('nope'); actor.gesture('no', true);
+      K.big(text);
+    }
+    function basket() {
+      mode = 'in'; wait = 0.9;
+      score++; K.score(score);
+      A.play('match'); A.play('thud', 0.1);
+      puffs.emit(bk.x, RIM_Y + 0.1, bk.z, 10, 1.4, 0.09, 0.5, 4);
+      actor.gesture(score % 5 === 0 ? 'clap' : 'happy', true);
+      if (score === 4 || score === 9 || score === 15) K.big(tr('Further back!'));
+      else K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
-      label: 'Points', label2: 'Snowballs', hint: 'Pull back and let go to throw.',
+      label: 'Baskets', label2: 'Wind', hint: 'Flick the snowball into the bucket.',
       view: () => view,
       start() {
         if (!view) build();
-        cast(view, 0.55, true);
-        view.rig.position.set(0, 0, 2.2);
-        face(PI);
-        ammo = AMMO; wind = 0; combo = 0; aim = null; flying = false; thrown = 0; score = 0; endT = 0;
-        K.time(ammo);
-        ball.visible = false; puffs.clear();
-        dots.forEach((d) => { d.visible = false; });
-        targets.forEach((tg, i) => { tg.state = 'gone'; tg.g.visible = false; tg.t = i < 3 ? 0.15 + i * 0.3 : 1e9; tg.x0 = 99; });
+        cast(view, 0.42, true);
+        face(0);
+        score = 0; puffs.clear();
+        setUp();
       },
-      go() { newWind(); },
+      go() {},
       pointer(type, x, y) {
-        if (type === 'down') { if (!flying && ammo > 0) aim = pull(null, 'down', x, y); return; }
-        if (!aim) return;
-        pull(aim, type, x, y, 0.6);
-        if (type === 'up') { if (aim.p > 0.08) launch(); aim = null; }
+        if (mode !== 'ready') return;
+        if (type === 'down') { drag = { x, y, t: performance.now() }; return; }
+        if (!drag || type !== 'up') return;
+        const dx = x - drag.x, dy = y - drag.y;
+        drag = null;
+        if (dy > -30 || Math.hypot(dx, dy) < 40) return;           // a flick has to go up the screen
+        launch(U.clamp(Math.atan2(dx, -dy) * 0.42, -0.5, 0.5));
       },
       update(dt, playing) {
         clock += dt;
-        hh = lens(view);
-        view.camera.position.set(0, 3.6, CAM_Z); view.camera.lookAt(0, 1.0, -6);
-        // the aim: only the first stretch of the arc is shown, and never the wind
-        const show = !!aim && aim.p > 0.03 && playing;
-        if (show) {
-          const v = 7.5 + 7 * aim.p, ch = Math.cos(ELEV) * v, vy = Math.sin(ELEV) * v;
-          dots.forEach((d, i) => {
-            const t = (i + 1) * 0.075;
-            d.position.set(SX + Math.sin(aim.yaw) * ch * t, SY + vy * t - GRAV * t * t / 2, SZ - Math.cos(aim.yaw) * ch * t);
-            d.visible = true;
-          });
-          face(PI - aim.yaw);
-        } else dots.forEach((d) => { d.visible = false; });
-        // snowmen come and go
-        targets.forEach((tg) => {
-          tg.t += dt;
-          if (tg.state === 'gone') { if (tg.t > 0.6 && playing && tg.t < 1e8) spawn(tg); return; }
-          if (tg.moving && tg.state !== 'down') { tg.x = tg.x0 + Math.sin(clock * 1.7 + tg.ph) * tg.amp; tg.g.position.x = tg.x; }
-          if (tg.state === 'in') { tg.g.scale.setScalar(Math.min(1, tg.t / 0.3)); if (tg.t > 0.3) tg.state = 'up'; }
-          else if (tg.state === 'down') {
-            tg.g.rotation.x = -Math.min(1.45, tg.t * 4.2); tg.g.position.y = -Math.max(0, tg.t - 0.3) * 2.2;
-            if (tg.t > 0.75) { tg.state = 'gone'; tg.t = 0; tg.g.visible = false; tg.x0 = 99; }
-          }
-        });
-        // the snowball
-        if (flying) {
-          const steps = 2, h = dt / steps;
-          for (let s = 0; s < steps && flying; s++) {
-            bv.x += wind * h; bv.y -= GRAV * h;
+        lens(view);
+        view.camera.position.set(0, 2.1, SZ + 2.6); view.camera.lookAt(0, 0.55, SZ - Math.min(dist, 8.5));
+        // the flag streams out with the wind
+        const w = Math.abs(wind) / 4.5;
+        cloth.rotation.y = wind >= 0 ? 0 : PI;
+        cloth.rotation.z = -1.3 * (1 - Math.min(1, w * 1.6));
+        cloth.userData.mesh.rotation.y = Math.sin(clock * (4 + 8 * w)) * (0.1 + 0.35 * w);
+        if (mode === 'ready') ball.position.y = SY + Math.sin(clock * 3) * 0.02;
+        if (mode === 'fly' || mode === 'out' && ball.visible && bv.lengthSq() > 0.01) {
+          const steps = 3, h = dt / steps;
+          for (let i = 0; i < steps; i++) {
+            bv.x += wind * 0.5 * h; bv.y -= GRAV * h;
             ball.position.addScaledVector(bv, h);
-            const p = ball.position;
-            for (let i = 0; i < targets.length; i++) {
-              const tg = targets[i];
-              if (tg.state !== 'up' && tg.state !== 'in') continue;
-              if (p.y < 1.75 && Math.hypot(p.x - tg.x, p.z - tg.z) < 0.5) {
-                const d = SZ - tg.z, pts = (d > 10.5 ? 3 : d > 7.5 ? 2 : 1) + (tg.moving ? 2 : 0) + Math.min(3, combo);
-                combo++; score += pts;
-                K.score(score); K.big('+' + pts);
-                A.play('match'); A.play('thud');
-                puffs.emit(p.x, p.y, p.z, 12, 2.2, 0.13, 0.6, 6);
-                tg.state = 'down'; tg.t = 0;
-                if (combo > 1) actor.gesture('happy');
-                landed();
-                break;
+            const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
+            ball.rotation.x -= spin * h;
+            if (mode === 'fly' && prevY >= RIM_Y && p.y < RIM_Y) {
+              if (d < RIM - BR * 0.5) { p.set(bk.x + (p.x - bk.x) * 0.5, RIM_Y - 0.25, bk.z + (p.z - bk.z) * 0.5); bv.set(0, 0, 0); basket(); break; }
+              if (d < RIM + BR) {                                      // clang off the rim
+                A.play('tap'); A.play('thud', 0.1);
+                const ox = (p.x - bk.x) / (d || 1), oz = (p.z - bk.z) / (d || 1);
+                bv.set(ox * 2.2, Math.abs(bv.y) * 0.4, oz * 2.2);
+                p.y = RIM_Y + 0.01; rimHit = true;
+                miss(tr('So close!'));
               }
             }
-            if (flying && p.y < 0.16) {
-              puffs.emit(p.x, 0.15, p.z, 6, 1.2, 0.1, 0.45, 5);
-              A.play('tap');
-              combo = 0;
-              landed();
+            if (mode === 'fly' && p.y < RIM_Y && d < RIM + BR && d > RIM - BR) { bv.x *= -0.4; bv.z *= -0.4; miss(tr('So close!')); }
+            prevY = p.y;
+            if (p.y < BR) {
+              p.y = BR;
+              puffs.emit(p.x, BR, p.z, 6, 1.1, 0.09, 0.45, 5);
+              bv.set(0, 0, 0);
+              if (mode === 'fly') miss(tr('Miss'));
+              break;
             }
           }
         }
-        if (endT > 0 && playing) { endT -= dt; if (endT <= 0) K.over(tr(score >= 12 ? 'Wow!' : 'Time!')); }
+        if ((mode === 'in' || mode === 'out') && playing) {
+          wait -= dt;
+          if (wait <= 0) {
+            if (mode === 'out') { mode = 'done'; K.over(tr(score >= 10 ? 'Wow!' : 'Time!')); }
+            else setUp();
+          }
+        }
         puffs.update(dt);
         actor.update(dt, clock, null);
       },
