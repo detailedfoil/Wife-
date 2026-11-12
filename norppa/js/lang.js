@@ -328,6 +328,7 @@
     'You have {0} sardines. Place a bet.': 'Sinulla on {0} sardiinia. Aseta panos.',
     'Place a bet.': 'Aseta panos.',
     'All gone!': 'Kaikki meni!',
+    'The house is out!': 'Pankki on tyhjä!',
     'High risk, high reward. She might come back Angy.': 'Iso riski, iso palkinto. Hän saattaa palata murjottaen.',
     '{0} got nipped by a crab and came up Angy.': 'Rapu nipisti! {0} nousi ylös murjottaen.',
     '{0} lost the fish at the last second and is Angy.': '{0} menetti kalan viime hetkellä ja murjottaa.',

@@ -720,7 +720,7 @@
      Bet 5 sardines, hit or stand, beat the dealer without going over 21. A win pays five times the bet.
      You sit down with ten sardines and play until you cash out or they are all gone. Only the winnings turn into coins. */
   const bj = (() => {
-    const START = 10, BETS = [5], PAY = 5;
+    const START = 10, BETS = [5], PAY = 5, CAP = 120;   // 120 sardines of winnings is 40 coins, the most a game pays, so the table closes there
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, mode = 'bet', wait = 0, msg = '', hide = true;
     const total = (h) => {
@@ -836,6 +836,7 @@
           else settle();
         } else if (mode === 'done') {
           if (stack < BETS[0]) { el.hidden = true; K.over(tr('All gone!')); return; }
+          if (stack - START >= CAP) { el.hidden = true; K.over(tr('The house is out!')); return; }
           mode = 'bet'; you = []; house = []; hide = true; msg = tr('Place a bet.'); paint();
         }
       },
@@ -848,7 +849,7 @@
      to fill the calm meter. Fill it and the round is won, then the next one is harder. Let it run dry and it is over. */
   const sauna = (() => {
     let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null;
-    let band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
+    let lvl = 0, band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
     function build() {
       view = stage('#3a2114', '#6b4023', { ground: 0x5a3a22, hemi: 1.7, key: 1.3 });
       const sc = view.scene;
@@ -867,7 +868,8 @@
       el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm');
     }
     function newRound() {
-      size = Math.max(0.15, 0.31 - round * 0.022);
+      lvl = round * 4 / 7;                       // round 7 is as hard as round 4 used to be
+      size = Math.max(0.15, 0.31 - lvl * 0.022);
       band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.6; calm = 0.35; rest = 0;
     }
     function paint() {
@@ -910,9 +912,9 @@
         if (band > 1 - size) { band = 1 - size; bandV = 0; }
         if (pressing) { splash -= dt; if (splash <= 0) { splash = 0.16; steam.emit(0.62, 0.2, 1.0, 2, 0.5, 0.16, 1.3, -1.6); if (rnd() < 0.25) A.play('bubble', 0.25); } }
         // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
-        const k = 1 + round * 0.22;
+        const k = 1 + lvl * 0.22;
         hop -= dt;
-        if (hop <= 0) { hop = (0.5 + rnd() * 1.5) / Math.sqrt(k); pinT = rnd() < 0.3 ? rnd() : U.clamp(pin + rs(0.3 + 0.04 * round), 0.03, 0.97); }
+        if (hop <= 0) { hop = (0.5 + rnd() * 1.5) / Math.sqrt(k); pinT = rnd() < 0.3 ? rnd() : U.clamp(pin + rs(0.3 + 0.04 * lvl), 0.03, 0.97); }
         pinV += ((pinT - pin) * 9 * k - pinV * 4.5) * dt;
         pin = U.clamp(pin + pinV * dt, 0, 1);
         const inside = pin >= band && pin <= band + size;
