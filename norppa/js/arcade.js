@@ -819,5 +819,94 @@
     };
   })();
 
-  G.ext.swim = swim; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj;
+  /* ---------- Löyly: the sauna game ----------
+     Played like the fishing in Stardew Valley. A needle (how hot she feels) wanders up and down the thermometer.
+     Hold to throw water on the stones and the green band rises; let go and it sinks. Keep the needle in the green
+     to fill the calm meter. Fill it and the round is won, then the next one is harder. Let it run dry and it is over. */
+  const sauna = (() => {
+    let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null;
+    let band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
+    function build() {
+      view = stage('#3a2114', '#6b4023', { ground: 0x5a3a22, hemi: 1.7, key: 1.3 });
+      const sc = view.scene;
+      const wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 });
+      sc.add(U.box(9, 6, 0.2, wood, 0, 1.6, -1.7));
+      for (let i = -5; i <= 5; i++) sc.add(U.box(0.035, 6, 0.03, dark, i * 0.8, 1.6, -1.58));
+      sc.add(U.box(9, 0.2, 6, dark, 0, -1.05, 0.6));
+      sc.add(U.box(5.2, 0.16, 1.5, wood, -0.4, -0.08, -0.85));            // the bench she sits on
+      sc.add(U.box(5.2, 0.14, 0.9, wood, -0.4, -0.6, 0.25));              // the step below it
+      sc.add(U.box(1.0, 0.95, 0.9, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), 0.62, -0.62, 1.0));   // the stove
+      stones = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
+      for (let i = 0; i < 9; i++) sc.add(U.ball(0.17 + rnd() * 0.06, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stones, 0.62 + rs(0.3), -0.1 + rnd() * 0.08, 1.0 + rs(0.26), 1, 0.8, 1, 8, 6));
+      const lamp = new T.PointLight(0xffa85a, 6, 9); lamp.position.set(0.62, 0.5, 1.7); sc.add(lamp);
+      steam = Puffs(sc, 50, 0xffffff, 0.5);
+      view.camera.position.set(0, 0.9, 5.6);
+      el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm');
+    }
+    function newRound() {
+      size = Math.max(0.15, 0.31 - round * 0.022);
+      band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.6; calm = 0.35; rest = 0;
+    }
+    function paint() {
+      zoneEl.style.height = (size * 100) + '%'; zoneEl.style.bottom = (band * 100) + '%';
+      pinEl.style.top = ((1 - pin) * 100) + '%';
+      calmEl.style.height = (calm * 100) + '%';
+      zoneEl.classList.toggle('out', !(pin >= band && pin <= band + size));
+    }
+    return {
+      label: 'Rounds', hint: 'Hold to throw water. Keep the needle in the green.',
+      view: () => view,
+      start() {
+        if (!view) build();
+        cast(view, 0.62, true);
+        actor.g.position.set(-0.5, 0, -0.75);
+        face(0.25);
+        round = 0; live = false; hold = false; steam.clear();
+        newRound();
+        el.hidden = false; paint();
+      },
+      stop() { el.hidden = true; },
+      go() { live = true; },
+      pointer(type) { if (type === 'down') hold = true; else if (type === 'up') hold = false; },
+      key() {},
+      update(dt, playing) {
+        clock += dt;
+        lens(view);
+        view.camera.lookAt(0, -0.15, 0);
+        actor.update(dt, clock, null);
+        steam.update(dt, 0, 0);
+        stones.emissiveIntensity = 0.6 + pin * 1.6;
+        if (!playing || !live) return;
+        if (rest > 0) { rest -= dt; if (rest <= 0) newRound(); paint(); return; }
+        const pressing = hold || K.keys() !== 0;
+        // the green band: water lifts it, and it sinks back on its own, with a small bounce off the bottom
+        bandV += (pressing ? 2.6 : -2.1) * dt;
+        bandV = U.clamp(bandV, -1.3, 1.3);
+        band += bandV * dt;
+        if (band < 0) { band = 0; bandV = Math.abs(bandV) * 0.35; }
+        if (band > 1 - size) { band = 1 - size; bandV = 0; }
+        if (pressing) { splash -= dt; if (splash <= 0) { splash = 0.16; steam.emit(0.62, 0.2, 1.0, 2, 0.5, 0.16, 1.3, -1.6); if (rnd() < 0.25) A.play('bubble', 0.25); } }
+        // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
+        const k = 1 + round * 0.22;
+        hop -= dt;
+        if (hop <= 0) { hop = (0.5 + rnd() * 1.5) / Math.sqrt(k); pinT = rnd() < 0.3 ? rnd() : U.clamp(pin + rs(0.3 + 0.04 * round), 0.03, 0.97); }
+        pinV += ((pinT - pin) * 9 * k - pinV * 4.5) * dt;
+        pin = U.clamp(pin + pinV * dt, 0, 1);
+        const inside = pin >= band && pin <= band + size;
+        calm = U.clamp(calm + (inside ? 0.125 : -0.15) * dt, 0, 1);
+        paint();
+        if (calm >= 1) {
+          round++; K.score(round); A.play(round % 5 === 0 ? 'award' : 'match'); actor.gesture('happy', true); K.big(tr('Lovely!'));
+          steam.emit(0.62, 0.25, 1.0, 14, 1.1, 0.2, 1.6, -1.4);
+          rest = 1.3;
+        } else if (calm <= 0) {
+          A.play('nope'); actor.gesture(pin > band ? 'shake' : 'no', true);
+          el.hidden = true;
+          K.over(tr(pin > band + size ? 'Too hot!' : 'Too cold!'));
+        }
+      },
+    };
+  })();
+
+  G.ext.swim = swim; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});

@@ -286,7 +286,7 @@
         h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + names(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
       } else {
         // one shelf for each kind of thing, with a row of shortcuts at the top
-        const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = wear ? D.WEAR : D.DECOR;
+        const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = (wear ? D.WEAR : D.DECOR).filter((it) => !it.hidden);
         const one = (it) => {
           const own = st.owned[it.id], on = wear ? st.wearing[it.slot] === it.id : st.placed[it.id];
           return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(wear ? (on ? 'Wearing' : 'tag|Wear') : (on ? 'Out' : 'Put out')) + '</span>' : price(it)), '', own ? (wear ? 'wear' : 'place') : 'buy');

@@ -850,6 +850,7 @@
     const r = S.unlockGame(state, id);
     if (!r.ok) { A.play('nope'); return; }
     A.play('award'); FX.sparkle(head(), 10); save();
+    W.setDecor(state.placed);
     UI.toast(tr('{0} unlocked!', title), 'coin');
     UI.renderSheet(); UI.refresh();
   };

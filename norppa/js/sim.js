@@ -102,7 +102,8 @@
       return dst;
     };
     fill(obj, base);
-    if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;   // anyone who already played Fish Rain keeps it
+    if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
+    if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;   // a sauna bought in the old shop brings its game along   // anyone who already played Fish Rain keeps it
     return obj;
   }
 
@@ -468,6 +469,7 @@
     const cost = price(state, g.price);
     if (state.coins < cost) return no('coins');
     state.coins -= cost; state.owned['game_' + id] = true;
+    if (id === 'sauna') { state.owned.sauna = true; state.placed.sauna = true; }   // the sauna itself comes with the game
     return ok({ price: cost });
   }
 
