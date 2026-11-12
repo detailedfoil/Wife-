@@ -968,6 +968,34 @@
     S.save(loaded);
     location.reload();
   };
+  /* Look for a newer copy of the game on the web. If there is one, fetch the files fresh, clear the old copies and reload.
+     The seal is saved first and nothing in the save changes. */
+  let updating = false;
+  G.checkUpdate = async function () {
+    if (updating) return;
+    updating = true;
+    const btn = $('titleUpdate'), onTitle = !$('title').hidden;
+    const say = (text) => { if (onTitle) { btn.textContent = text; } else UI.toast(text, 'refresh'); };
+    if (onTitle) btn.disabled = true;
+    say(tr('Checking...'));
+    const done = (text, wait) => { say(text); setTimeout(() => { updating = false; if (onTitle) { btn.disabled = false; btn.textContent = tr('Check for updates'); } }, wait || 2600); };
+    try {
+      const res = await fetch('js/data.js?check=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('status ' + res.status);
+      const m = /PN\.UPDATED = '([^']*)'/.exec(await res.text());
+      if (!m) throw new Error('no stamp');
+      if (!(m[1] > PN.UPDATED)) { done(tr('You have the latest version.')); return; }
+      say(tr('Updating...'));
+      if (state && !noSave) S.save(state);
+      const files = ['./'].concat(Array.prototype.map.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), (el) => el.getAttribute('src') || el.getAttribute('href')));
+      if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); }
+      if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map((r) => r.unregister())); }
+      await Promise.all(files.map((f) => fetch(f, { cache: 'reload' }).catch(() => null)));
+      noSave = true;
+      location.reload();
+    } catch (e) { done(tr('Could not check. Are you online?'), 3400); }
+  };
+
   /* Developer mode: tap the small print seven times in Settings to find it. */
   let devTaps = 0, devAt = 0;
   G.devTap = function () {

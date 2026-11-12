@@ -216,6 +216,8 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .title-foot { font-size: 13px; color: #a9bcec; max-width: 290px; text-wrap: balance; }
 .title-lang { font: 800 14px var(--body); color: #e3ebff; padding: 9px 18px; border-radius: 999px; background: rgba(255, 255, 255, .12); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .3); margin-top: 4px; }
 .title-lang:active { transform: scale(.95); }
+.title-update { margin-top: -4px; background: none; box-shadow: none; font-size: 13px; color: #b9caf5; text-decoration: underline; text-underline-offset: 3px; padding: 6px 12px; }
+.title-update:disabled { opacity: .75; text-decoration: none; }
 .fade { position: fixed; inset: 0; background: #f4f8ff; opacity: 0; pointer-events: none; transition: opacity .5s; }
 .fade.on { opacity: 1; }
 

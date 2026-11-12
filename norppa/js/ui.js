@@ -22,6 +22,7 @@
     heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/>',
     bolt: '<path d="M13 2.5L5 14h6l-1 7.5L18 10h-6l1-7.5z"/>',
     drop: '<path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/>',
+    refresh: '<path d="M19.5 12a7.5 7.5 0 11-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
     back: '<path d="M14.5 5.5L8 12l6.5 6.5"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
@@ -362,6 +363,7 @@
         + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight and the weather over Inari in Lapland as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>' + tr('Move to another device') + '</b><span class="d">' + tr('Your seal is saved on this device only. A save code lets you carry it to another one.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="export">' + tr('Get save code') + '</button><button class="btn small ghost" data-do="import">' + tr('Use a save code') + '</button></span></span></div>'
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
+        + '<button class="row" data-do="update"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Check for updates') + '</b><span class="d">' + tr('Look for a newer version of the game and load it. Your seal stays as she is.') + '</span></span></button>'
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
         + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
@@ -389,6 +391,7 @@
     else if (act === 'sky') game.setSetting('sky', id);
     else if (act === 'lang') game.setSetting('lang', id);
     else if (act === 'rename') game.rename();
+    else if (act === 'update') game.checkUpdate();
     else if (act === 'devtap') game.devTap();
     else if (act === 'devtoggle') game.devToggle();
     else if (act === 'devreset') game.devReset();
@@ -463,16 +466,18 @@
     ready(isNew, onGo) {
       titleInfo = { isNew, note: onGo.note };
       const go = $('titleGo');
-      go.hidden = false; $('titleFoot').hidden = !isNew; $('titleLang').hidden = false;
+      go.hidden = false; $('titleFoot').hidden = !isNew; $('titleLang').hidden = false; $('titleUpdate').hidden = false;
       $('titleSub').removeAttribute('data-l');
       UI.title.label();
       go.addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('pop'); onGo(); }, { once: true });
+      $('titleUpdate').addEventListener('click', () => G().checkUpdate());
       $('titleLang').addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('tap'); G().setLang(PN.lang === 'fi' ? 'en' : 'fi'); });
     },
     label() {
       if (!titleInfo) return;
       $('titleSub').textContent = titleInfo.isNew ? tr('A little seal is waiting under the snow.') : (titleInfo.note ? titleInfo.note() : '');
       $('titleGo').textContent = tr(titleInfo.isNew ? 'Meet your seal' : 'title|Play');
+      if (!$('titleUpdate').disabled) $('titleUpdate').textContent = tr('Check for updates');
     },
     hide() { const t = $('title'); t.classList.add('gone'); setTimeout(() => { t.hidden = true; }, 750); },
     show() { const t = $('title'); t.hidden = false; t.classList.remove('gone'); },

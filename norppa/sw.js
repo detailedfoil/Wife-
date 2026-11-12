@@ -1,6 +1,6 @@
 /* Pikku Norppa: lets the game open with no signal.
    Online, the newest files are always fetched; the copy kept here is only the fallback. */
-const CACHE = 'pikku-norppa-v24';
+const CACHE = 'pikku-norppa-v25';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'vendor/three.min.js',
   'js/data.js', 'js/lang.js', 'js/sim.js', 'js/astro.js', 'js/audio.js', 'js/props.js', 'js/seal.js', 'js/fx.js', 'js/world.js', 'js/ui.js', 'js/games.js', 'js/arcade.js', 'js/main.js',
@@ -23,7 +23,7 @@ self.addEventListener('fetch', (e) => {
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(key);
-    const fresh = fetch(req).then((res) => {
+    const fresh = fetch(req, { cache: 'no-cache' }).then((res) => {
       if (res && res.ok) cache.put(key, res.clone());
       return res;
     });
