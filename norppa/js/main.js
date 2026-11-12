@@ -158,7 +158,8 @@
     if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry, grubby or glum for {0} hour.', 'Was left hungry, grubby or glum for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
-    if (state.grudge > 0) { bad = true; add('grump', tr('{0} is Angy. Food and gentle strokes will win it round.', plain()), 'bad'); }
+    if (state.medLate) { bad = true; add('grump', tr('{0} is Angy. She needs her medicine.', plain()), 'bad'); }
+    else if (state.grudge > 0) { bad = true; add('grump', tr('{0} is Angy. Food and gentle strokes will win it round.', plain()), 'bad'); }
     if (sum.cured) add('check', tr('Got over being poorly.'), 'good');
     sum.pupWell.forEach((n) => add('check', tr('<b>{0}</b> is feeling better.', UI.esc(n)), 'good'));
     if (sum.poops > 0) add('poo', sum.poops === 1 ? tr('Left a little present on the shore.') : tr('Left {0} little presents on the shore.', sum.poops));
@@ -276,6 +277,8 @@
         const a = D.awards[e.id];
         UI.toast(tr('Award: <b>{0}</b>. +{1} coins', UI.esc(PN.awardTitle(a)), a.c), 'star', '', 4200);
         A.play('award', 0.6);
+      } else if (e.type === 'medlate') {
+        UI.toast(tr('{0} has not had her medicine and is Angy.', nm()), 'grump', '', 4200);
       } else if (e.type === 'forgiven') {
         UI.toast(tr('{0} has forgiven you.', nm()), 'heart', '', 3800);
         seal.sulk = false; seal.heading = W.HOME_HEADING;
@@ -1024,6 +1027,61 @@
       S.devOff(state); A.play('tap');
     }
     save(); UI.renderSheet(); UI.refresh();
+  };
+  /* ---------- her daily medicine ---------- */
+  let medStream = null, medBusy = false, medWatch = 0;
+  const medEl = (id) => document.getElementById(id);
+  function medStop() {
+    clearInterval(medWatch); medWatch = 0;
+    if (medStream) { medStream.getTracks().forEach((t) => t.stop()); medStream = null; }
+    medEl('medVideo').srcObject = null;
+  }
+  G.openMed = async function () {
+    const info = S.medInfo(state, Date.now()), box = medEl('medCam');
+    if (info.taken && info.photo) return;
+    box.hidden = false; box.classList.remove('nocam'); medBusy = false;
+    medEl('medTitle').textContent = tr('Medicine time');
+    medEl('medShoot').textContent = tr('Take photo'); medEl('medShoot').hidden = false;
+    medEl('medSkip').textContent = tr('I took it'); medEl('medSkip').hidden = info.taken;
+    medEl('medMsg').textContent = tr('Hold the pill in the ring and take a photo for {0} bonus coins.', S.T.medBonus);
+    medEl('medRing').classList.remove('ok');
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('none');
+      medStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+      if (box.hidden) { medStop(); return; }          // closed while the camera was starting
+      const v = medEl('medVideo'); v.srcObject = medStream; await v.play().catch(() => {});
+      medWatch = setInterval(() => { if (!medBusy) medEl('medRing').classList.toggle('ok', PN.Pill.fromVideo(v).ok); }, 400);   // the ring turns green when it can see the pill
+    } catch (err) {
+      box.classList.add('nocam'); medEl('medShoot').hidden = true;
+      medEl('medMsg').textContent = tr('The camera is not available, so there is no photo bonus. You can still tap I took it.');
+    }
+  };
+  G.closeMed = function () { medStop(); medEl('medCam').hidden = true; };
+  G.medPhoto = async function () {
+    if (medBusy || !medStream) return;
+    medBusy = true; A.play('tap');
+    const v = medEl('medVideo');
+    let seen = false;
+    for (let i = 0; i < 8 && !seen; i++) { seen = PN.Pill.fromVideo(v).ok; if (!seen) await new Promise((r) => setTimeout(r, 150)); }
+    medBusy = false;
+    if (medEl('medCam').hidden) return;
+    if (seen) G.medTaken(true);
+    else { A.play('nope'); medEl('medMsg').textContent = tr('I cannot see the pill. Hold it in the ring on a plain surface and try again.'); }
+  };
+  G.medTaken = function (photo) {
+    const r = S.takeMed(state, Date.now(), !!photo);
+    G.closeMed();
+    if (!r.ok) return;
+    A.play(r.coins ? 'award' : 'chirp'); FX.sparkle(head(), 10, 0x7fe0a8);
+    if (!seal.asleep) seal.gesture('happy', true);
+    UI.toast(r.coins ? tr('{0} took her medicine. +{1} coins for the photo!', nm(), r.coins) : tr('{0} took her medicine.', nm()), r.coins ? 'coin' : 'check', '', 3800);
+    UI.refresh(); save();
+  };
+  G.devMed = function () {
+    if (!state.dev) return;
+    state.med.day = ''; state.med.photoDay = ''; state.med.since = '2000-01-01';
+    state.medLate = false; S.medSync(state, new Date().setHours(12, 30));
+    A.play('tap'); UI.closeSheet(); UI.refresh(); save();
   };
   G.devEnergy = function () {
     if (!state.dev) return;

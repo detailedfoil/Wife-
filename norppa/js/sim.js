@@ -24,6 +24,7 @@
     diveSulkChance: 0.33, diveSulk: 100,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
+    medHour: 12, medBonus: 30,            // medicine is due by midday; a photo of the pill earns a bonus
     sulkTreats: 5, sulkPats: 10,          // she picks five different treats and wants ten head pats
     sulkSleepH: 4, sulkTreatCut: 1 / 6, sulkPatCut: 1 / 6,   // a full sulk naps off in 4 h; each wished-for treat takes a sixth off it, and the ten pats together another sixth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
@@ -68,6 +69,7 @@
       asleep: false, sleepKind: null, wakeAt: 100,
       sick: false, wellMs: 0, starveMs: 0, filthMs: 0,
       grudge: 0, griefUntil: 0, neglectMs: 0,
+      med: { day: '', photoDay: '', since: dayKey(now), n: 0 }, medLate: false,   // her daily medicine: the day it was last taken, and the day the routine began
       poops: [], poopT: 1.5,
       coins: 40, coinCarry: 0,
       pantry: { muikku: 5, ahven: 2 },
@@ -101,9 +103,11 @@
       });
       return dst;
     };
+    if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: dayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
     fill(obj, base);
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
-    if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;   // a sauna bought in the old shop brings its game along   // anyone who already played Fish Rain keeps it
+    if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;
+   // a sauna bought in the old shop brings its game along   // anyone who already played Fish Rain keeps it
     return obj;
   }
 
@@ -176,6 +180,7 @@
   function sulkCheck(state) {
     const w = state.sulkWant;
     if (!w) return;
+    if (state.medLate) { state.grudge = 100; return; }   // nothing but her medicine ends this one
     if (state.grudge > 1e-6) return;
     state.grudge = 0; state.sulkWant = null;
     state.counters.forgiven++;
@@ -318,11 +323,33 @@
   }
 
   /* Move the world forward to now. Returns what happened in between. */
+  /* Her daily medicine. It is due before midday; from midday on she is Angy until she has had it.
+     The day starts afresh at midnight, and the routine begins the day after it first appears. */
+  function medInfo(state, now) {
+    const today = dayKey(now), m = state.med;
+    const taken = m.day === today;
+    return { taken, photo: m.photoDay === today, late: !taken && today > m.since && localHour(now) >= T.medHour };
+  }
+  function medSync(state, now) {
+    const late = medInfo(state, now).late;
+    if (late && !state.medLate) emit('medlate');
+    if (!late && state.medLate) { state.grudge = 0; state.sulkWant = null; }   // a new day wipes yesterday's slate
+    state.medLate = late;
+    if (late) state.grudge = 100;
+  }
+  function takeMed(state, now, photo) {
+    const today = dayKey(now), m = state.med, first = m.day !== today;
+    let coins = 0;
+    if (first) { m.day = today; m.n = (m.n || 0) + 1; }
+    if (photo && m.photoDay !== today) { m.photoDay = today; coins = T.medBonus; state.coins += coins; }
+    if (state.medLate) { state.medLate = false; state.grudge = 0; state.sulkWant = null; emit('forgiven'); }
+    return { ok: first || coins > 0, first, coins };
+  }
   function advance(state, now, opts) {
     const away = !!(opts && opts.away);
     const sum = { ms: 0, sleptH: 0, poops: 0, neglectH: 0, xpLost: 0, hungry: false, sulk: false,
       sick: false, cured: false, pupSick: [], pupLost: [], pupWell: [] };
-    if (!(now > state.lastSeen)) { state.lastSeen = now; return sum; }   // clock went backwards: just carry on
+    if (!(now > state.lastSeen)) { state.lastSeen = now; medSync(state, now); return sum; }   // clock went backwards: just carry on
     const span = Math.min(now - state.lastSeen, T.maxCatchUp);
     sum.ms = now - state.lastSeen;
     let t = now - span;
@@ -333,6 +360,7 @@
       t += dt;
     }
     state.lastSeen = now;
+    medSync(state, now);
     sum.xpLost = Math.round(sum.xpLost);
     return sum;
   }
@@ -801,5 +829,5 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
-    sulkNeeds, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
+    sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

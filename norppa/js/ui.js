@@ -79,7 +79,11 @@
     $('bAlbum').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('album'); });
     $('bSettings').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('settings'); });
     $('skyChip').addEventListener('click', () => UI.skyInfo());
-    $('sulkChip').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('feed'); });
+    $('sulkChip').addEventListener('click', () => { PN.Audio.play('tap'); if (G().state.medLate) G().openMed(); else UI.openSheet('feed'); });
+    $('medChip').addEventListener('click', () => { PN.Audio.play('tap'); G().openMed(); });
+    $('medClose').addEventListener('click', () => G().closeMed());
+    $('medShoot').addEventListener('click', () => G().medPhoto());
+    $('medSkip').addEventListener('click', () => G().medTaken(false));
     $('sheetClose').addEventListener('click', () => UI.closeSheet());
     $('scrubDone').addEventListener('click', () => G().endWash(false));
     $('sheetTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) { PN.Audio.play('tap'); UI.tab = b.dataset.tab; UI.renderSheet(); } });
@@ -103,7 +107,10 @@
     });
     const sn = S.sulkNeeds(st), chip = $('sulkChip');
     chip.hidden = !sn;
-    if (sn) chip.textContent = tr('Angy: {0} of sleep left', mins(napMs(st)));
+    if (sn) chip.textContent = st.medLate ? tr('Angy: needs her medicine') : tr('Angy: {0} of sleep left', mins(napMs(st)));
+    const mi = S.medInfo(st, Date.now()), mc = $('medChip');
+    mc.hidden = !st.name || (mi.taken && mi.photo) || S.dayKey(Date.now()) <= st.med.since;
+    if (!mc.hidden) mc.textContent = mi.taken ? tr('Pill photo +{0}', S.T.medBonus) : tr('Medicine');
     $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
     const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
     document.querySelectorAll('#dock button').forEach((b) => {
@@ -239,7 +246,7 @@
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will cheer her up today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
         + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
@@ -374,6 +381,7 @@
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
         + '<button class="row" data-do="update"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Check for updates') + '</b><span class="d">' + tr('Look for a newer version of the game and load it. Your seal stays as she is.') + '</span></span></button>'
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
+        + (st.dev ? '<button class="row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
         + '</div><p class="note" data-do="devtap">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + ' ' + tr('Last updated {0}.', updatedText()) + ' ' + tr('Weather data by Open-Meteo.com.').replace('Open-Meteo.com', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>') + '</p>';
@@ -405,6 +413,8 @@
     else if (act === 'devtoggle') game.devToggle();
     else if (act === 'devreset') game.devReset();
     else if (act === 'devenergy') game.devEnergy();
+    else if (act === 'devmed') game.devMed();
+    else if (act === 'med') { UI.closeSheet(); game.openMed(); }
     else if (act === 'export') game.exportSave();
     else if (act === 'import') game.importSave();
     else if (act === 'reset') game.resetGame();
