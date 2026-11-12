@@ -24,7 +24,7 @@
     diveSulkChance: 0.33, diveSulk: 100,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
-    medHour: 6, medBonus: 30,             // she is Anxi from 6am until she has had it; a photo of the pill earns a bonus
+    medHour: 6, medBonus: 100,             // she is Anxi from 6am until she has had it; a photo of the pill earns a bonus
     sulkTreats: 5, sulkPats: 10,          // she picks five different treats and wants ten head pats
     sulkSleepH: 4, sulkTreatCut: 1 / 6, sulkPatCut: 1 / 6,   // a full sulk naps off in 4 h; each wished-for treat takes a sixth off it, and the ten pats together another sixth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
