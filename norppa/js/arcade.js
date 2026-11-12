@@ -317,7 +317,7 @@
     /* New wind and maybe a new distance, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
-      wind = Math.round(10 * Math.pow(rnd(), 1.5) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
+      wind = Math.round(10 * Math.pow(rnd(), 1.2) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
       bk.set(0, 0, SZ - dist);
       bucket.position.copy(bk);
       flag.position.set(0.95, 0, bk.z - 0.2);
