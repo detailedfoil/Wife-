@@ -271,7 +271,7 @@
      Every throw has new wind and the bucket stays where it is. A miss resets the
      streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62, WINDK = 0.45;   // HIT: the scoring circle is 30% wider than the bucket looks
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62, WINDK = 0.5;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
     let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
@@ -317,8 +317,8 @@
     /* New wind and maybe a new distance, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
-      const top = score < 4 ? 2.7 : score < 12 ? 5.6 : score < 24 ? 8 : 10;   // the wind grows half as fast with the streak, up to 10
-      wind = score === 0 ? 0 : Math.round(rnd() * top * 10) / 10 * (rnd() < 0.5 ? -1 : 1);
+      const top = score < 3 ? 3.5 : score < 8 ? 6 : score < 16 ? 8.5 : 10;   // the wind grows with the streak, up to 10
+      wind = score === 0 ? 0 : Math.round(top * (0.45 + 0.55 * rnd()) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // and is never a gentle breeze for long
       bk.set(0, 0, SZ - dist);
       bucket.position.copy(bk);
       flag.position.set(0.95, 0, bk.z - 0.2);
@@ -371,7 +371,7 @@
         // the angle of the flick sets the aim: a swipe within about 6 degrees of straight goes dead straight,
         // and past that the aim opens up quickly so a wind-beating sideways shot is only a moderate slant
         const ang = Math.atan2(dx, -dy), g = Math.max(0, Math.abs(ang) - 0.1);
-        launch(U.clamp(Math.sign(ang) * (0.5 * g + 0.9 * g * g * g), -0.62, 0.62));
+        launch(U.clamp(Math.sign(ang) * (0.5 * g + 1.3 * g * g * g), -0.8, 0.8));
       },
       update(dt, playing) {
         clock += dt;
