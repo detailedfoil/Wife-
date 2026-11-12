@@ -14,104 +14,27 @@
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/blackjack-table.css">
 </head>
 <body>
 <canvas id="gl" aria-label="Your seal's snowy home" data-la="Your seal's snowy home"></canvas>
 <div class="vignette" aria-hidden="true"></div>
-
-<!-- Everything that floats over the scene while you look after the seal -->
 <div class="hud" id="hud" hidden>
   <div class="top">
-    <button class="plate pebble" id="plate" aria-label="About your seal" data-la="About your seal">
-      <span class="plate-name" id="pName"></span>
-      <span class="plate-sub" id="pSub"></span>
-      <span class="plate-xp" aria-hidden="true"><i id="pXp"></i></span>
-    </button>
-    <div class="top-r">
-      <div class="coins pebble" id="coins" aria-label="Coins" data-la="Coins"><span class="ic-slot" data-ic="coin"></span><b id="coinN">0</b></div>
-      <button class="round pebble" id="bAlbum" aria-label="Album" data-la="Album"><span class="ic-slot" data-ic="book"></span></button>
-      <button class="round pebble" id="bSettings" aria-label="Settings" data-la="Settings"><span class="ic-slot" data-ic="sliders"></span></button>
-    </div>
+    <button class="plate pebble" id="plate" aria-label="About your seal" data-la="About your seal"><span class="plate-name" id="pName"></span><span class="plate-sub" id="pSub"></span><span class="plate-xp" aria-hidden="true"><i id="pXp"></i></span></button>
+    <div class="top-r"><div class="coins pebble" id="coins" aria-label="Coins" data-la="Coins"><span class="ic-slot" data-ic="coin"></span><b id="coinN">0</b></div><button class="round pebble" id="bAlbum" aria-label="Album" data-la="Album"><span class="ic-slot" data-ic="book"></span></button><button class="round pebble" id="bSettings" aria-label="Settings" data-la="Settings"><span class="ic-slot" data-ic="sliders"></span></button></div>
   </div>
-  <div class="meters" id="meters">
-    <button class="meter pebble" data-stat="food" aria-label="Tummy" data-la="Tummy"><span class="ic-slot" data-ic="fish"></span><span class="bar"><i></i></span></button>
-    <button class="meter pebble" data-stat="joy" aria-label="Happiness" data-la="Happiness"><span class="ic-slot" data-ic="heart"></span><span class="bar"><i></i></span></button>
-    <button class="meter pebble" data-stat="energy" aria-label="Energy" data-la="Energy"><span class="ic-slot" data-ic="bolt"></span><span class="bar"><i></i></span></button>
-    <button class="meter pebble" data-stat="clean" aria-label="Cleanliness" data-la="Cleanliness"><span class="ic-slot" data-ic="drop"></span><span class="bar"><i></i></span></button>
-  </div>
-  <div class="under">
-    <div class="family" id="family"></div>
-    <button class="sulk-chip pebble" id="sulkChip" hidden></button>
-    <button class="sky-chip pebble" id="skyChip" aria-label="Weather" data-la="Weather"></button>
-  </div>
-  <div class="bubble" id="bubble" hidden></div>
-  <div class="floats" id="floats" aria-hidden="true"></div>
-  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
-  <div class="scrub pebble" id="scrub" hidden>
-    <span class="scrub-label" data-l="Rub to scrub">Rub to scrub</span>
-    <span class="bar"><i id="scrubBar"></i></span>
-    <button class="btn small" id="scrubDone" data-l="Done">Done</button>
-  </div>
-  <nav class="dock" id="dock" aria-label="Look after your seal" data-la="Look after your seal">
-    <button class="pebble" data-act="feed"><span class="ic-slot" data-ic="fish"></span><span data-l="Feed">Feed</span></button>
-    <button class="pebble" data-act="play"><span class="ic-slot" data-ic="ball"></span><span data-l="Play">Play</span></button>
-    <button class="pebble" data-act="wash"><span class="ic-slot" data-ic="bubbles"></span><span data-l="Wash">Wash</span></button>
-    <button class="pebble" data-act="sleep"><span class="ic-slot" data-ic="moon"></span><span id="sleepLabel">Sleep</span></button>
-    <button class="pebble" data-act="shop"><span class="ic-slot" data-ic="bag"></span><span data-l="Shop">Shop</span></button>
-  </nav>
+  <div class="meters" id="meters"><button class="meter pebble" data-stat="food" aria-label="Tummy" data-la="Tummy"><span class="ic-slot" data-ic="fish"></span><span class="bar"><i></i></span></button><button class="meter pebble" data-stat="joy" aria-label="Happiness" data-la="Happiness"><span class="ic-slot" data-ic="heart"></span><span class="bar"><i></i></span></button><button class="meter pebble" data-stat="energy" aria-label="Energy" data-la="Energy"><span class="ic-slot" data-ic="bolt"></span><span class="bar"><i></i></span></button><button class="meter pebble" data-stat="clean" aria-label="Cleanliness" data-la="Cleanliness"><span class="ic-slot" data-ic="drop"></span><span class="bar"><i></i></span></button></div>
+  <div class="under"><div class="family" id="family"></div><button class="sulk-chip pebble" id="sulkChip" hidden></button><button class="sky-chip pebble" id="skyChip" aria-label="Weather" data-la="Weather"></button></div>
+  <div class="bubble" id="bubble" hidden></div><div class="floats" id="floats" aria-hidden="true"></div><div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <div class="scrub pebble" id="scrub" hidden><span class="scrub-label" data-l="Rub to scrub">Rub to scrub</span><span class="bar"><i id="scrubBar"></i></span><button class="btn small" id="scrubDone" data-l="Done">Done</button></div>
+  <nav class="dock" id="dock" aria-label="Look after your seal" data-la="Look after your seal"><button class="pebble" data-act="feed"><span class="ic-slot" data-ic="fish"></span><span data-l="Feed">Feed</span></button><button class="pebble" data-act="play"><span class="ic-slot" data-ic="ball"></span><span data-l="Play">Play</span></button><button class="pebble" data-act="wash"><span class="ic-slot" data-ic="bubbles"></span><span data-l="Wash">Wash</span></button><button class="pebble" data-act="sleep"><span class="ic-slot" data-ic="moon"></span><span id="sleepLabel">Sleep</span></button><button class="pebble" data-act="shop"><span class="ic-slot" data-ic="bag"></span><span data-l="Shop">Shop</span></button></nav>
 </div>
-
-<!-- Mini-game score and timer -->
-<div class="gamehud" id="gamehud" hidden>
-  <div class="g-top">
-    <div class="g-pill pebble"><span id="gScoreLabel">Fish</span> <b id="gScore">0</b></div>
-    <div class="g-pill pebble" id="gTimeWrap"><span id="gTimeLabel" data-l="Time">Time</span> <b id="gTime">40</b></div>
-    <button class="round pebble" id="gQuit" aria-label="Stop the game" data-la="Stop the game"><span class="ic-slot" data-ic="close"></span></button>
-  </div>
-  <div class="g-big" id="gBig"></div>
-  <div class="g-hint" id="gHint"></div>
-  <div class="bj" id="bjTable" hidden></div>
-  <div class="sg" id="saunaGauge" hidden><div class="sg-heat"><i id="sgZone"></i><b id="sgPin"></b></div><div class="sg-calm"><i id="sgCalm"></i></div></div>
-</div>
-<!-- Slide-up sheet: food, play, shop, album, settings -->
-<div class="sheet" id="sheet" hidden>
-  <div class="sheet-head">
-    <h2 id="sheetTitle"></h2>
-    <button class="round" id="sheetClose" aria-label="Close" data-la="Close"><span class="ic-slot" data-ic="close"></span></button>
-  </div>
-  <div class="tabs" id="sheetTabs" hidden></div>
-  <div class="sheet-body" id="sheetBody"></div>
-</div>
-
-<!-- Messages that need an answer -->
+<div class="gamehud" id="gamehud" hidden><div class="g-top"><div class="g-pill pebble"><span id="gScoreLabel">Fish</span> <b id="gScore">0</b></div><div class="g-pill pebble" id="gTimeWrap"><span id="gTimeLabel" data-l="Time">Time</span> <b id="gTime">40</b></div><button class="round pebble" id="gQuit" aria-label="Stop the game" data-la="Stop the game"><span class="ic-slot" data-ic="close"></span></button></div><div class="g-big" id="gBig"></div><div class="g-hint" id="gHint"></div><div class="bj" id="bjTable" hidden></div><div class="sg" id="saunaGauge" hidden><div class="sg-heat"><i id="sgZone"></i><b id="sgPin"></b></div><div class="sg-calm"><i id="sgCalm"></i></div></div></div>
+<div class="sheet" id="sheet" hidden><div class="sheet-head"><h2 id="sheetTitle"></h2><button class="round" id="sheetClose" aria-label="Close" data-la="Close"><span class="ic-slot" data-ic="close"></span></button></div><div class="tabs" id="sheetTabs" hidden></div><div class="sheet-body" id="sheetBody"></div></div>
 <div class="modal" id="modal" hidden><div class="modal-card" id="modalCard" role="dialog" aria-modal="true"></div></div>
-
-<!-- First screen -->
-<div class="title" id="title">
-  <div class="title-in">
-    <h1>Pikku<br>Norppa</h1>
-    <p class="title-sub" id="titleSub" data-l="Packing the snow">Packing the snow</p>
-    <button class="btn big" id="titleGo" hidden>Meet your seal</button>
-    <p class="title-foot" id="titleFoot" data-l="Norppa is Finnish for a ringed seal. Pikku means little." hidden>Norppa is Finnish for a ringed seal. Pikku means little.</p>
-    <button class="title-lang" id="titleLang" data-l="Suomeksi" hidden>Suomeksi</button>
-    <button class="title-lang title-update" id="titleUpdate" hidden>Check for updates</button>
-  </div>
-</div>
+<div class="title" id="title"><div class="title-in"><h1>Pikku<br>Norppa</h1><p class="title-sub" id="titleSub" data-l="Packing the snow">Packing the snow</p><button class="btn big" id="titleGo" hidden>Meet your seal</button><p class="title-foot" id="titleFoot" data-l="Norppa is Finnish for a ringed seal. Pikku means little." hidden>Norppa is Finnish for a ringed seal. Pikku means little.</p><button class="title-lang" id="titleLang" data-l="Suomeksi" hidden>Suomeksi</button><button class="title-lang title-update" id="titleUpdate" hidden>Check for updates</button></div></div>
 <div class="fade" id="fade" aria-hidden="true"></div>
-
-<script src="vendor/three.min.js"></script>
-<script src="js/data.js"></script>
-<script src="js/lang.js"></script>
-<script src="js/sim.js"></script>
-<script src="js/astro.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/props.js"></script>
-<script src="js/seal.js"></script>
-<script src="js/fx.js"></script>
-<script src="js/world.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/games.js"></script>
-<script src="js/arcade.js"></script>
-<script src="js/main.js"></script>
+<script src="vendor/three.min.js"></script><script src="js/data.js"></script><script src="js/lang.js"></script><script src="js/sim.js"></script><script src="js/astro.js"></script><script src="js/audio.js"></script><script src="js/props.js"></script><script src="js/seal.js"></script><script src="js/fx.js"></script><script src="js/world.js"></script><script src="js/ui.js"></script><script src="js/games.js"></script><script src="js/arcade.js"></script><script src="js/main.js"></script>
 </body>
 </html>
