@@ -680,6 +680,7 @@
       buzz(10);
     });
     if (r.med) UI.toast(tr('Cloudberry juice works wonders.'), 'med');
+    else if (r.pep >= 3) UI.toast(tr('{0} is full, so it all turned into pep. Energy +{1}.', nm(), r.pep), 'bolt');
     else if (r.fav && state.counters.feeds < 400 && Math.random() < 0.35) UI.toast(tr('{0}, the favourite!', UI.esc(it.fi)), 'heart');
     UI.renderSheet(); UI.refresh();
   };

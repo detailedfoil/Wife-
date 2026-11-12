@@ -297,13 +297,21 @@
   ];
 
   /* Economy dial. Shop prices are doubled and earnings cut to two thirds. Cosmetics (wear and decor)
-     cost a further 6x on top, so 12x their base price. Every fish fills a quarter less.
-     Change these numbers to retune. */
-  const ECON = { price: 2, cosmetic: 6, earn: 2 / 3, fishFood: 0.75 };
+     cost 12x their base price at the top end, but are then spread on a curve so the cheapest sits near
+     cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
+  const ECON = { price: 2, cosmetic: 6, cosmeticFloor: 200, earn: 2 / 3, fishFood: 0.75 };
   PN.ECON = ECON;
-  [FISH, FOODS, WEAR, DECOR].forEach((list) => list.forEach((x) => {
-    if (x.price) x.price = Math.round(x.price * ECON.price * (list === WEAR || list === DECOR ? ECON.cosmetic : 1));
-  }));
+  [FISH, FOODS].forEach((list) => list.forEach((x) => { if (x.price) x.price = Math.round(x.price * ECON.price); }));
+  {
+    const cos = WEAR.concat(DECOR).filter((x) => x.price);
+    const old = (x) => x.price * ECON.price * ECON.cosmetic;
+    const lo = Math.min.apply(null, cos.map(old)), hi = Math.max.apply(null, cos.map(old));
+    const k = Math.log(hi / ECON.cosmeticFloor) / Math.log(hi / lo);
+    cos.forEach((x) => {
+      const v = ECON.cosmeticFloor * Math.pow(old(x) / lo, k);
+      x.price = Math.round(v / 10) * 10;
+    });
+  }
   FISH.forEach((f) => { f.food = Math.max(3, Math.round(f.food * ECON.fishFood)); });
   AWARDS.forEach((a) => { a.c = Math.max(1, Math.round(a.c * ECON.earn)); });
 
