@@ -842,9 +842,9 @@
 
   /* ---------- mini-games ---------- */
   G.unlockGame = async function (id) {
-    const g = PN.GAMES[id], title = tr(g.title);
-    if (state.coins < g.price) { A.play('nope'); UI.toast(tr('Not enough coins yet. Games and dives earn more.'), 'coin', 'bad'); return; }
-    const v = await UI.modal({ title, html: '<p>' + tr('Unlock {0} for {1} coins?', title, g.price) + '</p>', actions: [{ label: tr('Unlock'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+    const g = PN.GAMES[id], title = tr(g.title), cost = S.price(state, g.price);
+    if (state.coins < cost) { A.play('nope'); UI.toast(tr('Not enough coins yet. Games and dives earn more.'), 'coin', 'bad'); return; }
+    const v = await UI.modal({ title, html: '<p>' + tr('Unlock {0} for {1} coins?', title, cost) + '</p>', actions: [{ label: tr('Unlock'), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (v !== 1) return;
     const r = S.unlockGame(state, id);
     if (!r.ok) { A.play('nope'); return; }
@@ -967,6 +967,40 @@
     if (!loaded) { A.play('nope'); UI.toast(tr('That code did not work. Check that all of it was copied.'), 'book', 'bad', 4500); return; }
     noSave = true;
     S.save(loaded);
+    location.reload();
+  };
+  /* Developer mode: tap the small print seven times in Settings to find it. */
+  let devTaps = 0, devAt = 0;
+  G.devTap = function () {
+    const now = Date.now();
+    devTaps = now - devAt < 2500 ? devTaps + 1 : 1; devAt = now;
+    if (devTaps < 7) return;
+    devTaps = 0;
+    try { localStorage.setItem('pikkunorppa.devshown', '1'); } catch (e) { /* nothing to do */ }
+    A.play('award'); UI.toast(tr('Developer mode found.'), 'bolt');
+    UI.renderSheet();
+  };
+  G.devToggle = async function () {
+    if (!state.dev) {
+      const v = await UI.modal({ title: tr('Developer mode'), html: '<p>' + tr('Everything becomes free. Your save as it is right now is kept safe, and Reset puts it back.') + '</p>',
+        actions: [{ label: tr('Turn on'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+      if (v !== 1) return;
+      if (!S.devOn(state)) { A.play('nope'); UI.toast(tr('Could not keep a copy of the save, so developer mode stays off.'), 'bolt', 'bad', 4500); return; }
+      A.play('award');
+    } else {
+      const v = await UI.modal({ title: tr('Turn off developer mode?'), html: '<p>' + tr('Prices come back. What you have now stays, and the old save is let go.') + '</p>',
+        actions: [{ label: tr('Turn off'), value: 1 }, { label: tr('Keep it on'), value: 0 }] });
+      if (v !== 1) return;
+      S.devOff(state); A.play('tap');
+    }
+    save(); UI.renderSheet(); UI.refresh();
+  };
+  G.devReset = async function () {
+    const v = await UI.modal({ title: tr('Reset to before developer mode?'), html: '<p>' + tr('Everything goes back to how it was just before developer mode was turned on, and developer mode switches off.') + '</p>',
+      actions: [{ label: tr('Reset'), value: 1 }, { label: tr('Cancel'), value: 0 }] });
+    if (v !== 1) return;
+    noSave = true;
+    if (!S.devRestore()) { noSave = false; A.play('nope'); UI.toast(tr('There is no earlier save to go back to.'), 'bolt', 'bad', 4500); return; }
     location.reload();
   };
   G.resetGame = async function () {

@@ -437,15 +437,19 @@
     return ok({});
   }
 
+  /* What something costs right now. Developer mode makes everything free. */
+  const price = (state, p) => (state.dev ? 0 : p);
+
   /* Mini-games are bought once with coins. */
   const gameOwned = (state, id) => !PN.GAMES[id] || PN.GAMES[id].price === 0 || !!state.owned['game_' + id];
   function unlockGame(state, id) {
     const g = PN.GAMES[id];
     if (!g) return no('none');
     if (gameOwned(state, id)) return no('owned');
-    if (state.coins < g.price) return no('coins');
-    state.coins -= g.price; state.owned['game_' + id] = true;
-    return ok({ price: g.price });
+    const cost = price(state, g.price);
+    if (state.coins < cost) return no('coins');
+    state.coins -= cost; state.owned['game_' + id] = true;
+    return ok({ price: cost });
   }
 
   function canPlay(state) {
@@ -556,8 +560,9 @@
     const it = PN.items[id];
     if (!it || it.price == null) return no('nosale');
     if ((it.kind === 'wear' || it.kind === 'decor') && state.owned[id]) return no('owned');
-    if (state.coins < it.price) return no('coins');
-    state.coins -= it.price;
+    const cost = price(state, it.price);
+    if (state.coins < cost) return no('coins');
+    state.coins -= cost;
     let away = null;
     if (it.kind === 'wear') {
       state.owned[id] = true; state.wearing[it.slot] = id;
@@ -735,7 +740,28 @@
       return migrate(obj);
     } catch (e) { return null; }
   }
-  function wipe() { try { localStorage.removeItem(KEY); } catch (e) { /* nothing to do */ } }
+  /* Developer mode: everything is free. The save from just before it began is kept apart, so it can come back. */
+  const DEV_KEY = KEY + '.beforedev';
+  function devOn(state) {
+    try { if (!localStorage.getItem(DEV_KEY)) localStorage.setItem(DEV_KEY, JSON.stringify(Object.assign({}, state, { dev: false }))); }
+    catch (e) { return false; }
+    state.dev = true;
+    return true;
+  }
+  function devHasBackup() { try { return !!localStorage.getItem(DEV_KEY); } catch (e) { return false; } }
+  function devRestore() {
+    try {
+      const raw = localStorage.getItem(DEV_KEY);
+      if (!raw) return null;
+      const obj = migrate(JSON.parse(raw));
+      obj.dev = false; obj.lastSeen = Date.now();          // no time passes while developer mode was on
+      localStorage.setItem(KEY, JSON.stringify(obj));
+      localStorage.removeItem(DEV_KEY);
+      return obj;
+    } catch (e) { return null; }
+  }
+  function devOff(state) { state.dev = false; try { localStorage.removeItem(DEV_KEY); } catch (e) { /* nothing to do */ } }
+  function wipe() { try { localStorage.removeItem(DEV_KEY); localStorage.removeItem(KEY); } catch (e) { /* nothing to do */ } }
 
   function exportCode(state) {
     return 'PN1.' + btoa(unescape(encodeURIComponent(JSON.stringify(state))));
@@ -753,5 +779,5 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
-    giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
+    price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

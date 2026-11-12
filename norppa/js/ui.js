@@ -257,7 +257,7 @@
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
-        if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= gm.price ? '' : ' off', side: tr('Unlock {0}', gm.price) });
+        if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', S.price(st, gm.price)) });
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? (best ? tr('best {0}', best) : '') : why(can) });
       });
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
@@ -269,7 +269,7 @@
     },
     shop(st) {
       let h = '';
-      const price = (it) => coinTag(it.price, st.coins >= it.price ? 'buy' : 'cant');
+      const price = (it) => coinTag(S.price(st, it.price), st.coins >= S.price(st, it.price) ? 'buy' : 'cant');
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
         h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + names(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
@@ -350,6 +350,7 @@
         + '<p class="note">' + next + '</p><div class="btn-row"><button class="btn small ghost" data-do="rename">' + tr('Change name') + '</button></div>';
     },
     settings(st) {
+      const devShown = (s) => s.dev || (() => { try { return !!localStorage.getItem('pikkunorppa.devshown'); } catch (e) { return false; } })();
       const tog = (k, label, icon, text) => '<button class="row" data-do="toggle" data-id="' + k + '"><span class="ic-wrap">' + ic(icon) + '</span><span class="txt"><b>' + tr(label) + '</b><span class="d">' + tr(text) + '</span></span><span class="toggle' + (st.settings[k] ? ' on' : '') + '"></span></button>';
       const seg = ['live', 'day', 'night'].map((m) => '<button class="' + (st.settings.sky === m ? 'on' : '') + '" data-do="sky" data-id="' + m + '">' + tr({ live: 'Real time', day: 'Day', night: 'Night' }[m]) + '</button>').join('');
       const lang = ['en', 'fi'].map((m) => '<button class="' + (PN.lang === m ? 'on' : '') + '" data-do="lang" data-id="' + m + '">' + { en: 'English', fi: 'Suomi' }[m] + '</button>').join('');
@@ -359,7 +360,9 @@
         + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight and the weather over Inari in Lapland as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>' + tr('Move to another device') + '</b><span class="d">' + tr('Your seal is saved on this device only. A save code lets you carry it to another one.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="export">' + tr('Get save code') + '</button><button class="btn small ghost" data-do="import">' + tr('Use a save code') + '</button></span></span></div>'
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
-        + '</div><p class="note">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + ' ' + tr('Weather data by Open-Meteo.com.').replace('Open-Meteo.com', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>') + '</p>';
+        + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
+        + (st.dev ? '<button class="row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
+        + '</div><p class="note" data-do="devtap">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + ' ' + tr('Weather data by Open-Meteo.com.').replace('Open-Meteo.com', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>') + '</p>';
     },
   };
 
@@ -383,6 +386,9 @@
     else if (act === 'sky') game.setSetting('sky', id);
     else if (act === 'lang') game.setSetting('lang', id);
     else if (act === 'rename') game.rename();
+    else if (act === 'devtap') game.devTap();
+    else if (act === 'devtoggle') game.devToggle();
+    else if (act === 'devreset') game.devReset();
     else if (act === 'export') game.exportSave();
     else if (act === 'import') game.importSave();
     else if (act === 'reset') game.resetGame();
