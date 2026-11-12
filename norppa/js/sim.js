@@ -25,8 +25,8 @@
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
     medHour: 6, medBonus: 100,             // she is Anxi from 6am until she has had it; a photo of the pill earns a bonus
-    sulkTreats: 5, sulkPats: 10,          // she picks five different treats and wants ten head pats
-    sulkSleepH: 4, sulkTreatCut: 1 / 6, sulkPatCut: 1 / 6,   // a full sulk naps off in 4 h; each wished-for treat takes a sixth off it, and the ten pats together another sixth
+    sulkTreats: 3, sulkPats: 3,           // she picks three different treats and wants three head pats and a bath
+    sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the three pats together a fifth, and the bath a fifth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
@@ -104,6 +104,7 @@
       return dst;
     };
     if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: dayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
+    if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
     if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;
@@ -162,7 +163,7 @@
     });
   }
 
-  /* What a sulking seal wants before she will forgive you: five different treats of her own choosing, and ten head pats.
+  /* What a sulking seal wants before she will forgive you: three different treats of her own choosing, three head pats and a bath.
      She chooses when the sulk starts (or the first time anyone looks), from treats the shop sells at a fair price. */
   function sulkNeeds(state) {
     if (!(state.grudge > 0)) { state.sulkWant = null; return null; }
@@ -172,7 +173,7 @@
         return (it.kind === 'fish' || it.kind === 'food') && it.price > 0 && it.price <= 50 && !it.energy;
       });
       for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd(state) * (i + 1)); const x = pool[i]; pool[i] = pool[j]; pool[j] = x; }
-      state.sulkWant = { treats: pool.slice(0, T.sulkTreats), got: [], pats: 0 };
+      state.sulkWant = { treats: pool.slice(0, T.sulkTreats), got: [], pats: 0, bath: false };
     }
     return state.sulkWant;
   }
@@ -430,6 +431,8 @@
     state.filthMs = 0;
     state.counters.washes++;
     addXp(state, before < 60 ? 6 : 2);
+    const want = sulkNeeds(state);
+    if (want && !want.bath) { want.bath = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkBathCut); sulkCheck(state); }
     learn(state, 'kylpy');
     check(state);
     return ok({});
