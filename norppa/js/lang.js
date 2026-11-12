@@ -360,6 +360,7 @@
     'Put back the save from just before developer mode was turned on.': 'Palauttaa tallennuksen, joka oli juuri ennen kehittäjätilan käynnistämistä.',
     'Fill energy': 'Täytä energia',
     'Top up the energy bar whenever you like.': 'Täytä energiapalkki milloin haluat.',
+    'Last updated {0}.': 'Viimeksi päivitetty {0}.',
     'Developer mode found.': 'Kehittäjätila löytyi.',
     'Everything becomes free. Your save as it is right now is kept safe, and Reset puts it back.': 'Kaikesta tulee ilmaista. Nykyinen tallennuksesi säilytetään, ja nollaus palauttaa sen.',
     'Turn on': 'Ota käyttöön',
