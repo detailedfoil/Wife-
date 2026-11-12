@@ -383,7 +383,7 @@
         if (mode === 'fly' || mode === 'out' && ball.visible && bv.lengthSq() > 0.01) {
           const steps = 3, h = dt / steps;
           for (let i = 0; i < steps; i++) {
-            bv.x += wind * 0.5 * h; bv.y -= GRAV * h;
+            bv.x += wind * 1.0 * h; bv.y -= GRAV * h;
             ball.position.addScaledVector(bv, h);
             const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
             ball.rotation.x -= spin * h;
