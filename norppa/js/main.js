@@ -663,7 +663,6 @@
     if (!r.ok) {
       A.play('nope');
       if (r.why === 'asleep') UI.toast(whyText('asleep') + tr(' Wake first, or wait for morning.'), 'zzz');
-      else if (r.why === 'full') { seal.gesture('no'); UI.toast(tr('{0} is full to the whiskers.', nm()), 'fish'); }
       else if (r.why === 'notsick') UI.toast(tr('Nobody is poorly. Save the juice for a rainy day.'), 'med');
       return;
     }

@@ -147,7 +147,7 @@
     if (g.stun > 0) { g.stun -= dt; g.vx = 0; }
     else {
       const px = s.g.position.x, want = U.damp(px, g.tx, 12, dt);
-      const step = U.clamp(want - px, -8.5 * dt, 8.5 * dt);
+      const step = U.clamp(want - px, -7.5 * dt, 7.5 * dt);
       s.g.position.x = px + step;
       g.vx = step / Math.max(dt, 0.001);
     }
@@ -157,20 +157,20 @@
 
   /* ---------- Fish Rain ---------- */
   function spawnCatch(prog) {
-    const isBall = g.clock > 4 && Math.random() < 0.12 + 0.14 * prog;
+    const isBall = g.clock > 3 && Math.random() < 0.17 + 0.2 * prog;
     const holder = new T.Group();
     let it;
     if (isBall) {
       holder.add(snowball());
-      it = { m: holder, ball: true, v: 4.8 + prog * 2.2, spin: 0 };
+      it = { m: holder, ball: true, v: 5.4 + prog * 2.6, spin: 0 };
     } else {
       const f = pickFish(), model = fishCopy(f.id);
       holder.add(model);
       holder.rotation.z = -Math.PI / 2 + rs(0.35);          // nose down
       holder.scale.setScalar(1.75);
-      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.4 + prog * 3 + Math.random() * 1.1, spin: rs(5), inner: model };
+      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.9 + prog * 3.5 + Math.random() * 1.2, spin: rs(5), inner: model };
       // Later on, some fish wriggle from side to side on the way down.
-      if (prog > 0.3 && Math.random() < 0.25 + 0.5 * prog) { it.sway = 0.35 + Math.random() * 0.55 * prog; it.swayF = 2 + Math.random() * 2; it.swayP = Math.random() * 6.3; }
+      if (prog > 0.2 && Math.random() < 0.35 + 0.55 * prog) { it.sway = 0.4 + Math.random() * 0.7 * prog; it.swayF = 2 + Math.random() * 2.2; it.swayP = Math.random() * 6.3; }
     }
     const x = U.clamp(g.seal.g.position.x + rs(3.4), -HALF, HALF);
     it.x0 = x;
@@ -203,7 +203,7 @@
       p.y -= it.v * dt;
       if (it.sway) p.x = U.clamp(it.x0 + Math.sin(g.clock * it.swayF + it.swayP) * it.sway, -HALF - 0.2, HALF + 0.2);
       if (it.inner) it.inner.rotation.x += it.spin * dt;
-      const reach = it.ball ? 0.44 * size + 0.32 : 0.42 * size + 0.28;
+      const reach = it.ball ? 0.44 * size + 0.32 : 0.38 * size + 0.25;
       if (!quiet && g.stun <= 0 && p.y < my + 0.5 && p.y > my - 0.45 * size - 0.25 && Math.abs(p.x - mx) < reach) {
         if (it.ball) {
           g.stun = 1.2;
@@ -258,7 +258,7 @@
   /* ---------- Nose Ball ---------- */
   function updateBall(dt) {
     const s = g.seal, b = g.b, R = 0.36;
-    const grav = 7.2 + Math.min(4.8, g.score * 0.16);   // the ball comes down faster with every bounce
+    const grav = 8.6 + Math.min(5.8, g.score * 0.2);    // the ball comes down faster with every bounce
     b.vy -= grav * dt;
     b.x += b.vx * dt; b.y += b.vy * dt;
     const wall = HALF + 0.35;
@@ -266,13 +266,13 @@
     else if (b.x < -wall) { b.x = -wall; b.vx = Math.abs(b.vx); A.play('tap', 0.1); }
     s.noseA.getWorldPosition(v1);
     const top = v1.y + 0.1 * s.size, nx = v1.x, nz = v1.z;
-    if (b.vy < 0 && b.y - R < top && b.y - R > top - 0.6 && Math.abs(b.x - nx) < 0.4 * s.size + 0.34) {
+    if (b.vy < 0 && b.y - R < top && b.y - R > top - 0.6 && Math.abs(b.x - nx) < 0.36 * s.size + 0.3) {
       g.score++;
       setScore(g.score);
       b.y = top + R;
-      const g2 = 7.2 + Math.min(4.8, g.score * 0.16);
+      const g2 = 8.6 + Math.min(5.8, g.score * 0.2);
       b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
-      b.vx = U.clamp((b.x - nx) * 3.6 + g.vx * 0.28 + rs(0.7 + Math.min(2.4, g.score * 0.09)), -4.3, 4.3);
+      b.vx = U.clamp((b.x - nx) * 3.6 + g.vx * 0.28 + rs(0.9 + Math.min(2.8, g.score * 0.11)), -4.6, 4.6);
       s.gesture('boop', true);
       A.play('boing');
       FX.sparkle(v1.set(b.x, b.y - R, nz), 3);

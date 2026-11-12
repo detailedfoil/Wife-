@@ -12,26 +12,26 @@
   /* Tuning. Rates are points per hour on a 0 to 100 scale. */
   const T = {
     earnRate: PN.ECON.earn,
-    food: 7.5,                            // the same asleep, awake or with the game closed: a quarter left after 10 hours
-    joyAwake: 8, joyAsleep: 1.8,
-    energyAwake: 5.5, energyAsleep: 14,
-    clean: 5, cleanPerPoop: 1.5,
-    poopEvery: 2.5, maxPoops: 6,
+    food: 11.25,                          // the same asleep, awake or with the game closed: a quarter left after about 6 hours 40
+    joyAwake: 12, joyAsleep: 2.7,
+    energyAwake: 8.25, energyAsleep: 14,
+    clean: 7.5, cleanPerPoop: 1.5,
+    poopEvery: 5 / 3, maxPoops: 6,        // a poo every 100 minutes awake
     careGood: 50, careLow: 25,            // growing slows once her lowest need drops below careGood and stops at careLow
     sleepGrace: 20,                       // asleep for the night, her tummy counts this much fuller
     neglectLine: 25,                      // below this she sulks, friendship slips and growing goes backwards
     setback: 1,                           // hours of growing lost per hour spent below neglectLine
-    grudgePerH: 8, xpLossPerH: 8,
+    grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
     sootheFeed: 12, sootheFav: 25, sootheWash: 10, sootheDo: 2,
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
-    nurseMin: 35, nurseGain: 10, nurseCost: 1.5,
-    pupFood: 6, pupJoy: 4,
+    nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
+    pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
-    gameEnergy: 12, catchKeepChance: 0.1, pairsTurns: 20,
+    gameEnergy: 12, catchKeepChance: 0.1, pairsTurns: 16,
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -132,7 +132,7 @@
   }
 
   function addXp(state, n) {
-    state.xp += n;
+    state.xp += n * T.xpRate;
     const L = level(state).level;
     while (state.maxLevel < L) {
       state.maxLevel++;
@@ -342,7 +342,6 @@
       return ok({ med: true });
     }
     if (state.asleep) return no('asleep');
-    if (s.food >= 97) return no('full');
     const before = s.food, fav = id === state.fav;
     state.pantry[id]--;
     s.food = pct(s.food + it.food);
