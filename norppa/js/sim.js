@@ -32,7 +32,7 @@
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
-    gameEnergy: 12, catchKeepChance: 0.1, pairsTurns: 16,
+    gameEnergy: 12, catchKeepChance: 0.1,
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -524,10 +524,6 @@
     } else if (game === 'ball') {
       coins = Math.min(60, Math.round(score * 1.5));
       if (score > c.bestBall) { c.bestBall = score; best = score > 0; }
-    } else if (game === 'pairs') {
-      const done = found == null || found >= 8;
-      coins = done ? clamp(30 - score, 2, 22) : (found || 0);       // ran out of turns: a coin a pair
-      if (done && (!c.bestPairs || score < c.bestPairs)) { c.bestPairs = score; best = true; }
     }
     coins = earn(state, coins);
     s.energy = pct(s.energy - T.gameEnergy);

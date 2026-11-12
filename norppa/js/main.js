@@ -194,7 +194,7 @@
     perf(raw);
     runTweens(dt);
     if (started && state.name) simTick(dt);
-    if (PN.Games.active && PN.Games.active !== 'pairs') PN.Games.update(dt);
+    if (PN.Games.active) PN.Games.update(dt);
     else behave(dt);
     moveBall(dt);
     seal.update(dt, t, W.groundY);
@@ -447,7 +447,7 @@
   let pupZ = 2;
   function updatePups(dt) {
     if (!G.busy && !seal.freeY) anchor.copy(seal.g.position);
-    const inGame = !!PN.Games.active && PN.Games.active !== 'pairs';
+    const inGame = !!PN.Games.active;
     pupZ -= dt;
     state.pups.forEach((p, i) => {
       const ps = pups[p.id];
@@ -849,7 +849,7 @@
     seal.halt();
     PN.Games.start(id);
   };
-  G.endGame = async function (id, score, r, found) {
+  G.endGame = async function (id, score, r) {
     W.stage(false); W.setCamMode('home');
     UI.showHud(true);
     resetBall();
@@ -858,11 +858,9 @@
     UI.refresh();
     if (!r) return;
     seal.gesture(r.best ? 'happy' : 'clap'); A.play(r.best ? 'award' : 'coin');
-    const title = tr({ catch: 'Fish Rain', ball: 'Nose Ball', pairs: 'Fish Pairs' }[id]);
-    const unit = tr(id === 'catch' ? 'fish caught' : id === 'ball' ? (score === 1 ? 'bounce' : 'bounces') : 'turns');
-    const short = id === 'pairs' && found < 8;
-    let html = (short ? '<div class="bigscore">' + found + '/8</div><p>' + (found ? tr('Out of turns, but {0} pairs found.', found) : tr('Out of turns!')) + '</p>'
-      : '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p>') + '<div class="loot">' + coinChip(r.coins)
+    const title = tr({ catch: 'Fish Rain', ball: 'Nose Ball' }[id]);
+    const unit = tr(id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces'));
+    let html = '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';

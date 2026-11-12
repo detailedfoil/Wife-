@@ -265,7 +265,6 @@
     { id: 'streak30', t: 'Kuukausi', d: 'Visit every day for a month.', c: 200, test: (s) => s.gift.streak >= 30 },
     { id: 'catch25', t: 'Quick flippers', d: 'Catch 25 fish in one Fish Rain.', c: 30, test: (s) => s.counters.bestCatch >= 25 },
     { id: 'ball20', t: 'Nose for it', d: 'Bounce the ball 20 times in one go.', c: 30, test: (s) => s.counters.bestBall >= 20 },
-    { id: 'pairs', t: 'Sharp memory', d: 'Finish Fish Pairs in 12 turns or fewer.', c: 30, test: (s) => s.counters.bestPairs > 0 && s.counters.bestPairs <= 12 },
     { id: 'aurora', t: 'Revontulet', d: 'See the northern lights.', c: 30, test: (s) => !!s.seen.aurora },
     { id: 'kaamos', t: 'Kaamos', d: 'Visit during the polar night.', c: 30, test: (s) => !!s.seen.kaamos },
     { id: 'yoton', t: 'Yötön yö', d: 'Visit under the midnight sun.', c: 30, test: (s) => !!s.seen.midnightSun },

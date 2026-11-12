@@ -1,7 +1,7 @@
-/* Pikku Norppa: the three mini-games.
+/* Pikku Norppa: the two mini-games.
    Fish Rain: slide the seal about to catch falling fish.
    Nose Ball: keep the ball in the air.
-   Fish Pairs: a memory game that teaches the fish their Finnish names. */
+   */
 (function (PN) {
   'use strict';
   const T = THREE, U = PN.U, W = PN.World, S = PN.Sim, D = PN.DATA, UI = PN.UI, FX = PN.FX, A = PN.Audio, tr = PN.L;
@@ -17,10 +17,6 @@
   let g = null;                // the game in play
   let bound = false;
 
-  function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = a[i]; a[i] = a[j]; a[j] = x; }
-    return a;
-  }
   function big(text) {
     const el = $('gBig');
     el.textContent = text;
@@ -57,11 +53,9 @@
   function bind() {
     if (bound) return;
     bound = true;
-    $('gQuit').addEventListener('click', () => { A.play('tap'); if (g && g.id !== 'pairs') finish(true); });
-    $('pairsQuit').addEventListener('click', () => { A.play('tap'); if (g && g.id === 'pairs') finish(true); });
-    $('pairsGrid').addEventListener('click', onCard);
+    $('gQuit').addEventListener('click', () => { A.play('tap'); if (g) finish(true); });
     window.addEventListener('keydown', (e) => {
-      if (!g || g.id === 'pairs') return;
+      if (!g) return;
       if (e.key === 'ArrowLeft' || e.key === 'a') g.keyL = 1;
       else if (e.key === 'ArrowRight' || e.key === 'd') g.keyR = 1;
     });
@@ -78,7 +72,6 @@
     Games.active = id;
     UI.closeSheet();
     UI.setBubble(null);
-    if (id === 'pairs') { startPairs(); return; }
     const seal = PN.Game.seal;
     UI.showHud(false);
     $('gamehud').hidden = false;
@@ -99,14 +92,14 @@
 
   /* A finger on the screen says where the seal should go. */
   Games.pointer = function (type, x, y) {
-    if (!g || g.id === 'pairs' || type === 'up') return;
+    if (!g || type === 'up') return;
     const ray = W.rayAt(x, y);
     const k = (LANE_Z - ray.origin.z) / ray.direction.z;
     g.tx = U.clamp(ray.origin.x + ray.direction.x * k, -HALF, HALF);
   };
 
   Games.update = function (dt) {
-    if (!g || g.id === 'pairs') return;
+    if (!g) return;
     const s = g.seal;
     g.clock += dt;
     if (g.phase === 'count') {
@@ -238,7 +231,7 @@
   }
   function updateCatch(dt) {
     g.time -= dt;
-    const left = Math.max(0, g.time), prog = 1 - left / GAME_LEN;
+    const left = Math.max(0, g.time), prog = 1;   // as hard as the final seconds, from the start
     const whole = Math.ceil(left);
     if (whole !== g.lastTick) {
       g.lastTick = whole;
@@ -272,7 +265,7 @@
       b.y = top + R;
       const g2 = 8.6 + Math.min(5.8, g.score * 0.2);
       b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
-      b.vx = U.clamp((b.x - nx) * 3.6 + g.vx * 0.28 + rs(0.9 + Math.min(2.8, g.score * 0.11)), -4.6, 4.6);
+      b.vx = U.clamp((b.x - nx) * 5.2 + g.vx * 0.4 + rs(2.2 + Math.min(4.4, g.score * 0.2)), -8.5, 8.5);   // it can fly off sideways, fast
       s.gesture('boop', true);
       A.play('boing');
       FX.sparkle(v1.set(b.x, b.y - R, nz), 3);
@@ -293,64 +286,15 @@
     }
   }
 
-  /* ---------- Fish Pairs ---------- */
-  function startPairs() {
-    const st = PN.Game.state;
-    const pool = shuffle(D.FISH.filter((f) => st.fish[f.id] || f.rarity <= 2).map((f) => f.id)).slice(0, 8);
-    const cards = shuffle(pool.concat(pool));
-    g = { id: 'pairs', score: 0, open: [], found: 0, lock: false, caught: {}, max: S.T.pairsTurns };
-    $('pairsGrid').innerHTML = cards.map((id, i) => '<button class="pcard" data-id="' + id + '" aria-label="Card ' + (i + 1) + '"><span class="back"></span><span class="front"><img src="'
-      + PN.Thumbs.get(id) + '" alt=""></span></button>').join('');
-    turnsLeft();
-    $('pairsWord').textContent = tr('Find two of the same fish.');
-    $('pairs').hidden = false;
-  }
-  function onCard(e) {
-    const c = e.target.closest('.pcard');
-    if (!c || !g || g.id !== 'pairs' || g.lock || c.classList.contains('up')) return;
-    c.classList.add('up');
-    A.play('flip');
-    g.open.push(c);
-    if (g.open.length < 2) return;
-    const a = g.open[0], b = g.open[1];
-    g.open = [];
-    g.score++;
-    turnsLeft();
-    if (a.dataset.id === b.dataset.id) {
-      const it = PN.items[a.dataset.id];
-      a.classList.add('done'); b.classList.add('done');
-      g.found++;
-      A.play('match');
-      $('pairsWord').innerHTML = tr('<b>{0}</b> is {1}.', UI.esc(it.fi), UI.esc(it.en.toLowerCase()));
-      if (g.found === 8) { g.lock = true; setTimeout(() => { if (g && g.id === 'pairs') finish(false); }, 950); return; }
-    } else {
-      g.lock = true;
-      setTimeout(() => { a.classList.remove('up'); b.classList.remove('up'); if (g && g.score < g.max) g.lock = false; }, 600);
-    }
-    if (g.score >= g.max) {
-      g.lock = true;
-      A.play('nope');
-      $('pairsWord').innerHTML = '<b>' + tr('Out of turns!') + '</b>';
-      setTimeout(() => { if (g && g.id === 'pairs') finish(false); }, 1300);
-    }
-  }
-  function turnsLeft() {
-    const n = g.max - g.score, el = $('pairsTurns');
-    el.textContent = tr(n === 1 ? '{0} turn left' : '{0} turns left', n);
-    el.classList.toggle('low', n <= 3);
-  }
-
   /* ---------- the end of any game ---------- */
   function finish(quit) {
-    const id = g.id, score = g.score, caught = g.caught, found = g.found;
+    const id = g.id, score = g.score, caught = g.caught;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
     g = null;
     Games.active = null;
     $('gamehud').hidden = true;
-    $('pairs').hidden = true;
     let reward = null;
-    const counts = id === 'pairs' ? !quit : !(quit && score === 0);
-    if (counts) reward = S.gameReward(PN.Game.state, id, score, caught, id === 'pairs' ? found : null);
-    PN.Game.endGame(id, score, reward, found);
+    if (!(quit && score === 0)) reward = S.gameReward(PN.Game.state, id, score, caught);
+    PN.Game.endGame(id, score, reward);
   }
 })(window.PN = window.PN || {});
