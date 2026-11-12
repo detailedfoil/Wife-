@@ -12,21 +12,27 @@
   /* Tuning. Rates are points per hour on a 0 to 100 scale. */
   const T = {
     earnRate: PN.ECON.earn,
-    foodAwake: 7.5, foodAsleep: 7.5,
-    joyAwake: 6, joyAsleep: 1.8,
-    energyAwake: 6.5, energyAsleep: 14,
-    clean: 4, cleanPerPoop: 1.5,
-    poopEvery: 3, maxPoops: 6,
-    awayMercy: 0.6,                       // needs fall slower while the game is closed
-    grudgePerH: 5, xpLossPerH: 6,         // what an hour at rock bottom costs
-    starveToSick: 12 * H, filthToSick: 16 * H, wellToCure: 4 * H,
+    food: 7.5,                            // the same asleep, awake or with the game closed: a quarter left after 10 hours
+    joyAwake: 8, joyAsleep: 1.8,
+    energyAwake: 5.5, energyAsleep: 14,
+    clean: 5, cleanPerPoop: 1.5,
+    poopEvery: 2.5, maxPoops: 6,
+    careGood: 50, careLow: 25,            // growing slows once her lowest need drops below careGood and stops at careLow
+    sleepGrace: 20,                       // asleep for the night, her tummy counts this much fuller
+    neglectLine: 25,                      // below this she sulks, friendship slips and growing goes backwards
+    setback: 1,                           // hours of growing lost per hour spent below neglectLine
+    grudgePerH: 8, xpLossPerH: 8,
+    sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
+    sootheFeed: 12, sootheFav: 25, sootheWash: 10, sootheDo: 2,
+    starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 10, nurseCost: 1.5,
     pupFood: 6, pupJoy: 4,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
-    stageAge: [2 * DAY, 6 * DAY], stageLevel: [5, 8], pupLevel: 9,
+    stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
     gameEnergy: 12, catchKeepChance: 0.1, pairsTurns: 20,
+    handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
 
@@ -37,6 +43,7 @@
 
   const localHour = (t) => { const d = new Date(t); return d.getHours() + d.getMinutes() / 60; };
   const isNight = (t) => { const h = localHour(t); return h >= 21.5 || h < 7; };
+  const isBedtime = (t) => { const h = localHour(t); return h >= 19 || h < 7; };   // tucked in from 19:00, she sleeps the night through
   const dayKey = (t) => {
     const d = new Date(t), p = (n) => (n < 10 ? '0' : '') + n;
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
@@ -69,7 +76,7 @@
       pups: [], family: [], nextPupAt: 0, pupSeq: 0,
       fav: 'muikku', favKnown: false,
       gift: { last: dayKey(now), streak: 1 },
-      dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0,
+      dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0, juiceAt: 0,
       petWin: { t0: 0, n: 0 }, ballWin: { t0: 0, n: 0 },
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
@@ -165,16 +172,33 @@
     state.poops.push({ a: rnd(state), r: rnd(state) });
   }
 
-  /* One slice of time. away = the game was closed for this stretch. */
+  /* How well she is growing right now, from 0 (not at all) to 1 (full speed).
+     Her lowest need decides it, and a sulk slows it. Asleep for the night, a hungry tummy matters a bit less. */
+  const lowNeed = (state) => { const s = state.stats; return Math.min(s.food + (state.asleep && state.sleepKind === 'night' ? T.sleepGrace : 0), s.joy, s.clean); };
+  function care(state) {
+    if (state.sick) return 0;
+    const low = lowNeed(state);
+    return clamp((low - T.careLow) / (T.careGood - T.careLow), 0, 1) * (state.grudge > 0 ? T.sulkGrow : 1);
+  }
+
+  /* A word for how growing is going right now, for the profile. */
+  function growth(state) {
+    if (state.sick) return 'sick';
+    if (lowNeed(state) < T.neglectLine) return 'back';
+    const c = care(state);
+    return c >= 0.95 ? 'well' : c > 0.02 ? 'slow' : 'none';
+  }
+
+  /* One slice of time. away = the game was closed for this stretch. Needs run at the same pace either way. */
   function step(state, t, dt, away, sum) {
-    const h = dt / H, s = state.stats, m = away ? T.awayMercy : 1;
+    const h = dt / H, s = state.stats;
     const night = isNight(t + dt);
 
     // Dozing off and waking without help.
     if (!state.asleep) {
       if (s.energy <= 6) fallAsleep(state, t, night ? 'night' : 'nap', night ? 100 : 60);
       else if (away && night && s.energy < 70) fallAsleep(state, t, 'night', 100);
-    } else if (state.sleepKind === 'night' ? (s.energy >= 99.5 && !night) : s.energy >= state.wakeAt) {
+    } else if (state.sleepKind === 'night' ? (s.energy >= 99.5 && !isBedtime(t + dt)) : s.energy >= state.wakeAt) {
       state.asleep = false; state.sleepKind = null;
     }
     const asleep = state.asleep;
@@ -183,18 +207,18 @@
     // Pups feed from their mother, as long as she has enough herself.
     const nursing = state.pups.length > 0 && s.food > T.nurseMin && !state.sick;
 
-    let foodRate = asleep ? T.foodAsleep : T.foodAwake;
+    let foodRate = T.food;
     if (nursing) foodRate += T.nurseCost * state.pups.length;
     let joyRate = asleep ? T.joyAsleep : T.joyAwake;
-    if (s.food < 20) joyRate *= 1.5;
+    if (s.food < 25) joyRate *= 1.5;
     if (s.clean < 25) joyRate *= 1.4;
     if (state.sick) joyRate *= 1.5;
 
     const wasFed = s.food > 20;
-    s.food = pct(s.food - foodRate * h);   // hunger runs at the same pace asleep, awake, or app closed
-    s.joy = pct(s.joy - joyRate * h * m);
-    s.energy = pct(s.energy + (asleep ? T.energyAsleep * (state.sick ? 0.6 : 1) * h : -T.energyAwake * h * m));
-    s.clean = pct(s.clean - (T.clean + T.cleanPerPoop * state.poops.length) * (asleep ? 0.5 : 1) * h * m);
+    s.food = pct(s.food - foodRate * h);
+    s.joy = pct(s.joy - joyRate * h);
+    s.energy = pct(s.energy + (asleep ? T.energyAsleep * (state.sick ? 0.6 : 1) * h : -T.energyAwake * h));
+    s.clean = pct(s.clean - (T.clean + T.cleanPerPoop * state.poops.length) * (asleep ? 0.5 : 1) * h);
     if (wasFed && s.food <= 20) sum.hungry = true;
     if (state.griefUntil > t) s.joy = Math.min(s.joy, 50);
     if (state.sick) s.joy = Math.min(s.joy, 60);
@@ -207,8 +231,8 @@
       }
     }
 
-    // What being left at rock bottom costs.
-    const neglected = s.food <= 0.01 || s.clean <= 0.01 || s.joy <= 0.01;
+    // What being left to go without costs.
+    const neglected = lowNeed(state) < T.neglectLine;
     if (neglected) {
       state.neglectMs += dt;
       sum.neglectH += h;
@@ -217,9 +241,12 @@
       if (g0 <= 0 && state.grudge > 0) sum.sulk = true;
       const lose = Math.max(0, Math.min(state.xp - xpFloor(state), T.xpLossPerH * h));
       state.xp -= lose; sum.xpLost += lose;
-    } else if (!state.sick) {
-      state.ageMs += dt;                 // growing only counts while cared for
+      // and sets her growing back, though never below where her current stage began
+      const floor = state.stage > 0 ? T.stageAge[Math.min(state.stage, 2) - 1] : 0;
+      if (state.ageMs > floor) state.ageMs = Math.max(floor, state.ageMs - dt * T.setback);
     }
+    const c = care(state);
+    state.ageMs += dt * c;                 // growing only counts while she is cared for
 
     if (s.food <= 0.01) state.starveMs += dt; else if (s.food > 15) state.starveMs = 0;
     if (s.clean <= 0.01) state.filthMs += dt; else if (s.clean > 15) state.filthMs = 0;
@@ -238,8 +265,8 @@
     for (let i = state.pups.length - 1; i >= 0; i--) {
       const p = state.pups[i];
       if (nursing) p.food = pct(p.food + T.nurseGain * h);
-      p.food = pct(p.food - T.pupFood * h * m);
-      p.joy = pct(p.joy - T.pupJoy * h * m);
+      p.food = pct(p.food - T.pupFood * h);
+      p.joy = pct(p.joy - T.pupJoy * h);
       if (p.food <= 0.01) p.starveMs += dt;
       else if (p.food > 25) p.starveMs = Math.max(0, p.starveMs - 3 * dt);
       if (!p.sick && p.starveMs > T.pupStarveToSick) {
@@ -322,7 +349,7 @@
     s.joy = pct(s.joy + (it.joy || 2) + (fav ? 8 : 0));
     if (fav && !state.favKnown) { state.favKnown = true; learn(state, 'herkku'); }
     state.counters.feeds++;
-    soothe(state, fav ? 25 : 12);
+    soothe(state, fav ? T.sootheFav : T.sootheFeed);
     addXp(state, before < 85 ? 4 : 1);
     learn(state, 'kala');
     check(state);
@@ -335,7 +362,7 @@
     const sulking = state.grudge > 0;
     s.joy = pct(s.joy + (sulking ? 0.5 : 1.5));
     state.counters.pets++;
-    soothe(state, 2);
+    soothe(state, T.sootheDo);
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     check(state);
@@ -349,7 +376,7 @@
     s.clean = 100; s.joy = pct(s.joy + 4);
     state.filthMs = 0;
     state.counters.washes++;
-    soothe(state, 10);
+    soothe(state, T.sootheWash);
     addXp(state, before < 60 ? 6 : 2);
     learn(state, 'kylpy');
     check(state);
@@ -360,7 +387,7 @@
     const s = state.stats;
     if (state.asleep) return no('asleep');
     if (s.energy > 88) return no('awake');
-    const night = isNight(now);
+    const night = isBedtime(now);
     fallAsleep(state, now, night ? 'night' : 'nap', night ? 100 : 95);
     state.counters.tucks++;
     addXp(state, s.energy < 50 ? 5 : 2);
@@ -392,7 +419,7 @@
   function playBall(state, now) {
     const s = state.stats;
     if (state.asleep) return no('asleep');
-    if (state.grudge > 20) return no('sulk');
+    if (state.grudge > T.sulkBlock) return no('sulk');
     if (s.energy < 6) return no('tired');
     const fresh = now - state.ballAt > 20e3;
     state.ballAt = now;
@@ -409,7 +436,7 @@
   function canPlay(state) {
     if (state.asleep) return no('asleep');
     if (state.sick) return no('sick');
-    if (state.grudge > 20) return no('sulk');
+    if (state.grudge > T.sulkBlock) return no('sulk');
     if (state.stats.energy < 12) return no('tired');
     return ok({});
   }
@@ -557,24 +584,32 @@
     state.filthMs = 0;
     if (state.sick) state.wellMs += H;
     state.counters.saunas++;
-    soothe(state, 15);
+    soothe(state, T.sootheWash * 1.5);
     addXp(state, 6);
     learn(state, 'sauna'); learn(state, 'loyly');
     check(state);
     return ok({});
   }
 
-  /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then. */
-  function canBorrow(state, now) {
-    const hasFood = Object.keys(state.pantry).some((id) => state.pantry[id] > 0 && PN.items[id] && PN.items[id].kind !== 'med');
-    return !hasFood && state.coins < 6 && now >= state.handoutAt;
-  }
+  /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then.
+     And if she is poorly and the juice costs more than you have, they can spare a bottle once a day. */
+  const hasFood = (state) => Object.keys(state.pantry).some((id) => state.pantry[id] > 0 && PN.items[id] && PN.items[id].kind !== 'med');
+  const fishSpare = (state, now) => !hasFood(state) && state.coins < 6 && now >= state.handoutAt;
+  const juiceSpare = (state, now) => (state.sick || state.pups.some((p) => p.sick)) && !(state.pantry.lakkamehu > 0)
+    && state.coins < PN.items.lakkamehu.price && now >= state.juiceAt;
+  function canBorrow(state, now) { return fishSpare(state, now) || juiceSpare(state, now); }
+  const spare = (state, now) => ({ fish: fishSpare(state, now), juice: juiceSpare(state, now) });
   function borrow(state, now) {
     if (!canBorrow(state, now)) return no('notyet');
-    state.handoutAt = now + 4 * H;
-    giveFish(state, 'muikku', 3);
+    let n = 0, juice = false;
+    if (fishSpare(state, now)) {
+      // enough for a proper meal: her tummy to about 60%, never fewer than handoutFish
+      n = clamp(Math.ceil((T.handoutFill - state.stats.food) / PN.items.muikku.food), T.handoutFish, 8);
+      state.handoutAt = now + T.handoutGap; giveFish(state, 'muikku', n);
+    }
+    if (juiceSpare(state, now)) { state.juiceAt = now + T.juiceGap; juice = true; state.pantry.lakkamehu = 1; }
     learn(state, 'kiitos');
-    return ok({ id: 'muikku', n: 3 });
+    return ok({ id: 'muikku', n, juice });
   }
 
   /* First visit of the day. */
@@ -583,7 +618,7 @@
     if (state.gift.last === today) return null;
     const kept = state.gift.last === dayKey(now - DAY);
     state.gift.last = today;
-    if (state.grudge > 0) { state.gift.streak = 0; return { withheld: true }; }
+    if (state.grudge > T.sulkBlock) { state.gift.streak = 0; return { withheld: true }; }
     state.gift.streak = kept ? state.gift.streak + 1 : 1;
     const coins = earn(state, 15 + 5 * Math.min(state.gift.streak, 7));
     const id = pickFish(state, 2);
@@ -695,8 +730,8 @@
     } catch (e) { return null; }
   }
 
-  PN.Sim = { T, H, DAY, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
+  PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, canDive, diveResult, gameReward,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
-    giveFish, canBorrow, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
+    giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

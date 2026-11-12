@@ -234,14 +234,16 @@
       const order = { fish: 0, food: 1, med: 2 };
       ids.sort((a, b) => order[PN.items[a].kind] - order[PN.items[b].kind] || (PN.items[a].food || 0) - (PN.items[b].food || 0));
       const fav = st.favKnown ? tr('Favourite: <b>{0}</b>.', PN.items[st.fav].fi.toLowerCase()) : tr('There is one fish {0} loves best. Try them all to find it.', esc(st.name));
+      const spare = S.spare(st, Date.now());
+      const juice = spare.juice ? '<div class="rows">' + row({ icon: 'med', tint: 'rose', title: tr('Ask the neighbours'), act: 'borrow',
+        text: tr('{0} is poorly and the juice costs more than you have. The neighbours can spare a bottle.', esc(st.name)) }) + '</div>' : '';
       if (!ids.length) {
-        const spare = S.canBorrow(st, Date.now());
         return '<p class="lead">' + tr('The larder is empty. Catch fish in Fish Rain, send {0} diving, or buy some.', esc(st.name))
-          + (spare ? tr(' With no coins either, the neighbours will spare a few fish.') : '') + '</p><div class="btn-row">'
-          + (spare ? '<button class="btn small" data-do="borrow">' + tr('Ask the neighbours') + '</button>' : '<button class="btn small" data-do="goto" data-id="play">' + tr('Play') + '</button>')
+          + (spare.fish ? tr(' With no coins either, the neighbours will spare a few fish.') : '') + '</p>' + (spare.fish ? '' : juice) + '<div class="btn-row">'
+          + (spare.fish ? '<button class="btn small" data-do="borrow">' + tr('Ask the neighbours') + '</button>' : '<button class="btn small" data-do="goto" data-id="play">' + tr('Play') + '</button>')
           + '<button class="btn small ghost" data-do="goto" data-id="shop">' + tr('Shop') + '</button></div>';
       }
-      return '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p><div class="grid">' + ids.map((id) => {
+      return '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p>' + juice + '<div class="grid">' + ids.map((id) => {
         const it = PN.items[id];
         return cell(id, thumb(id) + names(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
       }).join('') + '</div>';
@@ -328,12 +330,17 @@
       const line = (a, b) => '<div class="statline"><span>' + tr(a) + '</span><b>' + b + '</b></div>';
       const stage = D.STAGES[st.stage], favIt = PN.items[st.fav];
       let next;
+      let growing = '';
       if (st.stage < 2) {
-        const nx = D.STAGES[st.stage + 1];
-        next = tr('Becomes a {0} at friendship level {1}, given enough days of good care. Time spent hungry, dirty or unhappy does not count.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage]);
+        const nx = D.STAGES[st.stage + 1], needD = S.T.stageAge[st.stage] / S.DAY;
+        const done = (Math.floor(Math.min(st.ageMs / S.DAY, needD) * 10) / 10).toFixed(1).replace('.', fi ? ',' : '.');
+        const how = { sick: 'paused while poorly', back: 'going backwards', well: 'nicely', slow: 'slowly', none: 'not at the moment' }[S.growth(st)];
+        growing = line('Growing', tr(how)) + line('Good care', tr('{0} of {1} days', done, needD));
+        next = tr('Becomes a {0} at friendship level {1} after {2} days of good care. Growing slows once a bar drops below half, and being left hungry, grubby or glum sets it back.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage], needD);
       } else next = tr('Fully grown. With friendship level {0} and a happy, well-fed life, a pup may arrive.', S.T.pupLevel);
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
         + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', tr(moods[S.mood(st)]))
+        + growing
         + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
         + line('Strokes', st.counters.pets) + line('Meals', st.counters.feeds) + line('Dives', st.counters.dives) + line('Games played', st.counters.games)
         + (st.counters.pupsGrown + st.counters.pupsLost ? line('Pups raised', st.counters.pupsGrown) + line('Pups lost', st.counters.pupsLost) : '')

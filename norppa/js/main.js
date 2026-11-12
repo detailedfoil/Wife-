@@ -155,7 +155,7 @@
     if (sum.pupLost.length) { bad = true; sum.pupLost.forEach((n) => add('heart', tr('<b>{0}</b> went too long without milk and did not make it.', UI.esc(n)), 'bad')); }
     if (sum.sick && state.sick) { bad = true; add('med', tr('{0} has fallen poorly. Cloudberry juice or steady care will mend it.', plain()), 'bad'); }
     if (sum.pupSick.length) { bad = true; sum.pupSick.forEach((n) => { if (state.pups.some((p) => p.name === n && p.sick)) add('med', tr('<b>{0}</b> is poorly from hunger. Feed {1} so she can nurse.', UI.esc(n), plain()), 'bad'); }); }
-    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left with an empty bar for {0} hour.', 'Was left with an empty bar for {0} hours.'), 'bad'); }
+    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry, grubby or glum for {0} hour.', 'Was left hungry, grubby or glum for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
     if (state.grudge > 0) { bad = true; add('grump', tr('{0} is sulking. Food and gentle strokes will win it round.', plain()), 'bad'); }
@@ -688,7 +688,8 @@
     const r = S.borrow(state, Date.now());
     if (!r.ok) { A.play('nope'); return; }
     A.play('sparkle');
-    UI.toast(tr('The neighbours left {0} vendace on the ice. Kiitos!', r.n), 'fish', '', 4200);
+    UI.toast(r.n && r.juice ? tr('The neighbours left {0} vendace and a bottle of cloudberry juice on the ice. Kiitos!', r.n)
+      : r.juice ? tr('The neighbours left a bottle of cloudberry juice on the ice. Kiitos!') : tr('The neighbours left {0} vendace on the ice. Kiitos!', r.n), r.juice ? 'med' : 'fish', '', 4200);
     UI.renderSheet(); UI.refresh(); save();
   };
 
