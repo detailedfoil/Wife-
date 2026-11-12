@@ -271,7 +271,7 @@
      Every throw has new wind and the bucket stays where it is. A miss resets the
      streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.504, HIT = 0.66, RIM_Y = 0.62, WINDK = 0.8;   // HIT: the scoring circle is 30% wider than the bucket looks
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.504, HIT = 0.66, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
     let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
@@ -323,11 +323,11 @@
       flag.position.set(0.95, 0, bk.z - 0.2);
       view.rig.position.set(-1.05, 0, bk.z + 0.15);
       K.time(wind ? Math.abs(wind).toFixed(1) + (wind > 0 ? ' →' : ' ←') : '0.0');
-      ball.position.set(0, SY, SZ); ball.visible = true; ball.scale.setScalar(1);
+      ball.position.set(0, SY, SZ + ZB); ball.visible = true; ball.scale.setScalar(1);
       mode = 'ready'; rimHit = false;
     }
     function launch(yaw) {
-      const v = Math.sqrt(GRAV * dist / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
+      const v = Math.sqrt(GRAV * RANGE / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
       bv.set(Math.tan(yaw) * ch, Math.sin(ELEV) * v, -ch);   // a sideways shot keeps its full reach, so leaning into the wind never falls short
       mode = 'fly'; prevY = SY; spin = 8;
       A.play('whoosh');
@@ -367,10 +367,10 @@
         const dx = x - drag.x, dy = y - drag.y;
         drag = null;
         if (dy > -30 || Math.hypot(dx, dy) < 40) return;           // a flick has to go up the screen
-        // the angle of the flick sets the aim: a swipe within about 6 degrees of straight goes dead straight,
-        // and past that the aim opens up quickly so a wind-beating sideways shot is only a moderate slant
-        const ang = Math.atan2(dx, -dy), g = Math.max(0, Math.abs(ang) - 0.1);
-        launch(U.clamp(Math.sign(ang) * (0.5 * g + 1.3 * g * g * g), -0.85, 0.85));
+        // like Paper Toss: the swipe's own angle is the throw's angle, one to one. A swipe within about 4 degrees of
+        // straight goes dead straight. Wind 10 needs a lean of about 45 degrees, and each point is roughly 4.5 degrees.
+        const ang = Math.atan2(dx, -dy);
+        launch(U.clamp(Math.sign(ang) * Math.max(0, Math.abs(ang) - 0.07), -1.25, 1.25));
       },
       update(dt, playing) {
         clock += dt;
