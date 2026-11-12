@@ -1,12 +1,12 @@
-/* Pikku Norppa: the two mini-games.
+/* Pikku Norppa: the mini-games.
    Fish Rain: slide the seal about to catch falling fish.
    Nose Ball: keep the ball in the air.
-   */
+   The rest live in arcade.js and plug in through Games.ext. */
 (function (PN) {
   'use strict';
   const T = THREE, U = PN.U, W = PN.World, S = PN.Sim, D = PN.DATA, UI = PN.UI, FX = PN.FX, A = PN.Audio, tr = PN.L;
   const $ = (id) => document.getElementById(id);
-  const Games = PN.Games = { active: null };
+  const Games = PN.Games = { active: null, ext: {} };
 
   const LANE_Z = 0.6;          // the seal slides along this line, facing the camera
   const HALF = 2.5;            // how far it can go either way
@@ -19,6 +19,7 @@
 
   function big(text) {
     const el = $('gBig');
+    if (g) g.bigAt = g.clock;
     el.textContent = text;
     el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
   }
@@ -27,6 +28,16 @@
     el.textContent = n;
     el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   }
+
+  /* What the arcade games use to talk to the screen. */
+  Games.kit = {
+    big,
+    score(n, quiet) { if (!g) return; g.score = n; if (quiet) $('gScore').textContent = n; else setScore(n); },
+    time(v) { $('gTime').textContent = v; },
+    hint(text) { $('gHint').textContent = text; },
+    over(text) { if (g && g.phase === 'play') { g.phase = 'over'; g.clock = 0; big(text); } },
+    keys: () => (g ? g.keyR - g.keyL : 0),
+  };
 
   /* One model of each fish is built once, then copied for every fish that falls. */
   const fishModels = {};
@@ -56,6 +67,7 @@
     $('gQuit').addEventListener('click', () => { A.play('tap'); if (g) finish(true); });
     window.addEventListener('keydown', (e) => {
       if (!g) return;
+      if (g.ext && g.ext.key && g.phase === 'play' && !e.repeat) g.ext.key(e.key);
       if (e.key === 'ArrowLeft' || e.key === 'a') g.keyL = 1;
       else if (e.key === 'ArrowRight' || e.key === 'd') g.keyR = 1;
     });
@@ -72,15 +84,22 @@
     Games.active = id;
     UI.closeSheet();
     UI.setBubble(null);
-    const seal = PN.Game.seal;
+    const seal = PN.Game.seal, ext = Games.ext[id];
     UI.showHud(false);
     $('gamehud').hidden = false;
-    $('gScoreLabel').textContent = tr(id === 'catch' ? 'label|Fish' : 'Bounces');
-    $('gTimeWrap').hidden = id !== 'catch';
+    $('gScoreLabel').textContent = ext ? tr(ext.label) : tr(id === 'catch' ? 'label|Fish' : 'Bounces');
+    $('gTimeWrap').hidden = ext ? !ext.label2 : id !== 'catch';
+    $('gTimeLabel').textContent = tr((ext && ext.label2) || 'Time');
     $('gScore').textContent = '0';
     $('gTime').textContent = GAME_LEN;
     $('gBig').textContent = '';
-    $('gHint').textContent = tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');
+    $('gHint').textContent = ext ? tr(ext.hint) : tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');
+    if (ext) {
+      g = { id, ext, seal, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0 };
+      ext.start();
+      W.override = ext.view();
+      return;
+    }
     W.setCamMode('game');
     W.stage(true);
     W.ball.visible = false;
@@ -92,7 +111,9 @@
 
   /* A finger on the screen says where the seal should go. */
   Games.pointer = function (type, x, y) {
-    if (!g || type === 'up') return;
+    if (!g) return;
+    if (g.ext) { if (g.phase === 'play') g.ext.pointer(type, x, y); return; }
+    if (type === 'up') return;
     const ray = W.rayAt(x, y);
     const k = (LANE_Z - ray.origin.z) / ray.direction.z;
     g.tx = U.clamp(ray.origin.x + ray.direction.x * k, -HALF, HALF);
@@ -102,6 +123,7 @@
     if (!g) return;
     const s = g.seal;
     g.clock += dt;
+    if (g.ext) { updateExt(dt); return; }
     if (g.phase === 'count') {
       const n = Math.floor(g.clock / 0.75);
       if (n !== g.said && n < 4) {
@@ -132,6 +154,21 @@
       if (g.clock > 1.15) finish(false);
     }
   };
+
+  /* An arcade game: the same count-in and ending, the game itself runs its own stage. */
+  function updateExt(dt) {
+    if (g.phase === 'count') {
+      const n = Math.floor(g.clock / 0.75);
+      if (n !== g.said && n < 4) {
+        g.said = n;
+        if (n < 3) { big(String(3 - n)); A.play('tick'); }
+        else { big(tr('Go!')); A.play('go'); g.phase = 'play'; g.clock = 0; g.ext.go(); }
+      }
+    }
+    if (g.bigAt != null && g.phase === 'play' && g.clock - g.bigAt > 0.8) { $('gBig').textContent = ''; g.bigAt = null; }
+    g.ext.update(dt, g.phase === 'play');
+    if (g.phase === 'over' && g.clock > 1.4) finish(false);
+  }
 
   function steer(dt) {
     const s = g.seal;
@@ -292,6 +329,7 @@
     (g.items || []).forEach((it) => W.scene.remove(it.m));
     g = null;
     Games.active = null;
+    W.override = null;
     $('gamehud').hidden = true;
     let reward = null;
     if (!(quit && score === 0)) reward = S.gameReward(PN.Game.state, id, score, caught);

@@ -255,15 +255,11 @@
       const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
-      const gameRow = (id, icon, tint, title, text, best) => {
-        if (!S.gameOwned(st, id)) {
-          const price = PN.GAMES[id].price;
-          return row({ icon: 'lock', tint, title, text, act: 'unlock', id, cls: st.coins >= price ? '' : ' off', side: tr('Unlock {0}', price) });
-        }
-        return row({ icon, tint, title, text, act: 'game', id, cls: off(can), side: can.ok ? (best ? tr('best {0}', best) : '') : why(can) });
-      };
-      h += gameRow('catch', 'fish', 'sea', tr('Fish Rain'), tr('Slide left and right to catch the fish. Now and then you get to keep one.'), st.counters.bestCatch);
-      h += gameRow('ball', 'up', 'warm', tr('Nose Ball'), tr('Keep the ball in the air for as long as you can.'), st.counters.bestBall);
+      PN.GAME_ORDER.forEach((id) => {
+        const gm = PN.GAMES[id], best = st.counters[gm.best];
+        if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= gm.price ? '' : ' off', side: tr('Unlock {0}', gm.price) });
+        else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? (best ? tr('best {0}', best) : '') : why(can) });
+      });
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       if (st.owned.sauna) {
         const wait = now < st.saunaAt;

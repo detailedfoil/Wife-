@@ -537,6 +537,10 @@
     } else if (game === 'ball') {
       coins = Math.min(60, Math.round(score * 1.5));
       if (score > c.bestBall) { c.bestBall = score; best = score > 0; }
+    } else if (PN.GAMES[game] && PN.GAMES[game].rate) {
+      const key = PN.GAMES[game].best;
+      coins = Math.min(60, Math.round(score * PN.GAMES[game].rate));
+      if (score > (c[key] || 0)) { c[key] = score; best = score > 0; }
     }
     coins = earn(state, coins);
     s.energy = pct(s.energy - T.gameEnergy);

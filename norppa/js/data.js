@@ -299,7 +299,15 @@
      cost 12x their base price at the top end, but are then spread on a curve so the cheapest sits near
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
   /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
-  const GAMES = { ball: { price: 0 }, catch: { price: 200 } };
+  const GAMES = {
+    ball: { price: 0, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall' },
+    catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch' },
+    swim: { price: 500, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp.', best: 'best_swim', rate: 3, unit: 'gaps swum' },
+    toss: { price: 800, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Pull back, aim and let go. Knock over the snowmen. Mind the wind.', best: 'best_toss', rate: 2.5, unit: 'points' },
+    curl: { price: 1100, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', rate: 1.8, unit: 'points' },
+    sled: { price: 1500, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', rate: 0.1, unit: 'metres' },
+  };
+  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'toss', 'curl', 'sled'];
   PN.GAMES = GAMES;
   const ECON = { price: 2, cosmetic: 6, cosmeticFloor: 200, earn: 2 / 3, fishFood: 0.75 };
   PN.ECON = ECON;

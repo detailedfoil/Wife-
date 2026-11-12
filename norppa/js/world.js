@@ -696,5 +696,7 @@
     updateCamera(dt, false);
   };
 
-  W.render = function () { W.renderer.render(W.scene, W.camera); };
+  /* An arcade game shows a stage of its own in place of the lake. */
+  W.override = null;
+  W.render = function () { const o = W.override; W.renderer.render(o ? o.scene : W.scene, o ? o.camera : W.camera); };
 })(window.PN = window.PN || {});

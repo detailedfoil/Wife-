@@ -842,7 +842,7 @@
 
   /* ---------- mini-games ---------- */
   G.unlockGame = async function (id) {
-    const g = PN.GAMES[id], title = tr({ catch: 'Fish Rain', ball: 'Nose Ball' }[id] || id);
+    const g = PN.GAMES[id], title = tr(g.title);
     if (state.coins < g.price) { A.play('nope'); UI.toast(tr('Not enough coins yet. Games and dives earn more.'), 'coin', 'bad'); return; }
     const v = await UI.modal({ title, html: '<p>' + tr('Unlock {0} for {1} coins?', title, g.price) + '</p>', actions: [{ label: tr('Unlock'), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (v !== 1) return;
@@ -870,8 +870,8 @@
     UI.refresh();
     if (!r) return;
     seal.gesture(r.best ? 'happy' : 'clap'); A.play(r.best ? 'award' : 'coin');
-    const title = tr({ catch: 'Fish Rain', ball: 'Nose Ball' }[id]);
-    const unit = tr(id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces'));
+    const title = tr(PN.GAMES[id].title);
+    const unit = tr(PN.GAMES[id].unit || (id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces')));
     let html = '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
