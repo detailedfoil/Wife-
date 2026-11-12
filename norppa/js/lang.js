@@ -286,7 +286,7 @@
     'Sunken coins': 'Uponneita kolikoita',
     '{0} came up with a flipperful of coins.': '{0} toi pinnalle evällisen kolikoita.',
     ' New for the album!': ' Uusi albumiin!',
-    'You have this one already, so the village trader bought it.': 'Tämä sinulla jo on, joten kylän kauppias osti sen.',
+    '{0} found some coins too.': '{0} löysi myös kolikoita.',
     'Into the larder': 'Ruokakomeroon',
     'Into the album': 'Albumiin',
 

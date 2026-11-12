@@ -627,7 +627,7 @@
     const what = PN.isFi() ? rare.charAt(0).toUpperCase() + rare.slice(1) + (loot.n > 1 ? ', ' + loot.n + ' kpl' : '') + '.'
       : '<b>' + UI.esc(it.en) + '</b>' + (loot.n > 1 ? ' × ' + loot.n : '') + ', ' + rare + '.';
     let html = '<p>' + what + (loot.isNew ? tr(' New for the album!') : '') + '</p><p>' + UI.esc(PN.itemNote(it)) + '</p>';
-    if (loot.kind === 'trinket' && loot.coins) html += '<div class="loot">' + coinChip(loot.coins) + '</div><p>' + tr('You have this one already, so the village trader bought it.') + '</p>';
+    if (loot.coins) html += '<div class="loot">' + coinChip(loot.coins) + '</div><p>' + tr('{0} found some coins too.', plain()) + '</p>';
     return UI.modal({ art: PN.Thumbs.get(loot.id), title: UI.esc(it.fi), html, actions: [{ label: tr(loot.kind === 'fish' ? 'Into the larder' : 'Into the album'), value: 1 }] });
   }
 

@@ -513,26 +513,28 @@
     state.counters.dives++;
     addXp(state, 4);
     learn(state, 'avanto');
+    // Every dive that finds anything pays 20 to 150 coins, and now and then a fish or a treasure comes up with them.
     let r = rnd(state), loot;
-    if (state.counters.dives === 1) r = 0.1;          // first dive: fish for certain
-    else if (state.counters.dives === 2) r = 0.7;     // second dive: a first treasure
-    if (r < 0.5) {
-      const id = state.counters.dives === 1 ? 'muikku' : pickFish(state);
-      const n = PN.items[id].rarity === 1 ? 1 + Math.floor(rnd(state) * 2) : 1;
-      const isNew = giveFish(state, id, n);
-      loot = { kind: 'fish', id, n, isNew };
-    } else if (r < 0.8) {
-      const id = pickTrinket(state);
-      const isNew = !state.trinkets[id];
-      state.trinkets[id] = (state.trinkets[id] || 0) + 1;
-      let coins = 0;
-      if (!isNew) coins = earn(state, 4 * (24 + 6 * PN.items[id].rarity));   // 4x a game, the dive has a 25 minute timer
-      learn(state, 'aarre');
-      loot = { kind: 'trinket', id, n: 1, isNew, coins };
-    } else if (r < 0.95) {
-      const n = earn(state, 4 * (36 + Math.floor(rnd(state) * 25)));   // 96 to 160 coins, 4x a game because of the timer
-      loot = { kind: 'coins', n };
-    } else loot = { kind: 'none' };
+    const early = state.counters.dives <= 2;
+    if (!early && r < 0.05) loot = { kind: 'none' };
+    else {
+      const coins = earn(state, (20 + Math.floor(rnd(state) * 131)) / T.earnRate);
+      let b = rnd(state);
+      if (state.counters.dives === 1) b = 0.1;          // first dive: fish for certain
+      else if (state.counters.dives === 2) b = 0.7;     // second dive: a first treasure
+      if (b < 0.5) {
+        const id = state.counters.dives === 1 ? 'muikku' : pickFish(state);
+        const n = PN.items[id].rarity === 1 ? 1 + Math.floor(rnd(state) * 2) : 1;
+        const isNew = giveFish(state, id, n);
+        loot = { kind: 'fish', id, n, isNew, coins };
+      } else if (b < 0.8) {
+        const id = pickTrinket(state);
+        const isNew = !state.trinkets[id];
+        state.trinkets[id] = (state.trinkets[id] || 0) + 1;
+        learn(state, 'aarre');
+        loot = { kind: 'trinket', id, n: 1, isNew, coins };
+      } else loot = { kind: 'coins', n: coins, coins };
+    }
     // Cold water and no say in it: now and then she comes up in a huff.
     if (rnd(state) < T.diveSulkChance) {
       if (state.grudge <= 0) state.grudge = T.diveSulk;
