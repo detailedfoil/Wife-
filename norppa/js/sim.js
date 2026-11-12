@@ -21,7 +21,7 @@
     sleepGrace: 20,                       // asleep for the night, her tummy counts this much fuller
     neglectLine: 25,                      // below this she sulks, friendship slips and growing goes backwards
     setback: 1,                           // hours of growing lost per hour spent below neglectLine
-    diveSulkChance: 0.33, diveSulk: 100,
+    diveSulkChance: 0.15, diveSulk: 100,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
     medHour: 6, medBonus: 100,             // she is Anxi from 6am until she has had it; a photo of the pill earns a bonus
