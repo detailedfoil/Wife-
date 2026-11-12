@@ -994,6 +994,12 @@
     }
     save(); UI.renderSheet(); UI.refresh();
   };
+  G.devEnergy = function () {
+    if (!state.dev) return;
+    state.stats.energy = 100;
+    A.play('sparkle'); FX.sparkle(head(), 8, 0xffc04a);
+    UI.refresh(); UI.renderSheet(); save();
+  };
   G.devReset = async function () {
     const v = await UI.modal({ title: tr('Reset to before developer mode?'), html: '<p>' + tr('Everything goes back to how it was just before developer mode was turned on, and developer mode switches off.') + '</p>',
       actions: [{ label: tr('Reset'), value: 1 }, { label: tr('Cancel'), value: 0 }] });
