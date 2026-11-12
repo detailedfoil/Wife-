@@ -32,6 +32,7 @@
     snow: '<path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M9.5 4.5L12 6.5l2.5-2M9.5 19.5l2.5-2 2.5 2"/>',
     aurora: '<path d="M3 9c3-4 6 4 9 0s6 4 9 0M3 14c3-4 6 4 9 0s6 4 9 0M5 19c2.5-3 4.5 3 7 0s4.5 3 7 0"/>',
     med: '<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M12 8v8M8 12h8"/>',
+    anxi: '<path d="M4.5 10l5-2M19.5 10l-5-2M7.5 17.5q1.1-1.6 2.25 0t2.25 0 2.25 0 2.25 0"/>',
     grump: '<path d="M4.5 8.5l5 2M19.5 8.5l-5 2M8 17.5c2.5-2.5 5.5-2.5 8 0"/>',
     dive: '<path d="M12 3v10M8 9.5l4 4 4-4M3 18c2-2 4 2 6 0s4 2 6 0 4 2 6 0"/>',
     steam: '<path d="M6 20h12M8 15.5c-2-3 2-4 0-7.5M12 15.5c-2-3 2-4 0-7.5M16 15.5c-2-3 2-4 0-7.5"/>',
@@ -107,7 +108,7 @@
     });
     const sn = S.sulkNeeds(st), chip = $('sulkChip');
     chip.hidden = !sn;
-    if (sn) chip.textContent = st.medLate ? tr('Angy: needs her medicine') : tr('Angy: {0} of sleep left', mins(napMs(st)));
+    if (sn) chip.textContent = st.medLate ? tr('Anxi: needs her medicine') : tr('Angy: {0} of sleep left', mins(napMs(st)));
     const mi = S.medInfo(st, Date.now()), mc = $('medChip');
     mc.hidden = !st.name || (mi.taken && mi.photo) || S.dayKey(Date.now()) <= st.med.since;
     if (!mc.hidden) mc.textContent = mi.taken ? tr('Pill photo +{0}', S.T.medBonus) : tr('Medicine');
@@ -246,7 +247,7 @@
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will cheer her up today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} is Anxi.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will calm her down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
         + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
@@ -360,7 +361,7 @@
         next = tr('Becomes a {0} at friendship level {1} after {2} days of good care. Growing slows once a bar drops below half, and being left hungry, grubby or glum sets it back.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage], needD);
       } else next = tr('Fully grown. With friendship level {0} and a happy, well-fed life, a pup may arrive.', S.T.pupLevel);
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
-        + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', tr(moods[S.mood(st)]))
+        + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|Anxi') : tr(moods[S.mood(st)]))
         + growing
         + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
         + line('Strokes', st.counters.pets) + line('Meals', st.counters.feeds) + line('Dives', st.counters.dives) + line('Games played', st.counters.games)

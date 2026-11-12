@@ -158,7 +158,7 @@
     if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry, grubby or glum for {0} hour.', 'Was left hungry, grubby or glum for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
-    if (state.medLate) { bad = true; add('grump', tr('{0} is Angy. She needs her medicine.', plain()), 'bad'); }
+    if (state.medLate) { bad = true; add('anxi', tr('{0} is Anxi. She needs her medicine.', plain()), 'bad'); }
     else if (state.grudge > 0) { bad = true; add('grump', tr('{0} is Angy. Food and gentle strokes will win it round.', plain()), 'bad'); }
     if (sum.cured) add('check', tr('Got over being poorly.'), 'good');
     sum.pupWell.forEach((n) => add('check', tr('<b>{0}</b> is feeling better.', UI.esc(n)), 'good'));
@@ -278,7 +278,7 @@
         UI.toast(tr('Award: <b>{0}</b>. +{1} coins', UI.esc(PN.awardTitle(a)), a.c), 'star', '', 4200);
         A.play('award', 0.6);
       } else if (e.type === 'medlate') {
-        UI.toast(tr('{0} has not had her medicine and is Angy.', nm()), 'grump', '', 4200);
+        UI.toast(tr('{0} has not had her medicine and is Anxi.', nm()), 'anxi', '', 4200);
       } else if (e.type === 'forgiven') {
         UI.toast(tr('{0} has forgiven you.', nm()), 'heart', '', 3800);
         seal.sulk = false; seal.heading = W.HOME_HEADING;
@@ -339,7 +339,8 @@
     }
     const awake = !seal.asleep;
     seal.setMood(S.mood(state));
-    const sulk = state.grudge > 0 && awake && !bedBusy;
+    seal.scared = state.medLate && awake && !bedBusy;
+    const sulk = state.grudge > 0 && !state.medLate && awake && !bedBusy;
     if (sulk !== seal.sulk && !G.busy) {
       seal.sulk = sulk;
       seal.heading = W.HOME_HEADING + (sulk ? 2.2 : 0);
@@ -372,6 +373,7 @@
   function idleAct() {
     const mood = S.mood(state), r = Math.random();
     if (mood === 'sick') { if (r < 0.6) { seal.gesture('sneeze'); A.play('sneeze'); } }
+    else if (mood === 'sulk' && state.medLate) { if (r < 0.6) { seal.gesture('surprise'); A.play('sad'); } }
     else if (mood === 'sulk') { if (r < 0.5) { seal.gesture('no'); A.play('hmph'); head(v1); FX.huff(v1, 1); } }
     else if (mood === 'hungry') { if (r < 0.6) { seal.gesture('sad'); A.play('sad'); } }
     else if (mood === 'tired') { seal.gesture('yawn'); A.play('yawn'); }
@@ -640,6 +642,7 @@
   function refuse(why) {
     A.play('nope');
     if (!seal.asleep && why !== 'asleep') seal.gesture('no');
+    if (why === 'sulk' && state.medLate) { UI.toast(tr('{0} is Anxi and will not play. She needs her medicine.', nm()), 'anxi'); return; }
     UI.toast(whyText(why), why === 'asleep' ? 'zzz' : why === 'sick' ? 'med' : why === 'sulk' ? 'grump' : 'clock');
   }
 
@@ -671,7 +674,7 @@
       return;
     }
     A.play('pop');
-    seal.sulk = state.grudge > 0;
+    seal.sulk = state.grudge > 0 && !state.medLate; seal.scared = !!state.medLate;
     toss(id, () => {
       if (r.med) {
         seal.gesture('gulp', true); A.play('gulp'); FX.sparkle(head(), 10, 0xffc04a);
@@ -1227,6 +1230,7 @@
       if (washing) return;
       if (seal.asleep) { head(v1); FX.zzz(v1); return; }
       const r = S.pet(state, Date.now());
+      if (r.sulking && state.medLate) { seal.gesture('surprise'); A.play('sad'); return; }
       if (r.sulking) { seal.gesture('no'); A.play('hmph'); head(v1); FX.huff(v1, 1); if (r.pat) { UI.refresh(); if (UI.sheetName === 'feed') UI.renderSheet(); } return; }
       seal.gesture('boop', true); A.play('squeak'); FX.hearts(head(), 1); buzz(10);
     } else if (type === 'poop') {
@@ -1294,6 +1298,7 @@
     if (G.ready && !G.busy && !PN.Games.active && !washing && !state.asleep && !seal.asleep && !bedBusy) {
       const s = state.stats;
       if (state.sick) b = 'med';
+      else if (state.medLate) b = 'anxi';
       else if (state.grudge > 0) b = 'grump';
       else if (s.food < 25) b = 'fish';
       else if (s.energy < 20) b = 'zzz';

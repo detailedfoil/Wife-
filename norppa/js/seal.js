@@ -227,7 +227,7 @@
       this.wornId = { head: null, neck: null, face: null, back: null };
 
       // state
-      this.mood = 'ok'; this.asleep = false; this.sulk = false; this.petting = 0; this.washing = false;
+      this.mood = 'ok'; this.asleep = false; this.sulk = false; this.scared = false; this.petting = 0; this.washing = false;
       this.look = null;                           // a point in the world to look at, or null
       this.heading = 0; this.move = null;
       this.gest = null; this.gestQ = [];
@@ -347,6 +347,11 @@
       // how it feels
       if (asleep) {
         eye = 0; eyeMode = 2; sq -= 0.08; pitch -= 0.3; drop = 0.12; roll = 0.16; fl = -0.3; fr = -0.3; blush = 0.3;
+      } else if (this.scared) {
+        // anxious: wide eyes, hunched small, trembling, glancing about
+        eye = 1; wide = 1.22; frown = 0.7; mouth = 0.12 + 0.06 * Math.sin(t * 17); sq -= 0.05; pitch -= 0.16; drop = 0.05; blush = 0.15;
+        bRoll += Math.sin(t * 31) * 0.016; roll += Math.sin(t * 27) * 0.02; fl += 0.35; fr += 0.35;
+        yaw = Math.sin(t * 1.3) > 0.55 ? 0.5 : Math.sin(t * 1.3) < -0.55 ? -0.5 : yaw * 0.3;
       } else if (this.sulk) {
         eye = 0; eyeMode = 2; pitch += 0.22; yaw = -0.55; frown = 1; blush = 0.2;
         this.peekT -= dt;
