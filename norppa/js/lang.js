@@ -302,6 +302,7 @@
     'Unlock': 'Avaa',
     'Not now': 'Ei nyt',
     '{0} unlocked!': '{0} avattu!',
+    'High risk, high reward. She might come back sulking.': 'Iso riski, iso palkinto. Hän saattaa palata murjottaen.',
     '{0} got nipped by a crab and came up sulking.': 'Rapu nipisti! {0} nousi ylös murjottaen.',
     '{0} lost the fish at the last second and is sulking.': '{0} menetti kalan viime hetkellä ja murjottaa.',
     '{0} got bitten down there and is sulking.': 'Alhaalla puraistiin! {0} murjottaa.',

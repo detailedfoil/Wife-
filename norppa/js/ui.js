@@ -264,7 +264,7 @@
       const off = (c) => (c.ok ? '' : ' off');
       const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
-      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
+      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back sulking.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
