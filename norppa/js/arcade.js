@@ -317,7 +317,7 @@
     /* New wind and maybe a new distance, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
-      const top = score < 2 ? 1.2 : score < 6 ? 2.5 : score < 12 ? 3.6 : 4.5;
+      const top = score < 4 ? 2.7 : score < 12 ? 5.6 : score < 24 ? 8 : 10;   // the wind grows half as fast with the streak, up to 10
       wind = score === 0 ? 0 : Math.round(rnd() * top * 10) / 10 * (rnd() < 0.5 ? -1 : 1);
       bk.set(0, 0, SZ - dist);
       bucket.position.copy(bk);
@@ -375,7 +375,7 @@
         lens(view);
         view.camera.position.set(0, 2.1, SZ + 2.6); view.camera.lookAt(0, 0.55, SZ - Math.min(dist, 8.5));
         // the flag streams out with the wind
-        const w = Math.abs(wind) / 4.5;
+        const w = Math.abs(wind) / 10;
         cloth.rotation.y = wind >= 0 ? 0 : PI;
         cloth.rotation.z = -1.3 * (1 - Math.min(1, w * 1.6));
         cloth.userData.mesh.rotation.y = Math.sin(clock * (4 + 8 * w)) * (0.1 + 0.35 * w);
@@ -383,7 +383,7 @@
         if (mode === 'fly' || mode === 'out' && ball.visible && bv.lengthSq() > 0.01) {
           const steps = 3, h = dt / steps;
           for (let i = 0; i < steps; i++) {
-            bv.x += wind * 4.0 * h; bv.y -= GRAV * h;
+            bv.x += wind * 1.8 * h   /* 1.8 per point: the same push as before, now shown on a 0 to 10 scale */; bv.y -= GRAV * h;
             ball.position.addScaledVector(bv, h);
             const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
             ball.rotation.x -= spin * h;
