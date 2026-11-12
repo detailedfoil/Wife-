@@ -92,7 +92,9 @@
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(bmp, 0, 0, w, h);
     if (bmp.close) bmp.close();
-    return Pill.find(ctx.getImageData(0, 0, w, h).data, w, h);
+    const res = Pill.find(ctx.getImageData(0, 0, w, h).data, w, h);
+    res.canvas = c;                                  // the shrunk photo, so the game can show where it looked
+    return res;
   };
   PN.Pill = Pill;
 })(window.PN = window.PN || {});

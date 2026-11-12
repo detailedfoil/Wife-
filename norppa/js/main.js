@@ -1032,30 +1032,55 @@
     save(); UI.renderSheet(); UI.refresh();
   };
   /* ---------- her daily medicine ---------- */
-  let medBusy = false;
+  let medBusy = false, medFound = false;
   const medEl = (id) => document.getElementById(id);
   G.openMed = function () {
     const info = S.medInfo(state, Date.now()), box = medEl('medCam');
     if (info.taken && info.photo) return;
-    box.hidden = false; medBusy = false;
+    box.hidden = false; medBusy = false; medFound = false;
+    medEl('medPic').hidden = true;
     medEl('medTitle').textContent = tr('Medicine time');
     medEl('medShoot').textContent = tr('Take photo'); medEl('medShoot').disabled = false;
     medEl('medSkip').textContent = tr('I took it'); medEl('medSkip').hidden = info.taken;
     medEl('medMsg').textContent = tr('Take a photo of the pill on a plain surface for {0} bonus coins.', S.T.medBonus);
   };
-  G.closeMed = function () { medEl('medCam').hidden = true; medBusy = false; };
+  G.closeMed = function () { medEl('medCam').hidden = true; medBusy = false; medFound = false; };
   G.medPhoto = function () { if (!medBusy) { const f = medEl('medFile'); f.value = ''; f.click(); } };   // opens the phone's own camera
+  /* the photo, with a ring round the spot where she thinks the pill is */
+  function medShow(res) {
+    const pic = medEl('medPic'), src = res.canvas;
+    if (!src) { pic.hidden = true; return; }
+    pic.width = src.width; pic.height = src.height;
+    const c = pic.getContext('2d'); c.drawImage(src, 0, 0);
+    if (res.ok) {
+      const x = res.x * src.width, y = res.y * src.width, r = Math.max(14, res.r * src.width * 1.5), lw = Math.max(3, src.width / 120);
+      c.lineWidth = lw + 3; c.strokeStyle = 'rgba(0,0,0,.45)'; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.stroke();
+      c.lineWidth = lw; c.strokeStyle = '#3ddc84'; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.stroke();
+    }
+    pic.hidden = false;
+  }
   G.medFile = async function (file) {
     if (!file || medBusy) return;
     medBusy = true; medEl('medShoot').disabled = true;
     medEl('medMsg').textContent = tr('Looking at the photo...');
-    let seen = false;
-    try { seen = (await PN.Pill.fromFile(file)).ok; } catch (err) { seen = false; }
+    let res = { ok: false };
+    try { res = await PN.Pill.fromFile(file); } catch (err) { res = { ok: false }; }
     medBusy = false; medEl('medShoot').disabled = false;
     if (medEl('medCam').hidden) return;
-    if (seen) G.medTaken(true);
-    else { A.play('nope'); medEl('medMsg').textContent = tr('I cannot see the pill. Put it on its own on a plain, darker surface, get close, and try again.'); }
+    medFound = !!res.ok; medShow(res);
+    medEl('medShoot').textContent = tr('Retake');
+    const info = S.medInfo(state, Date.now());
+    if (res.ok) {
+      A.play('chirp');
+      medEl('medMsg').textContent = tr('Is this the pill? The green ring shows where I found it.');
+      medEl('medSkip').textContent = tr('Yes, that is it'); medEl('medSkip').hidden = info.photo;
+    } else {
+      A.play('nope');
+      medEl('medMsg').textContent = tr('I cannot see the pill. Put it on its own on a plain, darker surface, get close, and try again.');
+      medEl('medSkip').textContent = tr('I took it'); medEl('medSkip').hidden = info.taken;
+    }
   };
+  G.medSkip = function () { G.medTaken(medFound); };
   G.medTaken = function (photo) {
     const r = S.takeMed(state, Date.now(), !!photo);
     G.closeMed();

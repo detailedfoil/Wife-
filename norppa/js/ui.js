@@ -85,7 +85,7 @@
     $('medClose').addEventListener('click', () => G().closeMed());
     $('medShoot').addEventListener('click', () => G().medPhoto());
     $('medFile').addEventListener('change', (e) => G().medFile(e.target.files && e.target.files[0]));
-    $('medSkip').addEventListener('click', () => G().medTaken(false));
+    $('medSkip').addEventListener('click', () => G().medSkip());
     $('sheetClose').addEventListener('click', () => UI.closeSheet());
     $('scrubDone').addEventListener('click', () => G().endWash(false));
     $('sheetTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) { PN.Audio.play('tap'); UI.tab = b.dataset.tab; UI.renderSheet(); } });
