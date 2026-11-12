@@ -14,7 +14,7 @@
     earnRate: PN.ECON.earn,
     food: 12.6,                          // the same asleep, awake or with the game closed: a quarter left after about 6 hours
     joyAwake: 27, joyAsleep: 6.1,
-    energyAwake: 8.25, energyAsleep: 14,
+    energyAwake: 8.25, energyAsleep: 25,
     clean: 16.9, cleanPerPoop: 3.4,
     poopEvery: 5 / 3, maxPoops: 6,        // a poo every 100 minutes awake
     careGood: 50, careLow: 25,            // growing slows once her lowest need drops below careGood and stops at careLow
