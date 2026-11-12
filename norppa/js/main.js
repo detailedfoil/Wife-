@@ -604,7 +604,7 @@
     await wait(0.9);
     await showLoot(loot);
     if (carried) seal.mouthA.remove(carried);
-    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr('{0} came up in a huff. That water was cold.', nm()), 'grump'); }
+    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up sulking.', '{0} lost the fish at the last second and is sulking.', '{0} got bitten down there and is sulking.'][Math.floor(Math.random() * 3)], nm()), 'grump'); }
     else { seal.gesture('happy'); A.play('chirp'); }
     await seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.0, face: W.HOME_HEADING });
     G.busy = false; UI.setBusy(false);
