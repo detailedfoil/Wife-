@@ -103,7 +103,7 @@
     });
     const sn = S.sulkNeeds(st), chip = $('sulkChip');
     chip.hidden = !sn;
-    if (sn) chip.textContent = tr('{0}/{1} treats, {2}/{3} pats', sn.got.length, sn.treats.length, sn.pats, S.T.sulkPats);
+    if (sn) chip.textContent = tr('Sulk: {0} of sleep left', mins(napMs(st)));
     $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
     const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
     document.querySelectorAll('#dock button').forEach((b) => {
@@ -233,13 +233,14 @@
   const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + '">' + ic(o.icon) + '</span><span class="txt"><b>'
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
+  const napMs = (st) => Math.max(0, st.grudge) / (100 / S.T.sulkSleepH) * 3600e3;   // sleep it would take to sulk it off
   const WHY = { asleep: 'asleep', sick: 'poorly', sulk: 'sulking', tired: 'too tired', wait: 'resting' };
 
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is sulking.', esc(st.name)) + '</b> ' + tr('Each of these treats takes a sixth off the sulk, and ten head pats take off another sixth. A four hour nap clears it too.') + '<div class="sulk-want">'
-        + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : '') + '</span>').join('')
+      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is sulking.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Sulk timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+        + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
         + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
       const order = { fish: 0, food: 1, med: 2 };
