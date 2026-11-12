@@ -271,7 +271,7 @@
      Every throw has new wind and the bucket stays where it is. A miss resets the
      streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62, WINDK = 0.5;   // HIT: the scoring circle is 30% wider than the bucket looks
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.504, HIT = 0.66, RIM_Y = 0.62, WINDK = 0.5;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
     let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
@@ -297,7 +297,7 @@
       bucket.add(U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 24), tin, 0, 0.02, 0), -PI / 2));
       bucket.add(U.rot(U.torus(RIM, 0.025, U.mat(0xc7d3df, { metalness: 0.6, roughness: 0.3 }), 0, RIM_Y, 0, PI * 2, 32), PI / 2));
       bucket.add(U.rot(U.torus(RIM * 0.92, 0.012, U.mat(0x7d8b99, { metalness: 0.6, roughness: 0.4 }), 0, RIM_Y + 0.18, 0, PI, 24), 0, 0, 0));
-      bucket.add(U.mesh(new T.CircleGeometry(0.75, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
+      bucket.add(U.mesh(new T.CircleGeometry(0.9, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
       bucket.children[bucket.children.length - 1].rotation.x = -PI / 2;
       sc.add(bucket);
       // a little flag shows which way the wind blows
@@ -317,7 +317,7 @@
     /* New wind and maybe a new distance, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
-      wind = Math.round(10 * Math.pow(rnd(), 2) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
+      wind = Math.round(10 * Math.pow(rnd(), 1.5) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
       bk.set(0, 0, SZ - dist);
       bucket.position.copy(bk);
       flag.position.set(0.95, 0, bk.z - 0.2);
