@@ -303,7 +303,7 @@
     'Not now': 'Ei nyt',
     '{0} unlocked!': '{0} avattu!',
     'Blackjack': 'Blackjack',
-    'Bet 1, 3 or 5 sardines a hand. Beat the dealer without going over 21. Cash out when you like.': 'Panosta 1, 3 tai 5 sardiinia kädestä. Voita jakaja menemättä yli 21:n. Kotiuta voitot milloin haluat.',
+    'Bet 5 sardines a hand. Beat the dealer without going over 21. Cash out when you like.': 'Panosta 5 sardiinia kädestä. Voita jakaja menemättä yli 21:n. Kotiuta voitot milloin haluat.',
     'sardines won': 'voitettua sardiinia',
     'Sardines': 'Sardiinit',
     'Cash out': 'Kotiuta',

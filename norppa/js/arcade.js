@@ -717,10 +717,10 @@
   })();
 
   /* ---------- Blackjack ----------
-     Bet 1, 3 or 5 sardines, hit or stand, beat the dealer without going over 21. A win pays five times the bet.
+     Bet 5 sardines, hit or stand, beat the dealer without going over 21. A win pays five times the bet.
      You sit down with ten sardines and play until you cash out or they are all gone. Only the winnings turn into coins. */
   const bj = (() => {
-    const START = 10, BETS = [1, 3, 5], PAY = 5;
+    const START = 10, BETS = [5], PAY = 5;
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, mode = 'bet', wait = 0, msg = '', hide = true;
     const total = (h) => {
@@ -740,7 +740,7 @@
     function paint() {
       const btn = (act, label, cls, off) => '<button data-bj="' + act + '" class="' + (cls || '') + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
       let btns = '';
-      if (mode === 'bet') btns = BETS.map((b) => btn('bet' + b, tr('Bet {0}', b), b === 5 ? 'go' : '', stack < b)).join('');
+      if (mode === 'bet') btns = BETS.map((b) => btn('bet' + b, tr('Bet {0}', b), 'go', stack < b)).join('');
       else btns = btn('hit', tr('Hit'), '', mode !== 'play') + btn('stand', tr('Stand'), 'go', mode !== 'play');
       el.innerHTML = '<div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (house.length ? (hide ? '?' : total(house)) : '') + '</b></div><div class="bj-cards">'
         + house.map((c, i) => card(c, hide && i === 1)).join('') + '</div></div>'
