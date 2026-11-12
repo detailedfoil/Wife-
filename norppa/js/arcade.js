@@ -270,7 +270,7 @@
      Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
      Every throw has new wind, the bucket moves further back as the streak grows, and one miss ends it. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, RIM_Y = 0.62;
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.55, RIM_Y = 0.62;   // RIM: 30% wider than the first version
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
     let wind = 0, score = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
@@ -296,7 +296,7 @@
       bucket.add(U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 24), tin, 0, 0.02, 0), -PI / 2));
       bucket.add(U.rot(U.torus(RIM, 0.025, U.mat(0xc7d3df, { metalness: 0.6, roughness: 0.3 }), 0, RIM_Y, 0, PI * 2, 32), PI / 2));
       bucket.add(U.rot(U.torus(RIM * 0.92, 0.012, U.mat(0x7d8b99, { metalness: 0.6, roughness: 0.4 }), 0, RIM_Y + 0.18, 0, PI, 24), 0, 0, 0));
-      bucket.add(U.mesh(new T.CircleGeometry(0.75, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
+      bucket.add(U.mesh(new T.CircleGeometry(0.98, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
       bucket.children[bucket.children.length - 1].rotation.x = -PI / 2;
       sc.add(bucket);
       // a little flag shows which way the wind blows
