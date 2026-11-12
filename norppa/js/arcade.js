@@ -268,7 +268,7 @@
 
   /* ================= Snowball Toss =================
      Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
-     Every throw has new wind and the bucket moves further back as the streak grows. A miss resets the
+     Every throw has new wind and the bucket stays where it is. A miss resets the
      streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
     const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62;   // HIT: the scoring circle is 30% wider than the bucket looks
@@ -316,7 +316,7 @@
     }
     /* New wind and maybe a new distance, ready for the next throw. */
     function setUp() {
-      dist = score < 4 ? 5 : score < 9 ? 7 : score < 15 ? 9 : 10.5;
+      dist = 5;   // the bucket never moves back
       const top = score < 2 ? 1.2 : score < 6 ? 2.5 : score < 12 ? 3.6 : 4.5;
       wind = score === 0 ? 0 : Math.round(rnd() * top * 10) / 10 * (rnd() < 0.5 ? -1 : 1);
       bk.set(0, 0, SZ - dist);
@@ -383,7 +383,7 @@
         if (mode === 'fly' || mode === 'out' && ball.visible && bv.lengthSq() > 0.01) {
           const steps = 3, h = dt / steps;
           for (let i = 0; i < steps; i++) {
-            bv.x += wind * 2.0 * h; bv.y -= GRAV * h;
+            bv.x += wind * 4.0 * h; bv.y -= GRAV * h;
             ball.position.addScaledVector(bv, h);
             const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
             ball.rotation.x -= spin * h;
