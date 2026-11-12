@@ -778,7 +778,30 @@
     }
     function build() {
       view = stage('#0d2b3a', '#1c6a55', { ground: 0x224a40, hemi: 1.9, key: 1.6 });
-      view.scene.add(U.ball(1, U.mat(0x17694f, { roughness: 0.9 }), 0, -1.02, 0, 2.6, 1, 2.6, 28));
+      // A fine, hand-made felt grain. Kept low-contrast so the table still reads as a clean cartoon.
+      const feltTex = U.tex(192, 192, (c, w, h) => {
+        const r = U.rng(714);
+        c.fillStyle = '#17694f'; c.fillRect(0, 0, w, h);
+        for (let i = 0; i < 2600; i++) {
+          const v = r() < 0.52 ? '255,255,255' : '5,45,32';
+          c.fillStyle = 'rgba(' + v + ',' + (0.018 + r() * 0.045) + ')';
+          const x = r() * w, y = r() * h, len = 1 + r() * 2.2;
+          c.fillRect(x, y, len, 1);
+        }
+        // Soft, scattered felt flecks rather than a noisy photographic surface.
+        for (let i = 0; i < 90; i++) {
+          c.fillStyle = 'rgba(194,235,208,' + (0.025 + r() * 0.035) + ')';
+          c.beginPath(); c.arc(r() * w, r() * h, 0.5 + r() * 1.1, 0, PI * 2); c.fill();
+        }
+      });
+      feltTex.wrapS = feltTex.wrapT = T.RepeatWrapping;
+      feltTex.repeat.set(4, 4);
+      const feltMat = new T.MeshStandardMaterial({ map: feltTex, color: 0xffffff, roughness: 1 });
+      view.scene.add(U.ball(1, feltMat, 0, -1.02, 0, 2.6, 1, 2.6, 36));
+      // A slim brass piping follows the curved edge of the felt.
+      const trim = U.torus(2.47, 0.032, U.mat(0xd8a94b, { metalness: 0.28, roughness: 0.42 }), 0, -0.71, 0, PI * 2, 96);
+      trim.rotation.x = PI / 2;
+      view.scene.add(trim);
       view.camera.position.set(0, 0.5, 4.6);
       el = document.getElementById('bjTable');
       el.addEventListener('click', (e) => { const b = e.target.closest('[data-bj]'); if (b && !b.disabled) act(b.dataset.bj); });
