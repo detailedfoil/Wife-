@@ -680,10 +680,12 @@
         seal.gesture('gulp', true); A.play('gulp'); FX.sparkle(head(), 10, 0xffc04a);
         return;
       }
-      if (it.energy) { seal.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.4); FX.sparkle(head(), 6, 0xffc04a); }
-      else { seal.gesture('chomp', true); A.play('munch'); }
-      if (r.fav) { FX.hearts(head(), 4); A.play('chirp'); seal.gesture('happy'); }
+      const awake = !seal.asleep;
+      if (it.energy) { if (awake) seal.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.4); FX.sparkle(head(), 6, 0xffc04a); }
+      else { if (awake) seal.gesture('chomp', true); A.play('munch'); }
+      if (r.fav) { FX.hearts(head(), 4); A.play('chirp'); if (awake) seal.gesture('happy'); }
       else if (it.kind === 'food') FX.hearts(head(), 1);
+      if (!awake) FX.zzz(head());
       buzz(10);
     });
     if (r.treat) UI.toast(tr('{0} wanted that one.', nm()), 'heart');

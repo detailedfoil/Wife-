@@ -391,8 +391,7 @@
       addXp(state, 3); check(state);
       return ok({ med: true });
     }
-    if (state.asleep) return no('asleep');
-    const before = s.food, fav = id === state.fav;
+    const before = s.food, fav = id === state.fav;   // she can be fed in her sleep
     state.pantry[id]--;
     s.food = pct(s.food + it.food);
     if (it.energy) s.energy = pct(s.energy + it.energy);
