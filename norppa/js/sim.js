@@ -13,14 +13,15 @@
   const T = {
     earnRate: PN.ECON.earn,
     food: 11.25,                          // the same asleep, awake or with the game closed: a quarter left after about 6 hours 40
-    joyAwake: 36, joyAsleep: 8.1,
+    joyAwake: 24, joyAsleep: 5.4,
     energyAwake: 8.25, energyAsleep: 14,
-    clean: 22.5, cleanPerPoop: 4.5,
+    clean: 15, cleanPerPoop: 3,
     poopEvery: 5 / 3, maxPoops: 6,        // a poo every 100 minutes awake
     careGood: 50, careLow: 25,            // growing slows once her lowest need drops below careGood and stops at careLow
     sleepGrace: 20,                       // asleep for the night, her tummy counts this much fuller
     neglectLine: 25,                      // below this she sulks, friendship slips and growing goes backwards
     setback: 1,                           // hours of growing lost per hour spent below neglectLine
+    diveSulkChance: 0.33, diveSulk: 25,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
     sootheFeed: 12, sootheFav: 25, sootheWash: 10, sootheDo: 2,
@@ -494,6 +495,11 @@
       const n = earn(state, 5 + Math.floor(rnd(state) * 16));
       loot = { kind: 'coins', n };
     } else loot = { kind: 'none' };
+    // Cold water and no say in it: now and then she comes up in a huff.
+    if (rnd(state) < T.diveSulkChance) {
+      if (state.grudge <= 0) state.grudge = T.diveSulk;
+      loot.sulked = true;
+    }
     check(state);
     return loot;
   }

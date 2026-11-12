@@ -303,6 +303,7 @@
     '{0} is too tired for that.': '{0} on liian väsynyt siihen.',
     'Not just yet.': 'Ei ihan vielä.',
     ' Wake first, or wait for morning.': ' Herätä ensin tai odota aamuun.',
+    '{0} came up in a huff. That water was cold.': '{0} nousi ylös murjottaen. Vesi oli kylmää.',
     'Nobody is poorly. Save the juice for a rainy day.': 'Kukaan ei ole kipeä. Säästä mehu pahan päivän varalle.',
     'Cloudberry juice works wonders.': 'Lakkamehu tekee ihmeitä.',
     '{0}, the favourite!': '{0}, lempiruokaa!',
