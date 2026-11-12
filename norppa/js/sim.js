@@ -523,11 +523,11 @@
       const isNew = !state.trinkets[id];
       state.trinkets[id] = (state.trinkets[id] || 0) + 1;
       let coins = 0;
-      if (!isNew) coins = earn(state, 24 + 6 * PN.items[id].rarity);   // a spare treasure sells for about what a game pays
+      if (!isNew) coins = earn(state, 4 * (24 + 6 * PN.items[id].rarity));   // 4x a game, the dive has a 25 minute timer
       learn(state, 'aarre');
       loot = { kind: 'trinket', id, n: 1, isNew, coins };
     } else if (r < 0.95) {
-      const n = earn(state, 36 + Math.floor(rnd(state) * 25));   // 24 to 40 coins, the same as a good game
+      const n = earn(state, 4 * (36 + Math.floor(rnd(state) * 25)));   // 96 to 160 coins, 4x a game because of the timer
       loot = { kind: 'coins', n };
     } else loot = { kind: 'none' };
     // Cold water and no say in it: now and then she comes up in a huff.
