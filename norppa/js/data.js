@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '2026-11-12T13:15:00Z';
+  PN.UPDATED = '2026-11-12T13:45:00Z';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -302,13 +302,14 @@
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
   /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
   const GAMES = {
-    ball: { price: 0, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall' },
-    catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch' },
-    swim: { price: 500, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp.', best: 'best_swim', rate: 3, unit: 'gaps swum' },
-    toss: { price: 800, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. A miss starts the streak again. Play until you press Back.', best: 'best_toss', rate: 3, unit: 'baskets in a row' },
-    curl: { price: 1100, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', rate: 1.8, unit: 'points' },
-    sled: { price: 1500, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', rate: 0.1, unit: 'metres' },
+    ball: { price: 0, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', rate: 1.7 },
+    catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', rate: 1.2 },
+    swim: { price: 500, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp.', best: 'best_swim', rate: 4.8, unit: 'gaps swum' },
+    toss: { price: 800, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. A miss starts the streak again. Play until you press Back.', best: 'best_toss', rate: 5.3, unit: 'baskets in a row' },
+    curl: { price: 1100, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', rate: 4, unit: 'points' },
+    sled: { price: 1500, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', rate: 0.096, unit: 'metres' },
   };
+  /* rate: base coins per point, tuned so a run at the player's high score pays about 48 on every game (then the earnings cut applies). */
   PN.GAME_ORDER = ['ball', 'catch', 'swim', 'toss', 'curl', 'sled'];
   PN.GAMES = GAMES;
   const ECON = { price: 2, cosmetic: 6, cosmeticFloor: 200, earn: 2 / 3, fishFood: 0.75 };
