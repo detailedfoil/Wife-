@@ -200,6 +200,7 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .g-pill b.bump { animation: bump .28s cubic-bezier(.2, .9, .3, 1.4); display: inline-block; }
 @keyframes bump { from { transform: scale(1.55); color: var(--berry); } }
 .g-top .round { margin-left: auto; pointer-events: auto; }
+.g-top .round.back { width: auto; padding: 0 15px 0 9px; border-radius: 19px; gap: 3px; grid-auto-flow: column; font: 800 13px var(--body, inherit); color: var(--ink-soft); }
 .g-big { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font: 600 76px/1 var(--display); color: #fff; text-shadow: 0 4px 0 rgba(13, 24, 60, .5), 0 0 30px rgba(13, 24, 60, .5); }
 .g-big.pop { animation: pop .5s cubic-bezier(.2, .9, .3, 1.4); }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } }

@@ -268,11 +268,12 @@
 
   /* ================= Snowball Toss =================
      Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
-     Every throw has new wind, the bucket moves further back as the streak grows, and one miss ends it. */
+     Every throw has new wind and the bucket moves further back as the streak grows. A miss resets the
+     streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.55, RIM_Y = 0.62;   // RIM: 30% wider than the first version
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
-    let wind = 0, score = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
+    let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
 
     function build() {
@@ -296,7 +297,7 @@
       bucket.add(U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 24), tin, 0, 0.02, 0), -PI / 2));
       bucket.add(U.rot(U.torus(RIM, 0.025, U.mat(0xc7d3df, { metalness: 0.6, roughness: 0.3 }), 0, RIM_Y, 0, PI * 2, 32), PI / 2));
       bucket.add(U.rot(U.torus(RIM * 0.92, 0.012, U.mat(0x7d8b99, { metalness: 0.6, roughness: 0.4 }), 0, RIM_Y + 0.18, 0, PI, 24), 0, 0, 0));
-      bucket.add(U.mesh(new T.CircleGeometry(0.98, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
+      bucket.add(U.mesh(new T.CircleGeometry(0.75, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
       bucket.children[bucket.children.length - 1].rotation.x = -PI / 2;
       sc.add(bucket);
       // a little flag shows which way the wind blows
@@ -341,7 +342,8 @@
     }
     function basket() {
       mode = 'in'; wait = 0.9;
-      score++; K.score(score);
+      score++; K.shown(score);
+      if (score > top) { top = score; K.result(top); }
       A.play('match'); A.play('thud', 0.1);
       puffs.emit(bk.x, RIM_Y + 0.1, bk.z, 10, 1.4, 0.09, 0.5, 4);
       actor.gesture(score % 5 === 0 ? 'clap' : 'happy', true);
@@ -349,13 +351,13 @@
       else K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
-      label: 'Baskets', label2: 'Wind', hint: 'Flick the snowball into the bucket.',
+      label: 'Baskets', label2: 'Wind', back: true, hint: 'Flick the snowball into the bucket. Miss and the streak starts again.',
       view: () => view,
       start() {
         if (!view) build();
         cast(view, 0.42, true);
         face(0);
-        score = 0; puffs.clear();
+        score = 0; top = 0; puffs.clear();
         setUp();
       },
       go() {},
@@ -386,8 +388,8 @@
             const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
             ball.rotation.x -= spin * h;
             if (mode === 'fly' && prevY >= RIM_Y && p.y < RIM_Y) {
-              if (d < RIM - BR * 0.5) { p.set(bk.x + (p.x - bk.x) * 0.5, RIM_Y - 0.25, bk.z + (p.z - bk.z) * 0.5); bv.set(0, 0, 0); basket(); break; }
-              if (d < RIM + BR) {                                      // clang off the rim
+              if (d < HIT - BR * 0.5) { p.set(bk.x + (p.x - bk.x) * 0.5, RIM_Y - 0.25, bk.z + (p.z - bk.z) * 0.5); bv.set(0, 0, 0); basket(); break; }
+              if (d < HIT + BR) {                                      // clang off the rim
                 A.play('tap'); A.play('thud', 0.1);
                 const ox = (p.x - bk.x) / (d || 1), oz = (p.z - bk.z) / (d || 1);
                 bv.set(ox * 2.2, Math.abs(bv.y) * 0.4, oz * 2.2);
@@ -395,7 +397,7 @@
                 miss(tr('So close!'));
               }
             }
-            if (mode === 'fly' && p.y < RIM_Y && d < RIM + BR && d > RIM - BR) { bv.x *= -0.4; bv.z *= -0.4; miss(tr('So close!')); }
+            if (mode === 'fly' && p.y < RIM_Y && d < HIT + BR && d > HIT - BR) { bv.x *= -0.4; bv.z *= -0.4; miss(tr('So close!')); }
             prevY = p.y;
             if (p.y < BR) {
               p.y = BR;
@@ -409,8 +411,8 @@
         if ((mode === 'in' || mode === 'out') && playing) {
           wait -= dt;
           if (wait <= 0) {
-            if (mode === 'out') { mode = 'done'; K.over(tr(score >= 10 ? 'Wow!' : 'Time!')); }
-            else setUp();
+            if (mode === 'out') { score = 0; K.shown(0); }
+            setUp();
           }
         }
         puffs.update(dt);

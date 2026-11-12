@@ -37,6 +37,8 @@
     hint(text) { $('gHint').textContent = text; },
     over(text) { if (g && g.phase === 'play') { g.phase = 'over'; g.clock = 0; big(text); } },
     keys: () => (g ? g.keyR - g.keyL : 0),
+    shown(n) { setScore(n); },                       // change the number on screen, not the result
+    result(n) { if (g) g.score = n; },              // what the game will pay out for
   };
 
   /* One model of each fish is built once, then copied for every fish that falls. */
@@ -91,6 +93,9 @@
     $('gTimeWrap').hidden = ext ? !ext.label2 : id !== 'catch';
     $('gTimeLabel').textContent = tr((ext && ext.label2) || 'Time');
     $('gScore').textContent = '0';
+    const quit = $('gQuit');
+    if (ext && ext.back) { quit.classList.add('back'); quit.innerHTML = UI.ic('back') + tr('Back'); quit.setAttribute('aria-label', tr('Back')); }
+    else if (quit.classList.contains('back')) { quit.classList.remove('back'); quit.innerHTML = UI.ic('close'); quit.setAttribute('aria-label', tr('Stop the game')); }
     $('gTime').textContent = GAME_LEN;
     $('gBig').textContent = '';
     $('gHint').textContent = ext ? tr(ext.hint) : tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');

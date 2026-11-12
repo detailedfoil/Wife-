@@ -303,7 +303,7 @@
     ball: { price: 0, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall' },
     catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch' },
     swim: { price: 500, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp.', best: 'best_swim', rate: 3, unit: 'gaps swum' },
-    toss: { price: 800, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. One miss and it is over.', best: 'best_toss', rate: 3, unit: 'baskets in a row' },
+    toss: { price: 800, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. A miss starts the streak again. Play until you press Back.', best: 'best_toss', rate: 3, unit: 'baskets in a row' },
     curl: { price: 1100, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', rate: 1.8, unit: 'points' },
     sled: { price: 1500, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', rate: 0.1, unit: 'metres' },
   };
