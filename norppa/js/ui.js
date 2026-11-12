@@ -83,6 +83,7 @@
     $('sulkChip').addEventListener('click', () => { PN.Audio.play('tap'); if (G().state.medLate) G().openMed(); else UI.openSheet('feed'); });
     $('medChip').addEventListener('click', () => { PN.Audio.play('tap'); G().openMed(); });
     $('medClose').addEventListener('click', () => G().closeMed());
+    $('medCam').addEventListener('click', (e) => { if (e.target === e.currentTarget) G().closeMed(); });   // tap outside the card to close
     $('medShoot').addEventListener('click', () => G().medPhoto());
     $('medFile').addEventListener('change', (e) => G().medFile(e.target.files && e.target.files[0]));
     $('medSkip').addEventListener('click', () => G().medSkip());
