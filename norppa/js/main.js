@@ -158,7 +158,7 @@
     if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry, grubby or glum for {0} hour.', 'Was left hungry, grubby or glum for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
-    if (state.grudge > 0) { bad = true; add('grump', tr('{0} is sulking. Food and gentle strokes will win it round.', plain()), 'bad'); }
+    if (state.grudge > 0) { bad = true; add('grump', tr('{0} is Angy. Food and gentle strokes will win it round.', plain()), 'bad'); }
     if (sum.cured) add('check', tr('Got over being poorly.'), 'good');
     sum.pupWell.forEach((n) => add('check', tr('<b>{0}</b> is feeling better.', UI.esc(n)), 'good'));
     if (sum.poops > 0) add('poo', sum.poops === 1 ? tr('Left a little present on the shore.') : tr('Left {0} little presents on the shore.', sum.poops));
@@ -604,7 +604,7 @@
     await wait(0.9);
     await showLoot(loot);
     if (carried) seal.mouthA.remove(carried);
-    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up sulking.', '{0} lost the fish at the last second and is sulking.', '{0} got bitten down there and is sulking.'][Math.floor(Math.random() * 3)], nm()), 'grump'); }
+    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up Angy.', '{0} lost the fish at the last second and is Angy.', '{0} got bitten down there and is Angy.'][Math.floor(Math.random() * 3)], nm()), 'grump'); }
     else { seal.gesture('happy'); A.play('chirp'); }
     await seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.0, face: W.HOME_HEADING });
     G.busy = false; UI.setBusy(false);
@@ -632,7 +632,7 @@
   }
 
   /* ---------- looking after the seal ---------- */
-  const WHY = { asleep: '{0} is fast asleep.', sick: '{0} is poorly and needs rest.', sulk: '{0} is sulking and will not play.', tired: '{0} is too tired for that.', wait: 'Not just yet.' };
+  const WHY = { asleep: '{0} is fast asleep.', sick: '{0} is poorly and needs rest.', sulk: '{0} is Angy and will not play.', tired: '{0} is too tired for that.', wait: 'Not just yet.' };
   const whyText = (why) => tr(WHY[why] || WHY.wait, nm());
   function refuse(why) {
     A.play('nope');

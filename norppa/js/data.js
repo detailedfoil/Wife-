@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '2026-11-12T15:03:58Z';
+  PN.UPDATED = '2026-11-12T15:08:26Z';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -280,7 +280,7 @@
     { id: 'wear25', t: 'Walk-in wardrobe', d: 'Own 25 things to wear.', c: 150, test: (s) => ownedOf(s, WEAR) >= 25 },
     { id: 'home12', t: 'Kylä', d: 'Own 12 things for the shore. It means village.', c: 150, test: (s) => ownedOf(s, DECOR) >= 12 },
     { id: 'loyly', t: 'Löyly', d: 'Take a sauna.', c: 30, test: (s) => s.counters.saunas >= 1 },
-    { id: 'sorry', t: 'Anteeksi', d: 'Make up after a sulk.', c: 10, test: (s) => s.counters.forgiven >= 1 },
+    { id: 'sorry', t: 'Anteeksi', d: 'Make up after an Angy spell.', c: 10, test: (s) => s.counters.forgiven >= 1 },
   ];
 
   /* Names to suggest, with what they mean. */

@@ -103,7 +103,7 @@
     });
     const sn = S.sulkNeeds(st), chip = $('sulkChip');
     chip.hidden = !sn;
-    if (sn) chip.textContent = tr('Sulk: {0} of sleep left', mins(napMs(st)));
+    if (sn) chip.textContent = tr('Angy: {0} of sleep left', mins(napMs(st)));
     $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
     const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
     document.querySelectorAll('#dock button').forEach((b) => {
@@ -234,12 +234,12 @@
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
   const napMs = (st) => Math.max(0, st.grudge) / (100 / S.T.sulkSleepH) * 3600e3;   // sleep it would take to sulk it off
-  const WHY = { asleep: 'asleep', sick: 'poorly', sulk: 'sulking', tired: 'too tired', wait: 'resting' };
+  const WHY = { asleep: 'asleep', sick: 'poorly', sulk: 'Angy', tired: 'too tired', wait: 'resting' };
 
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is sulking.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Sulk timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it, and ten head pats cut {0} more.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
         + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
@@ -265,7 +265,7 @@
       const off = (c) => (c.ok ? '' : ' off');
       const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
-      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back sulking.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
+      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back Angy.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
@@ -340,7 +340,7 @@
     },
     profile(st) {
       const lv = S.level(st), days = Math.floor((Date.now() - st.createdAt) / S.DAY), fi = PN.isFi();
-      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|sulking', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a wash', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
+      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|Angy', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a wash', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
       const line = (a, b) => '<div class="statline"><span>' + tr(a) + '</span><b>' + b + '</b></div>';
       const stage = D.STAGES[st.stage], favIt = PN.items[st.fav];
       let next;
