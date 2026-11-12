@@ -21,10 +21,11 @@
     sleepGrace: 20,                       // asleep for the night, her tummy counts this much fuller
     neglectLine: 25,                      // below this she sulks, friendship slips and growing goes backwards
     setback: 1,                           // hours of growing lost per hour spent below neglectLine
-    diveSulkChance: 0.33, diveSulk: 25,
+    diveSulkChance: 0.33, diveSulk: 100,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
-    sulkTreats: 5, sulkPats: 10,          // to end a sulk she picks five different treats, and wants ten head pats
+    sulkTreats: 5, sulkPats: 10,          // she picks five different treats and wants ten head pats
+    sulkSleepH: 4, sulkTreatCut: 1 / 6, sulkPatCut: 1 / 6,   // a full sulk naps off in 4 h; each wished-for treat takes a sixth off it, and the ten pats together another sixth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
@@ -173,8 +174,8 @@
   /* Forgiven once every wished-for treat has been given and the pats are done. */
   function sulkCheck(state) {
     const w = state.sulkWant;
-    if (!w || state.grudge <= 0) return;
-    if (w.got.length < w.treats.length || w.pats < T.sulkPats) return;
+    if (!w) return;
+    if (state.grudge > 1e-6) return;
     state.grudge = 0; state.sulkWant = null;
     state.counters.forgiven++;
     learn(state, 'anteeksi');
@@ -262,6 +263,8 @@
       const floor = state.stage > 0 ? T.stageAge[Math.min(state.stage, 2) - 1] : 0;
       if (state.ageMs > floor) state.ageMs = Math.max(floor, state.ageMs - dt * T.setback);
     }
+    // A good nap sulks it off: a full sulk is gone after four hours of sleep.
+    if (asleep && state.grudge > 0) { state.grudge = Math.max(0, state.grudge - (100 / T.sulkSleepH) * h); sulkCheck(state); }
     const c = care(state);
     state.ageMs += dt * c;                 // growing only counts while she is cared for
 
@@ -368,7 +371,7 @@
     state.counters.feeds++;
     const want = sulkNeeds(state);
     let treat = false;
-    if (want && want.treats.indexOf(id) >= 0 && want.got.indexOf(id) < 0) { want.got.push(id); treat = true; sulkCheck(state); }
+    if (want && want.treats.indexOf(id) >= 0 && want.got.indexOf(id) < 0) { want.got.push(id); treat = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkTreatCut); sulkCheck(state); }
     addXp(state, before < 85 ? 4 : 1);
     learn(state, 'kala');
     check(state);
@@ -383,7 +386,7 @@
     state.counters.pets++;
     const want = sulkNeeds(state);
     let pat = false;
-    if (want && want.pats < T.sulkPats) { want.pats++; pat = true; sulkCheck(state); }
+    if (want && want.pats < T.sulkPats) { want.pats++; pat = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkPatCut / T.sulkPats); sulkCheck(state); }
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     check(state);

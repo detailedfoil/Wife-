@@ -371,7 +371,7 @@
     'You have the latest version.': 'Sinulla on uusin versio.',
     'Could not check. Are you online?': 'Tarkistus ei onnistunut. Oletko verkossa?',
     '{0} is sulking.': '{0} murjottaa.',
-    'To cheer her up she wants these five different treats and ten head pats.': 'Piristääkseen hän haluaa nämä viisi eri herkkua ja kymmenen päänsilitystä.',
+    'Each of these treats takes a sixth off the sulk, and ten head pats take off another sixth. A four hour nap clears it too.': 'Jokainen näistä herkuista vie kuudesosan murjotuksesta, ja kymmenen rapsutusta vie toisen kuudesosan. Neljän tunnin päiväunet myös auttavat.',
     'Head pats: {0} of {1}': 'Päänsilityksiä: {0} / {1}',
     '{0}/{1} treats, {2}/{3} pats': '{0}/{1} herkkua, {2}/{3} silitystä',
     '{0} wanted that one.': '{0} halusi juuri tuota.',

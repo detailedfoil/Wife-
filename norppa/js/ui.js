@@ -238,7 +238,7 @@
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is sulking.', esc(st.name)) + '</b> ' + tr('To cheer her up she wants these five different treats and ten head pats.') + '<div class="sulk-want">'
+      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is sulking.', esc(st.name)) + '</b> ' + tr('Each of these treats takes a sixth off the sulk, and ten head pats take off another sixth. A four hour nap clears it too.') + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : '') + '</span>').join('')
         + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
