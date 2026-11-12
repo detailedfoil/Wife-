@@ -217,6 +217,48 @@
       [[0.14, -0.06], [-0.13, -0.08], [0.03, 0.04], [0.1, 0.13]].forEach((p) => g.add(U.ball(0.022, U.mat(0x5fa052), p[0], 0.285, p[1])));
       return g;
     },
+    /* A tall can of fizzy energy drink, with its own made-up label. A parody: a seal, not a sports brand. */
+    sealsius() {
+      // The label wraps all the way round the can, so only the middle third of the picture faces you. Keep the art there.
+      const tex = U.tex(900, 512, (c, w, h) => {
+        const cx = w / 2;
+        c.fillStyle = '#f6f7f9'; c.fillRect(0, 0, w, h);
+        const body = c.createLinearGradient(0, 0, w, 0);
+        body.addColorStop(0, 'rgba(0,0,0,.16)'); body.addColorStop(0.2, 'rgba(255,255,255,.3)'); body.addColorStop(0.5, 'rgba(255,255,255,0.25)'); body.addColorStop(0.8, 'rgba(255,255,255,.1)'); body.addColorStop(1, 'rgba(0,0,0,.18)');
+        c.fillStyle = body; c.fillRect(0, 0, w, h);
+        c.textAlign = 'center';
+        c.fillStyle = '#7e8590'; c.font = '600 18px sans-serif'; c.fillText('ENERGY DRINK', cx, 50);
+        // a swirl in the warm gradient, with a seal's whisker dots
+        const sw = c.createLinearGradient(cx - 60, 70, cx + 60, 200);
+        sw.addColorStop(0, '#f7c531'); sw.addColorStop(1, '#ef5a3c');
+        c.strokeStyle = sw; c.lineWidth = 22; c.lineCap = 'round';
+        c.beginPath(); c.arc(cx, 132, 46, -0.3 * Math.PI, 1.6 * Math.PI, true); c.stroke();
+        c.fillStyle = '#2a2d33';
+        [0, 14, 28].forEach((d) => { c.beginPath(); c.arc(cx + 10 + d, 136, 4.2, 0, 7); c.fill(); });
+        c.fillStyle = '#16181c'; c.font = '800 40px sans-serif'; c.fillText('SEALSIUS', cx, 250);
+        c.fillStyle = '#ef5a3c'; c.font = '700 20px sans-serif'; c.fillText('LIVE FLIPPER', cx, 282);
+        c.fillStyle = '#f08a1c'; c.beginPath(); c.arc(cx - 52, 330, 24, 0, 7); c.fill();
+        c.fillStyle = '#3f8f3a'; c.beginPath(); c.ellipse(cx - 40, 304, 12, 6, -0.6, 0, 7); c.fill();
+        c.fillStyle = '#ffd34a'; c.beginPath(); c.moveTo(cx - 6, 336); c.arc(cx + 18, 330, 24, 0.3, 3.4); c.closePath(); c.fill();
+        c.fillStyle = '#16181c'; c.fillRect(0, 370, w, 96);
+        c.fillStyle = '#ef5a3c'; c.fillRect(cx - 128, 370, 16, 96);
+        c.textAlign = 'left';
+        c.font = '700 16px sans-serif'; c.fillStyle = '#ef5a3c'; c.fillText('SPARKLING CLOUDBERRY', cx - 100, 360);
+        c.fillStyle = '#ffffff'; c.font = '700 17px sans-serif';
+        ['ZERO SUGAR', '7 VITAMINS', 'EXTRA SQUEAKY'].forEach((t, i) => c.fillText('\u25B8 ' + t, cx - 100, 398 + i * 25));
+        const base = c.createLinearGradient(0, 466, 0, h);
+        base.addColorStop(0, '#d5d9df'); base.addColorStop(1, '#8b929c');
+        c.fillStyle = base; c.fillRect(0, 466, w, h - 466);
+        c.textAlign = 'center'; c.fillStyle = '#16181c'; c.font = '700 14px sans-serif'; c.fillText('VERY HIGH SQUEAK CONTENT', cx, 494);
+      });
+      const can = U.mesh(new T.CylinderGeometry(0.115, 0.115, 0.44, 28), new T.MeshStandardMaterial({ map: tex, roughness: 0.35, metalness: 0.25 }), 0, 0.22, 0);
+      can.rotation.y = Math.PI + 0.35;
+      const metal = U.mat(0xb9bfc7, { roughness: 0.25, metalness: 0.7 });
+      const g = U.group(can, U.cyl(0.108, 0.115, 0.03, U.mat(0x1d1f24, { roughness: 0.4, metalness: 0.5 }), 0, 0.455, 0, 28),
+        U.cyl(0.092, 0.092, 0.014, metal, 0, 0.475, 0, 24));
+      g.add(U.rot(U.torus(0.03, 0.007, metal, 0, 0.5, 0, TAU, 14), Math.PI / 2, 0, 0));
+      return g;
+    },
     lakkamehu() {
       const glass = new T.MeshStandardMaterial({ color: 0xffb02e, roughness: 0.12, transparent: true, opacity: 0.86,
         emissive: 0xc46a00, emissiveIntensity: 0.45 });

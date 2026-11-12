@@ -79,6 +79,7 @@
     $('bAlbum').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('album'); });
     $('bSettings').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('settings'); });
     $('skyChip').addEventListener('click', () => UI.skyInfo());
+    $('sulkChip').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('feed'); });
     $('sheetClose').addEventListener('click', () => UI.closeSheet());
     $('scrubDone').addEventListener('click', () => G().endWash(false));
     $('sheetTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) { PN.Audio.play('tap'); UI.tab = b.dataset.tab; UI.renderSheet(); } });
@@ -100,6 +101,9 @@
       m.querySelector('i').style.width = Math.max(3, v) + '%';
       m.classList.toggle('low', v < 25);
     });
+    const sn = S.sulkNeeds(st), chip = $('sulkChip');
+    chip.hidden = !sn;
+    if (sn) chip.textContent = tr('{0}/{1} treats, {2}/{3} pats', sn.got.length, sn.treats.length, sn.pats, S.T.sulkPats);
     $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
     const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
     document.querySelectorAll('#dock button').forEach((b) => {
@@ -233,6 +237,10 @@
 
   const VIEWS = {
     feed(st) {
+      const need = S.sulkNeeds(st);
+      const sulkBanner = need ? '<div class="sulk-card"><b>' + tr('{0} is sulking.', esc(st.name)) + '</b> ' + tr('To cheer her up she wants these five different treats and ten head pats.') + '<div class="sulk-want">'
+        + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : '') + '</span>').join('')
+        + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
       const order = { fish: 0, food: 1, med: 2 };
       ids.sort((a, b) => order[PN.items[a].kind] - order[PN.items[b].kind] || (PN.items[a].food || 0) - (PN.items[b].food || 0));
@@ -241,12 +249,12 @@
       const juice = spare.juice ? '<div class="rows">' + row({ icon: 'med', tint: 'rose', title: tr('Ask the neighbours'), act: 'borrow',
         text: tr('{0} is poorly and the juice costs more than you have. The neighbours can spare a bottle.', esc(st.name)) }) + '</div>' : '';
       if (!ids.length) {
-        return '<p class="lead">' + tr('The larder is empty. Catch fish in Fish Rain, send {0} diving, or buy some.', esc(st.name))
+        return sulkBanner + '<p class="lead">' + tr('The larder is empty. Catch fish in Fish Rain, send {0} diving, or buy some.', esc(st.name))
           + (spare.fish ? tr(' With no coins either, the neighbours will spare a few fish.') : '') + '</p>' + (spare.fish ? '' : juice) + '<div class="btn-row">'
           + (spare.fish ? '<button class="btn small" data-do="borrow">' + tr('Ask the neighbours') + '</button>' : '<button class="btn small" data-do="goto" data-id="play">' + tr('Play') + '</button>')
           + '<button class="btn small ghost" data-do="goto" data-id="shop">' + tr('Shop') + '</button></div>';
       }
-      return '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p>' + juice + '<div class="grid">' + ids.map((id) => {
+      return sulkBanner + '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p>' + juice + '<div class="grid">' + ids.map((id) => {
         const it = PN.items[id];
         return cell(id, thumb(id) + names(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
       }).join('') + '</div>';

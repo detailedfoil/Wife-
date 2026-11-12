@@ -24,7 +24,7 @@
     diveSulkChance: 0.33, diveSulk: 25,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
-    sootheFeed: 12, sootheFav: 25, sootheWash: 10, sootheDo: 2,
+    sulkTreats: 5, sulkPats: 10,          // to end a sulk she picks five different treats, and wants ten head pats
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
@@ -156,15 +156,29 @@
     });
   }
 
-  /* Calm a sulk. */
-  function soothe(state, n) {
-    if (state.grudge <= 0) return;
-    state.grudge = Math.max(0, state.grudge - n);
-    if (state.grudge === 0) {
-      state.counters.forgiven++;
-      learn(state, 'anteeksi');
-      emit('forgiven', {});
+  /* What a sulking seal wants before she will forgive you: five different treats of her own choosing, and ten head pats.
+     She chooses when the sulk starts (or the first time anyone looks), from treats the shop sells at a fair price. */
+  function sulkNeeds(state) {
+    if (!(state.grudge > 0)) { state.sulkWant = null; return null; }
+    if (!state.sulkWant) {
+      const pool = Object.keys(PN.items).filter((id) => {
+        const it = PN.items[id];
+        return (it.kind === 'fish' || it.kind === 'food') && it.price > 0 && it.price <= 50 && !it.energy;
+      });
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd(state) * (i + 1)); const x = pool[i]; pool[i] = pool[j]; pool[j] = x; }
+      state.sulkWant = { treats: pool.slice(0, T.sulkTreats), got: [], pats: 0 };
     }
+    return state.sulkWant;
+  }
+  /* Forgiven once every wished-for treat has been given and the pats are done. */
+  function sulkCheck(state) {
+    const w = state.sulkWant;
+    if (!w || state.grudge <= 0) return;
+    if (w.got.length < w.treats.length || w.pats < T.sulkPats) return;
+    state.grudge = 0; state.sulkWant = null;
+    state.counters.forgiven++;
+    learn(state, 'anteeksi');
+    emit('forgiven', {});
   }
 
   function fallAsleep(state, t, kind, wakeAt) {
@@ -348,14 +362,17 @@
     const before = s.food, fav = id === state.fav;
     state.pantry[id]--;
     s.food = pct(s.food + it.food);
+    if (it.energy) s.energy = pct(s.energy + it.energy);
     s.joy = pct(s.joy + (it.joy || 2) + (fav ? 8 : 0));
     if (fav && !state.favKnown) { state.favKnown = true; learn(state, 'herkku'); }
     state.counters.feeds++;
-    soothe(state, fav ? T.sootheFav : T.sootheFeed);
+    const want = sulkNeeds(state);
+    let treat = false;
+    if (want && want.treats.indexOf(id) >= 0 && want.got.indexOf(id) < 0) { want.got.push(id); treat = true; sulkCheck(state); }
     addXp(state, before < 85 ? 4 : 1);
     learn(state, 'kala');
     check(state);
-    return ok({ fav });
+    return ok({ fav, treat });
   }
 
   function pet(state, now) {
@@ -364,11 +381,13 @@
     const sulking = state.grudge > 0;
     s.joy = pct(s.joy + (sulking ? 0.5 : 1.5));
     state.counters.pets++;
-    soothe(state, T.sootheDo);
+    const want = sulkNeeds(state);
+    let pat = false;
+    if (want && want.pats < T.sulkPats) { want.pats++; pat = true; sulkCheck(state); }
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     check(state);
-    return ok({ sulking });
+    return ok({ sulking, pat });
   }
 
   function wash(state) {
@@ -378,7 +397,6 @@
     s.clean = 100; s.joy = pct(s.joy + 4);
     state.filthMs = 0;
     state.counters.washes++;
-    soothe(state, T.sootheWash);
     addXp(state, before < 60 ? 6 : 2);
     learn(state, 'kylpy');
     check(state);
@@ -607,7 +625,6 @@
     state.filthMs = 0;
     if (state.sick) state.wellMs += H;
     state.counters.saunas++;
-    soothe(state, T.sootheWash * 1.5);
     addXp(state, 6);
     learn(state, 'sauna'); learn(state, 'loyly');
     check(state);
@@ -777,5 +794,5 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
-    price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
+    sulkNeeds, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

@@ -674,11 +674,13 @@
         seal.gesture('gulp', true); A.play('gulp'); FX.sparkle(head(), 10, 0xffc04a);
         return;
       }
-      seal.gesture('chomp', true); A.play('munch');
+      if (it.energy) { seal.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.4); FX.sparkle(head(), 6, 0xffc04a); }
+      else { seal.gesture('chomp', true); A.play('munch'); }
       if (r.fav) { FX.hearts(head(), 4); A.play('chirp'); seal.gesture('happy'); }
       else if (it.kind === 'food') FX.hearts(head(), 1);
       buzz(10);
     });
+    if (r.treat) UI.toast(tr('{0} wanted that one.', nm()), 'heart');
     if (r.med) UI.toast(tr('Cloudberry juice works wonders.'), 'med');
     else if (r.fav && state.counters.feeds < 400 && Math.random() < 0.35) UI.toast(tr('{0}, the favourite!', UI.esc(it.fi)), 'heart');
     UI.renderSheet(); UI.refresh();
@@ -1142,6 +1144,7 @@
     head(v1); v1.x += rs(0.3) * seal.size; v1.y -= 0.1 * seal.size;
     if (r.asleep) { if (strokeN % 4 === 0) FX.hearts(v1, 1); return; }
     if (r.sulking) {
+      if (r.pat) { UI.refresh(); if (UI.sheetName === 'feed') UI.renderSheet(); A.play('tap', 0.2); }
       if (strokeN % 3 === 0) { FX.huff(v1, 1); A.play('hmph', 1.4); }
       return;
     }
@@ -1165,7 +1168,7 @@
       if (washing) return;
       if (seal.asleep) { head(v1); FX.zzz(v1); return; }
       const r = S.pet(state, Date.now());
-      if (r.sulking) { seal.gesture('no'); A.play('hmph'); head(v1); FX.huff(v1, 1); return; }
+      if (r.sulking) { seal.gesture('no'); A.play('hmph'); head(v1); FX.huff(v1, 1); if (r.pat) { UI.refresh(); if (UI.sheetName === 'feed') UI.renderSheet(); } return; }
       seal.gesture('boop', true); A.play('squeak'); FX.hearts(head(), 1); buzz(10);
     } else if (type === 'poop') {
       const i = hit.pick.index;
