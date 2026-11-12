@@ -70,12 +70,8 @@ h1, h2, h3, p { margin: 0; }
 .med-chip { height: 26px; border-radius: 13px; padding: 0 11px; font-size: 12.5px; font-weight: 800; color: #1f7a56; margin-right: auto; margin-left: 8px; }
 .sulk-chip:not([hidden]) + .med-chip { margin-left: 0; }
 .sulk-chip:not([hidden]):has(+ .med-chip:not([hidden])) { margin-right: 0; }
-.medcam { position: fixed; inset: 0; z-index: 200; background: #0d1830; display: flex; flex-direction: column; }
+.medcam { position: fixed; inset: 0; z-index: 200; background: rgba(13, 24, 48, .62); display: flex; flex-direction: column; }
 .medcam[hidden] { display: none; }
-.medcam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.medcam-ring { position: absolute; left: 50%; top: 38%; width: min(46vw, 220px); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; box-shadow: 0 0 0 4px #fff, 0 0 0 100vmax rgba(13, 24, 48, .45); }
-.medcam-ring.ok { box-shadow: 0 0 0 6px #2fbf71, 0 0 0 100vmax rgba(13, 24, 48, .45); }
-.medcam.nocam .medcam-ring { display: none; }
 .medcam-x { position: absolute; right: calc(12px + var(--sr)); top: calc(12px + var(--st, 0px)); width: 44px; height: 44px; border-radius: 50%; font-size: 26px; line-height: 1; color: var(--ink); }
 .medcam-card { position: relative; margin: auto 10px calc(12px + var(--sb)); max-width: 460px; align-self: center; width: calc(100% - 20px); background: #fff; border-radius: 26px; padding: 16px 16px 18px; text-align: center; box-shadow: 0 10px 30px rgba(8, 20, 40, .45); }
 .medcam-card b { font: 600 20px var(--display); color: var(--ink); }

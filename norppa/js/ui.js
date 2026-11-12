@@ -84,6 +84,7 @@
     $('medChip').addEventListener('click', () => { PN.Audio.play('tap'); G().openMed(); });
     $('medClose').addEventListener('click', () => G().closeMed());
     $('medShoot').addEventListener('click', () => G().medPhoto());
+    $('medFile').addEventListener('change', (e) => G().medFile(e.target.files && e.target.files[0]));
     $('medSkip').addEventListener('click', () => G().medTaken(false));
     $('sheetClose').addEventListener('click', () => UI.closeSheet());
     $('scrubDone').addEventListener('click', () => G().endWash(false));

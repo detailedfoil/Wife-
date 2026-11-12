@@ -1032,44 +1032,29 @@
     save(); UI.renderSheet(); UI.refresh();
   };
   /* ---------- her daily medicine ---------- */
-  let medStream = null, medBusy = false, medWatch = 0;
+  let medBusy = false;
   const medEl = (id) => document.getElementById(id);
-  function medStop() {
-    clearInterval(medWatch); medWatch = 0;
-    if (medStream) { medStream.getTracks().forEach((t) => t.stop()); medStream = null; }
-    medEl('medVideo').srcObject = null;
-  }
-  G.openMed = async function () {
+  G.openMed = function () {
     const info = S.medInfo(state, Date.now()), box = medEl('medCam');
     if (info.taken && info.photo) return;
-    box.hidden = false; box.classList.remove('nocam'); medBusy = false;
+    box.hidden = false; medBusy = false;
     medEl('medTitle').textContent = tr('Medicine time');
-    medEl('medShoot').textContent = tr('Take photo'); medEl('medShoot').hidden = false;
+    medEl('medShoot').textContent = tr('Take photo'); medEl('medShoot').disabled = false;
     medEl('medSkip').textContent = tr('I took it'); medEl('medSkip').hidden = info.taken;
-    medEl('medMsg').textContent = tr('Hold the pill in the ring and take a photo for {0} bonus coins.', S.T.medBonus);
-    medEl('medRing').classList.remove('ok');
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('none');
-      medStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
-      if (box.hidden) { medStop(); return; }          // closed while the camera was starting
-      const v = medEl('medVideo'); v.srcObject = medStream; await v.play().catch(() => {});
-      medWatch = setInterval(() => { if (!medBusy) medEl('medRing').classList.toggle('ok', PN.Pill.fromVideo(v).ok); }, 400);   // the ring turns green when it can see the pill
-    } catch (err) {
-      box.classList.add('nocam'); medEl('medShoot').hidden = true;
-      medEl('medMsg').textContent = tr('The camera is not available, so there is no photo bonus. You can still tap I took it.');
-    }
+    medEl('medMsg').textContent = tr('Take a photo of the pill on a plain surface for {0} bonus coins.', S.T.medBonus);
   };
-  G.closeMed = function () { medStop(); medEl('medCam').hidden = true; };
-  G.medPhoto = async function () {
-    if (medBusy || !medStream) return;
-    medBusy = true; A.play('tap');
-    const v = medEl('medVideo');
+  G.closeMed = function () { medEl('medCam').hidden = true; medBusy = false; };
+  G.medPhoto = function () { if (!medBusy) { const f = medEl('medFile'); f.value = ''; f.click(); } };   // opens the phone's own camera
+  G.medFile = async function (file) {
+    if (!file || medBusy) return;
+    medBusy = true; medEl('medShoot').disabled = true;
+    medEl('medMsg').textContent = tr('Looking at the photo...');
     let seen = false;
-    for (let i = 0; i < 8 && !seen; i++) { seen = PN.Pill.fromVideo(v).ok; if (!seen) await new Promise((r) => setTimeout(r, 150)); }
-    medBusy = false;
+    try { seen = (await PN.Pill.fromFile(file)).ok; } catch (err) { seen = false; }
+    medBusy = false; medEl('medShoot').disabled = false;
     if (medEl('medCam').hidden) return;
     if (seen) G.medTaken(true);
-    else { A.play('nope'); medEl('medMsg').textContent = tr('I cannot see the pill. Hold it in the ring on a plain surface and try again.'); }
+    else { A.play('nope'); medEl('medMsg').textContent = tr('I cannot see the pill. Put it on its own on a plain, darker surface, get close, and try again.'); }
   };
   G.medTaken = function (photo) {
     const r = S.takeMed(state, Date.now(), !!photo);
