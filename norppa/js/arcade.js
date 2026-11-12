@@ -716,5 +716,108 @@
     };
   })();
 
-  G.ext.swim = swim; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled;
+  /* ---------- Blackjack ----------
+     Bet 1, 3 or 5 sardines, hit or stand, beat the dealer without going over 21. A win pays five times the bet.
+     You sit down with ten sardines and play until you cash out or they are all gone. Only the winnings turn into coins. */
+  const bj = (() => {
+    const START = 10, BETS = [1, 3, 5], PAY = 5;
+    const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, mode = 'bet', wait = 0, msg = '', hide = true;
+    const total = (h) => {
+      let t = 0, aces = 0;
+      h.forEach((c) => { const r = c % 13; if (r === 0) { aces++; t += 11; } else t += Math.min(10, r + 1); });
+      while (t > 21 && aces) { t -= 10; aces--; }
+      return t;
+    };
+    const draw = () => deck.pop();
+    function shuffle() {
+      deck = [];
+      for (let i = 0; i < 52; i++) deck.push(i);
+      for (let i = 51; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const x = deck[i]; deck[i] = deck[j]; deck[j] = x; }
+    }
+    const card = (c, down) => down ? '<span class="bj-card down"></span>'
+      : '<span class="bj-card' + (Math.floor(c / 13) === 1 || Math.floor(c / 13) === 2 ? ' red' : '') + '"><span>' + RANKS[c % 13] + '<i>' + SUITS[Math.floor(c / 13)] + '</i></span></span>';
+    function paint() {
+      const btn = (act, label, cls, off) => '<button data-bj="' + act + '" class="' + (cls || '') + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
+      let btns = '';
+      if (mode === 'bet') btns = BETS.map((b) => btn('bet' + b, tr('Bet {0}', b), b === 5 ? 'go' : '', stack < b)).join('');
+      else btns = btn('hit', tr('Hit'), '', mode !== 'play') + btn('stand', tr('Stand'), 'go', mode !== 'play');
+      el.innerHTML = '<div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (house.length ? (hide ? '?' : total(house)) : '') + '</b></div><div class="bj-cards">'
+        + house.map((c, i) => card(c, hide && i === 1)).join('') + '</div></div>'
+        + '<div class="bj-row"><div class="bj-who">' + tr('You') + '<b>' + (you.length ? total(you) : '') + '</b></div><div class="bj-cards">' + you.map((c) => card(c)).join('') + '</div></div>'
+        + '<div class="bj-msg">' + msg + '</div><div class="bj-btns">' + btns + '</div>';
+    }
+    function money() { K.shown(stack); K.result(Math.max(0, stack - START)); }
+    function deal(b) {
+      if (mode !== 'bet' || stack < b) return;
+      bet = b; stack -= b; money();
+      shuffle(); you = [draw(), draw()]; house = [draw(), draw()]; hide = true; msg = '';
+      A.play('pop');
+      if (total(you) === 21) { mode = 'house'; wait = 0.7; } else mode = 'play';
+      paint();
+    }
+    function settle() {
+      const p = total(you), d = total(house);
+      if (p > 21) { msg = tr('Over 21. You lose {0}.', bet); A.play('thud'); actor.gesture('no', true); }
+      else if (d > 21 || p > d) { stack += bet * PAY; msg = tr(d > 21 ? 'Dealer goes over. You win {0}!' : 'You win {0}!', bet * PAY); A.play('award'); actor.gesture('happy', true); }
+      else if (p === d) { stack += bet; msg = tr('A tie. You get your bet back.'); A.play('tap'); }
+      else { msg = tr('Dealer wins. You lose {0}.', bet); A.play('nope'); actor.gesture('shake', true); }
+      money();
+      mode = 'done'; wait = 1.5;
+      paint();
+    }
+    function act(a) {
+      if (a.indexOf('bet') === 0) return deal(+a.slice(3));
+      if (mode !== 'play') return;
+      if (a === 'hit') {
+        you.push(draw()); A.play('pop');
+        if (total(you) > 21) { hide = false; settle(); }
+        else if (total(you) === 21) { mode = 'house'; wait = 0.6; paint(); }
+        else paint();
+      } else if (a === 'stand') { A.play('tap'); mode = 'house'; wait = 0.5; paint(); }
+    }
+    function build() {
+      view = stage('#0d2b3a', '#1c6a55', { ground: 0x224a40, hemi: 1.9, key: 1.6 });
+      view.scene.add(U.ball(1, U.mat(0x17694f, { roughness: 0.9 }), 0, -1.02, 0, 2.6, 1, 2.6, 28));
+      view.camera.position.set(0, 0.5, 4.6);
+      el = document.getElementById('bjTable');
+      el.addEventListener('click', (e) => { const b = e.target.closest('[data-bj]'); if (b && !b.disabled) act(b.dataset.bj); });
+    }
+    return {
+      label: 'Sardines', back: true, backLabel: 'Cash out', nocount: true, hint: '',
+      view: () => view,
+      start() {
+        if (!view) build();
+        cast(view, 0.62, true);
+        face(0);
+        stack = START; bet = 0; you = []; house = []; mode = 'bet'; hide = true;
+        msg = tr('You have {0} sardines. Place a bet.', START);
+        el.hidden = false;
+        paint();
+      },
+      stop() { el.hidden = true; el.innerHTML = ''; },
+      go() { K.score(0, true); money(); },
+      pointer() {},
+      key(k) { if (k === 'h') act('hit'); else if (k === 's') act('stand'); },
+      update(dt, playing) {
+        clock += dt;
+        lens(view);
+        view.camera.lookAt(0, -0.75, 0);
+        actor.update(dt, clock, null);
+        if (!playing || wait <= 0) return;
+        wait -= dt;
+        if (wait > 0) return;
+        if (mode === 'house') {
+          if (hide) { hide = false; A.play('pop'); wait = 0.6; paint(); }
+          else if (total(house) < 17) { house.push(draw()); A.play('pop'); wait = 0.6; paint(); }
+          else settle();
+        } else if (mode === 'done') {
+          if (stack < BETS[0]) { el.hidden = true; K.over(tr('All gone!')); return; }
+          mode = 'bet'; you = []; house = []; hide = true; msg = tr('Place a bet.'); paint();
+        }
+      },
+    };
+  })();
+
+  G.ext.swim = swim; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj;
 })(window.PN = window.PN || {});

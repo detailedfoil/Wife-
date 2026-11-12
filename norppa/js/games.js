@@ -94,7 +94,7 @@
     $('gTimeLabel').textContent = tr((ext && ext.label2) || 'Time');
     $('gScore').textContent = '0';
     const quit = $('gQuit');
-    if (ext && ext.back) { quit.classList.add('back'); quit.innerHTML = UI.ic('back') + tr('Back'); quit.setAttribute('aria-label', tr('Back')); }
+    if (ext && ext.back) { quit.classList.add('back'); quit.innerHTML = UI.ic('back') + tr(ext.backLabel || 'Back'); quit.setAttribute('aria-label', tr(ext.backLabel || 'Back')); }
     else if (quit.classList.contains('back')) { quit.classList.remove('back'); quit.innerHTML = UI.ic('close'); quit.setAttribute('aria-label', tr('Stop the game')); }
     $('gTime').textContent = GAME_LEN;
     $('gBig').textContent = '';
@@ -162,6 +162,7 @@
 
   /* An arcade game: the same count-in and ending, the game itself runs its own stage. */
   function updateExt(dt) {
+    if (g.phase === 'count' && g.ext.nocount) { g.phase = 'play'; g.clock = 0; g.ext.go(); }
     if (g.phase === 'count') {
       const n = Math.floor(g.clock / 0.75);
       if (n !== g.said && n < 4) {
@@ -332,6 +333,7 @@
   function finish(quit) {
     const id = g.id, score = g.score, caught = g.caught;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
+    if (g.ext && g.ext.stop) g.ext.stop();
     g = null;
     Games.active = null;
     W.override = null;
