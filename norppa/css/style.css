@@ -231,7 +231,17 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .bj-card.down { background: repeating-linear-gradient(45deg, #2a5fb8 0 6px, #3f78d6 6px 12px); box-shadow: inset 0 0 0 4px #fff, 0 2px 0 rgba(0, 0, 0, .25); }
 @keyframes bjdeal { from { transform: translateY(-18px) rotate(-8deg); opacity: 0; } }
 .bj-msg { min-height: 24px; margin: 8px 0 10px; text-align: center; font: 600 17px var(--display); color: #ffe9a8; }
-.bj-btns { display: flex; gap: 8px; }
+.bj-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.bj-slide { position: relative; flex: 1 1 100%; padding: 4px 6px 0; }
+.bj-slide input { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 34px; margin: 0; background: transparent; position: relative; z-index: 2; touch-action: none; }
+.bj-slide input::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
+.bj-slide input::-moz-range-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
+.bj-slide input::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -9px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 #b9d6c9, 0 0 0 3px #17264d; }
+.bj-slide input::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 3px 0 #b9d6c9, 0 0 0 3px #17264d; }
+.bj-ticks { position: absolute; left: 21px; right: 21px; top: 10px; height: 20px; z-index: 1; pointer-events: none; }
+.bj-ticks i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, .7); border-radius: 1px; }
+.bj-ticks i:nth-child(1) { left: 25%; } .bj-ticks i:nth-child(2) { left: 50%; } .bj-ticks i:nth-child(3) { left: 75%; }
+.bj-ends { display: flex; justify-content: space-between; margin: -2px 3px 8px; font: 800 12px var(--body, inherit); color: #bfe8d6; }
 .bj-btns button { flex: 1; height: 52px; border-radius: 26px; background: #fff; color: #17264d; font: 600 17px var(--display); box-shadow: 0 4px 0 #b9d6c9; }
 .bj-btns button:active { transform: translateY(2px); box-shadow: 0 2px 0 #b9d6c9; }
 .bj-btns button.go { background: #ffcf4a; box-shadow: 0 4px 0 #c79412; }

@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '2026-11-12T16:30:01Z';
+  PN.UPDATED = '2026-11-12T16:39:24Z';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -311,7 +311,7 @@
     sauna: { price: 850, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right. Unlocking it builds the sauna on the shore.', best: 'best_sauna', rate: 6.86, unit: 'rounds in a row' },
     curl: { price: 1000, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', rate: 4, unit: 'points' },
     sled: { price: 1250, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', rate: 0.096, unit: 'metres' },
-    bj: { price: 1500, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Bet 5 sardines a hand. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', rate: 0.5, unit: 'sardines won' },
+    bj: { price: 1500, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Choose your bet, from 5 sardines up to all in. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', rate: 0.5, unit: 'sardines won' },
   };
   /* rate: base coins per point, tuned so a run at the player's high score pays about 48 on every game (then the earnings cut applies). */
   PN.GAME_ORDER = ['ball', 'catch', 'swim', 'toss', 'sauna', 'curl', 'sled', 'bj'];
