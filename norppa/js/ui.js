@@ -268,16 +268,19 @@
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
         h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + names(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
-      } else if (UI.tab === 'wear') {
-        h = '<p class="lead">' + tr('Tap something you own to put it on or take it off.') + '</p><div class="grid">' + D.WEAR.map((it) => {
-          const own = st.owned[it.id], on = st.wearing[it.slot] === it.id;
-          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(on ? 'Wearing' : 'tag|Wear') + '</span>' : price(it)), '', own ? 'wear' : 'buy');
-        }).join('') + '</div>';
       } else {
-        h = '<p class="lead">' + tr('Things for the shore. Tap one you own to put it out or tidy it away.') + '</p><div class="grid">' + D.DECOR.map((it) => {
-          const own = st.owned[it.id], on = st.placed[it.id];
-          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(on ? 'Out' : 'Put out') + '</span>' : price(it)), '', own ? 'place' : 'buy');
-        }).join('') + '</div>';
+        // one shelf for each kind of thing, with a row of shortcuts at the top
+        const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = wear ? D.WEAR : D.DECOR;
+        const one = (it) => {
+          const own = st.owned[it.id], on = wear ? st.wearing[it.slot] === it.id : st.placed[it.id];
+          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(wear ? (on ? 'Wearing' : 'tag|Wear') : (on ? 'Out' : 'Put out')) + '</span>' : price(it)), '', own ? (wear ? 'wear' : 'place') : 'buy');
+        };
+        h = '<p class="lead">' + tr(wear ? 'Tap something you own to put it on or take it off.' : 'Things for the shore. Tap one you own to put it out or tidy it away.') + '</p>'
+          + '<div class="chips">' + cats.map((c) => '<button class="chip-btn" data-do="jump" data-id="cat-' + c.id + '">' + tr(c.t) + '</button>').join('') + '</div>'
+          + cats.map((c) => {
+            const items = list.filter((it) => it.cat === c.id);
+            return '<h3 class="shelf" id="cat-' + c.id + '">' + tr(c.t) + '<span>' + items.filter((it) => st.owned[it.id]).length + ' / ' + items.length + '</span></h3><div class="grid">' + items.map(one).join('') + '</div>';
+          }).join('');
       }
       return h;
     },
@@ -358,6 +361,7 @@
     else if (act === 'wear') game.wear(id);
     else if (act === 'place') game.place(id);
     else if (act === 'info') UI.itemInfo(id);
+    else if (act === 'jump') { const el = document.getElementById(id); if (el) { PN.Audio.play('tap'); const box = $('sheetBody'); box.scrollTo({ top: el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 4, behavior: 'smooth' }); } }
     else if (act === 'goto') UI.openSheet(id);
     else if (act === 'borrow') game.borrow();
     else if (act === 'ball') { UI.closeSheet(); game.playBall(); }

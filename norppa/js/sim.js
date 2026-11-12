@@ -12,7 +12,7 @@
   /* Tuning. Rates are points per hour on a 0 to 100 scale. */
   const T = {
     earnRate: PN.ECON.earn,
-    foodAwake: 8.5, foodAsleep: 3.5,
+    foodAwake: 7.5, foodAsleep: 7.5,
     joyAwake: 6, joyAsleep: 1.8,
     energyAwake: 6.5, energyAsleep: 14,
     clean: 4, cleanPerPoop: 1.5,
@@ -63,7 +63,7 @@
       coins: 40, coinCarry: 0,
       pantry: { muikku: 5, ahven: 2 },
       owned: { lantern: true }, placed: { lantern: true },
-      wearing: { head: null, neck: null, face: null },
+      wearing: { head: null, neck: null, face: null, back: null },
       fish: { muikku: 5, ahven: 2 },
       trinkets: {}, words: {}, awards: {}, seen: {},
       pups: [], family: [], nextPupAt: 0, pupSeq: 0,
@@ -191,7 +191,7 @@
     if (state.sick) joyRate *= 1.5;
 
     const wasFed = s.food > 20;
-    s.food = pct(s.food - foodRate * h * m);
+    s.food = pct(s.food - foodRate * h);   // hunger runs at the same pace asleep, awake, or app closed
     s.joy = pct(s.joy - joyRate * h * m);
     s.energy = pct(s.energy + (asleep ? T.energyAsleep * (state.sick ? 0.6 : 1) * h : -T.energyAwake * h * m));
     s.clean = pct(s.clean - (T.clean + T.cleanPerPoop * state.poops.length) * (asleep ? 0.5 : 1) * h * m);
@@ -511,17 +511,19 @@
     if ((it.kind === 'wear' || it.kind === 'decor') && state.owned[id]) return no('owned');
     if (state.coins < it.price) return no('coins');
     state.coins -= it.price;
+    let away = null;
     if (it.kind === 'wear') {
       state.owned[id] = true; state.wearing[it.slot] = id;
       if (id.indexOf('pipo') === 0) learn(state, 'pipo');
       if (id.indexOf('scarf') === 0) learn(state, 'kaulaliina');
     } else if (it.kind === 'decor') {
       state.owned[id] = true; state.placed[id] = true;
+      away = makeRoom(state, id);
     } else if (it.kind === 'fish') giveFish(state, id, 1);
     else state.pantry[id] = (state.pantry[id] || 0) + 1;
     learn(state, 'kauppa');
     check(state);
-    return ok({});
+    return ok({ away });
   }
 
   function wear(state, id) {
@@ -534,7 +536,14 @@
   function place(state, id) {
     if (!state.owned[id]) return no('none');
     state.placed[id] = !state.placed[id];
-    return ok({ on: state.placed[id] });
+    return ok({ on: state.placed[id], away: state.placed[id] ? makeRoom(state, id) : null });
+  }
+  /* Two things that share one place cannot both be out. Returns the one that was tidied away, if any. */
+  function makeRoom(state, id) {
+    const it = PN.items[id];
+    let away = null;
+    if (it && it.swap) PN.DATA.DECOR.forEach((d) => { if (d.id !== id && d.swap === it.swap && state.placed[d.id]) { state.placed[d.id] = false; away = d.id; } });
+    return away;
   }
 
   function sauna(state, now) {

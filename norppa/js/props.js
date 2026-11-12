@@ -77,6 +77,45 @@
     gold: 0xf5c542, spruce: 0x2e5a4c, pink: 0xf59ab5, stone: 0x8f98a3, warm: 0xffc46b,
   };
   const gold = () => U.mat(C.gold, { metalness: 0.35, roughness: 0.3, emissive: 0x6a4a08, emissiveIntensity: 0.55 });
+  const UPV = new T.Vector3(0, 1, 0);
+  /* A thin rod from one point to another. */
+  U.rod = (a, b, r, material, seg) => {
+    const va = new T.Vector3(a[0], a[1], a[2]), vb = new T.Vector3(b[0], b[1], b[2]), d = vb.clone().sub(va);
+    const m = U.mesh(new T.CylinderGeometry(r, r, d.length(), seg || 6), material);
+    m.position.copy(va).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(UPV, d.normalize());
+    return m;
+  };
+  /* Sit something on the seal's head at a point, with its up pointing straight out of the head. */
+  function stick(o, x, y, z, lift) {
+    const n = new T.Vector3(x / 0.382, y / 0.318, z / 0.339).normalize();
+    o.position.set(x, y, z).addScaledVector(n, lift || 0);
+    o.quaternion.setFromUnitVectors(UPV, n);
+    return o;
+  }
+  /* A flat heart outline to cut shapes from. k: size. */
+  function heartShape(k, Kind) {
+    const s = new (Kind || T.Shape)();
+    s.moveTo(0, -0.42 * k);
+    s.bezierCurveTo(-0.62 * k, 0.02 * k, -0.5 * k, 0.52 * k, -0.2 * k, 0.52 * k);
+    s.bezierCurveTo(-0.06 * k, 0.52 * k, 0, 0.42 * k, 0, 0.3 * k);
+    s.bezierCurveTo(0, 0.42 * k, 0.06 * k, 0.52 * k, 0.2 * k, 0.52 * k);
+    s.bezierCurveTo(0.5 * k, 0.52 * k, 0.62 * k, 0.02 * k, 0, -0.42 * k);
+    return s;
+  }
+  /* A little flame: soft teardrops one inside another. Returns the group and a flicker to call every frame. */
+  const teardrop = (r, h) => new T.LatheGeometry([[0, 0], [0.62, 0.04], [1, 0.22], [0.9, 0.42], [0.55, 0.7], [0.22, 0.9], [0, 1]].map((q) => new T.Vector2(q[0] * r, q[1] * h)), 10);
+  function makeFlame(k) {
+    const g = new T.Group(), parts = [];
+    [[0xff7a1a, 0.075, 0.24, 0.85], [0xffb02e, 0.052, 0.17, 0.95], [0xffe27a, 0.03, 0.1, 1]].forEach((f, i) => {
+      const m = U.mesh(teardrop(f[1] * k, f[2] * k), new T.MeshBasicMaterial({ color: f[0], toneMapped: false, transparent: true, opacity: f[3], depthWrite: false }));
+      m.renderOrder = 2 + i; g.add(m); parts.push(m);
+    });
+    return { g, tick(t, ph) {
+      const p = ph || 0, kk = 1 + 0.16 * Math.sin(t * 12 + p) + 0.08 * Math.sin(t * 19.3 + p * 2);
+      parts.forEach((m, i) => { m.scale.set(1 + 0.08 * Math.sin(t * 8 + p + i), kk, 1); m.rotation.z = 0.1 * Math.sin(t * 5.7 + p + i); });
+    } };
+  }
   const P = PN.Props = {};
 
   /* ---------- fish ---------- */
@@ -235,6 +274,158 @@
     pipo_red: () => pipo(C.red, C.cream),
     pipo_blue: () => pipo(C.blue, C.cream),
     pipo_yellow: () => pipo(C.yellow, 0x2f4a8a),
+    pipo_pink: () => pipo(0xf48fb1, C.cream),
+    pipo_green: () => pipo(0x3f8f5a, C.cream),
+    karvalakki() {
+      const fur = U.mat(0x7a5a3c, { roughness: 1 }), dark = U.mat(0x5a4029, { roughness: 1 });
+      const dome = U.mesh(new T.SphereGeometry(0.47, 24, 12, 0, TAU, 0, Math.PI / 2), fur, 0, 0.33, 0);
+      dome.scale.y = 0.75;
+      const g = U.group(dome, U.rot(U.torus(0.47, 0.085, dark, 0, 0.35, 0, TAU, 28), Math.PI / 2),
+        U.ball(0.2, dark, 0, 0.5, 0.37, 1.25, 0.8, 0.45),                                                      // front flap, turned up
+        U.ball(0.2, dark, 0.6, 0.08, 0, 0.5, 1.3, 0.95), U.ball(0.2, dark, -0.6, 0.08, 0, 0.5, 1.3, 0.95));    // ear flaps, down
+      return U.rot(g, -0.08, 0, 0);
+    },
+    juhlahattu() {
+      const tex = U.tex(64, 64, (c, w, h) => {
+        c.fillStyle = '#ffd23f'; c.fillRect(0, 0, w, h); c.fillStyle = '#e2334f';
+        for (let i = -3; i < 8; i++) { c.beginPath(); c.moveTo(i * 16, 0); c.lineTo(i * 16 + 8, 0); c.lineTo(i * 16 + 40, h); c.lineTo(i * 16 + 32, h); c.fill(); }
+      });
+      const blue = U.mat(0x4f8fe6, { roughness: 0.9 });
+      const g = U.group(U.mesh(new T.ConeGeometry(0.21, 0.52, 20), new T.MeshStandardMaterial({ map: tex, roughness: 0.6 }), 0, 0.26, 0),
+        U.ball(0.065, blue, 0, 0.54, 0), U.rot(U.torus(0.205, 0.024, blue, 0, 0.015, 0, TAU, 20), Math.PI / 2));
+      g.position.set(-0.1, 0.5, 0.03); g.rotation.set(-0.05, 0, 0.22);
+      return U.group(g);
+    },
+    baskeri() {
+      const felt = U.mat(0xb8263a, { roughness: 1 });
+      const g = U.group(U.ball(0.44, felt, 0, 0, 0, 1, 0.3, 1, 24), U.rot(U.torus(0.3, 0.05, U.mat(0x8f1c2c, { roughness: 1 }), 0, -0.08, 0, TAU, 24), Math.PI / 2),
+        U.cyl(0.018, 0.018, 0.09, felt, 0, 0.15, 0, 6));
+      g.position.set(0.08, 0.56, 0); g.rotation.set(-0.12, 0, -0.32);
+      return U.group(g);
+    },
+    olkihattu() {
+      const straw = U.mat(0xe3c27a, { roughness: 1 });
+      const g = U.group(U.cyl(0.66, 0.68, 0.03, straw, 0, 0.42, 0, 32), U.cyl(0.35, 0.4, 0.2, straw, 0, 0.53, 0, 24), U.ball(0.35, straw, 0, 0.63, 0, 1, 0.22, 1, 24),
+        U.cyl(0.405, 0.41, 0.07, U.mat(0xd8382f, { roughness: 0.8 }), 0, 0.475, 0, 24));
+      return U.rot(g, -0.16, 0, 0.06);
+    },
+    kokinhattu() {
+      const w = U.mat(0xffffff, { roughness: 0.9 }), g = new T.Group();
+      g.add(U.cyl(0.3, 0.3, 0.26, w, 0, 0.58, 0, 24), U.ball(0.3, w, 0, 0.84, 0, 1.1, 0.7, 1.1, 20));
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; g.add(U.ball(0.17, w, Math.cos(a) * 0.24, 0.8, Math.sin(a) * 0.24, 1, 0.9, 1, 14)); }
+      return U.rot(g, -0.08, 0, -0.08);
+    },
+    yolakki() {
+      const white = U.mat(0xfafafa, { roughness: 0.85 }), black = U.mat(0x15171c, { roughness: 0.35 });
+      const peak = U.mesh(new T.CylinderGeometry(0.33, 0.33, 0.025, 24, 1, false, -1.0, 2.0), black, 0, 0.435, 0.2);
+      peak.rotation.x = 0.22;
+      const g = U.group(U.ball(0.45, white, 0, 0.6, 0, 1, 0.3, 1, 24), U.cyl(0.375, 0.385, 0.12, black, 0, 0.48, 0, 24), peak, U.ball(0.04, gold(), 0, 0.49, 0.39));
+      return U.rot(g, -0.1, 0, 0.05);
+    },
+    silinteri() {
+      const black = U.mat(0x1b1d24, { roughness: 0.45 });
+      const g = U.group(U.cyl(0.25, 0.23, 0.44, black, 0, 0.26, 0, 24), U.cyl(0.42, 0.42, 0.03, black, 0, 0.03, 0, 28),
+        U.cyl(0.236, 0.232, 0.08, U.mat(0xc22a3a, { roughness: 0.6 }), 0, 0.09, 0, 24));
+      g.position.set(0.05, 0.5, 0); g.rotation.set(-0.1, 0, -0.14);
+      return U.group(g);
+    },
+    velho() {
+      const blue = U.mat(0x3b4cc0, { roughness: 0.9 }), star = new T.MeshStandardMaterial({ color: 0xffe07a, emissive: 0xffc93a, emissiveIntensity: 0.7, roughness: 0.4 });
+      const tip = U.mesh(new T.ConeGeometry(0.135, 0.42, 16), blue, 0.12, 1.09, 0);
+      tip.rotation.z = -0.6;
+      const g = U.group(U.cyl(0.56, 0.58, 0.03, blue, 0, 0.44, 0, 28), U.mesh(new T.CylinderGeometry(0.13, 0.36, 0.5, 20), blue, 0, 0.69, 0), tip,
+        U.rot(U.torus(0.365, 0.022, star, 0, 0.465, 0, TAU, 24), Math.PI / 2));
+      [[0.4, 0.6], [2.3, 0.78], [4.1, 0.62], [5.4, 0.84], [1.3, 0.86]].forEach((q) => {
+        const rad = 0.36 - (q[1] - 0.44) / 0.5 * 0.23 + 0.01;
+        g.add(U.ball(0.04, star, Math.cos(q[0]) * rad, q[1], Math.sin(q[0]) * rad, 1, 1, 1, 8));
+      });
+      return U.rot(g, -0.1, 0, 0.04);
+    },
+    viikinki() {
+      const iron = U.mat(0xa9b3bf, { roughness: 0.3, metalness: 0.25 }), band = U.mat(0x7c8794, { roughness: 0.35, metalness: 0.25 }), horn = U.mat(0xf3ead3, { roughness: 0.6 });
+      const dome = U.mesh(new T.SphereGeometry(0.46, 24, 12, 0, TAU, 0, Math.PI / 2), iron, 0, 0.32, 0);
+      dome.scale.y = 0.78;
+      const g = U.group(dome, U.rot(U.torus(0.462, 0.045, band, 0, 0.33, 0, TAU, 28), Math.PI / 2), U.rot(U.torus(0.36, 0.03, band, 0, 0.32, 0, Math.PI, 20), 0, Math.PI / 2, 0));
+      [-1, 1].forEach((s) => {
+        const h = new T.Group(), low = new T.CylinderGeometry(0.062, 0.1, 0.24, 12), top = new T.ConeGeometry(0.063, 0.27, 12);
+        low.translate(0, 0.12, 0); top.translate(0, 0.135, 0);
+        const tipM = new T.Mesh(top, horn);
+        tipM.position.y = 0.23; tipM.rotation.z = s * 0.7;
+        h.add(new T.Mesh(low, horn), tipM);
+        h.position.set(s * 0.4, 0.5, 0); h.rotation.z = -s * 1.05;
+        g.add(h);
+      });
+      return U.rot(g, -0.08, 0, 0);
+    },
+    kukka() {
+      const f = new T.Group(), white = U.mat(0xffffff, { roughness: 0.8 });
+      for (let i = 0; i < 9; i++) {
+        const a = i / 9 * TAU, p = U.ball(0.07, white, Math.cos(a) * 0.105, 0.02, Math.sin(a) * 0.105, 1.35, 0.3, 0.62, 10);
+        p.rotation.y = -a; f.add(p);
+      }
+      f.add(U.ball(0.065, U.mat(0xf5b81e, { roughness: 0.9 }), 0, 0.035, 0, 1, 0.6, 1, 12), U.ball(0.06, U.mat(0x5fae5a), 0.15, 0, 0.12, 1.5, 0.3, 0.8, 8));
+      f.scale.setScalar(1.4);
+      return U.group(stick(f, -0.3, 0.47, 0.2, 0.02));
+    },
+    kissa() {
+      const dark = U.mat(0x2b2b33, { roughness: 1 }), pink = U.mat(0xf59ab5, { roughness: 0.9 });
+      const g = U.group(U.torus(0.615, 0.026, dark, 0, 0, 0, Math.PI, 26));
+      [-1, 1].forEach((s) => {
+        const e = U.group(U.rot(U.mesh(new T.ConeGeometry(0.15, 0.27, 4), dark, 0, 0.135, 0), 0, Math.PI / 4, 0), U.rot(U.mesh(new T.ConeGeometry(0.09, 0.17, 4), pink, 0, 0.105, 0.06), 0, Math.PI / 4, 0));
+        e.scale.z = 0.55;
+        g.add(stick(e, s * 0.33, 0.48, 0, -0.03));
+      });
+      return g;
+    },
+    pupu() {
+      const white = U.mat(0xffffff, { roughness: 1 }), pink = U.mat(0xf7a8c0, { roughness: 0.9 });
+      const g = U.group(U.torus(0.615, 0.026, white, 0, 0, 0, Math.PI, 26));
+      [-1, 1].forEach((s) => {
+        const e = U.group(U.ball(0.1, white, 0, 0.3, 0, 1, 3.1, 0.55, 14), U.ball(0.1, pink, 0, 0.3, 0.035, 0.55, 2.5, 0.35, 12));
+        e.position.set(s * 0.21, 0.5, 0); e.rotation.set(-0.06, 0, s > 0 ? -0.36 : 0.12);
+        g.add(e);
+      });
+      return g;
+    },
+    sarvet() {
+      const m = U.mat(0x8a6a48, { roughness: 0.9 }), g = U.group(U.torus(0.615, 0.022, U.mat(0x5a4029), 0, 0, 0, Math.PI, 26));
+      const limb = (r0, r1, len) => { const geo = new T.CylinderGeometry(r1, r0, len, 7); geo.translate(0, len / 2, 0); return new T.Mesh(geo, m); };
+      [-1, 1].forEach((s) => {
+        const a = new T.Group(), t1 = limb(0.028, 0.012, 0.2), t2 = limb(0.026, 0.012, 0.2), t3 = limb(0.022, 0.01, 0.16);
+        t1.position.y = 0.16; t1.rotation.x = 0.95;                      // a tine pointing forward
+        t2.position.y = 0.3; t2.rotation.z = s * 0.95;                   // one pointing in
+        t3.position.y = 0.44; t3.rotation.set(-0.5, 0, -s * 0.6);
+        a.add(limb(0.042, 0.026, 0.46), t1, t2, t3, U.ball(0.026, m, 0, 0.46, 0));
+        a.position.set(s * 0.2, 0.5, 0); a.rotation.z = -s * 0.5;
+        g.add(a);
+      });
+      return g;
+    },
+    kuulokkeet() {
+      const shell = U.mat(0x2bb3a3, { roughness: 0.4 }), dark = U.mat(0x23262d, { roughness: 0.6 });
+      const g = U.group(U.torus(0.63, 0.035, dark, 0, 0, 0, Math.PI, 26));
+      [-1, 1].forEach((s) => {
+        g.add(U.rot(U.cyl(0.19, 0.19, 0.09, shell, s * 0.67, -0.02, 0, 20), 0, 0, Math.PI / 2), U.rot(U.cyl(0.16, 0.16, 0.06, dark, s * 0.615, -0.02, 0, 20), 0, 0, Math.PI / 2),
+          U.ball(0.06, U.mat(0xffffff, { roughness: 0.4 }), s * 0.715, -0.02, 0, 0.3, 1, 1, 10));
+      });
+      return g;
+    },
+    sieni() {
+      const tex = U.tex(128, 64, (c, w, h) => {
+        c.fillStyle = '#d8322a'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff';
+        const r = U.rng(5);
+        for (let i = 0; i < 16; i++) { c.beginPath(); c.ellipse(r() * w, 8 + r() * (h - 20), 5 + r() * 4, 4 + r() * 3, 0, 0, TAU); c.fill(); }
+      });
+      const cap = U.mesh(new T.SphereGeometry(0.56, 28, 12, 0, TAU, 0, Math.PI / 2), new T.MeshStandardMaterial({ map: tex, roughness: 0.6 }), 0, 0.3, 0);
+      cap.scale.y = 0.66;
+      return U.rot(U.group(cap, U.rot(U.torus(0.52, 0.045, U.mat(0xfff6e6, { roughness: 0.9 }), 0, 0.3, 0, TAU, 28), Math.PI / 2)), -0.1, 0, 0.06);
+    },
+    sadekeha() {
+      const ring = U.rot(U.torus(0.3, 0.036, new T.MeshStandardMaterial({ color: 0xffe07a, emissive: 0xffc93a, emissiveIntensity: 0.9, roughness: 0.3 }), 0, 0.9, 0, TAU, 32), Math.PI / 2);
+      const glow = U.halo(0xffd86b, 0.9, 0.35);
+      glow.position.y = 0.9;
+      return U.rot(U.group(ring, glow), -0.12, 0, 0.08);
+    },
     bow() {
       const m = U.mat(0xe2334f, { roughness: 0.7 });
       const g = U.group(U.ball(0.15, m, -0.14, 0, 0, 1, 0.72, 0.45), U.ball(0.15, m, 0.14, 0, 0, 1, 0.72, 0.45),
@@ -280,6 +471,50 @@
     },
     scarf_red: () => scarf(0xd8382f, 0xf7f1e3),
     scarf_green: () => scarf(0x2f8f5f, 0x2f8f5f),
+    scarf_blue: () => scarf(0x1f4fb0, 0xffffff),
+    scarf_rainbow: () => scarf(0xe2334f, 0x4f8fe6, [0xe2334f, 0xf28c28, 0xf5d042, 0x3fa85a, 0x4f8fe6, 0x8a5ad6]),
+    huivi() {
+      const red = U.mat(0xd8382f, { roughness: 1 }), tri = new T.Shape();
+      tri.moveTo(-0.22, 0); tri.lineTo(0.22, 0); tri.lineTo(0, -0.36); tri.closePath();
+      const flap = U.mesh(new T.ExtrudeGeometry(tri, { depth: 0.03, bevelEnabled: false }), red, 0, 0, -0.015);
+      const hang = U.group(flap, U.ball(0.028, U.mat(0xffffff), -0.07, -0.08, 0.02, 1, 1, 0.5), U.ball(0.028, U.mat(0xffffff), 0.07, -0.08, 0.02, 1, 1, 0.5), U.ball(0.028, U.mat(0xffffff), 0, -0.2, 0.02, 1, 1, 0.5));
+      hang.position.set(0.5, -0.33, 0.17); hang.rotation.set(0.1, 0, 0.22);
+      return U.group(new T.Mesh(new T.TorusGeometry(0.622, 0.075, 10, 36), red), hang);
+    },
+    solmuke() {
+      const red = U.mat(0xc22a3a, { roughness: 0.7 });
+      const bow = U.group(U.ball(0.13, red, -0.12, 0, 0, 1, 0.72, 0.45), U.ball(0.13, red, 0.12, 0, 0, 1, 0.72, 0.45), U.ball(0.055, U.mat(0x8f1c2c, { roughness: 0.7 }), 0, 0, 0.02));
+      bow.position.set(0.5, -0.42, 0.18); bow.rotation.set(0.1, 0, 0.22);
+      return U.group(new T.Mesh(new T.TorusGeometry(0.62, 0.04, 8, 36), U.mat(0x1b1d24, { roughness: 0.6 })), bow);
+    },
+    solmio() {
+      const blue = U.mat(0x2f63c9, { roughness: 0.7 }), blade = new T.Shape();
+      blade.moveTo(-0.045, 0); blade.lineTo(0.045, 0); blade.lineTo(0.085, -0.3); blade.lineTo(0, -0.4); blade.lineTo(-0.085, -0.3); blade.closePath();
+      const tie = U.group(U.mesh(new T.ExtrudeGeometry(blade, { depth: 0.025, bevelEnabled: false }), blue, 0, -0.03, -0.012), U.ball(0.06, blue, 0, 0, 0, 1, 0.85, 0.6),
+        U.rot(U.box(0.2, 0.03, 0.03, U.mat(0xf5c542), 0, -0.2, 0.012), 0, 0, 0.5));
+      tie.position.set(0.5, -0.37, 0.18); tie.rotation.set(0.1, 0, 0.22);
+      return U.group(new T.Mesh(new T.TorusGeometry(0.62, 0.05, 8, 36), U.mat(0xffffff, { roughness: 0.8 })), tie);
+    },
+    kukkakaulus() {
+      const g = U.group(new T.Mesh(new T.TorusGeometry(0.622, 0.03, 6, 36), U.mat(0x4f9a52)));
+      const cols = [0xf48fb1, 0xffd84a, 0xffffff, 0xff9d5c, 0xd6a7ff];
+      for (let i = 0; i < 22; i++) {
+        const a = i / 22 * TAU, x = Math.cos(a) * 0.63, y = Math.sin(a) * 0.63;
+        g.add(U.ball(0.085, U.mat(cols[i % 5], { roughness: 0.8 }), x, y, (i % 2) * 0.03, 1, 1, 0.8, 10), U.ball(0.03, U.mat(0xf2b01e), x * 1.05, y * 1.05, 0.07));
+      }
+      return g;
+    },
+    helmet() {
+      const pearl = U.mat(0xfff8ef, { roughness: 0.18 }), g = new T.Group();
+      for (let i = 0; i < 38; i++) { const a = i / 38 * TAU; g.add(U.ball(0.05, pearl, Math.cos(a) * 0.63, Math.sin(a) * 0.63, 0, 1, 1, 1, 10)); }
+      return g;
+    },
+    mitali() {
+      const medal = U.group(U.rot(U.cyl(0.115, 0.115, 0.03, gold(), 0, -0.2, 0, 20), Math.PI / 2), U.rot(U.cyl(0.07, 0.07, 0.04, U.mat(0xffe59a, { roughness: 0.3, emissive: 0x6a4a08, emissiveIntensity: 0.5 }), 0, -0.2, 0, 16), Math.PI / 2),
+        U.box(0.09, 0.14, 0.02, U.mat(0x1f4fb0, { roughness: 0.8 }), 0, -0.05, 0));
+      medal.position.set(0.5, -0.36, 0.18); medal.rotation.set(0.1, 0, 0.22);
+      return U.group(new T.Mesh(new T.TorusGeometry(0.62, 0.045, 8, 36), U.mat(0x1f4fb0, { roughness: 0.8 })), medal);
+    },
     bell() {
       const g = U.group(U.torus(0.615, 0.04, U.mat(0xc22a2a, { roughness: 0.8 }), 0, 0, 0, TAU, 32));
       const b = U.group(U.ball(0.115, gold(), 0, 0, 0), U.torus(0.03, 0.012, gold(), 0, 0.12, 0, TAU, 10),
@@ -290,12 +525,152 @@
     },
     glasses: () => specs(false),
     shades: () => specs(true),
+    punanena() {
+      return U.group(U.ball(0.088, U.mat(0xe5262e, { roughness: 0.2, emissive: 0x7a0a10, emissiveIntensity: 0.5 }), 0, -0.075, 0.63, 1, 1, 1, 16), U.ball(0.022, U.glow(0xffffff), -0.03, -0.04, 0.7));
+    },
+    viikset() {
+      const m = U.mat(0x5a3a22, { roughness: 0.9 }), g = new T.Group();
+      [-1, 1].forEach((s) => {
+        g.add(U.rot(U.ball(0.095, m, s * 0.115, -0.15, 0.665, 1.5, 0.55, 0.5, 12), 0, s * 0.3, -s * 0.22),
+          U.ball(0.05, m, s * 0.25, -0.115, 0.61, 1, 1, 0.6, 10), U.ball(0.03, m, s * 0.285, -0.07, 0.585));
+      });
+      return g;
+    },
+    silmalappu() {
+      const black = U.mat(0x15171c, { roughness: 0.6 });
+      const patch = stick(U.ball(0.15, black, 0, 0, 0, 1, 0.28, 1.05, 16), 0.245, 0.04, 0.52, 0.05);
+      const strap = new T.Mesh(new T.TorusGeometry(0.607, 0.018, 6, 40), black);
+      strap.rotation.set(Math.PI / 2, 0, 0);
+      const tilt = U.group(strap);
+      tilt.rotation.z = -0.5; tilt.position.y = 0.16;
+      return U.group(patch, tilt);
+    },
+    sydanlasit() {
+      const frame = U.mat(0xe2334f, { roughness: 0.35 }), g = new T.Group();
+      const outer = heartShape(0.36);
+      outer.holes.push(heartShape(0.28, T.Path));
+      const rim = new T.ExtrudeGeometry(outer, { depth: 0.022, bevelEnabled: false, curveSegments: 14 }), lens = new T.ShapeGeometry(heartShape(0.29), 14);
+      [-1, 1].forEach((s) => {
+        const eye = U.group(U.mesh(rim, frame, 0, 0, -0.011), U.mesh(lens, new T.MeshStandardMaterial({ color: 0xff8fb0, roughness: 0.1, transparent: true, opacity: 0.55, side: T.DoubleSide })));
+        eye.position.set(s * 0.235, 0.03, 0.6); eye.rotation.y = s * 0.3;
+        g.add(eye);
+        const arm = U.cyl(0.013, 0.013, 0.5, frame, s * 0.5, 0.06, 0.36, 6);
+        arm.rotation.set(Math.PI / 2, 0, s * -0.38);
+        g.add(arm);
+      });
+      g.add(U.rot(U.cyl(0.014, 0.014, 0.12, frame, 0, 0.1, 0.645, 6), 0, 0, Math.PI / 2));
+      return g;
+    },
+    monokkeli() {
+      const au = gold(), g = new T.Group();
+      const ring = U.torus(0.165, 0.02, au, 0.235, 0.045, 0.6, TAU, 26);
+      ring.rotation.y = 0.3;
+      const lens = U.mesh(new T.CircleGeometry(0.16, 24), new T.MeshStandardMaterial({ color: 0xd8ecff, roughness: 0.05, transparent: true, opacity: 0.35 }), 0.235, 0.045, 0.6);
+      lens.rotation.y = 0.3;
+      g.add(ring, lens);
+      for (let i = 0; i <= 9; i++) {                       // the chain, hanging in a curve down to the collar
+        const k = i / 9;
+        g.add(U.ball(0.016, au, 0.39 + 0.17 * k, -0.02 - 0.42 * k - 0.1 * Math.sin(k * Math.PI), 0.56 - 0.3 * k));
+      }
+      return g;
+    },
+    laskettelulasit() {
+      const g = new T.Group(), seg = (k, a, p0, p1, m) => {
+        const mesh = new T.Mesh(new T.SphereGeometry(1, 24, 8, Math.PI / 2 - a, a * 2, Math.PI / 2 - p1, p1 - p0), m);
+        mesh.scale.set(0.618 * k, 0.564 * k, 0.582 * k);
+        return mesh;
+      };
+      g.add(seg(1.045, 0.66, 0.42, 0.78, U.mat(0x23262d, { roughness: 0.6, side: T.DoubleSide })),
+        seg(1.07, 0.58, 0.47, 0.73, new T.MeshStandardMaterial({ color: 0xff9a3c, roughness: 0.08, emissive: 0x7a2a00, emissiveIntensity: 0.35, side: T.DoubleSide })));
+      const strap = new T.Mesh(new T.TorusGeometry(0.44, 0.035, 6, 36), U.mat(0x2f63c9, { roughness: 0.9 }));
+      strap.rotation.x = Math.PI / 2; strap.position.y = 0.35; strap.scale.set(1.06, 1, 1);
+      g.add(strap);
+      return g;
+    },
+    /* ---- on the back: built around a point on top of the seal's back, just behind the head; +z is toward the head ---- */
+    ilmapallo() {
+      const red = U.mat(0xe5334f, { roughness: 0.25 });
+      return U.group(U.rod([0, 0, 0], [0.14, 1.32, -0.28], 0.008, U.mat(0xf2f4f7)), U.ball(0.3, red, 0.17, 1.62, -0.34, 1, 1.18, 1, 20),
+        U.rot(U.cone(0.05, 0.07, red, 0.14, 1.28, -0.28, 8), 0.2, 0, 0.1), U.ball(0.05, U.glow(0xffffff), 0.07, 1.74, -0.12, 1, 1.4, 0.5), U.ball(0.05, U.mat(0xc22a3a), 0, 0.02, 0, 1, 0.5, 1));
+    },
+    ankka() {
+      const y = U.mat(0xffd23f, { roughness: 0.4 }), o = U.mat(0xf28c28, { roughness: 0.5 }), k = U.mat(0x15171c, { roughness: 0.2 });
+      return U.group(U.ball(0.18, y, 0, 0.13, -0.02, 1, 0.82, 1.25, 16), U.ball(0.12, y, 0, 0.32, 0.12, 1, 1, 1, 14), U.ball(0.06, o, 0, 0.3, 0.24, 1.1, 0.45, 1, 10),
+        U.ball(0.02, k, 0.055, 0.35, 0.21), U.ball(0.02, k, -0.055, 0.35, 0.21), U.rot(U.cone(0.07, 0.12, y, 0, 0.21, -0.23, 8), -0.9, 0, 0),
+        U.ball(0.1, y, 0.15, 0.13, -0.04, 0.35, 0.6, 1), U.ball(0.1, y, -0.15, 0.13, -0.04, 0.35, 0.6, 1));
+    },
+    reppu() {
+      const teal = U.mat(0x2a9d8f, { roughness: 0.8 }), yel = U.mat(0xf5c542, { roughness: 0.8 }), dark = U.mat(0x264653, { roughness: 0.8 });
+      const g = U.group(U.ball(0.27, teal, 0, 0.24, -0.1, 1, 0.95, 0.8, 16), U.ball(0.2, yel, 0, 0.36, -0.1, 1.12, 0.5, 0.86, 14), U.ball(0.13, dark, 0, 0.17, -0.3, 1.1, 0.8, 0.5, 12),
+        U.box(0.06, 0.05, 0.03, U.mat(0xf2f4f7, { roughness: 0.3 }), 0, 0.3, -0.31), U.rot(U.torus(0.05, 0.016, dark, 0, 0.5, -0.1, Math.PI, 10), 0, Math.PI / 2, 0));
+      [-1, 1].forEach((s) => g.add(U.rot(U.torus(0.26, 0.028, dark, s * 0.17, 0.1, 0.02, Math.PI, 14), 0, Math.PI / 2 + s * 0.25, 0)));
+      return g;
+    },
+    viitta() {
+      const geo = new T.PlaneGeometry(1.2, 1.5, 8, 10);
+      geo.rotateX(-Math.PI / 2);
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x0 = p.getX(i), t = (0.75 - p.getZ(i)) / 1.5;                 // t: 0 at the collar, 1 at the far hem
+        const x = x0 * (0.8 + 0.45 * t);
+        p.setXYZ(i, x, 0.09 + 0.07 * t + 0.07 * Math.sin(t * 6.2) - 0.5 * x * x * (1 - 0.5 * t) + 0.03 * Math.sin(x0 * 9) * t, 0.32 - t * 1.5);
+      }
+      geo.computeVertexNormals();
+      return U.group(new T.Mesh(geo, new T.MeshStandardMaterial({ color: 0xd8262e, roughness: 0.8, side: T.DoubleSide })),
+        U.ball(0.05, gold(), 0.22, 0.09, 0.34), U.ball(0.05, gold(), -0.22, 0.09, 0.34), U.rod([-0.22, 0.09, 0.34], [0.22, 0.09, 0.34], 0.015, gold()));
+    },
+    dinopiikit() {
+      const m = U.mat(0x58b368, { roughness: 0.7 }), g = new T.Group();
+      [[0.26, 0.03, 0.1, 0.8], [0, 0, 0, 1.05], [-0.27, -0.07, -0.25, 1], [-0.54, -0.18, -0.4, 0.85], [-0.79, -0.31, -0.5, 0.65]].forEach((q) => {
+        const c = U.mesh(new T.ConeGeometry(0.18 * q[3], 0.4 * q[3], 4), m, 0, 0.16 * q[3], 0);
+        c.rotation.y = Math.PI / 4; c.scale.x = 0.45;
+        const h = U.group(c);
+        h.position.set(0, q[1] - 0.02, q[0]); h.rotation.x = q[2];
+        g.add(h);
+      });
+      return g;
+    },
+    haineva() {
+      const fin = new T.Shape();
+      fin.moveTo(0.3, 0); fin.quadraticCurveTo(0.12, 0.42, -0.2, 0.66); fin.quadraticCurveTo(-0.08, 0.3, -0.26, 0); fin.closePath();
+      const geo = new T.ExtrudeGeometry(fin, { depth: 0.05, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 2, curveSegments: 10 });
+      geo.translate(0, 0, -0.025);
+      const m = U.mesh(geo, U.mat(0x7d8a99, { roughness: 0.5 }), 0, -0.03, -0.05);
+      m.rotation.y = -Math.PI / 2;
+      return U.group(m);
+    },
+    perhonen() {
+      const g = U.group(U.ball(0.06, U.mat(0x23262d), 0, 0.22, 0, 1, 4, 1, 10));
+      const wing = (r, x, y, col) => U.group(U.ball(r * 1.09, U.mat(0x23262d, { roughness: 0.8 }), x, y, 0, 1, 1.12, 0.03, 18), U.ball(r, U.mat(col, { roughness: 0.6 }), x, y, 0, 1, 1.12, 0.08, 18));
+      [-1, 1].forEach((s) => {
+        const w = U.group(wing(0.36, 0.42, 0.56, 0xf28c28), wing(0.25, 0.32, 0.16, 0xf5c542),
+          U.ball(0.035, U.mat(0xffffff), 0.62, 0.78, 0, 1, 1, 1), U.ball(0.028, U.mat(0xffffff), 0.7, 0.62, 0, 1, 1, 1), U.ball(0.05, U.mat(0x23262d), 0.4, 0.6, 0, 1, 1, 0.9));
+        w.scale.x = s; w.rotation.y = -s * 0.5;
+        g.add(w);
+      });
+      return g;
+    },
+    enkeli() {
+      const white = U.mat(0xffffff, { roughness: 0.9 }), g = new T.Group();
+      [-1, 1].forEach((s) => {
+        const w = new T.Group();
+        [[1.0, 0.62, 0.34, 0.24], [0.52, 0.56, 0.3, 0.22], [0.08, 0.46, 0.26, 0.2], [-0.3, 0.34, 0.2, 0.16]].forEach((f, i) => {
+          const pivot = U.group(U.ball(f[2], white, f[1] * 0.62, 0, -i * 0.012, f[1] / f[2], 0.6, 0.2, 14));
+          pivot.rotation.z = f[0];
+          w.add(pivot);
+        });
+        w.position.set(s * 0.08, 0.14, 0); w.scale.x = s; w.rotation.y = -s * 0.45;
+        g.add(w);
+      });
+      return g;
+    },
   };
-  function scarf(a, b) {
-    const tex = U.tex(64, 8, (g, w, h) => {
-      for (let i = 0; i < 8; i++) { g.fillStyle = U.hex(i % 2 ? b : a); g.fillRect(i * 8, 0, 8, h); }
+  function scarf(a, b, stripes) {
+    const cols = stripes || [a, b];
+    const tex = U.tex(cols.length * 8, 8, (g, w, h) => {
+      cols.forEach((c, i) => { g.fillStyle = U.hex(c); g.fillRect(i * 8, 0, 8, h); });
     });
-    tex.wrapS = T.RepeatWrapping; tex.repeat.set(2, 1);
+    tex.wrapS = T.RepeatWrapping; tex.repeat.set(stripes ? 3 : 8, 1);
     const m = new T.MeshStandardMaterial({ map: tex, roughness: 1 });
     const ring = new T.Mesh(new T.TorusGeometry(0.625, 0.11, 10, 36), m);
     const flat = new T.MeshStandardMaterial({ color: a, roughness: 1 });
@@ -546,6 +921,282 @@
       const halo = U.halo(0xffb45a, 2.2, 0.5); halo.position.set(0.5, 0.86, 1.15); g.add(halo);
       return { g, chimney: new T.Vector3(0.55, 2.7, -0.3), door: new T.Vector3(-0.5, 0, 1.6),
         tick(t, env) { glass.color.setHex(0xffc46b).multiplyScalar(0.5 + 0.5 * env.night); halo.material.opacity = 0.1 + 0.55 * env.night; } };
+    },
+    /* ---- lights ---- */
+    lumilyhty() {
+      const snow = U.mat(C.snow, { roughness: 1 }), g = new T.Group();
+      const glow = new T.MeshBasicMaterial({ color: 0xffb04a, toneMapped: false });
+      [[7, 0.25, 0.1, 0.105], [6, 0.19, 0.27, 0.1], [4, 0.115, 0.43, 0.095], [1, 0, 0.57, 0.09]].forEach((L, li) => {
+        for (let i = 0; i < L[0]; i++) { const a = (i + li * 0.5) / L[0] * TAU; g.add(U.ball(L[3], snow, Math.cos(a) * L[1], L[2], Math.sin(a) * L[1], 1, 1, 1, 10)); }
+      });
+      const halo = U.halo(0xffa040, 1.5, 0.6);
+      halo.position.y = 0.28;
+      g.add(U.ball(0.13, glow, 0, 0.2, 0, 1, 1.4, 1, 10), halo, U.ball(0.38, snow, 0, 0, 0, 1, 0.16, 1));
+      return { g, tick(t, env) {
+        const f = 0.9 + 0.1 * Math.sin(t * 9.3) * Math.sin(t * 5.1);
+        glow.color.setHex(0xffb04a).multiplyScalar(0.7 + 0.3 * f); halo.material.opacity = (0.25 + 0.55 * env.night) * f;
+      } };
+    },
+    jaalyhty() {
+      const ice = new T.MeshStandardMaterial({ color: 0xcdeeff, roughness: 0.08, transparent: true, opacity: 0.55, emissive: 0xffa040, emissiveIntensity: 0.25, side: T.DoubleSide, depthWrite: false });
+      const fl = makeFlame(1), halo = U.halo(0xffa040, 1.3, 0.6);
+      fl.g.position.y = 0.13; halo.position.y = 0.22;
+      const g = U.group(U.ball(0.32, U.mat(C.snow), 0, 0, 0, 1, 0.16, 1), U.cyl(0.17, 0.17, 0.03, U.mat(0xcfe6f5, { roughness: 0.2 }), 0, 0.055, 0, 20), U.cyl(0.035, 0.035, 0.07, U.mat(0xfff6e0), 0, 0.1, 0, 8),
+        U.mesh(new T.CylinderGeometry(0.2, 0.17, 0.3, 20, 1, true), ice, 0, 0.2, 0), fl.g, halo);
+      return { g, tick(t, env) {
+        fl.tick(t, 1.3); ice.emissiveIntensity = 0.2 + 0.5 * env.night;
+        halo.material.opacity = (0.2 + 0.55 * env.night) * (0.92 + 0.08 * Math.sin(t * 10));
+      } };
+    },
+    /* Two torches, one each side of the den door. */
+    ulkotulet() {
+      const g = new T.Group(), flames = [], halos = [], iron = U.mat(0x2b2f36, { roughness: 0.5 });
+      [-1, 1].forEach((s) => {
+        const torch = new T.Group(), fl = makeFlame(1.3), halo = U.halo(0xff8a3a, 1.5, 0.6);
+        fl.g.position.y = 0.85; halo.position.y = 0.96;
+        torch.add(U.cyl(0.02, 0.026, 0.8, U.mat(C.woodDark), 0, 0.4, 0, 6), U.cyl(0.078, 0.05, 0.1, iron, 0, 0.82, 0, 10), fl.g, halo, U.ball(0.16, U.mat(C.snow), 0, 0, 0, 1, 0.3, 1));
+        torch.position.set(s * 1.45, 0, 0); torch.rotation.z = -s * 0.07;
+        g.add(torch); flames.push(fl); halos.push(halo);
+      });
+      return { g, tick(t, env) {
+        flames.forEach((f, i) => f.tick(t, i * 2.1));
+        halos.forEach((h, i) => { h.material.opacity = (0.3 + 0.5 * env.night) * (0.88 + 0.12 * Math.sin(t * 9 + i * 2)); });
+      } };
+    },
+    tahti() {
+      const wood = U.mat(C.woodDark), st = new T.Shape(), N = 7;
+      for (let i = 0; i < N * 2; i++) {
+        const a = i / (N * 2) * TAU + Math.PI / 2, r = i % 2 ? 0.15 : 0.36;
+        if (i) st.lineTo(Math.cos(a) * r, Math.sin(a) * r); else st.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      st.closePath();
+      const geo = new T.ExtrudeGeometry(st, { depth: 0.02, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.07, bevelSegments: 1 });
+      geo.translate(0, 0, -0.01);
+      const paper = new T.MeshBasicMaterial({ color: 0xffe6a8, toneMapped: false }), halo = U.halo(0xffc46b, 2.0, 0.7);
+      const star = U.group(U.mesh(geo, paper), halo);
+      star.position.set(0.45, 1.9, 0);
+      const g = U.group(U.cyl(0.03, 0.04, 2.5, wood, 0, 1.25, 0, 8), U.rod([0, 2.42, 0], [0.45, 2.52, 0], 0.02, wood), U.rod([0.45, 2.52, 0], [0.45, 2.24, 0], 0.006, U.mat(0x2b2f36)), star,
+        U.ball(0.2, U.mat(C.snow), 0, 0.03, 0, 1, 0.4, 1));
+      return { g, tick(t, env) {
+        star.rotation.y = Math.sin(t * 0.7) * (0.15 + env.wind * 0.5); star.rotation.z = Math.sin(t * 1.1) * 0.05 * (1 + env.wind);
+        paper.color.setHex(0xffe6a8).multiplyScalar(0.62 + 0.38 * env.night); halo.material.opacity = 0.12 + 0.6 * env.night;
+      } };
+    },
+    /* ---- camp and comfort ---- */
+    matto() {
+      const tex = U.tex(64, 256, (c, w, h) => {
+        const cols = ['#c8463c', '#f2e8d5', '#3f6fa8', '#f2e8d5', '#e0a93b', '#f2e8d5', '#4f8f6a', '#f2e8d5'], r = U.rng(11);
+        let y = 0, i = 0;
+        while (y < h) { const hh = 8 + Math.floor(r() * 10); c.fillStyle = cols[i % cols.length]; c.fillRect(0, y, w, hh); y += hh; i++; }
+        c.globalAlpha = 0.1; c.fillStyle = '#000';
+        for (let x = 0; x < w; x += 3) c.fillRect(x, 0, 1, h);                 // the weave
+      });
+      const geo = new T.PlaneGeometry(2.0, 3.0, 8, 12);
+      geo.rotateX(-Math.PI / 2);
+      const rug = U.mesh(geo, new T.MeshStandardMaterial({ map: tex, roughness: 1 }), 0, 0, 0);
+      return { g: U.group(rug), flat: true,
+        /* Lie along the ground. yAt(x, z) gives the height of the ground under a point of the rug. */
+        conform(yAt) {
+          const p = geo.attributes.position;
+          for (let i = 0; i < p.count; i++) p.setY(i, yAt(p.getX(i), p.getZ(i)) + 0.009);
+          p.needsUpdate = true; geo.computeVertexNormals(); geo.computeBoundingSphere();
+        } };
+    },
+    pilkki() {
+      const g = new T.Group(), wood = U.mat(C.woodLight, { roughness: 0.8 }), snow = U.mat(C.snow, { roughness: 1 }), pail = U.mat(0x5a7fa8, { roughness: 0.5, side: T.DoubleSide });
+      const hole = U.mesh(new T.CircleGeometry(0.2, 20), new T.MeshBasicMaterial({ color: 0x0b1e3a }), 0, 0.014, 0);
+      hole.rotation.x = -Math.PI / 2;
+      g.add(hole, U.rot(U.torus(0.23, 0.05, snow, 0, 0.02, 0, TAU, 20), Math.PI / 2));
+      g.add(U.cyl(0.2, 0.2, 0.045, U.mat(0xc22a3a, { roughness: 0.8 }), -0.58, 0.37, 0.15, 14));                 // the stool
+      [0, 1, 2].forEach((i) => { const a = i * 2.09 + 0.4; g.add(U.rod([-0.58 + Math.cos(a) * 0.08, 0.36, 0.15 + Math.sin(a) * 0.08], [-0.58 + Math.cos(a) * 0.21, 0, 0.15 + Math.sin(a) * 0.21], 0.018, wood)); });
+      g.add(U.ball(0.14, snow, 0.36, 0.05, 0.1, 1, 0.7, 1), U.rod([0.38, 0.05, 0.1], [0.05, 0.52, 0.02], 0.014, wood), U.rod([0.05, 0.52, 0.02], [0, 0.02, 0], 0.004, U.mat(0xf2f4f7)), U.ball(0.03, U.mat(0xe2334f), 0.02, 0.22, 0.01));
+      g.add(U.mesh(new T.CylinderGeometry(0.15, 0.12, 0.24, 14, 1, true), pail, -0.1, 0.12, 0.6), U.cyl(0.12, 0.12, 0.02, pail, -0.1, 0.01, 0.6, 14));
+      const fish = P.fish(PN.items.ahven.look);
+      fish.scale.setScalar(0.2); fish.position.set(-0.1, 0.25, 0.6); fish.rotation.z = Math.PI / 2 - 0.25;
+      g.add(fish);
+      return { g };
+    },
+    laituri() {
+      const g = new T.Group(), wood = U.mat(0x8a6a4c, { roughness: 0.9 }), post = U.mat(C.woodDark), steel = U.mat(0xb7bec7, { roughness: 0.4 });
+      for (let i = 0; i < 12; i++) g.add(U.box(1.0, 0.05, 0.25, wood, 0, 0.34, 0.15 + i * 0.28));
+      [0.3, 1.5, 2.7, 3.3].forEach((z) => [-0.45, 0.45].forEach((x) => g.add(U.cyl(0.05, 0.05, 0.9, post, x, 0.1, z, 7))));
+      [-0.45, 0.45].forEach((x) => g.add(U.box(0.06, 0.06, 3.3, post, x, 0.29, 1.7)));
+      const snow = U.box(0.96, 0.07, 3.3, U.mat(C.snow, { roughness: 1 }), 0, 0.395, 1.7);
+      g.add(snow);
+      [-0.18, 0.18].forEach((x) => g.add(U.rod([x, 0.8, 3.5], [x, -0.2, 3.5], 0.02, steel)));
+      [0.1, 0.35, 0.6].forEach((y) => g.add(U.rod([-0.18, y, 3.5], [0.18, y, 3.5], 0.016, steel)));
+      return { g, float: true, tick(t, env) { snow.visible = env.snow > 0.4; } };
+    },
+    teltta() {
+      const g = new T.Group(), cloth = U.mat(0xf28c28, { roughness: 0.85 }), tri = new T.Shape(), door = new T.Shape();
+      tri.moveTo(-0.85, 0); tri.lineTo(0.85, 0); tri.lineTo(0, 1.15); tri.closePath();
+      door.moveTo(-0.4, 0); door.lineTo(0.4, 0); door.lineTo(0, 0.76); door.closePath();
+      const inside = new T.MeshBasicMaterial({ color: 0x3a2412 }), halo = U.halo(0xffb45a, 1.7, 0.4);
+      halo.position.set(0, 0.4, 1.15);
+      g.add(U.mesh(new T.ExtrudeGeometry(tri, { depth: 1.9, bevelEnabled: false }), cloth, 0, 0, -0.95), U.mesh(new T.ShapeGeometry(door), inside, 0, 0.01, 0.957),
+        U.rod([0, 1.15, -1.05], [0, 1.15, 1.05], 0.02, U.mat(C.woodDark)), U.ball(0.2, U.mat(C.snow), 0, 1.14, 0, 0.9, 0.35, 5, 10), halo);
+      [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach((q) => g.add(U.rod([q[0] * 0.5, 0.6, q[1] * 0.95], [q[0] * 1.3, 0, q[1] * 1.35], 0.006, U.mat(0xf2f4f7))));
+      return { g, tick(t, env) { inside.color.setHex(0xffb060).multiplyScalar(0.16 + 0.84 * env.night); halo.material.opacity = 0.5 * env.night; } };
+    },
+    vene() {
+      const g = new T.Group(), wood = U.mat(C.woodLight, { roughness: 0.8 });
+      const hull = new T.Mesh(new T.SphereGeometry(1, 24, 10, 0, TAU, Math.PI / 2, Math.PI / 2), new T.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.8, side: T.DoubleSide }));
+      hull.scale.set(0.6, 0.42, 1.55); hull.position.y = 0.42;
+      const rim = new T.Mesh(new T.TorusGeometry(1, 0.035, 6, 36), U.mat(0xf2ead8, { roughness: 0.7 }));
+      rim.rotation.x = Math.PI / 2; rim.scale.set(0.6, 1.55, 1.2); rim.position.y = 0.42;
+      const snow = U.ball(0.45, U.mat(C.snow, { roughness: 1 }), 0, 0.3, 0, 1, 0.3, 2.6, 12);
+      g.add(hull, rim, snow, U.box(1.05, 0.04, 0.24, wood, 0, 0.33, 0.35), U.box(0.95, 0.04, 0.24, wood, 0, 0.33, -0.5));
+      [-1, 1].forEach((s) => g.add(U.rod([s * 0.2, 0.38, 0.1], [s * 1.25, 0.52, -0.5], 0.022, wood), U.rot(U.box(0.12, 0.02, 0.36, wood, s * 1.33, 0.53, -0.55), 0, s * 1.0, 0)));
+      return { g: U.group(g), float: true, tick(t, env) {
+        const frozen = env.ice > 0.35;
+        snow.visible = frozen && env.snow > 0.4;
+        g.position.y = frozen ? -0.02 : -0.14 + Math.sin(t * 1.3) * 0.02; g.rotation.z = frozen ? 0.09 : Math.sin(t * 0.9) * 0.04;
+      } };
+    },
+    palju() {
+      const g = new T.Group(), wood = U.mat(0x9a6a40, { roughness: 0.85 }), iron = U.mat(0x2b2f36, { roughness: 0.5 });
+      const water = U.mesh(new T.CircleGeometry(0.77, 24), new T.MeshStandardMaterial({ color: 0x4fb3d9, roughness: 0.15, emissive: 0x1c5a7a, emissiveIntensity: 0.4 }), 0, 0.7, 0);
+      water.rotation.x = -Math.PI / 2;
+      g.add(U.mesh(new T.CylinderGeometry(0.8, 0.72, 0.75, 22, 1, true), new T.MeshStandardMaterial({ color: 0x9a6a40, roughness: 0.85, side: T.DoubleSide }), 0, 0.42, 0),
+        U.cyl(0.72, 0.72, 0.04, wood, 0, 0.07, 0, 22), water, U.rot(U.torus(0.745, 0.02, iron, 0, 0.25, 0, TAU, 28), Math.PI / 2), U.rot(U.torus(0.782, 0.02, iron, 0, 0.62, 0, TAU, 28), Math.PI / 2));
+      g.add(U.cyl(0.2, 0.2, 0.5, iron, 0.98, 0.3, -0.2, 12), U.cyl(0.05, 0.05, 1.0, iron, 0.98, 1.0, -0.2, 8), U.box(0.5, 0.12, 0.3, wood, -0.2, 0.1, 0.98), U.box(0.5, 0.12, 0.25, wood, -0.2, 0.26, 0.88));
+      const steam = [], glow = U.halo(0xff8a3a, 0.8, 0.5);
+      for (let i = 0; i < 5; i++) { const m = U.ball(0.16, new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }), 0, 0.8, 0, 1, 1, 1, 8); g.add(m); steam.push(m); }
+      glow.position.set(0.98, 0.25, 0.02); g.add(glow);
+      return { g, tick(t, env) {
+        steam.forEach((m, i) => {
+          const k = (t * 0.22 + i / 5) % 1;
+          m.position.set(Math.sin(i * 2.4 + t * 0.6) * 0.3, 0.75 + k * 1.1, Math.cos(i * 1.7) * 0.25); m.scale.setScalar(0.6 + k * 1.3); m.material.opacity = 0.34 * (1 - k) * Math.min(1, k * 6);
+        });
+        glow.material.opacity = (0.25 + 0.4 * env.night) * (0.9 + 0.1 * Math.sin(t * 8));
+      } };
+    },
+    /* ---- snow and ice ---- */
+    luminorppa() {
+      const s = U.mat(C.snow, { roughness: 1 }), coal = U.mat(C.coal), g = new T.Group();
+      g.add(U.ball(0.5, s, 0, 0.3, -0.1, 1, 0.72, 1.5, 18), U.ball(0.36, s, 0, 0.52, 0.55, 1, 0.95, 1, 18),
+        U.ball(0.16, s, 0.42, 0.1, 0.25, 1.4, 0.4, 0.8), U.ball(0.16, s, -0.42, 0.1, 0.25, 1.4, 0.4, 0.8),
+        U.ball(0.14, s, 0.12, 0.12, -0.92, 0.8, 0.4, 1.5), U.ball(0.14, s, -0.12, 0.12, -0.92, 0.8, 0.4, 1.5));
+      g.add(U.ball(0.042, coal, 0.13, 0.6, 0.865), U.ball(0.042, coal, -0.13, 0.6, 0.865), U.ball(0.036, coal, 0, 0.5, 0.905, 1.3, 0.8, 1));
+      [-1, 1].forEach((k) => [0, 1, 2].forEach((i) => g.add(U.rod([k * 0.07, 0.45, 0.88], [k * 0.32, 0.4 + i * 0.06, 0.8], 0.006, U.mat(C.woodDark)))));
+      return { g };
+    },
+    lumilinna() {
+      const s = U.mat(0xf2f6ff, { roughness: 1 }), sh = U.mat(0xdde7f7, { roughness: 1 }), g = new T.Group(), night = new T.MeshBasicMaterial({ color: 0x1a2a4a });
+      const tower = (x, z, r, h) => {
+        g.add(U.cyl(r, r * 1.08, h, s, x, h / 2, z, 14));
+        for (let i = 0; i < 6; i++) {
+          const a = i / 6 * TAU, b = U.box(r * 0.5, 0.16, r * 0.3, sh, x + Math.cos(a) * r * 0.82, h + 0.07, z + Math.sin(a) * r * 0.82);
+          b.rotation.y = -a + Math.PI / 2; g.add(b);
+        }
+      };
+      [[-0.9, 0.7], [0.9, 0.7], [-0.9, -0.7], [0.9, -0.7]].forEach((q) => tower(q[0], q[1], 0.36, 1.1));
+      tower(0, -0.1, 0.48, 1.7);
+      g.add(U.box(1.8, 0.75, 0.24, s, 0, 0.375, 0.7), U.box(1.8, 0.75, 0.24, s, 0, 0.375, -0.7), U.box(0.24, 0.75, 1.4, s, -0.9, 0.375, 0), U.box(0.24, 0.75, 1.4, s, 0.9, 0.375, 0));
+      for (let i = 0; i < 5; i++) g.add(U.box(0.18, 0.14, 0.26, sh, -0.6 + i * 0.3, 0.81, 0.7));
+      const gate = U.mesh(new T.CircleGeometry(0.3, 16, 0, Math.PI), night, 0, 0.1, 0.825);
+      gate.scale.y = 1.4;
+      const pennant = U.group(U.mesh(new T.PlaneGeometry(0.42, 0.24), U.mat(0xd8382f, { roughness: 0.9, side: T.DoubleSide }), 0.22, 0, 0));
+      pennant.position.set(0, 2.42, -0.1);
+      g.add(gate, U.box(0.6, 0.1, 0.02, night, 0, 0.05, 0.825), U.cyl(0.015, 0.015, 0.8, U.mat(C.woodDark), 0, 2.15, -0.1, 6), pennant);
+      return { g, tick(t, env) { pennant.rotation.y = Math.sin(t * (2 + env.wind * 3)) * 0.4; } };
+    },
+    /* ---- festive ---- */
+    kurpitsa() {
+      const g = new T.Group(), skin = U.mat(0xf28c28, { roughness: 0.6 }), lit = new T.MeshBasicMaterial({ color: 0x5a2a08, toneMapped: false }), bright = new T.Color(0xffd24a);
+      for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * TAU; g.add(U.ball(0.15, skin, Math.cos(a) * 0.14, 0.25, Math.sin(a) * 0.14, 1, 1.2, 1, 12)); }
+      g.add(U.ball(0.27, skin, 0, 0.25, 0, 1, 0.92, 1, 16), U.rot(U.cyl(0.025, 0.035, 0.12, U.mat(0x5a7a3a), 0.01, 0.5, 0, 6), 0, 0, 0.25));
+      const tri = new T.Shape(), mouth = new T.Shape();
+      tri.moveTo(-0.06, 0); tri.lineTo(0.06, 0); tri.lineTo(0, 0.09); tri.closePath();
+      mouth.moveTo(-0.17, 0.05); mouth.lineTo(-0.1, 0.01); mouth.lineTo(-0.05, 0.05); mouth.lineTo(0, 0.01); mouth.lineTo(0.05, 0.05); mouth.lineTo(0.1, 0.01); mouth.lineTo(0.17, 0.05);
+      mouth.quadraticCurveTo(0, -0.2, -0.17, 0.05);
+      const eye = new T.ShapeGeometry(tri), face = new T.Group();
+      [-1, 1].forEach((k) => { const e = U.mesh(eye, lit, k * 0.105, 0.3, 0.262); e.rotation.y = k * 0.38; face.add(e); });
+      const smile = U.mesh(new T.ShapeGeometry(mouth), lit, 0, 0.19, 0.282);
+      smile.rotation.x = 0.12;
+      const halo = U.halo(0xffa63a, 1.3, 0.6);
+      halo.position.set(0, 0.25, 0.2);
+      face.add(smile);
+      g.add(face, halo, U.ball(0.36, U.mat(C.snow), 0, 0, 0, 1, 0.16, 1));
+      return { g, tick(t, env) {
+        const f = 0.9 + 0.1 * Math.sin(t * 8.7) * Math.sin(t * 5.9);
+        lit.color.setHex(0x5a2a08).lerp(bright, (0.12 + 0.88 * env.night) * f); halo.material.opacity = (0.08 + 0.6 * env.night) * f;
+      } };
+    },
+    /* A string of little flags over the den door, in the place of the fairy lights. */
+    viirit(arch) {
+      const g = new T.Group(), flags = [];
+      const pts = arch || (() => { const a = []; for (let i = 0; i <= 12; i++) { const k = i / 12 * Math.PI; a.push(new T.Vector3(Math.cos(k) * 0.9, Math.sin(k) * 0.8 + 0.1, 0)); } return a; })();
+      const curve = new T.CatmullRomCurve3(pts), tri = new T.Shape();
+      tri.moveTo(-0.09, 0); tri.lineTo(0.09, 0); tri.lineTo(0, -0.21); tri.closePath();
+      const geo = new T.ShapeGeometry(tri), cols = [0xe2334f, 0xf5c542, 0x4f8fe6, 0x58b368, 0xf48fb1];
+      g.add(new T.Mesh(new T.TubeGeometry(curve, 40, 0.012, 5), U.mat(0xf2f4f7)));
+      for (let i = 0; i < 11; i++) {
+        const p = curve.getPoint((i + 0.5) / 11), f = U.mesh(geo, U.mat(cols[i % cols.length], { roughness: 0.85, side: T.DoubleSide }), p.x, p.y - 0.01, p.z + 0.02);
+        g.add(f); flags.push(f);
+      }
+      return { g, tick(t, env) { flags.forEach((f, i) => { f.rotation.x = Math.sin(t * (2 + env.wind * 2) + i * 1.3) * (0.12 + env.wind * 0.3); }); } };
+    },
+    ilmapallot() {
+      const sway = new T.Group(), cols = [0xe5334f, 0xf5c542, 0x4f8fe6, 0x58b368, 0xf48fb1];
+      [[-0.32, 1.55, 0.05], [0.3, 1.7, -0.1], [0, 2.05, 0.08], [-0.15, 1.75, -0.3], [0.2, 1.4, 0.28]].forEach((q, i) => {
+        const m = U.mat(cols[i], { roughness: 0.25 });
+        sway.add(U.rod([0, 0, 0], [q[0], q[1] - 0.3, q[2]], 0.006, U.mat(0xf2f4f7)), U.ball(0.26, m, q[0], q[1], q[2], 1, 1.18, 1, 16), U.cone(0.04, 0.06, m, q[0], q[1] - 0.31, q[2], 8),
+          U.ball(0.045, U.glow(0xffffff), q[0] - 0.09, q[1] + 0.12, q[2] + 0.2, 1, 1.4, 0.5));
+      });
+      return { g: U.group(sway, U.ball(0.07, U.mat(C.woodDark), 0, 0, 0, 1, 0.6, 1)), tick(t, env) {
+        sway.rotation.z = Math.sin(t * 0.8) * 0.05 - (env.wind - 0.3) * 0.25; sway.rotation.x = Math.sin(t * 0.63 + 1) * 0.05;
+      } };
+    },
+    lahjat() {
+      const g = U.group(U.ball(0.5, U.mat(C.snow), 0.08, 0, 0.1, 1, 0.1, 1));
+      const box = (w, h, d, col, rib, x, z, ry) => {
+        const r = U.mat(rib, { roughness: 0.5 });
+        const b = U.group(U.box(w, h, d, U.mat(col, { roughness: 0.7 }), 0, h / 2, 0), U.box(w * 1.02, h * 1.02, d * 0.16, r, 0, h / 2, 0), U.box(w * 0.16, h * 1.02, d * 1.02, r, 0, h / 2, 0),
+          U.ball(0.06, r, -0.05, h + 0.03, 0, 1, 0.7, 0.6), U.ball(0.06, r, 0.05, h + 0.03, 0, 1, 0.7, 0.6));
+        b.position.set(x, 0.02, z); b.rotation.y = ry;
+        g.add(b);
+      };
+      box(0.42, 0.3, 0.42, 0xd8382f, 0xf5c542, -0.12, -0.05, 0.3);
+      box(0.3, 0.22, 0.3, 0x2f63c9, 0xffffff, 0.3, 0.12, -0.4);
+      box(0.24, 0.34, 0.24, 0x3f8f5a, 0xe2334f, 0.08, 0.34, 0.9);
+      return { g };
+    },
+    /* ---- nature and friends ---- */
+    joutsen() {
+      const white = U.mat(0xffffff, { roughness: 0.85 }), black = U.mat(0x15171c, { roughness: 0.4 }), body = new T.Group();
+      body.add(U.ball(0.3, white, 0, 0.24, 0, 1, 0.8, 1.6, 16), U.rot(U.cone(0.14, 0.34, white, 0, 0.36, -0.5, 10), -1.0, 0, 0),
+        U.ball(0.22, white, 0.2, 0.3, -0.05, 0.4, 0.75, 1.7, 12), U.ball(0.22, white, -0.2, 0.3, -0.05, 0.4, 0.75, 1.7, 12));
+      const neck = new T.CatmullRomCurve3([new T.Vector3(0, 0.3, 0.36), new T.Vector3(0, 0.55, 0.52), new T.Vector3(0, 0.82, 0.44), new T.Vector3(0, 0.99, 0.5)]);
+      const head = U.group(U.ball(0.085, white, 0, 0, 0, 1, 0.9, 1.15, 12), U.rot(U.cone(0.05, 0.1, U.mat(0xf5c542, { roughness: 0.5 }), 0, -0.01, 0.11, 8), Math.PI / 2, 0, 0),
+        U.rot(U.cone(0.033, 0.1, black, 0, -0.015, 0.17, 8), Math.PI / 2, 0, 0), U.ball(0.014, black, 0.05, 0.02, 0.06), U.ball(0.014, black, -0.05, 0.02, 0.06));
+      head.position.set(0, 1.01, 0.53);
+      body.add(new T.Mesh(new T.TubeGeometry(neck, 14, 0.058, 8), white), head);
+      return { g: U.group(body), float: true, tick(t, env) {
+        body.position.y = env.ice > 0.35 ? 0 : -0.08 + Math.sin(t * 1.2) * 0.015; body.rotation.z = Math.sin(t * 0.9) * 0.02; head.rotation.y = Math.sin(t * 0.4) * 0.5;
+      } };
+    },
+    poro() {
+      const fur = U.mat(0x8a7560, { roughness: 1 }), pale = U.mat(0xe9e2d6, { roughness: 1 }), dark = U.mat(0x4a3a2c, { roughness: 1 }), horn = U.mat(0xb9a07a, { roughness: 0.9 }), eye = U.mat(0x15171c, { roughness: 0.2 });
+      const g = new T.Group(), head = new T.Group();
+      g.add(U.ball(0.3, fur, 0, 0.78, 0, 1, 0.95, 1.75, 16), U.ball(0.22, pale, 0, 0.72, 0.42, 1, 1, 0.9, 12), U.ball(0.09, pale, 0, 0.86, -0.52, 1, 1, 0.8));
+      [[0.16, 0.34], [-0.16, 0.34], [0.16, -0.36], [-0.16, -0.36]].forEach((q) => g.add(U.cyl(0.045, 0.035, 0.6, fur, q[0], 0.33, q[1], 7), U.cyl(0.045, 0.05, 0.07, dark, q[0], 0.035, q[1], 7)));
+      head.add(U.ball(0.15, fur, 0, 0, 0, 1, 1, 1.15, 12), U.ball(0.1, pale, 0, -0.04, 0.17, 1, 0.85, 1.1, 10), U.ball(0.035, dark, 0, -0.02, 0.275),
+        U.ball(0.022, eye, 0.095, 0.04, 0.1), U.ball(0.022, eye, -0.095, 0.04, 0.1), U.ball(0.06, fur, 0.16, 0.08, -0.05, 1.4, 0.5, 0.8), U.ball(0.06, fur, -0.16, 0.08, -0.05, 1.4, 0.5, 0.8));
+      const limb = (r0, r1, len) => { const geo = new T.CylinderGeometry(r1, r0, len, 6); geo.translate(0, len / 2, 0); return new T.Mesh(geo, horn); };
+      [-1, 1].forEach((s) => {
+        const a = new T.Group(), t1 = limb(0.02, 0.01, 0.16), t2 = limb(0.02, 0.01, 0.18), t3 = limb(0.018, 0.008, 0.14);
+        t1.position.y = 0.12; t1.rotation.x = 1.0; t2.position.y = 0.26; t2.rotation.z = s * 0.9; t3.position.y = 0.38; t3.rotation.set(-0.5, 0, -s * 0.6);
+        a.add(limb(0.03, 0.018, 0.4), t1, t2, t3);
+        a.position.set(s * 0.07, 0.1, -0.03); a.rotation.set(-0.2, 0, -s * 0.5);
+        head.add(a);
+      });
+      head.position.set(0, 1.27, 0.68);
+      g.add(U.rod([0, 0.85, 0.4], [0, 1.2, 0.62], 0.11, fur, 10), head, U.rot(U.torus(0.125, 0.025, U.mat(C.red, { roughness: 0.9 }), 0, 1.0, 0.5, TAU, 14), -1.0, 0, 0), U.ball(0.04, gold(), 0, 0.9, 0.6));
+      return { g, tick(t) {
+        const c = t % 9;
+        head.rotation.x = c > 6 && c < 8 ? Math.sin((c - 6) / 2 * Math.PI) * 0.5 : Math.sin(t * 0.8) * 0.04; head.rotation.y = Math.sin(t * 0.35) * 0.35;
+      } };
     },
   };
   P.decor = (id, arg) => (decor[id] ? decor[id](arg) : { g: new T.Group() });

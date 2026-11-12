@@ -89,7 +89,7 @@
   /* Make the seal and the shore match the save. */
   function syncLook() {
     seal.setStage(state.stage);
-    ['head', 'neck', 'face'].forEach((slot) => seal.setWear(slot, state.wearing[slot]));
+    ['head', 'neck', 'face', 'back'].forEach((slot) => seal.setWear(slot, state.wearing[slot]));
     syncDirt();
     W.setDecor(state.placed);
     W.syncPoops(state.poops);
@@ -888,7 +888,7 @@
       W.setDecor(state.placed);
       W.decorAt(id, v1); v1.y += 0.6;
       FX.sparkle(v1, 12);
-      UI.toast(tr('{0} is out on the shore.', UI.esc(it.fi)), 'home');
+      UI.toast(tr('{0} is out on the shore.', UI.esc(it.fi)) + (r.away ? ' ' + tr('{0} is tidied away to make room.', UI.esc(PN.items[r.away].fi)) : ''), 'home');
     }
     UI.renderSheet(); UI.refresh(); save();
   };
@@ -906,6 +906,7 @@
     A.play('pop');
     W.setDecor(state.placed);
     if (r.on) { W.decorAt(id, v1); v1.y += 0.6; FX.sparkle(v1, 8); }
+    if (r.away) UI.toast(tr('{0} is tidied away to make room.', UI.esc(PN.items[r.away].fi)), 'home');
     UI.renderSheet(); save();
   };
 
@@ -1113,8 +1114,17 @@
     else if (id === 'feeder') { A.play('chirp'); FX.notes(v1); }
     else if (id === 'xmastree' || id === 'lights') { A.play('jingle'); FX.sparkle(v1, 8, 0xffe08a); }
     else if (id === 'iceheart') { A.play('heart'); FX.hearts(v1, 3); }
-    else if (id === 'flag') A.play('whoosh');
+    else if (id === 'flag' || id === 'teltta') A.play('whoosh');
     else if (id === 'sled') A.play('jingle');
+    else if (id === 'lumilyhty' || id === 'jaalyhty' || id === 'kurpitsa' || id === 'tahti' || id === 'ulkotulet') { A.play('sparkle'); FX.sparkle(v1, 6, 0xffe08a); }
+    else if (id === 'lahjat' || id === 'viirit') { A.play('jingle'); FX.sparkle(v1, 6); }
+    else if (id === 'ilmapallot') A.play('boing');
+    else if (id === 'poro') { A.play('jingle'); FX.hearts(v1, 2); }
+    else if (id === 'joutsen') { A.play('chirp'); FX.notes(v1); }
+    else if (id === 'palju') A.play('splash');
+    else if (id === 'pilkki') A.play('bubble');
+    else if (id === 'luminorppa' || id === 'lumilinna') { FX.puff(v1, 5, 0xffffff, 0.3); A.play('pop'); }
+    else A.play('tap');
   }
 
   function bindInput() {

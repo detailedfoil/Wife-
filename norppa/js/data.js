@@ -62,35 +62,112 @@
       note: 'Golden and full of vitamins. Makes a poorly seal better.' },
   ];
 
-  /* Things to wear. slot: head, neck or face. */
+  /* Things to wear. slot: where it goes on the seal (head, neck, face or back; one thing per slot).
+     cat: which shelf of the shop it sits on. Prices here are base prices; see ECON below. */
+  const WEAR_CATS = [
+    { id: 'pipot', t: 'Woolly hats' }, { id: 'hatut', t: 'Fancy hats' }, { id: 'korvat', t: 'Ears and flowers' },
+    { id: 'kaula', t: 'Round the neck' }, { id: 'kasvot', t: 'On the face' }, { id: 'selka', t: 'On the back' },
+  ];
   const WEAR = [
-    { id: 'pipo_red', slot: 'head', fi: 'Punainen pipo', en: 'Red bobble hat', price: 60 },
-    { id: 'pipo_blue', slot: 'head', fi: 'Sininen pipo', en: 'Blue bobble hat', price: 60 },
-    { id: 'pipo_yellow', slot: 'head', fi: 'Keltainen pipo', en: 'Yellow bobble hat', price: 60 },
-    { id: 'bow', slot: 'head', fi: 'Rusetti', en: 'Bow', price: 80 },
-    { id: 'earmuffs', slot: 'head', fi: 'Korvaläpät', en: 'Earmuffs', price: 90 },
-    { id: 'tonttu', slot: 'head', fi: 'Tonttulakki', en: 'Elf hat', price: 110 },
-    { id: 'wreath', slot: 'head', fi: 'Kukkaseppele', en: 'Flower crown', price: 120 },
-    { id: 'crown', slot: 'head', fi: 'Kruunu', en: 'Tiny crown', price: 300 },
-    { id: 'scarf_red', slot: 'neck', fi: 'Raitakaulaliina', en: 'Striped scarf', price: 70 },
-    { id: 'scarf_green', slot: 'neck', fi: 'Vihreä kaulaliina', en: 'Green scarf', price: 70 },
-    { id: 'bell', slot: 'neck', fi: 'Kulkunen', en: 'Jingle bell', price: 100 },
-    { id: 'glasses', slot: 'face', fi: 'Silmälasit', en: 'Round glasses', price: 130 },
-    { id: 'shades', slot: 'face', fi: 'Aurinkolasit', en: 'Sunglasses', price: 130 },
+    { id: 'pipo_red', slot: 'head', cat: 'pipot', fi: 'Punainen pipo', en: 'Red bobble hat', price: 60 },
+    { id: 'pipo_blue', slot: 'head', cat: 'pipot', fi: 'Sininen pipo', en: 'Blue bobble hat', price: 60 },
+    { id: 'pipo_yellow', slot: 'head', cat: 'pipot', fi: 'Keltainen pipo', en: 'Yellow bobble hat', price: 60 },
+    { id: 'pipo_pink', slot: 'head', cat: 'pipot', fi: 'Vaaleanpunainen pipo', en: 'Pink bobble hat', price: 60 },
+    { id: 'pipo_green', slot: 'head', cat: 'pipot', fi: 'Vihreä pipo', en: 'Green bobble hat', price: 60 },
+    { id: 'earmuffs', slot: 'head', cat: 'pipot', fi: 'Korvaläpät', en: 'Earmuffs', price: 90 },
+    { id: 'tonttu', slot: 'head', cat: 'pipot', fi: 'Tonttulakki', en: 'Elf hat', price: 110 },
+    { id: 'karvalakki', slot: 'head', cat: 'pipot', fi: 'Karvalakki', en: 'Fur hat', price: 140 },
+
+    { id: 'juhlahattu', slot: 'head', cat: 'hatut', fi: 'Juhlahattu', en: 'Party hat', price: 80 },
+    { id: 'baskeri', slot: 'head', cat: 'hatut', fi: 'Baskeri', en: 'Beret', price: 90 },
+    { id: 'olkihattu', slot: 'head', cat: 'hatut', fi: 'Olkihattu', en: 'Straw hat', price: 100 },
+    { id: 'kokinhattu', slot: 'head', cat: 'hatut', fi: 'Kokinhattu', en: "Chef's hat", price: 120 },
+    { id: 'yolakki', slot: 'head', cat: 'hatut', fi: 'Ylioppilaslakki', en: 'Student cap', price: 150 },
+    { id: 'silinteri', slot: 'head', cat: 'hatut', fi: 'Silinteri', en: 'Top hat', price: 180 },
+    { id: 'velho', slot: 'head', cat: 'hatut', fi: 'Velhonhattu', en: 'Wizard hat', price: 200 },
+    { id: 'viikinki', slot: 'head', cat: 'hatut', fi: 'Viikinkikypärä', en: 'Viking helmet', price: 220 },
+    { id: 'crown', slot: 'head', cat: 'hatut', fi: 'Kruunu', en: 'Tiny crown', price: 300 },
+
+    { id: 'kukka', slot: 'head', cat: 'korvat', fi: 'Päivänkakkara', en: 'Daisy', price: 70 },
+    { id: 'bow', slot: 'head', cat: 'korvat', fi: 'Rusetti', en: 'Bow', price: 80 },
+    { id: 'kissa', slot: 'head', cat: 'korvat', fi: 'Kissankorvat', en: 'Cat ears', price: 100 },
+    { id: 'pupu', slot: 'head', cat: 'korvat', fi: 'Pupunkorvat', en: 'Bunny ears', price: 110 },
+    { id: 'wreath', slot: 'head', cat: 'korvat', fi: 'Kukkaseppele', en: 'Flower crown', price: 120 },
+    { id: 'sarvet', slot: 'head', cat: 'korvat', fi: 'Poronsarvet', en: 'Reindeer antlers', price: 130 },
+    { id: 'kuulokkeet', slot: 'head', cat: 'korvat', fi: 'Kuulokkeet', en: 'Headphones', price: 140 },
+    { id: 'sieni', slot: 'head', cat: 'korvat', fi: 'Kärpässienihattu', en: 'Toadstool hat', price: 150 },
+    { id: 'sadekeha', slot: 'head', cat: 'korvat', fi: 'Sädekehä', en: 'Halo', price: 250 },
+
+    { id: 'scarf_red', slot: 'neck', cat: 'kaula', fi: 'Raitakaulaliina', en: 'Striped scarf', price: 70 },
+    { id: 'scarf_green', slot: 'neck', cat: 'kaula', fi: 'Vihreä kaulaliina', en: 'Green scarf', price: 70 },
+    { id: 'scarf_blue', slot: 'neck', cat: 'kaula', fi: 'Sinivalkoinen kaulaliina', en: 'Blue and white scarf', price: 70 },
+    { id: 'huivi', slot: 'neck', cat: 'kaula', fi: 'Huivi', en: 'Neckerchief', price: 80 },
+    { id: 'scarf_rainbow', slot: 'neck', cat: 'kaula', fi: 'Sateenkaarikaulaliina', en: 'Rainbow scarf', price: 90 },
+    { id: 'solmuke', slot: 'neck', cat: 'kaula', fi: 'Solmuke', en: 'Bow tie', price: 90 },
+    { id: 'bell', slot: 'neck', cat: 'kaula', fi: 'Kulkunen', en: 'Jingle bell', price: 100 },
+    { id: 'solmio', slot: 'neck', cat: 'kaula', fi: 'Solmio', en: 'Necktie', price: 100 },
+    { id: 'kukkakaulus', slot: 'neck', cat: 'kaula', fi: 'Kukkaköynnös', en: 'Flower garland', price: 120 },
+    { id: 'helmet', slot: 'neck', cat: 'kaula', fi: 'Helminauha', en: 'Pearl necklace', price: 180 },
+    { id: 'mitali', slot: 'neck', cat: 'kaula', fi: 'Kultamitali', en: 'Gold medal', price: 200 },
+
+    { id: 'punanena', slot: 'face', cat: 'kasvot', fi: 'Punainen nenä', en: 'Red nose', price: 60 },
+    { id: 'viikset', slot: 'face', cat: 'kasvot', fi: 'Viikset', en: 'Moustache', price: 90 },
+    { id: 'silmalappu', slot: 'face', cat: 'kasvot', fi: 'Silmälappu', en: 'Eye patch', price: 90 },
+    { id: 'glasses', slot: 'face', cat: 'kasvot', fi: 'Silmälasit', en: 'Round glasses', price: 130 },
+    { id: 'shades', slot: 'face', cat: 'kasvot', fi: 'Aurinkolasit', en: 'Sunglasses', price: 130 },
+    { id: 'sydanlasit', slot: 'face', cat: 'kasvot', fi: 'Sydänlasit', en: 'Heart glasses', price: 150 },
+    { id: 'monokkeli', slot: 'face', cat: 'kasvot', fi: 'Monokkeli', en: 'Monocle', price: 160 },
+    { id: 'laskettelulasit', slot: 'face', cat: 'kasvot', fi: 'Laskettelulasit', en: 'Ski goggles', price: 170 },
+
+    { id: 'ilmapallo', slot: 'back', cat: 'selka', fi: 'Ilmapallo', en: 'Balloon', price: 100 },
+    { id: 'ankka', slot: 'back', cat: 'selka', fi: 'Kumiankka', en: 'Rubber duck', price: 110 },
+    { id: 'reppu', slot: 'back', cat: 'selka', fi: 'Reppu', en: 'Backpack', price: 120 },
+    { id: 'viitta', slot: 'back', cat: 'selka', fi: 'Viitta', en: 'Cape', price: 160 },
+    { id: 'dinopiikit', slot: 'back', cat: 'selka', fi: 'Dinopiikit', en: 'Dino spikes', price: 170 },
+    { id: 'haineva', slot: 'back', cat: 'selka', fi: 'Hainevä', en: 'Shark fin', price: 180 },
+    { id: 'perhonen', slot: 'back', cat: 'selka', fi: 'Perhosensiivet', en: 'Butterfly wings', price: 200 },
+    { id: 'enkeli', slot: 'back', cat: 'selka', fi: 'Enkelinsiivet', en: 'Angel wings', price: 260 },
   ];
 
-  /* Things for the shore. */
+  /* Things for the shore. Each has its own place to stand. swap: things that share one place,
+     so putting one out tidies the other away. */
+  const DECOR_CATS = [
+    { id: 'valot', t: 'Lights' }, { id: 'leiri', t: 'Camp and comfort' }, { id: 'lumi', t: 'Snow and ice' },
+    { id: 'juhla', t: 'Festive' }, { id: 'luonto', t: 'Nature and friends' },
+  ];
   const DECOR = [
-    { id: 'lantern', fi: 'Lyhty', en: 'Lantern', price: 0, note: 'Keeps the dark cosy.' },
-    { id: 'snowman', fi: 'Lumiukko', en: 'Snowman', price: 80, note: 'Good company. Never complains about the cold.' },
-    { id: 'flag', fi: 'Lipputanko', en: 'Flagpole', price: 100, note: 'Blue for the lakes, white for the snow.' },
-    { id: 'lights', fi: 'Valosarja', en: 'Fairy lights', price: 120, note: 'A string of little glows for long nights.' },
-    { id: 'sled', fi: 'Potkukelkka', en: 'Kicksled', price: 140, note: 'How you pop to the shops when the roads are ice.' },
-    { id: 'campfire', fi: 'Nuotio', en: 'Campfire', price: 150, note: 'Warm flippers, toasty nose.' },
-    { id: 'iceheart', fi: 'Jääsydän', en: 'Ice heart', price: 160, note: 'Carved from lake ice. Catches the light.' },
-    { id: 'feeder', fi: 'Lintulauta', en: 'Bird table', price: 180, note: 'A kuukkeli, the friendly Siberian jay, likes to visit.' },
-    { id: 'xmastree', fi: 'Joulukuusi', en: 'Christmas tree', price: 200, note: 'With a star on top, of course.' },
-    { id: 'sauna', fi: 'Sauna', en: 'Sauna', price: 450, note: 'Adds a sauna to the Play menu: warm, clean and happy in one go.' },
+    { id: 'lantern', cat: 'valot', fi: 'Lyhty', en: 'Lantern', price: 0, note: 'Keeps the dark cosy.' },
+    { id: 'lumilyhty', cat: 'valot', fi: 'Lumilyhty', en: 'Snowball lantern', price: 70, note: 'A little pyramid of snowballs with a candle glowing inside.' },
+    { id: 'jaalyhty', cat: 'valot', fi: 'Jäälyhty', en: 'Ice lantern', price: 90, note: 'A candle in a shell of ice. In winter there is one on every Finnish doorstep.' },
+    { id: 'ulkotulet', cat: 'valot', fi: 'Ulkotulet', en: 'Garden torches', price: 110, note: 'Two little flames to light the way home.' },
+    { id: 'lights', cat: 'valot', swap: 'arch', fi: 'Valosarja', en: 'Fairy lights', price: 120, note: 'A string of little glows for long nights.' },
+    { id: 'tahti', cat: 'valot', fi: 'Paperitähti', en: 'Paper star', price: 130, note: 'The kind that glows in windows all through the dark months.' },
+
+    { id: 'matto', cat: 'leiri', fi: 'Räsymatto', en: 'Rag rug', price: 90, note: 'Woven from old clothes. Makes anywhere feel like home.' },
+    { id: 'sled', cat: 'leiri', fi: 'Potkukelkka', en: 'Kicksled', price: 140, note: 'How you pop to the shops when the roads are ice.' },
+    { id: 'campfire', cat: 'leiri', fi: 'Nuotio', en: 'Campfire', price: 150, note: 'Warm flippers, toasty nose.' },
+    { id: 'pilkki', cat: 'leiri', fi: 'Pilkkipaikka', en: 'Ice-fishing spot', price: 160, note: 'A stool, a little rod and a lot of patience.' },
+    { id: 'laituri', cat: 'leiri', fi: 'Laituri', en: 'Jetty', price: 180, note: 'For cooling your toes after the sauna.' },
+    { id: 'teltta', cat: 'leiri', fi: 'Teltta', en: 'Tent', price: 200, note: 'For nights when the sky is too good to miss.' },
+    { id: 'vene', cat: 'leiri', fi: 'Soutuvene', en: 'Rowing boat', price: 240, note: 'Every lakeside cabin has one.' },
+    { id: 'palju', cat: 'leiri', fi: 'Palju', en: 'Hot tub', price: 320, note: 'A wooden tub of hot water under the open sky.' },
+    { id: 'sauna', cat: 'leiri', fi: 'Sauna', en: 'Sauna', price: 450, note: 'Adds a sauna to the Play menu: warm, clean and happy in one go.' },
+
+    { id: 'snowman', cat: 'lumi', fi: 'Lumiukko', en: 'Snowman', price: 80, note: 'Good company. Never complains about the cold.' },
+    { id: 'luminorppa', cat: 'lumi', fi: 'Luminorppa', en: 'Snow seal', price: 100, note: 'A friend made of snow. It looks a bit familiar.' },
+    { id: 'iceheart', cat: 'lumi', fi: 'Jääsydän', en: 'Ice heart', price: 160, note: 'Carved from lake ice. Catches the light.' },
+    { id: 'lumilinna', cat: 'lumi', fi: 'Lumilinna', en: 'Snow castle', price: 280, note: 'With towers, a gate and a flag on top.' },
+
+    { id: 'flag', cat: 'juhla', fi: 'Lipputanko', en: 'Flagpole', price: 100, note: 'Blue for the lakes, white for the snow.' },
+    { id: 'kurpitsa', cat: 'juhla', fi: 'Kurpitsalyhty', en: 'Pumpkin lantern', price: 100, note: 'It grins in the dark.' },
+    { id: 'viirit', cat: 'juhla', swap: 'arch', fi: 'Viirinauha', en: 'Bunting', price: 110, note: 'Little flags for any day worth celebrating. Hangs where the fairy lights go.' },
+    { id: 'ilmapallot', cat: 'juhla', fi: 'Ilmapallot', en: 'Balloons', price: 120, note: 'A bunch tied to the den, as on Vappu, the May Day carnival.' },
+    { id: 'lahjat', cat: 'juhla', fi: 'Lahjat', en: 'Presents', price: 130, note: 'No peeking before Christmas Eve.' },
+    { id: 'xmastree', cat: 'juhla', fi: 'Joulukuusi', en: 'Christmas tree', price: 200, note: 'With a star on top, of course.' },
+
+    { id: 'feeder', cat: 'luonto', fi: 'Lintulauta', en: 'Bird table', price: 180, note: 'A kuukkeli, the friendly Siberian jay, likes to visit.' },
+    { id: 'joutsen', cat: 'luonto', fi: 'Laulujoutsen', en: 'Whooper swan', price: 220, note: "Finland's national bird, gliding by." },
+    { id: 'poro', cat: 'luonto', fi: 'Poro', en: 'Reindeer', price: 260, note: 'Wanders over from the fells to say hello.' },
   ];
 
   /* Finds from the lake bottom. */
@@ -196,6 +273,9 @@
     { id: 'early', t: 'Early bird', d: 'Visit between 5 and 7 in the morning.', c: 15, test: (s) => !!s.seen.early },
     { id: 'hats3', t: 'Hat stand', d: 'Own 3 things for the head.', c: 30, test: (s) => ownedOf(s, WEAR.filter((w) => w.slot === 'head')) >= 3 },
     { id: 'home5', t: 'Oma koti kullan kallis', d: 'Own 5 things for the shore. The saying goes: your own home is worth gold.', c: 60, test: (s) => ownedOf(s, DECOR) >= 5 },
+    { id: 'wear10', t: 'Dressing-up box', d: 'Own 10 things to wear.', c: 60, test: (s) => ownedOf(s, WEAR) >= 10 },
+    { id: 'wear25', t: 'Walk-in wardrobe', d: 'Own 25 things to wear.', c: 150, test: (s) => ownedOf(s, WEAR) >= 25 },
+    { id: 'home12', t: 'Kylä', d: 'Own 12 things for the shore. It means village.', c: 150, test: (s) => ownedOf(s, DECOR) >= 12 },
     { id: 'loyly', t: 'Löyly', d: 'Take a sauna.', c: 30, test: (s) => s.counters.saunas >= 1 },
     { id: 'sorry', t: 'Anteeksi', d: 'Make up after a sulk.', c: 10, test: (s) => s.counters.forgiven >= 1 },
   ];
@@ -238,7 +318,7 @@
 
   const byId = (list) => list.reduce((m, x) => { m[x.id] = x; return m; }, {});
 
-  PN.DATA = { FISH, FOODS, WEAR, DECOR, TRINKETS, WORDS, AWARDS, NAMES, STAGES,
+  PN.DATA = { FISH, FOODS, WEAR, DECOR, WEAR_CATS, DECOR_CATS, TRINKETS, WORDS, AWARDS, NAMES, STAGES,
     words: byId(WORDS), awards: byId(AWARDS) };
   PN.items = items;
 })(window.PN = window.PN || {});

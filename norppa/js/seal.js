@@ -222,8 +222,9 @@
       this.mouthA = new T.Object3D(); this.mouthA.position.set(0, -0.3, 0.62); this.headP.add(this.mouthA);
       this.topA = new T.Object3D(); this.topA.position.set(0, 0.7, 0.05); this.headP.add(this.topA);
       this.noseA = new T.Object3D(); this.noseA.position.set(0, 0.05, 0.75); this.headP.add(this.noseA);
-      this.worn = { head: null, neck: null, face: null };
-      this.wornId = { head: null, neck: null, face: null };
+      this.backA = new T.Group(); this.sq.add(this.backA);                 // on top of the back, just behind the head; placed in setStage
+      this.worn = { head: null, neck: null, face: null, back: null };
+      this.wornId = { head: null, neck: null, face: null, back: null };
 
       // state
       this.mood = 'ok'; this.asleep = false; this.sulk = false; this.petting = 0; this.washing = false;
@@ -252,6 +253,7 @@
       this.tailG.position.set(0, 0.17, 1.05 - 2.4 * k + 0.12);
       this.headP.scale.setScalar(c.head);
       this.neckA.scale.setScalar(c.head);
+      this.backA.position.set(0, 1.062, 1.05 - 1.44 * k); this.backA.scale.setScalar(0.5 + 0.5 * k);
       this.eyes.forEach((e) => e.g.scale.setScalar(c.eye));
       this.baseScale = this.isPup ? 0.4 : c.scale;
       this.shadow.scale.set(2.3, 1.2 + 2.2 * k, 1);
@@ -266,7 +268,7 @@
       this.worn[slot] = null; this.wornId[slot] = id;
       if (!id) return;
       const o = U.shadows(PN.Props.wear(id), true, false);
-      (slot === 'neck' ? this.neckA : this.headP).add(o);
+      (slot === 'neck' ? this.neckA : slot === 'back' ? this.backA : this.headP).add(o);
       this.worn[slot] = o;
     }
     setDirt(k) { this.dirtMat.opacity = U.clamp(k, 0, 1) * 0.5; }

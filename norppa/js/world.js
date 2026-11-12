@@ -17,8 +17,16 @@
   const SPOTS = {
     snowman: [-2.1, -0.9, 0.6], flag: [-3.1, -4.7, 0.3], sled: [2.5, -5.0, -0.9],
     campfire: [1.4, 1.3, 0], iceheart: [-0.75, -5.4, 0.15], feeder: [-1.75, 0.55, 0.9], xmastree: [2.3, -0.35, 0], sauna: [3.3, -11.0, -0.35],
+    // the front of the shore: small things only, low enough not to hide the seal
+    lumilyhty: [-0.95, 2.8, 0.2], kurpitsa: [0.25, 3.35, 0], jaalyhty: [1.35, 2.8, -0.2], lahjat: [1.75, 0.4, -0.4], matto: [0.15, 0.3, 0.5],
+    // out on the lake
+    luminorppa: [0.9, -4.9, 0.5], lumilinna: [-1.9, -6.9, 0.3], pilkki: [0.5, -6.9, 0.2], teltta: [2.6, -7.1, -0.5],
+    vene: [-3.0, -9.0, 0.9], joutsen: [-0.9, -8.9, 0.6], poro: [1.2, -8.8, -0.6],
+    // by the den, and over on the sauna island
+    tahti: [-3.3, -5.9, 0.4], palju: [1.9, -10.3, 0.2], laituri: [3.05, -9.25, 0.25],
   };
-  const ON_DEN = { lantern: [0, 1.0, 1.55], lights: [0, 0, 0] };   // these two sit on the den itself
+  /* These sit on the den itself: x, y, z in the den's own space. */
+  const ON_DEN = { lantern: [0, 1.0, 1.55], lights: [0, 0, 0], viirit: [0, 0, 0], ulkotulet: [0, 0.02, 2.3], ilmapallot: [0.55, 1.2, 0.2] };
   W.SPOTS = SPOTS;
 
   /* ---------- the lie of the land ---------- */
@@ -437,21 +445,24 @@
     Object.keys(SPOTS).concat(Object.keys(ON_DEN)).forEach((id) => {
       const want = !!placed[id];
       if (want && !decor[id]) {
-        const d = id === 'lights' ? PN.Props.decor('lights', W.DEN.arch) : PN.Props.decor(id);
+        const d = id === 'lights' || id === 'viirit' ? PN.Props.decor(id, W.DEN.arch) : PN.Props.decor(id);
         if (ON_DEN[id]) { const o = ON_DEN[id]; d.g.position.set(o[0], o[1], o[2]); denG.add(d.g); }
         else {
-          const s = SPOTS[id];
-          d.g.position.set(s[0], W.groundY(s[0], s[1]), s[1]); d.g.rotation.y = s[2];
+          const s = SPOTS[id], y0 = W.groundY(s[0], s[1]);
+          d.g.position.set(s[0], y0, s[1]); d.g.rotation.y = s[2];
+          d.onLake = !W.isLand(s[0], s[1]);
+          d.front = s[1] > -2.5;
+          if (d.conform) { const cs = Math.cos(s[2]), sn = Math.sin(s[2]); d.conform((x, z) => W.groundY(s[0] + x * cs + z * sn, s[1] - x * sn + z * cs) - y0); }
           W.scene.add(d.g);
         }
-        U.shadows(d.g, true, id === 'sauna');
+        U.shadows(d.g, !d.flat, id === 'sauna' || !!d.flat);
         d.g.traverse((o) => { if (o.isMesh && (o.material.isMeshBasicMaterial || o.material.transparent)) o.castShadow = false; });
         d.g.userData.pick = { type: 'decor', id };
         decor[id] = d;
-        W.pickables.push(d.g);
+        if (!d.flat) W.pickables.push(d.g);
       } else if (!want && decor[id]) {
         decor[id].g.parent.remove(decor[id].g);
-        W.pickables.splice(W.pickables.indexOf(decor[id].g), 1);
+        if (W.pickables.indexOf(decor[id].g) >= 0) W.pickables.splice(W.pickables.indexOf(decor[id].g), 1);
         delete decor[id];
       }
     });
@@ -462,15 +473,26 @@
   };
   W.hasDecor = (id) => !!decor[id];
   /* Clear the front of the shore for a mini-game, and put it all back afterwards. */
+  let staged = false;
   W.stage = function (on) {
-    ['campfire', 'feeder', 'xmastree', 'snowman'].forEach((id) => { if (decor[id]) decor[id].g.visible = !on; });
+    staged = on;
     poopG.visible = !on;
+    showDecor();
   };
+  /* What is out but should not be seen just now: the front of the shore during a game, and things
+     that stand on the ice once the ice has gone (boats and birds stay: they float). */
+  function showDecor() {
+    Object.keys(decor).forEach((id) => {
+      const d = decor[id];
+      d.g.visible = !(staged && d.front) && !(d.onLake && !d.float && env.ice < 0.35);
+    });
+  }
   W.lampOverride = null;                 // null follows the daylight; true or false once the player taps the lantern
 
   /* ---------- poo ---------- */
   const AVOID = [[SPOTS.campfire[0], SPOTS.campfire[1], 0.85], [SPOTS.feeder[0], SPOTS.feeder[1], 0.6], [SPOTS.snowman[0], SPOTS.snowman[1], 0.7],
-    [SPOTS.xmastree[0], SPOTS.xmastree[1], 0.8], [W.BALL.x, W.BALL.z, 0.55], [W.HOME.x, W.HOME.z, 1.3]];
+    [SPOTS.xmastree[0], SPOTS.xmastree[1], 0.8], [SPOTS.lahjat[0], SPOTS.lahjat[1], 0.6], [SPOTS.lumilyhty[0], SPOTS.lumilyhty[1], 0.5], [SPOTS.jaalyhty[0], SPOTS.jaalyhty[1], 0.5],
+    [SPOTS.kurpitsa[0], SPOTS.kurpitsa[1], 0.5], [W.BALL.x, W.BALL.z, 0.55], [W.HOME.x, W.HOME.z, 1.3]];
   W.poopSpot = function (p, out) {
     const ang = (-30 + p.a * 240) * RAD, rad = 1.45 + p.r * 0.85;
     let x = W.HOME.x + Math.cos(ang) * rad, z = W.HOME.z + Math.sin(ang) * rad * 0.8;
@@ -643,6 +665,7 @@
 
     // season on the ground
     env.snow = se.snow; env.ice = se.ice; env.season = se.name;
+    showDecor();
     groundMat.color.setRGB(1, 1, 1).lerp(tmpC2.set(0x93a877), 1 - se.snow);
     treeSnow.visible = se.snow > 0.4;
     denMat.color.set(0xf2f6ff).lerp(tmpC2.set(0xa9a595), 1 - se.snow); tunnelMat.color.copy(denMat.color);
