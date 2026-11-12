@@ -36,6 +36,7 @@
     dice: '<rect x="4" y="4" width="16" height="16" rx="4"/><circle class="f" cx="9" cy="9" r="1.3"/><circle class="f" cx="15" cy="15" r="1.3"/><circle class="f" cx="15" cy="9" r="1.3"/><circle class="f" cx="9" cy="15" r="1.3"/>',
     cards: '<rect x="3" y="7" width="10" height="13" rx="2.5"/><path d="M9.5 7V5.6a2 2 0 0 1 2.3-2l6.6 1.2A2 2 0 0 1 20 7.1l-1.5 8.6a2 2 0 0 1-2.3 1.6L13 16.8"/>',
     gift: '<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M3 7h18v3H3zM12 7v13M12 7c-1.5-4-6-3-4 0M12 7c1.5-4 6-3 4 0"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 018 0v3"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
     poo: '<path d="M8 19.5c-3.2 0-4-3.2-2-5-1-2 .2-4 3-4-.4-2 1.2-3.8 3.6-4-.4 2 2 2.2 2 4 2.6 0 4 2 3 4 2 1.8 1.2 5-2 5H8z"/>',
     up: '<path d="M12 19V6M6 11l6-6 6 6"/>',
@@ -254,8 +255,15 @@
       const why = (c) => tr(WHY[c.why]);
       let h = '<div class="rows">';
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
-      h += row({ icon: 'fish', tint: 'sea', title: tr('Fish Rain'), text: tr('Slide left and right to catch the fish. Now and then you get to keep one.'), act: 'game', id: 'catch', cls: off(can), side: can.ok ? (st.counters.bestCatch ? tr('best {0}', st.counters.bestCatch) : '') : why(can) });
-      h += row({ icon: 'up', tint: 'warm', title: tr('Nose Ball'), text: tr('Keep the ball in the air for as long as you can.'), act: 'game', id: 'ball', cls: off(can), side: can.ok ? (st.counters.bestBall ? tr('best {0}', st.counters.bestBall) : '') : why(can) });
+      const gameRow = (id, icon, tint, title, text, best) => {
+        if (!S.gameOwned(st, id)) {
+          const price = PN.GAMES[id].price;
+          return row({ icon: 'lock', tint, title, text, act: 'unlock', id, cls: st.coins >= price ? '' : ' off', side: tr('Unlock {0}', price) });
+        }
+        return row({ icon, tint, title, text, act: 'game', id, cls: off(can), side: can.ok ? (best ? tr('best {0}', best) : '') : why(can) });
+      };
+      h += gameRow('catch', 'fish', 'sea', tr('Fish Rain'), tr('Slide left and right to catch the fish. Now and then you get to keep one.'), st.counters.bestCatch);
+      h += gameRow('ball', 'up', 'warm', tr('Nose Ball'), tr('Keep the ball in the air for as long as you can.'), st.counters.bestBall);
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)), act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       if (st.owned.sauna) {
         const wait = now < st.saunaAt;
@@ -372,6 +380,7 @@
     else if (act === 'borrow') game.borrow();
     else if (act === 'ball') { UI.closeSheet(); game.playBall(); }
     else if (act === 'game') game.startGame(id);
+    else if (act === 'unlock') game.unlockGame(id);
     else if (act === 'dive') game.dive();
     else if (act === 'sauna') game.sauna();
     else if (act === 'toggle') game.setSetting(id, !game.state.settings[id]);

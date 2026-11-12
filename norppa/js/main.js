@@ -841,8 +841,20 @@
   };
 
   /* ---------- mini-games ---------- */
+  G.unlockGame = async function (id) {
+    const g = PN.GAMES[id], title = tr({ catch: 'Fish Rain', ball: 'Nose Ball' }[id] || id);
+    if (state.coins < g.price) { A.play('nope'); UI.toast(tr('Not enough coins yet. Games and dives earn more.'), 'coin', 'bad'); return; }
+    const v = await UI.modal({ title, html: '<p>' + tr('Unlock {0} for {1} coins?', title, g.price) + '</p>', actions: [{ label: tr('Unlock'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+    if (v !== 1) return;
+    const r = S.unlockGame(state, id);
+    if (!r.ok) { A.play('nope'); return; }
+    A.play('award'); FX.sparkle(head(), 10); save();
+    UI.toast(tr('{0} unlocked!', title), 'coin');
+    UI.renderSheet(); UI.refresh();
+  };
   G.startGame = function (id) {
     if (blocked() || bedBusy) return;
+    if (!S.gameOwned(state, id)) return;
     const c = S.canPlay(state);
     if (!c.ok) { refuse(c.why); return; }
     if (washing) G.endWash(false);

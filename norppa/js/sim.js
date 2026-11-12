@@ -100,7 +100,9 @@
       });
       return dst;
     };
-    return fill(obj, base);
+    fill(obj, base);
+    if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;   // anyone who already played Fish Rain keeps it
+    return obj;
   }
 
   /* Friendship level from points. */
@@ -435,6 +437,17 @@
     return ok({});
   }
 
+  /* Mini-games are bought once with coins. */
+  const gameOwned = (state, id) => !PN.GAMES[id] || PN.GAMES[id].price === 0 || !!state.owned['game_' + id];
+  function unlockGame(state, id) {
+    const g = PN.GAMES[id];
+    if (!g) return no('none');
+    if (gameOwned(state, id)) return no('owned');
+    if (state.coins < g.price) return no('coins');
+    state.coins -= g.price; state.owned['game_' + id] = true;
+    return ok({ price: g.price });
+  }
+
   function canPlay(state) {
     if (state.asleep) return no('asleep');
     if (state.sick) return no('sick');
@@ -734,7 +747,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, canDive, diveResult, gameReward,
+    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
     giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

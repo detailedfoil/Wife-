@@ -298,6 +298,9 @@
   /* Economy dial. Shop prices are doubled and earnings cut to two thirds. Cosmetics (wear and decor)
      cost 12x their base price at the top end, but are then spread on a curve so the cheapest sits near
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
+  /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
+  const GAMES = { ball: { price: 0 }, catch: { price: 200 } };
+  PN.GAMES = GAMES;
   const ECON = { price: 2, cosmetic: 6, cosmeticFloor: 200, earn: 2 / 3, fishFood: 0.75 };
   PN.ECON = ECON;
   [FISH, FOODS].forEach((list) => list.forEach((x) => { if (x.price) x.price = Math.round(x.price * ECON.price); }));
