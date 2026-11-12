@@ -271,7 +271,7 @@
      Every throw has new wind and the bucket stays where it is. A miss resets the
      streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62;   // HIT: the scoring circle is 30% wider than the bucket looks
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 1.05, SZ = 3.2, BR = 0.14, RIM = 0.42, HIT = 0.55, RIM_Y = 0.62, WINDK = 0.45;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
     let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
@@ -368,7 +368,10 @@
         const dx = x - drag.x, dy = y - drag.y;
         drag = null;
         if (dy > -30 || Math.hypot(dx, dy) < 40) return;           // a flick has to go up the screen
-        launch(U.clamp(Math.atan2(dx, -dy) * 0.42, -0.5, 0.5));
+        // the angle of the flick sets the aim: a swipe within about 6 degrees of straight goes dead straight,
+        // and past that the aim opens up quickly so a wind-beating sideways shot is only a moderate slant
+        const ang = Math.atan2(dx, -dy), g = Math.max(0, Math.abs(ang) - 0.1);
+        launch(U.clamp(Math.sign(ang) * (0.5 * g + 0.9 * g * g * g), -0.62, 0.62));
       },
       update(dt, playing) {
         clock += dt;
@@ -383,7 +386,7 @@
         if (mode === 'fly' || mode === 'out' && ball.visible && bv.lengthSq() > 0.01) {
           const steps = 3, h = dt / steps;
           for (let i = 0; i < steps; i++) {
-            bv.x += wind * 1.8 * h   /* 1.8 per point: the same push as before, now shown on a 0 to 10 scale */; bv.y -= GRAV * h;
+            bv.x += wind * WINDK * h   /* a point of wind pushes the snowball about a quarter of a metre off line; 10 is a hard but possible shove */; bv.y -= GRAV * h;
             ball.position.addScaledVector(bv, h);
             const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
             ball.rotation.x -= spin * h;
