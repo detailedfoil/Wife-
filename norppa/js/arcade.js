@@ -717,10 +717,10 @@
   })();
 
   /* ---------- Blackjack ----------
-     Bet 5 sardines, hit or stand, beat the dealer without going over 21. A win pays five times the bet.
+     Bet 5 sardines, hit or stand, beat the dealer without going over 21. A win pays back 2.8 times the bet (your bet plus 1.8 times more).
      You sit down with ten sardines and play until you cash out or they are all gone. Only the winnings turn into coins. */
   const bj = (() => {
-    const START = 10, MIN = 5, PAY = 5, CAP = 120;   // 120 sardines of winnings is 40 coins, the most a game pays, so the table closes there
+    const START = 10, MIN = 5, PAY = 2.8, CAP = 120;   // 120 sardines of winnings is 40 coins, the most a game pays, so the table closes there
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, frac = 0, mode = 'bet', wait = 0, msg = '', hide = true;
     const total = (h) => {
@@ -763,7 +763,7 @@
     function settle() {
       const p = total(you), d = total(house);
       if (p > 21) { msg = tr('Over 21. You lose {0}.', bet); A.play('thud'); actor.gesture('no', true); }
-      else if (d > 21 || p > d) { stack += bet * PAY; msg = tr(d > 21 ? 'Dealer goes over. You win {0}!' : 'You win {0}!', bet * PAY); A.play('award'); actor.gesture('happy', true); }
+      else if (d > 21 || p > d) { const back = Math.round(bet * PAY); stack += back; msg = tr(d > 21 ? 'Dealer goes over. You win {0}!' : 'You win {0}!', back - bet); A.play('award'); actor.gesture('happy', true); }
       else if (p === d) { stack += bet; msg = tr('A tie. You get your bet back.'); A.play('tap'); }
       else { msg = tr('Dealer wins. You lose {0}.', bet); A.play('nope'); actor.gesture('shake', true); }
       money();
