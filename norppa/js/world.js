@@ -221,6 +221,8 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.NoToneMapping;
+    // When the phone hands the 3D context back after a spell in the background, paint every canvas texture again first.
+    canvas.addEventListener('webglcontextrestored', () => { if (U.repaint) U.repaint(); });
 
     const scene = W.scene = new T.Scene();
     scene.fog = new T.FogExp2(0x9fb8d8, 0.011);

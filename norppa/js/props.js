@@ -31,6 +31,19 @@
     if (!mats[key]) mats[key] = new T.MeshBasicMaterial(Object.assign({ color, toneMapped: false }, o));
     return mats[key];
   };
+  /* A texture painted on a canvas. Phones can throw a hidden canvas's picture away when the app is in the background, and
+     can drop the 3D context too; when the 3D context comes back, the textures are copied up again from the canvases, which
+     are blank by then, so whatever wore them turned black. So every canvas is kept with the code that painted it, and painted
+     again whenever its picture or the 3D context comes back (U.repaint). */
+  const painted = [];
+  function paint(p) {
+    const g = p.c.getContext('2d');
+    if (!g) return;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.clearRect(0, 0, p.w, p.h);
+    p.draw(g, p.w, p.h);
+    p.t.needsUpdate = true;
+  }
   U.tex = (w, h, draw) => {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
@@ -38,8 +51,12 @@
     const t = new T.CanvasTexture(c);
     t.colorSpace = T.SRGBColorSpace;
     t.anisotropy = 4;
+    const p = { c, w, h, draw, t };
+    painted.push(p);
+    c.addEventListener('contextrestored', () => paint(p));
     return t;
   };
+  U.repaint = () => painted.forEach((p) => { try { paint(p); } catch (e) { /* leave that one as it is */ } });
   U.mesh = (geo, material, x, y, z) => { const m = new T.Mesh(geo, material); m.position.set(x || 0, y || 0, z || 0); return m; };
   U.ball = (r, material, x, y, z, sx, sy, sz, seg) => {
     const m = U.mesh(new T.SphereGeometry(r, seg || 16, Math.max(8, Math.round((seg || 16) * 0.7))), material, x, y, z);
