@@ -76,7 +76,7 @@
       const b = e.target.closest('button'); if (!b) return;
       const st = G().state, k = b.dataset.stat, v = Math.round(st.stats[k]);
       const words = { food: ['Tummy', 'fish'], joy: ['Happiness', 'heart'], energy: ['Energy', 'bolt'], clean: ['Cleanliness', 'drop'] }[k];
-      const tip = { food: 'Feed to fill it.', joy: 'Stroke, play and treats lift it.', energy: 'Sleep brings it back.', clean: 'A sauna or a dive sorts it.' }[k];
+      const tip = { food: 'Feed to fill it.', joy: 'Games she fancies lift it. Strokes and treats help a little.', energy: 'Sleep brings it back.', clean: 'A sauna or a dive sorts it.' }[k];
       UI.toast('<b>' + tr(words[0]) + ' ' + v + pc() + '</b> ' + tr(v < 60 ? tip : 'Doing fine.'), words[1]);
     });
     $('plate').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('profile'); });

@@ -39,7 +39,7 @@
     // ----- bars and badges -----
     'Doing fine.': 'Hyvin menee.',
     'Feed to fill it.': 'Ruokkiminen täyttää sen.',
-    'Stroke, play and treats lift it.': 'Silittely, leikki ja herkut nostavat sitä.',
+    'Games she fancies lift it. Strokes and treats help a little.': 'Mieluisat pelit nostavat sitä. Silittely ja herkut auttavat vähän.',
     'Sleep brings it back.': 'Uni palauttaa sen.',
     'A sauna or a dive sorts it.': 'Sauna tai sukellus auttaa.',
     'Little one': 'Pikkuinen',

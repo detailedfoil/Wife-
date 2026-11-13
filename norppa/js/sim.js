@@ -37,6 +37,7 @@
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
     // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean.
+    petJoy: 0.2, petJoyPats: 10,   // a pat lifts happiness by only a fifth of a point, and only the first ten an hour
     saunaRounds: 7, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
     gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
     catchKeepChance: 0.1,
@@ -429,12 +430,12 @@
     const s = state.stats;
     if (state.asleep) { s.joy = pct(s.joy + 0.2); return ok({ asleep: true }); }
     const sulking = state.grudge > 0;
-    s.joy = pct(s.joy + (sulking ? 0.5 : 1.5));
+    if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
+    if (state.petWin.n < T.petJoyPats) s.joy = pct(s.joy + (sulking ? T.petJoy / 3 : T.petJoy));   // a pat is only a little cheer, and only the first few an hour: games she fancies are what lift her
     state.counters.pets++;
     const want = sulkNeeds(state);
     let pat = false;
     if (want && want.pats < T.sulkPats) { want.pats++; pat = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkPatCut / T.sulkPats); sulkCheck(state); }
-    if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     check(state);
     return ok({ sulking, pat });
