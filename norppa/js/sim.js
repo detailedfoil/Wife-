@@ -26,7 +26,7 @@
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
     medHour: 6, medBonus: 100,             // she is Anxi from 6am until she has had it; a photo of the pill earns a bonus
     sulkTreats: 3, sulkPats: 3,           // she picks three different treats and wants three head pats and a bath
-    sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the three pats together a fifth, and the bath a fifth
+    sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the three pats together a fifth, and the sauna a fifth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
@@ -34,7 +34,10 @@
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
-    diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
+    diveCooldown: 25 * 60e3,
+    // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
+    // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean.
+    saunaRounds: 7, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
     gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
     catchKeepChance: 0.1,
     playEnergy: 0.14, playEnergyMin: 2, playEnergyMax: 20, playEnergyNeed: 6,   // a game tires her by how long it lasted: 6 for a 43 second round of Fish Rain (halved, by request)
@@ -85,7 +88,7 @@
       poops: [], poopT: 1.5,
       coins: 40, coinCarry: 0,
       pantry: { muikku: 5, ahven: 2 },
-      owned: { lantern: true }, placed: { lantern: true },
+      owned: { lantern: true, sauna: true }, placed: { lantern: true, sauna: true },
       wearing: { head: null, neck: null, face: null, back: null },
       fish: { muikku: 5, ahven: 2 },
       trinkets: {}, words: {}, awards: {}, seen: {},
@@ -122,8 +125,7 @@
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
-    if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;
-   // a sauna bought in the old shop brings its game along   // anyone who already played Fish Rain keeps it
+    if (obj.owned && !obj.owned.sauna) { obj.owned.sauna = true; if (obj.placed) obj.placed.sauna = true; }   // the sauna is on everyone's shore now: it is how she gets clean
     return obj;
   }
 
@@ -178,7 +180,7 @@
     });
   }
 
-  /* What a sulking seal wants before she will forgive you: three different treats of her own choosing, three head pats and a bath.
+  /* What a sulking seal wants before she will forgive you: three different treats of her own choosing, three head pats and a sauna.
      She chooses when the sulk starts (or the first time anyone looks), from treats the shop sells at a fair price. */
   function sulkNeeds(state) {
     if (!(state.grudge > 0)) { state.sulkWant = null; return null; }
@@ -436,21 +438,6 @@
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     check(state);
     return ok({ sulking, pat });
-  }
-
-  function wash(state) {
-    const s = state.stats;
-    if (state.asleep) return no('asleep');
-    const before = s.clean;
-    s.clean = 100; s.joy = pct(s.joy + 4);
-    state.filthMs = 0;
-    state.counters.washes++;
-    addXp(state, before < 60 ? 6 : 2);
-    const want = sulkNeeds(state);
-    if (want && !want.bath) { want.bath = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkBathCut); sulkCheck(state); }
-    learn(state, 'kylpy');
-    check(state);
-    return ok({});
   }
 
   function tuck(state, now) {
@@ -751,21 +738,32 @@
     return away;
   }
 
-  function sauna(state, now) {
-    const s = state.stats;
-    if (!state.owned.sauna) return no('none');
-    const c = canPlay(state);
-    if (!c.ok && c.why !== 'sick') return c;
-    if (now < state.saunaAt) return no('wait');
-    state.saunaAt = now + T.saunaCooldown;
-    s.clean = 100; s.joy = pct(s.joy + 18); s.energy = pct(s.energy - 4);
-    state.filthMs = 0;
-    if (state.sick) state.wellMs += H;
-    state.counters.saunas++;
-    addXp(state, 6);
-    learn(state, 'sauna'); learn(state, 'loyly');
-    check(state);
+  /* The sauna: how she gets clean. A go is a run of rounds of the Löyly game; each scrubs a seventh of the dirt away, so seven rounds in one go
+     is a full clean from filthy and fewer rounds take more goes. A go asks for just as many rounds as it takes to finish her. */
+  const saunaNeed = (state) => Math.max(1, Math.ceil((100 - state.stats.clean) * T.saunaRounds / 100 - 1e-9));
+  function canSauna(state) {
+    if (state.asleep) return no('asleep');
+    if (state.stats.clean >= T.saunaClean) return no('clean');
     return ok({});
+  }
+  /* The end of a go: rounds of the need she got through. Whatever she managed counts, and the bonus is in proportion. */
+  function saunaDone(state, rounds, need) {
+    const s = state.stats, c = state.counters;
+    rounds = clamp(Math.floor(rounds) || 0, 0, need);
+    if (!(rounds > 0)) return { rounds: 0, need, coins: 0, clean: Math.round(s.clean), full: false };
+    const frac = rounds / need, was = s.clean;
+    s.clean = rounds >= need ? 100 : pct(s.clean + rounds * 100 / T.saunaRounds);
+    s.joy = pct(s.joy + T.saunaJoy * frac);
+    if (s.clean >= 60) state.filthMs = 0;
+    const coins = earn(state, T.saunaBonus * frac / T.earnRate);
+    c.saunas++; c.washes++;
+    addXp(state, was < 60 ? 6 : 2);
+    if (state.sick && rounds >= need) state.wellMs += H;
+    const want = sulkNeeds(state);
+    if (want && !want.bath && s.clean >= 60) { want.bath = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkBathCut); sulkCheck(state); }
+    learn(state, 'kylpy'); learn(state, 'sauna'); learn(state, 'loyly');
+    check(state);
+    return { rounds, need, coins, clean: Math.round(s.clean), full: rounds >= need };
   }
 
   /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then.
@@ -996,7 +994,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, gameMoods, setSkip, tasteSync,
-    buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
+    feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, gameMoods, setSkip, tasteSync,
+    buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

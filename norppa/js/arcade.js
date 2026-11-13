@@ -918,7 +918,7 @@
      to fill the calm meter. Fill it and the round is won, then the next one is harder. Let it run dry and it is over. */
   const sauna = (() => {
     let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null;
-    let lvl = 0, band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
+    let goal = 7, lvl = 0, band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
     function build() {
       view = stage('#3a2114', '#6b4023', { ground: 0x5a3a22, hemi: 1.7, key: 1.3 });
       const sc = view.scene;
@@ -948,16 +948,18 @@
       zoneEl.classList.toggle('out', !(pin >= band && pin <= band + size));
     }
     return {
-      label: 'Rounds', hint: 'Hold to throw water. Keep the needle in the green.',
+      label: 'Rounds', hint: 'Hold to throw water. Keep the needle in the green. Each round gets her cleaner.',
       view: () => view,
       start() {
         if (!view) build();
         cast(view, 0.62, true);
         actor.g.position.set(-0.5, 0, -0.75);
         face(0.25);
+        goal = (PN.Games.opts && PN.Games.opts.need) || 7;
         round = 0; live = false; hold = false; steam.clear();
         newRound();
         el.hidden = false; paint();
+        document.getElementById('gScore').textContent = '0/' + goal;
       },
       stop() { el.hidden = true; },
       go() { live = true; },
@@ -990,8 +992,11 @@
         calm = U.clamp(calm + (inside ? 0.125 : -0.15) * dt, 0, 1);
         paint();
         if (calm >= 1) {
-          round++; K.score(round); A.play(round % 5 === 0 ? 'award' : 'match'); actor.gesture('happy', true); K.big(tr('Lovely!'));
+          round++; K.score(round, true); document.getElementById('gScore').textContent = round + '/' + goal;
+          A.play(round >= goal ? 'award' : 'match'); actor.gesture('happy', true);
           steam.emit(0.62, 0.25, 1.0, 14, 1.1, 0.2, 1.6, -1.4);
+          if (round >= goal) { el.hidden = true; K.over(tr('Squeaky clean!')); return; }
+          K.big(tr('Lovely!'));
           rest = 1.3;
         } else if (calm <= 0) {
           A.play('nope'); actor.gesture(pin > band ? 'shake' : 'no', true);

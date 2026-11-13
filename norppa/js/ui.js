@@ -69,14 +69,14 @@
       if (act === 'feed') UI.openSheet('feed');
       else if (act === 'play') UI.openSheet('play');
       else if (act === 'shop') UI.openSheet('shop');
-      else if (act === 'wash') G().startWash();
+      else if (act === 'sauna') G().sauna();
       else if (act === 'sleep') G().sleepToggle();
     });
     $('meters').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
       const st = G().state, k = b.dataset.stat, v = Math.round(st.stats[k]);
       const words = { food: ['Tummy', 'fish'], joy: ['Happiness', 'heart'], energy: ['Energy', 'bolt'], clean: ['Cleanliness', 'drop'] }[k];
-      const tip = { food: 'Feed to fill it.', joy: 'Stroke, play and treats lift it.', energy: 'Sleep brings it back.', clean: 'A wash or a dive sorts it.' }[k];
+      const tip = { food: 'Feed to fill it.', joy: 'Stroke, play and treats lift it.', energy: 'Sleep brings it back.', clean: 'A sauna or a dive sorts it.' }[k];
       UI.toast('<b>' + tr(words[0]) + ' ' + v + pc() + '</b> ' + tr(v < 60 ? tip : 'Doing fine.'), words[1]);
     });
     $('plate').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('profile'); });
@@ -91,7 +91,6 @@
     $('medFile').addEventListener('change', (e) => G().medFile(e.target.files && e.target.files[0]));
     $('medSkip').addEventListener('click', () => G().medSkip());
     $('sheetClose').addEventListener('click', () => UI.closeSheet());
-    $('scrubDone').addEventListener('click', () => G().endWash(false));
     $('sheetTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) { PN.Audio.play('tap'); UI.tab = b.dataset.tab; UI.renderSheet(); } });
     $('sheetBody').addEventListener('click', onSheetClick);
     $('family').addEventListener('click', (e) => { const c = e.target.closest('.pup-chip'); if (c) G().pupInfo(+c.dataset.i); });
@@ -118,7 +117,7 @@
     mc.hidden = !st.name || mi.taken || S.dayKey(Date.now()) <= st.med.since;
     if (!mc.hidden) mc.textContent = mi.taken ? tr('Pill photo +{0}', S.T.medBonus) : tr('Medicine');
     $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
-    const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
+    const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, sauna: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };
     document.querySelectorAll('#dock button').forEach((b) => {
       b.classList.toggle('need', !!need[b.dataset.act]);
       if (b.dataset.act === 'sleep') b.classList.toggle('on', st.asleep);
@@ -195,13 +194,6 @@
   };
   UI.moveBubble = function (x, y) { $('bubble').style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)'; };
 
-  /* ---------- wash bar ---------- */
-  UI.scrub = function (on, k) {
-    $('scrub').hidden = !on;
-    $('hud').classList.toggle('scrubbing', !!on);
-    if (on) $('scrubBar').style.width = Math.round((k || 0) * 100) + '%';
-    document.querySelector('#dock [data-act="wash"]').classList.toggle('on', !!on);
-  };
   UI.setBusy = (b) => $('hud').classList.toggle('busy', !!b);
   UI.showHud = (on) => { $('hud').hidden = !on; };
 
@@ -252,9 +244,9 @@
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} is Anxi.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will calm her down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it. Three head pats and a bath cut {0} each.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} is Anxi.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will calm her down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it. Three head pats and a sauna cut {0} each.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
-        + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p><p style="margin:4px 0 0">' + tr('Bath') + (need.bath ? ' \u2713' : ' \u2212' + mins(S.T.sulkBathCut * S.T.sulkSleepH * 3600e3)) + '</p></div>' : '';
+        + '</div><p style="margin:8px 0 0">' + tr('Head pats: {0} of {1}', need.pats, S.T.sulkPats) + '</p><p style="margin:4px 0 0">' + tr('Sauna') + (need.bath ? ' \u2713' : ' \u2212' + mins(S.T.sulkBathCut * S.T.sulkSleepH * 3600e3)) + '</p></div>' : '';
       const ids = Object.keys(st.pantry).filter((id) => st.pantry[id] > 0 && PN.items[id]);
       const order = { fish: 0, food: 1, med: 2 };
       ids.sort((a, b) => order[PN.items[a].kind] - order[PN.items[b].kind] || (PN.items[a].food || 0) - (PN.items[b].food || 0));
@@ -280,7 +272,7 @@
       const moods = S.gameMoods(st, now), owned = PN.GAME_ORDER.filter((id) => S.gameOwned(st, id));
       // what she makes of each game right now: the percent more or less it pays
       const mood = (id) => { const m = moods.games[id]; return m.skip ? '<span class="mood">' + tr('left out') + '</span>' : '<span class="mood ' + (m.taste > 0 ? 'up' : m.taste < 0 ? 'down' : '') + '">' + (m.taste > 0 ? '+' : m.taste < 0 ? '\u2212' : '') + Math.abs(m.taste) + '%</span>'; };
-      let h = (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a wash.', moods.muck) + '</div>' : '')
+      let h = (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a sauna.', moods.muck) + '</div>' : '')
         + '<p class="lead">' + tr('The percent by a game is what it pays extra or less right now, going by what {0} fancies. Each play wears a game out a little and lifts the others.', esc(st.name)) + '</p>';
       h += '<div class="rows">';
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back Angy.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
@@ -290,10 +282,6 @@
         if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', S.price(st, gm.price)) });
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? mood(id) + (best ? '<small>' + tr('best {0}', gm.low ? PN.mmss(best) : best) + '</small>' : '') : why(can) });
       });
-      if (st.owned.sauna) {
-        const wait = now < st.saunaAt;
-        h += row({ icon: 'steam', tint: 'warm', title: tr('Sauna'), text: tr('Steam away the dirt and the grumps.'), act: 'sauna', cls: wait || st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : wait ? mins(st.saunaAt - now) : tr('ready') });
-      }
       h += '</div>';
       if (owned.length >= 3) {
         h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is dealt no likes or dislikes: it never pays extra, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
@@ -375,7 +363,7 @@
     },
     profile(st) {
       const lv = S.level(st), days = Math.floor((Date.now() - st.createdAt) / S.DAY), fi = PN.isFi();
-      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|Angy', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a wash', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
+      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|Angy', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a sauna', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
       const line = (a, b) => '<div class="statline"><span>' + tr(a) + '</span><b>' + b + '</b></div>';
       const stage = D.STAGES[st.stage], favIt = PN.items[st.fav];
       let next;
@@ -442,7 +430,6 @@
     else if (act === 'unlock') game.unlockGame(id);
     else if (act === 'skip') game.skipGame(id);
     else if (act === 'dive') game.dive();
-    else if (act === 'sauna') game.sauna();
     else if (act === 'toggle') game.setSetting(id, !game.state.settings[id]);
     else if (act === 'sky') game.setSetting('sky', id);
     else if (act === 'lang') game.setSetting('lang', id);

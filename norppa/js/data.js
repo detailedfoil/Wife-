@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '13 Nov 2026, 20:50';
+  PN.UPDATED = '13 Nov 2026, 21:25';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -155,7 +155,7 @@
     { id: 'teltta', cat: 'leiri', fi: 'Teltta', en: 'Tent', price: 200, note: 'For nights when the sky is too good to miss.' },
     { id: 'vene', cat: 'leiri', fi: 'Soutuvene', en: 'Rowing boat', price: 240, note: 'Every lakeside cabin has one.' },
     { id: 'palju', cat: 'leiri', fi: 'Palju', en: 'Hot tub', price: 320, note: 'A wooden tub of hot water under the open sky.' },
-    { id: 'sauna', cat: 'leiri', fi: 'Sauna', en: 'Sauna', hidden: true, note: 'Comes with the Sauna game: warm, clean and happy in one go.' },
+    { id: 'sauna', cat: 'leiri', fi: 'Sauna', en: 'Sauna', hidden: true, note: 'Always on the shore. Tap it for a sauna, which is how she gets clean.' },
 
     { id: 'snowman', cat: 'lumi', fi: 'Lumiukko', en: 'Snowman', price: 80, note: 'Good company. Never complains about the cold.' },
     { id: 'luminorppa', cat: 'lumi', fi: 'Luminorppa', en: 'Snow seal', price: 100, note: 'A friend made of snow. It looks a bit familiar.' },
@@ -251,7 +251,7 @@
   /* Awards. test(state) is checked after every action. */
   const AWARDS = [
     { id: 'first_bite', t: 'First bite', d: 'Feed your seal.', c: 10, test: (s) => s.counters.feeds >= 1 },
-    { id: 'clean', t: 'Squeaky clean', d: 'Give your seal a wash.', c: 10, test: (s) => s.counters.washes >= 1 },
+    { id: 'clean', t: 'Squeaky clean', d: 'Get your seal clean in the sauna.', c: 10, test: (s) => s.counters.washes >= 1 },
     { id: 'goodnight', t: 'Hyvää yötä', d: 'Tuck your seal in.', c: 10, test: (s) => s.counters.tucks >= 1 },
     { id: 'friend', t: 'Ystävä', d: 'Stroke your seal 100 times.', c: 25, test: (s) => s.counters.pets >= 100 },
     { id: 'bestfriend', t: 'Paras ystävä', d: 'Stroke your seal 1,000 times. It means best friend.', c: 80, test: (s) => s.counters.pets >= 1000 },
@@ -319,7 +319,7 @@
     puff: { price: 650, muck: 5, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [60.5, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
     piano: { price: 775, muck: 3, title: 'Ice Piano', icon: 'piano', tint: 'sky', text: 'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.', best: 'best_piano', pay: [0.2, 1], unit: 'tiles played' },
     toss: { price: 700, muck: 10, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.', best: 'best_toss', pay: [3.2, 1], unit: 'baskets' },
-    sauna: { price: 850, muck: 3, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right. Unlocking it builds the sauna on the shore.', best: 'best_sauna', pay: [13.8, 0.9], unit: 'rounds in a row' },
+    sauna: { price: 0, muck: 0, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right.', unit: 'rounds' },   // not a game to play for coins: it is how she gets clean (see Sim.saunaDone), so it is not in GAME_ORDER
     curl: { price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
     sled: { price: 1250, muck: 12, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
     bj: { price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Choose your bet, from 5 sardines up to all in. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.7, 1], unit: 'sardines won' },
@@ -344,7 +344,7 @@
   /* muck: how mucky a game leaves her, in cleanliness points a minute of play (sim.js: a mucky seal earns less). Sledging and
      snowballs are the muckiest; the piano, the card table and anything in the water the least. */
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
-  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'sauna', 'curl', 'sled', 'bj'];
+  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
   const ECON = { price: 2, food: 1.25, cosmetic: 6, cosmeticFloor: 200, cosmeticCut: 0.85, earn: 2 / 3, fishFood: 0.75 };   // food: fish and food cost a quarter more; cosmeticCut: things to wear and for the shore cost 15% less
   PN.ECON = ECON;

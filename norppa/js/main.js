@@ -13,7 +13,7 @@
   const rs = (k) => (Math.random() - 0.5) * 2 * k;
   const MIN = 60e3;
   let state, seal, t = 0, last = 0, started = false, noSave = false;
-  let washing = false, scrubK = 0, bedBusy = false;
+  let bedBusy = false;
   const pups = {};                       // pup id -> its Seal
 
   const nm = () => '<b>' + UI.esc(state.name) + '</b>';
@@ -95,7 +95,7 @@
     W.syncPoops(state.poops);
     poopN = state.poops.length;
   }
-  function syncDirt() { seal.setDirt(U.smooth(72, 12, state.stats.clean) * (washing ? 1 - scrubK : 1)); }
+  function syncDirt() { seal.setDirt(U.smooth(72, 12, state.stats.clean)); }
 
   async function begin(isNew, sum) {
     UI.title.hide();
@@ -243,12 +243,12 @@
       poopN = state.poops.length;
       W.syncPoops(state.poops);
     }
-    if (!washing) syncDirt();
+    syncDirt();
     syncPups();
     tickVisits(now);
     if (saveT > 10) { saveT = 0; save(); }
     if (envT <= 0) { envT = 22; noticeSky(); }
-    const free = G.ready && !G.busy && !PN.Games.active && !UI.modalOpen && !UI.sheetName && !washing && !bedBusy;
+    const free = G.ready && !G.busy && !PN.Games.active && !UI.modalOpen && !UI.sheetName && !bedBusy;
     if (free) {
       if (S.canEvolve(state)) evolve();
       else if (S.pupDue(state, now)) birth();
@@ -369,7 +369,7 @@
       }
     }
 
-    if (awake && G.ready && !G.busy && !bedBusy && !drag && !UI.sheetName && !UI.modalOpen && !washing && !seal.move) {
+    if (awake && G.ready && !G.busy && !bedBusy && !drag && !UI.sheetName && !UI.modalOpen && !seal.move) {
       idleT -= dt;
       if (idleT <= 0) { idleT = 6 + Math.random() * 8; idleAct(); }
     }
@@ -396,7 +396,6 @@
   function bedHeading() { return W.DEN.heading + (state.placed.peitto || state.placed.talja ? 0.95 : 0); }
   async function goToBed() {
     bedBusy = true;
-    if (washing) G.endWash(false);
     const d = W.DEN;
     seal.sulk = false;
     await seal.moveTo(d.sleep.x, d.sleep.z, { speed: 1.9, face: bedHeading() });
@@ -696,7 +695,6 @@
       return;
     }
     UI.closeSheet();
-    if (washing) G.endWash(false);
     G.busy = true; UI.setBusy(true);
     seal.sulk = false;
     const e = holeEdge(seal, v2).clone();
@@ -816,46 +814,6 @@
     UI.renderSheet(); UI.refresh(); save();
   };
 
-  G.startWash = function () {
-    if (washing) { G.endWash(false); return; }
-    if (blocked() || bedBusy) return;
-    if (state.asleep) { refuse('asleep'); return; }
-    UI.closeSheet();
-    washing = true; scrubK = 0; scrubFx = 0;
-    seal.washing = true; seal.sulk = false;
-    UI.scrub(true, 0);
-    A.play('bubble');
-  };
-  let scrubFx = 0;
-  function scrubBy(d, x, y) {
-    scrubK = Math.min(1, scrubK + d / 1500);
-    UI.scrub(true, scrubK);
-    scrubFx += d;
-    if (scrubFx > 34) {
-      scrubFx = 0;
-      const hit = W.pick(x, y);
-      if (hit && hit.pick.type === 'seal') FX.bubbles(hit.point, 1); else FX.bubbles(head(), 1);
-      A.play('scrub', 0.06);
-      syncDirt();
-    }
-    if (scrubK >= 1) G.endWash(true);
-  }
-  G.endWash = function (done) {
-    if (!washing) return;
-    if (!done && scrubK >= 0.6) done = true;          // near enough counts
-    washing = false; seal.washing = false;
-    UI.scrub(false);
-    if (done) {
-      S.wash(state);
-      seal.gesture('shake', true); A.play('splash');
-      v1.copy(seal.g.position); v1.y += 0.6 * seal.size;
-      FX.splash(v1, 10); FX.sparkle(head(), 8);
-      UI.toast(tr('Squeaky clean.'), 'bubbles');
-      buzz(15);
-    }
-    syncDirt(); UI.refresh();
-  };
-
   G.sleepToggle = function () {
     if (blocked() || bedBusy) return;
     const now = Date.now(), h = new Date().getHours();
@@ -872,26 +830,18 @@
     UI.closeSheet(); UI.refresh();
   };
 
-  G.sauna = async function () {
-    if (blocked()) return;
-    const r = S.sauna(state, Date.now());
-    if (!r.ok) {
-      if (r.why === 'wait') { A.play('nope'); UI.toast(tr('The stones are still heating. Ready in {0}.', UI.mins(state.saunaAt - Date.now())), 'steam'); }
-      else refuse(r.why);
+  /* The sauna is how she gets clean: the Löyly game, free, for as many rounds as it takes to finish the job. */
+  G.sauna = function () {
+    if (blocked() || bedBusy || PN.Games.active) return;
+    const c = S.canSauna(state);
+    if (!c.ok) {
+      if (c.why === 'clean') { A.play('nope'); seal.gesture('happy'); UI.toast(tr('{0} is already squeaky clean.', nm()), 'bubbles'); }
+      else refuse(c.why);
       return;
     }
-    UI.closeSheet();
-    G.busy = true;
-    A.play('steam');
-    await UI.fade(true);
-    syncDirt();
-    await wait(0.9);
-    await UI.fade(false);
-    for (let i = 0; i < 7; i++) { v1.copy(seal.g.position); v1.y += 0.5 * seal.size; FX.steam(v1); }
-    seal.gesture('happy', true); A.play('chirp');
-    UI.toast(tr('Ahh. Warm, clean and happy.'), 'steam');
-    G.busy = false;
-    UI.refresh();
+    seal.halt();
+    PN.Games.opts = { need: S.saunaNeed(state) };
+    PN.Games.start('sauna');
   };
 
   /* ---------- the ball ---------- */
@@ -939,7 +889,6 @@
     if (blocked() || bedBusy) return;
     const r = S.playBall(state, Date.now());
     if (!r.ok) { refuse(r.why); return; }
-    if (washing) G.endWash(false);
     if (tapped === true) {
       kick(rs(1.5), 4.3 + Math.random() * 1.2, rs(0.9));
       A.play('boing');
@@ -986,7 +935,6 @@
     if (!S.gameOwned(state, id)) return;
     const c = S.canPlay(state);
     if (!c.ok) { refuse(c.why); return; }
-    if (washing) G.endWash(false);
     seal.halt();
     PN.Games.start(id);
   };
@@ -998,6 +946,7 @@
     seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.2, face: W.HOME_HEADING });
     UI.refresh();
     if (!r) return;
+    if (id === 'sauna') { await saunaResult(r); return; }
     const gm = PN.GAMES[id], lost = gm.low && !score;      // a timed game: the score is the seconds it took, and none means it was lost
     seal.gesture(lost ? 'sad' : r.best ? 'happy' : 'clap'); A.play(lost ? 'sad' : r.best ? 'award' : 'coin');
     const title = tr(gm.title);
@@ -1008,7 +957,7 @@
     // why the coins are what they are: her taste for this game, and muck
     if (!lost && r.taste > 0) html += '<p class="note up">' + tr('{0} is keen on this one: +{1}% coins.', UI.esc(state.name), r.taste) + '</p>';
     else if (!lost && r.taste < 0) html += '<p class="note down">' + tr(r.joy < 0 ? '{0} is tired of this one: −{1}% coins, and she is glummer for it.' : '{0} is not so keen on this one: −{1}% coins.', UI.esc(state.name), -r.taste) + '</p>';
-    if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a wash.', r.muck) + '</p>';
+    if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';
     else if (r.fish.length) html += '<p>' + tr('The catch goes in the larder.') + '</p>';
@@ -1017,6 +966,17 @@
     save();
     if (v === 1) G.startGame(id);
   };
+
+  async function saunaResult(r) {
+    seal.gesture(r.rounds ? 'happy' : 'sad'); A.play(r.rounds ? (r.full ? 'award' : 'coin') : 'sad');
+    if (r.rounds) { for (let i = 0; i < 7; i++) { v1.copy(seal.g.position); v1.y += 0.5 * seal.size; FX.steam(v1); } syncDirt(); }
+    let html = '<div class="bigscore">' + r.clean + '%</div><p>' + tr('Cleanliness') + '.</p>' + (r.coins > 0 ? '<div class="loot">' + coinChip(r.coins) + '</div>' : '');
+    html += '<p class="note ' + (r.rounds ? 'up' : 'down') + '">' + (r.full ? tr('Ahh. Warm, clean and happy.') : r.rounds ? tr('Cleaner, but not spotless. Another go will finish the job.') : tr('The heat got away before a single round. No clean this time.')) + '</p>';
+    const again = !r.full && S.canSauna(state).ok;
+    const v = await UI.modal({ title: tr('Löyly'), html, actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
+    save();
+    if (v === 1) G.sauna();
+  }
 
   /* ---------- shop ---------- */
   G.buy = function (id) {
@@ -1393,7 +1353,6 @@
   }
 
   function stroke(d, x, y) {
-    if (washing) { scrubBy(d, x, y); return; }
     seal.petting = 0.6;
     strokeAcc += d;
     if (strokeAcc < 58) return;
@@ -1424,7 +1383,6 @@
       const s = hit.pick.seal;
       if (s.visit != null) { G.visitInfo(s.visit); return; }
       if (s.isPup) { const i = pupIndexOf(s); if (i >= 0) { if (state.pups[i].ready) G.pupInfo(i); else cuddle(i); } return; }
-      if (washing) return;
       if (seal.asleep) { head(v1); FX.zzz(v1); return; }
       const r = S.pet(state, Date.now());
       if (r.sulking && state.medLate) { seal.gesture('surprise'); A.play('sad'); return; }
@@ -1492,7 +1450,7 @@
   let hudT = 0;
   function hud(dt) {
     let b = null;
-    if (G.ready && !G.busy && !PN.Games.active && !washing && !state.asleep && !seal.asleep && !bedBusy) {
+    if (G.ready && !G.busy && !PN.Games.active && !state.asleep && !seal.asleep && !bedBusy) {
       const s = state.stats;
       if (state.sick) b = 'med';
       else if (state.medLate) b = 'anxi';

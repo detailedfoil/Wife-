@@ -40,7 +40,7 @@ h1, h2, h3, p { margin: 0; }
 /* ---------- HUD ---------- */
 .hud { position: fixed; inset: 0; pointer-events: none; }
 .hud > * { pointer-events: none; }
-.hud button, .hud .coins, .scrub { pointer-events: auto; }
+.hud button, .hud .coins { pointer-events: auto; }
 .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: calc(10px + var(--st)) calc(12px + var(--sr)) 0 calc(12px + var(--sl)); }
 .plate { text-align: left; border-radius: 18px; padding: 7px 14px 9px; min-width: 128px; max-width: 46vw; display: grid; gap: 1px; }
 .plate-name { font: 600 19px/1.1 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -113,10 +113,6 @@ h1, h2, h3, p { margin: 0; }
 .toast b { font-weight: 800; } .toast em { font-style: normal; color: #ffd45c; font-weight: 800; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(.96); } }
 
-.scrub { position: absolute; left: 50%; bottom: calc(92px + var(--sb)); transform: translateX(-50%); width: min(330px, calc(100% - 24px)); border-radius: 22px; padding: 9px 9px 9px 16px; display: flex; align-items: center; gap: 10px; }
-.hud.scrubbing .toasts { bottom: calc(150px + var(--sb)); }
-.scrub-label { font: 600 15px var(--display); white-space: nowrap; }
-.scrub .bar i { background: var(--clean); width: 0; }
 
 .dock { position: absolute; left: 0; right: 0; bottom: calc(12px + var(--sb)); display: flex; justify-content: center; gap: 9px; padding: 0 8px; }
 .dock button { width: 62px; height: 66px; border-radius: 22px; display: grid; place-items: center; align-content: center; gap: 3px; font: 800 11.5px var(--body); position: relative; }
@@ -319,7 +315,7 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 
 @media (orientation: landscape) and (max-height: 480px) {
   .meters { max-width: 420px; } .dock button { height: 56px; } .sheet { max-height: 86%; } .title-in { margin-top: 0; gap: 8px; } .title h1 { font-size: 44px; }
-  .toasts, .scrub { bottom: calc(80px + var(--sb)); }
+  .toasts { bottom: calc(80px + var(--sb)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .modal, .modal-card, .bar i, .plate-xp i { transition: none; }
