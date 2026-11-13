@@ -271,7 +271,7 @@
      Every throw has new wind and the bucket stays where it is. A miss resets the
      streak; you keep playing until you press Back, and the best streak is what pays out. */
   const toss = (() => {
-    const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.504, HIT = 0.66, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
+    const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.65, HIT = 0.85, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
     let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
@@ -297,7 +297,7 @@
       bucket.add(U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 24), tin, 0, 0.02, 0), -PI / 2));
       bucket.add(U.rot(U.torus(RIM, 0.025, U.mat(0xc7d3df, { metalness: 0.6, roughness: 0.3 }), 0, RIM_Y, 0, PI * 2, 32), PI / 2));
       bucket.add(U.rot(U.torus(RIM * 0.92, 0.012, U.mat(0x7d8b99, { metalness: 0.6, roughness: 0.4 }), 0, RIM_Y + 0.18, 0, PI, 24), 0, 0, 0));
-      bucket.add(U.mesh(new T.CircleGeometry(0.9, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
+      bucket.add(U.mesh(new T.CircleGeometry(1.16, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
       bucket.children[bucket.children.length - 1].rotation.x = -PI / 2;
       sc.add(bucket);
       // a little flag shows which way the wind blows
@@ -372,8 +372,7 @@
       A.play('match'); A.play('thud', 0.1);
       puffs.emit(bk.x, RIM_Y + 0.1, bk.z, 10, 1.4, 0.09, 0.5, 4);
       actor.gesture(score % 5 === 0 ? 'clap' : 'happy', true);
-      if (score === 4 || score === 9 || score === 15) K.big(tr('Further back!'));
-      else K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
+      K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
       label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Miss and the streak starts again.',
