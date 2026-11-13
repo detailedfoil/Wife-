@@ -835,11 +835,16 @@
       el.innerHTML = '<div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (house.length ? (hide ? '?' : total(house)) : '') + '</b></div><div class="bj-cards">'
         + house.map((c, i) => card(c, hide && i === 1)).join('') + '</div></div>'
         + '<div class="bj-row"><div class="bj-who">' + tr('You') + '<b>' + (you.length ? total(you) : '') + '</b></div><div class="bj-cards">' + you.map((c) => card(c)).join('') + '</div></div>'
-        + '<div class="bj-msg">' + msg + '</div><div class="bj-btns">' + btns + '</div>';
+        + '<div class="bj-msg">' + msg + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div>';
     }
     // How much the bar says: nothing is 5, the top is everything, and in between is that share of what you have now.
     const betNow = () => Math.min(stack, Math.max(MIN, Math.round(frac * stack)));
     const betLabel = () => tr(frac >= 1 ? 'All in {0}' : 'Bet {0}', betNow());
+    const potentialLabel = () => {
+      if (mode === 'done' || (mode === 'bet' && stack < MIN)) return '';
+      const stake = mode === 'bet' ? betNow() : bet, back = Math.round(stake * PAY);
+      return tr('Potential win: +{0} sardines · Total return: {1}', back - stake, back);
+    };
     function money() { K.shown(stack); K.result(Math.min(CAP, Math.max(0, stack - START))); }
     function deal(b) {
       if (mode !== 'bet' || stack < MIN || b < 1) return;
@@ -904,6 +909,7 @@
         if (e.target.id !== 'bjRange') return;
         frac = e.target.value / 100;
         const b = el.querySelector('[data-bj="bet"]'); if (b) b.textContent = betLabel();
+        const potential = el.querySelector('#bjPotential'); if (potential) potential.textContent = potentialLabel();
       });
     }
     return {
