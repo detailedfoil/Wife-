@@ -176,6 +176,13 @@ h1, h2, h3, p { margin: 0; }
 .row em.risk { display: block; font: italic 600 12px/1.3 var(--display); color: #b02358; margin-top: 3px; }
 .row .side { font: 600 13px var(--display); color: var(--ink-soft); white-space: nowrap; text-align: right; }
 .row.off { opacity: .55; }
+.row .side .mood { display: block; font: 600 15px var(--display); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.row .side .mood.up { color: #14784f; } .row .side .mood.down { color: #b02358; }
+.row .side small { display: block; font: 600 11.5px var(--display); color: var(--ink-soft); margin-top: 2px; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+.chip-btn.on { background: var(--ink); color: #fff; }
+.note { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px 0 0; font: 600 13.5px var(--display); color: var(--ink-soft); }
+.note.up { color: #14784f; } .note.down { color: #b02358; }
 .row.done .ic-wrap { background: #fff1c9; color: #b07400; }
 .word-fi { font: 600 17px/1.2 var(--display); }
 .row.locked b, .row.locked .d { color: #a9b4cf; }

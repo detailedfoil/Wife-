@@ -38,6 +38,15 @@
     gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
     catchKeepChance: 0.1,
     playEnergy: 0.14, playEnergyMin: 2, playEnergyMax: 20, playEnergyNeed: 6,   // a game tires her by how long it lasted: 6 for a 43 second round of Fish Rain (halved, by request)
+    // Care and games. Every game leaves her muckier (GAMES[id].muck, cleanliness points a minute, 1 to muckMost a game), and under
+    // muckLine clean she earns less, down to muckCut less when filthy. And she has tastes: every game she has (bar the ones left
+    // out, at most skipMax) carries a taste from -tasteMax to +tasteMax, which is the percent more or less it pays. Playing a
+    // game takes tasteDrop off it and shares that among the others; tastes drift tasteDrift points an hour towards a mix that is
+    // dealt afresh every tasteRoll. A game gives gameJoy happiness, more if she likes it (joyUp a point of taste) and less if not
+    // (joyDown a point), so from about -9 down it makes her glummer.
+    muckLine: 70, muckCut: 0.25, muckMost: 15,
+    tasteMax: 15, tasteDrop: 5, tasteDrift: 2.5, tasteRoll: 8 * H, skipMax: 2,
+    gameJoy: 14, joyUp: 0.4, joyDown: 1.6,
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -85,6 +94,7 @@
       gift: { last: dayKey(now), streak: 1 },
       dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0, juiceAt: 0,
       petWin: { t0: 0, n: 0 }, ballWin: { t0: 0, n: 0 },
+      taste: {}, tasteGoal: {}, tasteAt: now, tasteRollAt: 0, tasteKey: '', skip: [],
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
       settings: { sound: true, music: true, sky: 'live', haptics: true },
@@ -584,16 +594,92 @@
 
   /* Rewards after a mini-game. fishMap: fish caught in Fish Rain. secs: how long the game lasted, which sets the energy it costs.
      Every game pays a * score^b coins (PN.GAMES[game].pay), tuned so a minute of play earns about the same in each game. */
+  /* ---------- her taste in games, and muck ---------- */
+  /* The games her tastes are dealt among: the ones she has, less the ones left out. */
+  const roster = (state) => PN.GAME_ORDER.filter((id) => gameOwned(state, id) && state.skip.indexOf(id) < 0);
+  /* Deal a fresh mix to drift towards: evenly spread from least to most liked, in a random order, so there is always
+     something she fancies and something she is off. With few games the spread is narrower. Games left out sit at 0. */
+  function tasteDeal(state, now) {
+    const ids = roster(state), n = ids.length, amp = T.tasteMax * Math.min(1, (n - 1) / 3);
+    const vals = ids.map((_, i) => (n > 1 ? -amp + 2 * amp * i / (n - 1) : 0));
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd(state) * (i + 1)), t = vals[i]; vals[i] = vals[j]; vals[j] = t; }
+    state.tasteGoal = {};
+    ids.forEach((id, i) => { state.tasteGoal[id] = vals[i]; });
+    state.skip.forEach((id) => { state.tasteGoal[id] = 0; });
+    state.tasteRollAt = now + T.tasteRoll;
+  }
+  function tasteDrift(state, ms) {
+    const step = T.tasteDrift * ms / H;
+    Object.keys(state.taste).forEach((id) => {
+      const goal = state.tasteGoal[id] || 0, v = state.taste[id];
+      state.taste[id] = Math.abs(goal - v) <= step ? goal : v + Math.sign(goal - v) * step;
+    });
+  }
+  /* Bring her tastes up to now: a new game or a change to what is left out deals a new mix, and time lets them drift. */
+  function tasteSync(state, now) {
+    const key = roster(state).join(',') + '|' + state.skip.join(',');
+    if (key !== state.tasteKey) {
+      const first = !state.tasteKey;
+      state.tasteKey = key;
+      tasteDeal(state, now);
+      PN.GAME_ORDER.forEach((id) => {
+        if (!gameOwned(state, id)) return;
+        if (state.taste[id] == null || first) state.taste[id] = state.tasteGoal[id];          // a new game starts where the deal put it
+        if (state.skip.indexOf(id) >= 0) state.taste[id] = Math.min(0, state.taste[id]);
+      });
+      state.tasteAt = now;
+    }
+    for (let i = 0; i < 4 && now >= state.tasteRollAt; i++) {
+      const at = Math.max(state.tasteAt, state.tasteRollAt);
+      tasteDrift(state, at - state.tasteAt); state.tasteAt = at;
+      tasteDeal(state, at);
+    }
+    if (now >= state.tasteRollAt) state.tasteRollAt = now + T.tasteRoll;
+    if (now > state.tasteAt) { tasteDrift(state, now - state.tasteAt); state.tasteAt = now; }
+  }
+  const tasteOf = (state, id) => state.taste[id] || 0;
+  /* Playing a game wears it out a little and makes the others look better. */
+  function tastePlayed(state, id) {
+    if (state.taste[id] == null) return;
+    const others = roster(state).filter((x) => x !== id);
+    state.taste[id] = Math.max(-T.tasteMax, state.taste[id] - T.tasteDrop);
+    others.forEach((x) => { state.taste[x] = Math.min(T.tasteMax, (state.taste[x] || 0) + T.tasteDrop / others.length); });
+  }
+  /* How much less a mucky seal earns: nothing above muckLine, muckCut when filthy. */
+  const muckLoss = (state) => (state.stats.clean >= T.muckLine ? 0 : T.muckCut * (T.muckLine - state.stats.clean) / T.muckLine);
+  /* What a game's coins are multiplied by right now. */
+  const gameMult = (state, id) => (1 + tasteOf(state, id) / 100) * (1 - muckLoss(state));
+  const gameJoy = (taste) => T.gameJoy + taste * (taste >= 0 ? T.joyUp : T.joyDown);
+  /* What the Play menu shows: each game's taste, whether it is left out, and the muck loss, all in whole percent. */
+  function gameMoods(state, now) {
+    tasteSync(state, now);
+    const out = { muck: Math.round(muckLoss(state) * 100), games: {}, skips: state.skip.length, skipMax: T.skipMax };
+    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), skip: state.skip.indexOf(id) >= 0 }; });
+    return out;
+  }
+  /* Leave a game out of her tastes, or put it back. A game left out never pays over the odds, but still wears out if played. */
+  function setSkip(state, id, on, now) {
+    if (!PN.GAMES[id] || !gameOwned(state, id)) return no('none');
+    tasteSync(state, now);
+    const at = state.skip.indexOf(id);
+    if (on && at < 0) { if (state.skip.length >= T.skipMax) return no('full'); state.skip.push(id); }
+    else if (!on && at >= 0) state.skip.splice(at, 1);
+    tasteSync(state, now);
+    return ok({});
+  }
+
   function gamePay(game, score) {
     const gm = PN.GAMES[game];
     if (!gm || !gm.pay || !(score > 0)) return 0;
     return Math.min(T.gameMax, gm.pay[0] * Math.pow(Math.max(score, gm.quick || 0), gm.pay[1])) * T.gameBoost;
   }
-  function gameReward(state, game, score, fishMap, found, secs) {
+  function gameReward(state, game, score, fishMap, found, secs, now) {
     const s = state.stats, c = state.counters, gm = PN.GAMES[game];
     let coins = 0, best = false;
     const got = [];
-    coins = gamePay(game, score);
+    tasteSync(state, now || state.tasteAt);
+    const taste = tasteOf(state, game), muck = muckLoss(state);
+    coins = gamePay(game, score) * gameMult(state, game);
     const key = gm && gm.best;
     // In a timed game (low) the score is the seconds it took, so the best is the smallest, and 0 means it was lost.
     if (key && (gm.low ? score > 0 && (!c[key] || score < c[key]) : score > (c[key] || 0))) { c[key] = score; best = score > 0; }
@@ -609,12 +695,16 @@
     coins = earn(state, coins / T.earnRate);
     const tired = secs > 0 ? clamp(Math.round(secs * T.playEnergy), T.playEnergyMin, T.playEnergyMax) : T.gameEnergy;
     s.energy = pct(s.energy - tired);
-    s.joy = pct(s.joy + 14);
+    const joy = gameJoy(taste);
+    s.joy = pct(s.joy + joy);
+    const dirt = gm && gm.muck ? clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) : 0;
+    s.clean = pct(s.clean - dirt);
+    tastePlayed(state, game);
     c.games++;
     addXp(state, 8);
     learn(state, 'leikki');
     check(state);
-    return { coins, best, fish: got, tired };
+    return { coins, best, fish: got, tired, taste: Math.round(taste), muck: Math.round(muck * 100), joy, dirt };
   }
 
   function buy(state, id) {
@@ -679,7 +769,7 @@
   /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then.
      And if she is poorly and the juice costs more than you have, they can spare a bottle once a day. */
   const hasFood = (state) => Object.keys(state.pantry).some((id) => state.pantry[id] > 0 && PN.items[id] && PN.items[id].kind !== 'med');
-  const fishSpare = (state, now) => !hasFood(state) && state.coins < 6 && now >= state.handoutAt;
+  const fishSpare = (state, now) => !hasFood(state) && state.coins < PN.items.muikku.price && now >= state.handoutAt;
   const juiceSpare = (state, now) => (state.sick || state.pups.some((p) => p.sick)) && !(state.pantry.lakkamehu > 0)
     && state.coins < PN.items.lakkamehu.price && now >= state.juiceAt;
   function canBorrow(state, now) { return fishSpare(state, now) || juiceSpare(state, now); }
@@ -904,7 +994,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay,
+    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, gameMoods, setSkip, tasteSync,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

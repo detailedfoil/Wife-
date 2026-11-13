@@ -1224,7 +1224,7 @@
       else { c.className = 'pf-c'; c.textContent = ''; }
     }
     function clockNow() {
-      const secs = Math.floor(t), prize = Math.floor(PN.Sim.gamePay('puff', Math.max(1, Math.ceil(t))));
+      const secs = Math.floor(t), prize = Math.floor(PN.Sim.gamePay('puff', Math.max(1, Math.ceil(t))) * PN.Sim.gameMult(PN.Game.state, 'puff'));
       if (secs !== shownT) { shownT = secs; K.time(PN.mmss(secs)); }
       if (prize !== shownP) { shownP = prize; prizeEl.innerHTML = PN.UI.ic('coin') + '<b>' + prize + '</b>'; prizeEl.setAttribute('aria-label', tr('Coins for clearing it now: {0}', prize)); }
     }

@@ -277,19 +277,29 @@
       const now = Date.now(), can = S.canPlay(st), dive = S.canDive(st, now);
       const off = (c) => (c.ok ? '' : ' off');
       const why = (c) => tr(WHY[c.why]);
-      let h = '<div class="rows">';
+      const moods = S.gameMoods(st, now), owned = PN.GAME_ORDER.filter((id) => S.gameOwned(st, id));
+      // what she makes of each game right now: the percent more or less it pays
+      const mood = (id) => { const m = moods.games[id]; return m.skip ? '<span class="mood">' + tr('left out') + '</span>' : '<span class="mood ' + (m.taste > 0 ? 'up' : m.taste < 0 ? 'down' : '') + '">' + (m.taste > 0 ? '+' : m.taste < 0 ? '\u2212' : '') + Math.abs(m.taste) + '%</span>'; };
+      let h = (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a wash.', moods.muck) + '</div>' : '')
+        + '<p class="lead">' + tr('The percent by a game is what it pays extra or less right now, going by what {0} fancies. Each play wears a game out a little and lifts the others.', esc(st.name)) + '</p>';
+      h += '<div class="rows">';
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back Angy.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', S.price(st, gm.price)) });
-        else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? (best ? tr('best {0}', gm.low ? PN.mmss(best) : best) : '') : why(can) });
+        else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? mood(id) + (best ? '<small>' + tr('best {0}', gm.low ? PN.mmss(best) : best) + '</small>' : '') : why(can) });
       });
       if (st.owned.sauna) {
         const wait = now < st.saunaAt;
         h += row({ icon: 'steam', tint: 'warm', title: tr('Sauna'), text: tr('Steam away the dirt and the grumps.'), act: 'sauna', cls: wait || st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : wait ? mins(st.saunaAt - now) : tr('ready') });
       }
-      return h + '</div>';
+      h += '</div>';
+      if (owned.length >= 3) {
+        h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is dealt no likes or dislikes: it never pays extra, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
+          + owned.map((id) => '<button class="chip-btn' + (moods.games[id].skip ? ' on' : '') + '" data-do="skip" data-id="' + id + '" aria-pressed="' + moods.games[id].skip + '">' + tr(PN.GAMES[id].title) + '</button>').join('') + '</div>';
+      }
+      return h;
     },
     shop(st) {
       let h = '';
@@ -430,6 +440,7 @@
     else if (act === 'ball') { UI.closeSheet(); game.playBall(); }
     else if (act === 'game') game.startGame(id);
     else if (act === 'unlock') game.unlockGame(id);
+    else if (act === 'skip') game.skipGame(id);
     else if (act === 'dive') game.dive();
     else if (act === 'sauna') game.sauna();
     else if (act === 'toggle') game.setSetting(id, !game.state.settings[id]);

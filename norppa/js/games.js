@@ -339,7 +339,7 @@
     W.override = null;
     $('gamehud').hidden = true;
     let reward = null;
-    if (!(quit && score === 0)) reward = S.gameReward(PN.Game.state, id, score, caught, null, secs);
+    if (!(quit && score === 0)) reward = S.gameReward(PN.Game.state, id, score, caught, null, secs, Date.now());
     PN.Game.endGame(id, score, reward);
   }
 })(window.PN = window.PN || {});
