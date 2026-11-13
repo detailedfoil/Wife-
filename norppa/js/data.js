@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '13 Nov 2026, 13:50';
+  PN.UPDATED = '13 Nov 2026, 14:55';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -317,6 +317,7 @@
     swim: { price: 450, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
     stack: { price: 575, title: 'Ice Stack', icon: 'stack', tint: 'sea', text: 'Floes slide across. Tap to set each one down on the tower. Whatever hangs over breaks off. Miss the tower and it is over.', best: 'best_stack', pay: [0.78, 0.96], unit: 'floes stacked' },
     puff: { price: 650, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [60.5, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
+    piano: { price: 775, title: 'Ice Piano', icon: 'piano', tint: 'sky', text: 'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.', best: 'best_piano', pay: [0.2, 1], unit: 'tiles played' },
     toss: { price: 700, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.', best: 'best_toss', pay: [3.2, 1], unit: 'baskets' },
     sauna: { price: 850, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right. Unlocking it builds the sauna on the shore.', best: 'best_sauna', pay: [13.8, 0.9], unit: 'rounds in a row' },
     curl: { price: 1000, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
@@ -330,8 +331,18 @@
      was woken, which pays nothing). It pays 60.5 * seconds^-0.3 (10% above the balanced rate, by request), so about 30 coins for 10 seconds or less (quick), 25 for 20 seconds,
      22 for 30, 19 for 45, 18 for a minute and 14 for two. A set board cleared faster is also more boards a minute, so quick players
      earn more a minute here than elsewhere and slow ones less: about 10, 21, 41 and 79 at the four skill levels. */
+  /* Tunes for Ice Piano. Each note is a pitch and how long it lasts in sixteenths; a bar line (|) is only there for reading.
+     bpm is the speed it is meant to be played at; the game starts slower and climbs past it.
+     Ievan polkka is a traditional Finnish polka tune. */
+  PN.SONGS = {
+    ievan: { title: 'Ievan polkka', bpm: 100, notes:
+      'D4:2 G4:2 G4:3 A4:1 Bb4:2 G4:1 G4:2 G4:1 G4:1 Bb4:1 | A4:2 F4:2 F4:2 A4:2 Bb4:2 G4:2 G4:2 G4:1 G4:1 | '
+      + 'D4:2 G4:2 G4:3 A4:1 Bb4:2 G4:2 G4:2 G4:1 Bb4:1 | D5:1 D5:1 D5:1 C5:1 Bb4:2 A4:2 Bb4:2 G4:2 G4:2 G4:1 Bb4:1 | '
+      + 'D5:2 D5:2 C5:2 Bb4:2 A4:2 F4:2 F4:2 F4:1 A4:1 | C5:1 C5:1 C5:1 C5:1 Bb4:1 Bb4:1 A4:1 A4:1 Bb4:2 G4:2 G4:2 G4:1 Bb4:1 | '
+      + 'D5:2 D5:2 C5:2 Bb4:2 A4:1 A4:1 F4:2 F4:2 F4:1 A4:1 | C5:1 C5:1 C5:1 C5:1 Bb4:1 Bb4:1 A4:1 A4:1 Bb4:2 G4:2 G4:3 G4:1' },
+  };
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
-  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'stack', 'puff', 'toss', 'sauna', 'curl', 'sled', 'bj'];
+  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'sauna', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
   const ECON = { price: 2, cosmetic: 6, cosmeticFloor: 200, earn: 2 / 3, fishFood: 0.75 };
   PN.ECON = ECON;

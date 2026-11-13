@@ -125,6 +125,15 @@
     src.connect(g); g.connect(musicBus);
     src.start(ctx.currentTime + (at || 0));
   }
+  /* One note of a tune, for Ice Piano: a soft reed, a little like a small accordion. */
+  A.note = function (freq, len) {
+    if (!ctx || !A.sound) return;
+    tone(freq, len, { type: 'triangle', vol: 0.3, attack: 0.005 });
+    tone(freq * 2, len * 0.7, { vol: 0.07, attack: 0.005 });
+    tone(freq / 2, len, { vol: 0.1, attack: 0.01 });
+  };
+  /* Quieten the wandering background tune while a game plays its own. */
+  A.hush = function (on) { if (ctx) musicBus.gain.setTargetAtTime(on ? 0 : 0.22, ctx.currentTime, 0.08); };
   A.pluck = (i, vol) => { if (A.sound) pluck(i, vol == null ? 0.5 : vol); };
 
   /* A slow wandering tune: a short phrase, then a long breath. */

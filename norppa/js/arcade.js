@@ -1,4 +1,4 @@
-/* Pikku Norppa: the arcade. Eight mini-games, each on a little stage of its own.
+/* Pikku Norppa: the arcade. Nine mini-games, each on a little stage of its own.
    Swimmy Seal: tap to swim up, slip between the ice and the kelp. Three goes, the best counts.
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
@@ -6,6 +6,7 @@
    Blackjack: beat the dealer for sardines. Löyly: keep the sauna heat just right.
    Ice Stack: set sliding floes down on a tower; the overhang breaks off.
    Puffer Sweeper: minesweeper with pufferfish, one board against the clock.
+   Ice Piano: piano tiles; tap the tiles of a tune in order as it speeds up.
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
 (function (PN) {
   'use strict';
@@ -1330,5 +1331,158 @@
     };
   })();
 
-  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
+  /* ================= Ice Piano ================= */
+  /* Piano tiles on the ice. A tune comes down four lanes as tiles, one tile a note, as long as the note is. Tap them in order,
+     lowest first: each tap plays its note, so playing well plays the tune. The tune loops and gets faster. Tap a lane the next
+     tile is not in, or let a tile slide off the bottom, and it is over. The first tile waits for the first tap.
+     The score is the tiles played. Tunes live in data.js (PN.SONGS). */
+  const piano = (() => {
+    const LANES = 4, SPAN = 11, LINE = 0.74, START = 62, RISE = 7, MAX = 118, BOUNCE = 0.09;
+    const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    let view = null, el = null, cv = null, g2 = null, W = 0, H = 0, song = null, chart = [], total = 0;
+    let pos = 0, next = 0, n = 0, mode = 'idle', wait = 0, bad = -1, badTile = -1, lastLane = -1, lastAt = 0, bop = 0, why = '';
+
+    /* 'Bb4' as a frequency. */
+    function freq(name) {
+      const m = /^([A-G])(b|#)?(\d)$/.exec(name), semi = SEMI[m[1]] + (m[2] === 'b' ? -1 : m[2] === '#' ? 1 : 0) + (+m[3] + 1) * 12;
+      return 440 * Math.pow(2, (semi - 69) / 12);
+    }
+    /* Turn a tune into tiles: when each starts (in sixteenths), how long, its note, and a lane. The lane follows the tune:
+       up the scale moves right, down moves left, a repeated note hops to a lane beside it. Never the same lane twice running,
+       and the last tile's lane differs from the first, so the loop joins up. The same every time, so it can be learnt. */
+    function read(sg) {
+      const r = U.rng(7), out = [];
+      let at = 0, lane = 1, last = 0;
+      sg.notes.split(/\s+/).forEach((tok) => {
+        if (tok === '|' || !tok) return;
+        const parts = tok.split(':'), f = freq(parts[0]), d = +parts[1];
+        if (out.length) {
+          const dir = f > last * 1.001 ? 1 : f < last * 0.999 ? -1 : 0, pick = [];
+          for (let l = 0; l < LANES; l++) if (l !== lane && (dir === 0 ? Math.abs(l - lane) === 1 : (l - lane) * dir > 0)) pick.push(l);
+          if (!pick.length) for (let l = 0; l < LANES; l++) if (l !== lane) pick.push(l);
+          lane = pick[Math.floor(r() * pick.length)];
+        }
+        out.push({ at, d, f, lane }); at += d; last = f;
+      });
+      if (out[out.length - 1].lane === out[0].lane) out[out.length - 1].lane = [0, 1, 2, 3].filter((l) => l !== out[0].lane && l !== out[out.length - 2].lane)[0];
+      return { tiles: out, len: at };
+    }
+    const tile = (i) => chart[i % chart.length];
+    const startOf = (i) => Math.floor(i / chart.length) * total + tile(i).at;
+    const bpm = (p) => Math.min(MAX, START + RISE * p / total);
+    function size() {
+      const r = el.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (!r.width) return;
+      W = r.width; H = r.height;
+      if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+      g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function box(x, y, w, h, rad) {
+      g2.beginPath();
+      g2.moveTo(x + rad, y); g2.arcTo(x + w, y, x + w, y + h, rad); g2.arcTo(x + w, y + h, x, y + h, rad); g2.arcTo(x, y + h, x, y, rad); g2.arcTo(x, y, x + w, y, rad);
+      g2.closePath();
+    }
+    function draw() {
+      if (!W) return;
+      const lw = W / LANES, u = H / SPAN, line = H * LINE;
+      g2.clearRect(0, 0, W, H);
+      g2.fillStyle = 'rgba(255,255,255,.07)';
+      for (let l = 1; l < LANES; l++) g2.fillRect(l * lw - 1, 0, 2, H);
+      if (bad >= 0) { g2.fillStyle = 'rgba(226,80,58,.55)'; g2.fillRect(bad * lw, 0, lw, H); }
+      const first = Math.max(0, next - 6);
+      for (let i = first; i < first + 40; i++) {
+        const t = tile(i), s = startOf(i), bottom = line - (s - pos) * u, h = t.d * u, top = bottom - h;
+        if (bottom < -4) break;
+        if (top > H) continue;
+        const x = t.lane * lw + 4, w = lw - 8, y = top + 3, hh = h - 6, rad = Math.min(14, hh / 2);
+        if (i < next) { g2.fillStyle = 'rgba(255,255,255,.1)'; box(x, y, w, hh, rad); g2.fill(); continue; }
+        if (i === badTile) g2.fillStyle = '#e2503a';
+        else { const gr = g2.createLinearGradient(0, y, 0, y + hh); gr.addColorStop(0, '#fafdff'); gr.addColorStop(1, '#bfe0fa'); g2.fillStyle = gr; }
+        box(x, y, w, hh, rad); g2.fill();
+        if (i !== badTile) { g2.fillStyle = 'rgba(255,255,255,.9)'; box(x + 5, y + 4, w - 10, Math.min(5, hh / 3), 2.5); g2.fill(); }
+        if (i === 0 && mode === 'ready') {
+          g2.fillStyle = '#17264d'; g2.font = '600 ' + Math.round(Math.min(20, lw * 0.24)) + 'px DynaPuff, sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+          g2.fillText(tr('Start'), x + w / 2, y + hh / 2 + 1);
+        }
+      }
+    }
+    function fail(lane, i, text) {
+      mode = 'fail'; wait = 0.9; bad = lane; badTile = i; why = text;
+      A.play('nope'); actor.gesture('surprise', true);
+    }
+    function tap(lane) {
+      if (mode !== 'ready' && mode !== 'play') return;
+      const t = tile(next);
+      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); }
+      else if (lane !== t.lane || (startOf(next) - pos) * (H / SPAN) > H * LINE) {
+        if (lane === lastLane && clock - lastAt < BOUNCE) return;        // the same finger landing twice
+        fail(lane, -1, tr('Wrong tile!'));
+        return;
+      }
+      A.note(t.f, Math.max(0.2, t.d * 15 / bpm(pos) * 1.15));
+      lastLane = lane; lastAt = clock; bop = 1;
+      next++; n++; K.score(n);
+    }
+    function build() {
+      view = stage('#86bdf0', '#eef7ff', { ground: 0xbfdcff, hemi: 2.0, key: 1.7 });
+      const sc = view.scene, snow = U.mat(0xffffff, { roughness: 1 }), ice = U.mat(0xa9d6f5, { roughness: 0.45 });
+      const lake = U.mesh(new T.CircleGeometry(80, 40), U.mat(0x2b68b3, { roughness: 0.3 }), 0, -0.2, 0);
+      lake.rotation.x = -PI / 2;
+      sc.add(lake, U.cyl(1.02, 0.9, 0.32, ice, 0, -0.18, 0, 9), U.cyl(1.06, 1.02, 0.06, snow, 0, 0, 0, 9));
+      const r = U.rng(33);
+      for (let i = 0; i < 16; i++) {
+        const a = r() * PI * 2, d = 3.2 + r() * 16, k = 0.4 + r() * 1.3;
+        const f = U.cyl(k, k * 0.92, 0.12, snow, Math.cos(a) * d, -0.16, Math.sin(a) * d - 4, 7);
+        f.rotation.y = r() * 3; sc.add(f);
+      }
+      view.camera.position.set(0, 2.5, 7.2);
+      el = document.getElementById('pianoBoard'); cv = document.getElementById('pianoCanvas'); g2 = cv.getContext('2d');
+      el.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button > 0) return;
+        e.preventDefault();
+        const r = el.getBoundingClientRect();
+        tap(Math.max(0, Math.min(LANES - 1, Math.floor((e.clientX - r.left) / r.width * LANES))));
+      });
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      window.addEventListener('resize', () => { if (!el.hidden) size(); });
+    }
+    return {
+      label: 'Tiles', nocount: true, hint: 'Tap the Start tile, then every tile in order.',
+      view: () => view,
+      peek: () => ({ pos, next, n, mode, lane: chart.length ? tile(next).lane : -1, bpm: bpm(pos), total, count: chart.length }),
+      read, tap,
+      start() {
+        if (!view) build();
+        cast(view, 0.85, true);
+        face(0);
+        song = PN.SONGS.ievan;
+        const c = read(song); chart = c.tiles; total = c.len;
+        pos = 0; next = 0; n = 0; mode = 'ready'; wait = 0; bad = -1; badTile = -1; lastLane = -1; lastAt = 0; bop = 0;
+        el.hidden = false;
+        size(); draw();
+        A.hush(true);
+      },
+      stop() { el.hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
+      go() { K.score(0, true); },
+      pointer() {},
+      key() {},
+      update(dt, playing) {
+        clock += dt;
+        lens(view);
+        view.camera.lookAt(0, -2.0, 0);
+        bop = Math.max(0, bop - dt * 7);
+        view.rig.position.y = Math.sin(bop * PI) * 0.07;
+        actor.update(dt, clock, null);
+        if (!W) size();
+        if (playing && mode === 'play') {
+          pos += dt * bpm(pos) / 15;
+          const t = tile(next), u = H / SPAN;
+          if (H * LINE - (startOf(next) - pos) * u - t.d * u > H) fail(t.lane, next, tr('Missed one!'));
+        } else if (playing && mode === 'fail') { wait -= dt; if (wait <= 0) { mode = 'done'; K.over(why); } }
+        draw();
+      },
+    };
+  })();
+
+  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
