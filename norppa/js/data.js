@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '13 Nov 2026, 15:45';
+  PN.UPDATED = '13 Nov 2026, 15:50';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -332,7 +332,7 @@
      22 for 30, 19 for 45, 18 for a minute and 14 for two. A set board cleared faster is also more boards a minute, so quick players
      earn more a minute here than elsewhere and slow ones less: about 10, 21, 41 and 79 at the four skill levels. */
   /* Tunes for Ice Piano. Each note is a pitch and how long it lasts in sixteenths; a bar line (|) is only there for reading.
-     bpm is the speed on the sheet; the game starts at 73 and climbs by 14 every loop up to 125 (62 felt sluggish and 155 was far too fast).
+     bpm is the speed on the sheet; the game starts at 73 and steps up by 7 at every half loop to 125 (62 felt sluggish and 155 was far too fast).
      Ievan polkka is a traditional Finnish polka tune. */
   PN.SONGS = {
     ievan: { title: 'Ievan polkka', bpm: 100, notes:
