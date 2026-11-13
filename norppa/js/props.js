@@ -857,13 +857,31 @@
 
   /* ---------- things for the shore ----------
      Each returns { g, tick(t, env) }. env.night runs 0 (day) to 1 (dark). */
+  // Rounded skirts and a gently tapered tip, shared by every spruce in the game.
+  // Geometry is cached: the arcade forest still uses only three meshes per tree.
+  const firTiers = new Map();
+  U.firTier = (radius, height, segments) => {
+    const n = segments || 18, key = radius + '|' + height + '|' + n;
+    if (!firTiers.has(key)) {
+      const profile = [[0, 0], [0.88, 0.015], [1, 0.065], [0.98, 0.14], [0.77, 0.36], [0.47, 0.64], [0.18, 0.9], [0, 1]];
+      const geo = new T.LatheGeometry(profile.map((p) => new T.Vector2(p[0] * radius, (p[1] - 0.5) * height)), n), pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), t = y / height + 0.5;
+        const angle = Math.atan2(z, x), skirt = Math.max(0, 1 - t / 0.48);
+        const scallop = Math.cos(angle * 5 + 0.4), width = 1 + 0.055 * scallop * skirt;
+        pos.setXYZ(i, x * width + radius * 0.045 * t * t, y - height * 0.025 * (0.5 + 0.5 * scallop) * skirt, z * width);
+      }
+      geo.computeVertexNormals(); firTiers.set(key, geo);
+    }
+    return firTiers.get(key);
+  };
   function spruce(h, r, snow) {
     const g = new T.Group();
-    g.add(U.cyl(r * 0.1, r * 0.14, h * 0.25, U.mat(C.woodDark), 0, h * 0.12, 0, 7));
+    g.add(U.cyl(r * 0.10, r * 0.14, h * 0.25, U.mat(C.woodDark), 0, h * 0.12, 0, 10));
     for (let i = 0; i < 3; i++) {
-      const k = 1 - i * 0.27, y = h * (0.34 + i * 0.24), hh = h * 0.44 * (1 - i * 0.12);
-      g.add(U.cone(r * k, hh, U.mat(C.spruce, { roughness: 1 }), 0, y, 0, 10));
-      if (snow) g.add(U.cone(r * k * 0.86, hh * 0.72, U.mat(C.snow, { roughness: 1 }), 0, y + hh * 0.17, 0, 10));
+      const k = 1 - i * 0.27, y = h * (0.32 + i * 0.24), hh = h * 0.48 * (1 - i * 0.12);
+      g.add(U.mesh(U.firTier(r * k, hh), U.mat(i === 1 ? 0x376653 : C.spruce, { roughness: 1 }), (i % 2 ? -1 : 1) * r * 0.035, y, 0));
+      if (snow) g.add(U.mesh(U.firTier(r * k * 0.91, hh * 0.78), U.mat(C.snow, { roughness: 1 }), (i % 2 ? -1 : 1) * r * 0.035, y + hh * 0.14, 0));
     }
     return g;
   }

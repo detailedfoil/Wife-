@@ -107,16 +107,22 @@
     return aim;
   }
 
-  /* A cheap little spruce: three meshes, so a whole hillside of them stays quick. */
-  let treeBits = null;
+  /* Soft layered firs, merged once and shared by all the arcade games. */
+  let treeBits = null, treeCount = 0;
   function tree(k) {
     if (!treeBits) {
-      treeBits = { trunk: new T.CylinderGeometry(0.07, 0.1, 0.5, 6), green: new T.ConeGeometry(0.55, 1.5, 8), cap: new T.ConeGeometry(0.37, 0.85, 8) };
+      const model = PN.Props.spruce(1.95, 0.55, true), green = [], snow = [], trunk = [];
+      model.updateMatrixWorld(true);
+      model.children.forEach((m, i) => {
+        const parts = i === 0 ? trunk : m.material.color.getHex() === PN.COL.snow ? snow : green;
+        parts.push({ geo: m.geometry, m: m.matrixWorld, c: m.material.color });
+      });
+      treeBits = { trunk: U.merge(trunk), green: U.merge(green), cap: U.merge(snow) };
     }
-    const g = new T.Group();
-    g.add(U.mesh(treeBits.trunk, U.mat(PN.COL.woodDark), 0, 0.25, 0), U.mesh(treeBits.green, U.mat(PN.COL.spruce, { roughness: 1 }), 0, 1.1, 0),
-      U.mesh(treeBits.cap, U.mat(PN.COL.snow, { roughness: 1 }), 0, 1.52, 0));
+    const g = new T.Group(), foliage = U.mat(0xffffff, { roughness: 1, vertexColors: true });
+    g.add(U.mesh(treeBits.trunk, foliage), U.mesh(treeBits.green, foliage), U.mesh(treeBits.cap, foliage));
     g.scale.setScalar(k || 1);
+    g.rotation.y = treeCount++ * 2.39996;
     return g;
   }
 
@@ -622,7 +628,7 @@
   /* ================= Sled Run ================= */
   const sled = (() => {
     const SPAWN = -52, GONE = 9, LEN = 90, REP = 14;
-    let view = null, gtex = null, board = null, puffs = null;
+    let view = null, gtex = null, board = null, puffs = null, piste = null, banks = [];
     const pool = { tree: [], rock: [], fish: [], ramp: [] };
     let live = [], track = 2.1, x = 0, tx = 0, vx = 0, dist = 0, bonus = 0, rowAt = 0, free = 2, air = 0, dead = false, going = false, shown = -1, rows = 0, spray = 0;
 
@@ -630,17 +636,40 @@
       view = stage('#84bcf0', '#f7fbff', { ground: 0xdde8ff, hemi: 2.2, key: 1.5 });
       const sc = view.scene;
       sc.fog = new T.Fog(0xf1f6fd, 24, 54);
+      // A quiet snow wash replaces the busy, dark repeating oval pattern.
       gtex = U.tex(256, 256, (c, w, h) => {
-        c.fillStyle = '#f7faff'; c.fillRect(0, 0, w, h);
-        for (let i = 0; i < 90; i++) {
-          c.fillStyle = 'rgba(150,185,230,' + (0.1 + rnd() * 0.22) + ')';
-          c.beginPath(); c.ellipse(rnd() * w, rnd() * h, 2 + rnd() * 5, 6 + rnd() * 16, 0, 0, PI * 2); c.fill();
-        }
+        c.fillStyle = '#f8fbff'; c.fillRect(0, 0, w, h);
+        const wash = c.createLinearGradient(0, 0, w, 0);
+        wash.addColorStop(0, 'rgba(177,201,224,0)'); wash.addColorStop(0.5, 'rgba(177,201,224,0.055)'); wash.addColorStop(1, 'rgba(177,201,224,0)');
+        c.fillStyle = wash; c.fillRect(0, 0, w, h);
       });
       gtex.wrapS = gtex.wrapT = T.RepeatWrapping; gtex.repeat.set(9, REP);
-      const ground = new T.Mesh(new T.PlaneGeometry(60, LEN), new T.MeshStandardMaterial({ map: gtex, roughness: 1 }));
+      const ground = new T.Mesh(new T.PlaneGeometry(90, LEN), new T.MeshStandardMaterial({ map: gtex, roughness: 1 }));
       ground.rotation.x = -PI / 2; ground.position.z = -LEN / 2 + 12;
       sc.add(ground);
+      // The broad packed trail blends softly into the banks, without painted lanes.
+      const trailTex = U.tex(256, 16, (c, w, h) => {
+        const gr = c.createLinearGradient(0, 0, w, 0);
+        gr.addColorStop(0, 'rgba(184,207,229,0)'); gr.addColorStop(0.12, 'rgba(184,207,229,0.32)');
+        gr.addColorStop(0.3, 'rgba(220,233,245,0.26)'); gr.addColorStop(0.5, 'rgba(239,246,252,0.16)');
+        gr.addColorStop(0.7, 'rgba(220,233,245,0.26)'); gr.addColorStop(0.88, 'rgba(184,207,229,0.32)'); gr.addColorStop(1, 'rgba(184,207,229,0)');
+        c.fillStyle = gr; c.fillRect(0, 0, w, h);
+      });
+      piste = U.mesh(new T.PlaneGeometry(1, LEN), new T.MeshStandardMaterial({ map: trailTex, transparent: true, depthWrite: false, roughness: 1 }), 0, 0.012, -LEN / 2 + 12);
+      piste.rotation.x = -PI / 2; sc.add(piste);
+      // Smooth rolled snowbanks keep the route legible without hiding obstacles.
+      const profile = [[0, 0], [0.4, 0.08], [1.1, 0.27], [2.4, 0.48], [5, 0.27], [18, 0.10]];
+      [-1, 1].forEach((side) => {
+        const points = [], indices = [];
+        for (let j = 0; j <= 8; j++) for (const p of profile) points.push(side * p[0], p[1], 12 - j * LEN / 8);
+        for (let j = 0; j < 8; j++) for (let i = 0; i < profile.length - 1; i++) {
+          const a = j * profile.length + i, b = a + profile.length;
+          if (side > 0) indices.push(a, a + 1, b, a + 1, b + 1, b);
+          else indices.push(a, b, a + 1, a + 1, b, b + 1);
+        }
+        const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(points, 3)); geo.setIndex(indices); geo.computeVertexNormals();
+        const bank = U.mesh(geo, U.mat(0xf4f8ff, { roughness: 1 })); bank.userData.side = side; banks.push(bank); sc.add(bank);
+      });
       const wood = U.mat(PN.COL.woodLight, { roughness: 0.7 });
       board = U.group(U.box(0.62, 0.06, 1.5, wood, 0, 0.05, 0.05), U.rot(U.box(0.62, 0.06, 0.4, wood, 0, 0.16, -0.82), 0.7), U.box(0.5, 0.03, 0.06, U.mat(PN.COL.red), 0, 0.09, -0.4));
       sc.add(board);
@@ -725,6 +754,8 @@
         const speed = dead ? 0 : going ? 9 + Math.min(9, dist / 60) : 3;
         const dz = speed * dt;
         gtex.offset.y += dz * REP / LEN;
+        piste.scale.x = track * 2 + 1.4;
+        banks.forEach((bank) => { bank.position.x = bank.userData.side * (track + 0.55); });
         if (going && !dead) {
           dist += dz;
           const key = K.keys();

@@ -320,7 +320,7 @@
     // trees: all the green in one mesh and all the snow on them in another
     const green = [], white = [], M = new T.Matrix4(), Q = new T.Quaternion(), E = new T.Euler();
     const cGreen = new T.Color(0x2c5648), cDark = new T.Color(0x244a40), cTrunk = new T.Color(0x4d3323), cSnow = new T.Color(0xf2f6ff), cRock = new T.Color(0x7d8794);
-    const cone = (r, h) => new T.ConeGeometry(r, h, 9), r = U.rng(2024);
+    const cone = (r, h, far) => U.firTier(r, h, far ? 8 : 18), r = U.rng(2024);
     function tree(x, z, s, far) {
       const y0 = W.groundY(x, z) - 0.05, lean = far ? 0 : (r() - 0.5) * 0.08;
       const put = (list, geo, yy, color) => {
@@ -333,8 +333,8 @@
       const tiers = far ? 2 : 3;
       for (let i = 0; i < tiers; i++) {
         const k = 1 - i * (far ? 0.4 : 0.27), yy = hgt * (0.34 + i * (far ? 0.34 : 0.24)), hh = hgt * (far ? 0.62 : 0.46) * (1 - i * 0.1);
-        put(green, cone(rad * k, hh), yy, i % 2 ? cDark : cGreen);
-        put(white, cone(rad * k * 0.87, hh * 0.72), yy + hh * 0.17, cSnow);
+        put(green, cone(rad * k, hh, far), yy, i % 2 ? cDark : cGreen);
+        put(white, cone(rad * k * 0.91, hh * 0.78, far), yy + hh * 0.14, cSnow);
       }
       if (!far) put(white, new T.SphereGeometry(0.16, 8, 6), hgt * 1.02, cSnow);
     }
