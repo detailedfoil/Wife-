@@ -26,7 +26,9 @@
     tahti: [-3.3, -5.9, 0.4], palju: [1.9, -10.3, 0.2], laituri: [3.05, -9.25, 0.25],
   };
   /* These sit on the den itself: x, y, z in the den's own space. */
-  const ON_DEN = { lantern: [0, 1.0, 1.55], lights: [0, 0, 0], viirit: [0, 0, 0], ulkotulet: [0, 0.02, 2.3], ilmapallot: [0.55, 1.2, 0.2] };
+  const ON_DEN = { lantern: [0, 1.0, 1.55], lights: [0, 0, 0], viirit: [0, 0, 0], ulkotulet: [0, 0.02, 2.3], ilmapallot: [0.55, 1.2, 0.2],
+    // the cosy things at the door, where she sleeps; they settle onto the ground themselves (it drops away to the ice on the right)
+    talja: [0, 0, 2.05], ryijy: [-0.3, 0, 3.75], peitto: [-1.3, 0, 2.75], tyynyt: [1.5, 0, 3.0], kynttilat: [0, 0, 0], verho: [0, 0, 0] };
   W.SPOTS = SPOTS;
 
   /* ---------- the lie of the land ---------- */
@@ -446,7 +448,10 @@
       const want = !!placed[id];
       if (want && !decor[id]) {
         const d = id === 'lights' || id === 'viirit' ? PN.Props.decor(id, W.DEN.arch) : PN.Props.decor(id);
-        if (ON_DEN[id]) { const o = ON_DEN[id]; d.g.position.set(o[0], o[1], o[2]); denG.add(d.g); }
+        if (ON_DEN[id]) {
+          const o = ON_DEN[id]; d.g.position.set(o[0], o[1], o[2]); denG.add(d.g);
+          if (d.conform) d.conform((x, z) => denGround(o[0] + x, o[2] + z) - o[1]);
+        }
         else {
           const s = SPOTS[id], y0 = W.groundY(s[0], s[1]);
           d.g.position.set(s[0], y0, s[1]); d.g.rotation.y = s[2];
@@ -467,6 +472,12 @@
       }
     });
   };
+  /* How high the ground is under a point given in the den's own space, measured from the den's floor. */
+  function denGround(lx, lz) {
+    const c = Math.cos(W.DEN.heading), sn = Math.sin(W.DEN.heading);
+    return W.groundY(W.DEN.x + lx * c + lz * sn, W.DEN.z - lx * sn + lz * c) - denG.position.y;
+  }
+  W.decorOf = (id) => decor[id] || null;
   W.decorAt = (id, out) => {
     if (ON_DEN[id]) { const o = ON_DEN[id]; return denG.localToWorld(out.set(o[0], o[1], o[2])); }
     const s = SPOTS[id]; return out.set(s[0], W.groundY(s[0], s[1]), s[1]);

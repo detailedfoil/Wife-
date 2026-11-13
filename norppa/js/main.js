@@ -60,7 +60,7 @@
     W.scene.add(seal.g); W.pickables.push(seal.g);
     const d = W.DEN;
     if (isNew) seal.place(d.inside.x, W.groundY(d.inside.x, d.inside.z), d.inside.z, d.heading);
-    else if (state.asleep) { seal.place(d.sleep.x, W.groundY(d.sleep.x, d.sleep.z), d.sleep.z, d.heading); seal.asleep = true; }
+    else if (state.asleep) { seal.place(d.sleep.x, W.groundY(d.sleep.x, d.sleep.z), d.sleep.z, bedHeading()); seal.asleep = true; }
     else seal.place(W.HOME.x, W.groundY(W.HOME.x, W.HOME.z), W.HOME.z, W.HOME_HEADING);
     anchor.copy(seal.g.position);
     syncLook();
@@ -340,6 +340,10 @@
     const awake = !seal.asleep;
     seal.setMood(S.mood(state));
     seal.scared = state.medLate && awake && !bedBusy;
+    // the snuggle blanket: over her while she sleeps in the den, folded by the door the rest of the time
+    seal.cosy = !!state.placed.peitto;
+    const folded = W.decorOf('peitto');
+    if (folded) folded.setOut(!seal.asleep);
     const sulk = state.grudge > 0 && !state.medLate && awake && !bedBusy;
     if (sulk !== seal.sulk && !G.busy) {
       seal.sulk = sulk;
@@ -387,14 +391,16 @@
     else if (r < 0.88) { seal.gesture('yawn'); A.play('yawn'); }
   }
 
+  /* On a hide or under her blanket she curls up sideways across the doorway, so you can see her all snug. */
+  function bedHeading() { return W.DEN.heading + (state.placed.peitto || state.placed.talja ? 0.95 : 0); }
   async function goToBed() {
     bedBusy = true;
     if (washing) G.endWash(false);
     const d = W.DEN;
     seal.sulk = false;
-    await seal.moveTo(d.sleep.x, d.sleep.z, { speed: 1.9, face: d.heading });
+    await seal.moveTo(d.sleep.x, d.sleep.z, { speed: 1.9, face: bedHeading() });
     if (state.asleep) {
-      seal.heading = d.heading;
+      seal.heading = bedHeading();
       seal.gesture('yawn', true); A.play('yawn');
       await wait(1.6);
       if (state.asleep) { seal.asleep = true; zT = 0.6; }

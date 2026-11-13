@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '13 Nov 2026, 01:25';
+  PN.UPDATED = '13 Nov 2026, 01:52';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -137,7 +137,7 @@
      so putting one out tidies the other away. */
   const DECOR_CATS = [
     { id: 'valot', t: 'Lights' }, { id: 'leiri', t: 'Camp and comfort' }, { id: 'lumi', t: 'Snow and ice' },
-    { id: 'juhla', t: 'Festive' }, { id: 'luonto', t: 'Nature and friends' },
+    { id: 'juhla', t: 'Festive' }, { id: 'luonto', t: 'Nature and friends' }, { id: 'koti', t: 'Cosy den' },
   ];
   const DECOR = [
     { id: 'lantern', cat: 'valot', fi: 'Lyhty', en: 'Lantern', price: 0, note: 'Keeps the dark cosy.' },
@@ -172,6 +172,14 @@
     { id: 'feeder', cat: 'luonto', fi: 'Lintulauta', en: 'Bird table', price: 180, note: 'A kuukkeli, the friendly Siberian jay, likes to visit.' },
     { id: 'joutsen', cat: 'luonto', fi: 'Laulujoutsen', en: 'Whooper swan', price: 220, note: "Finland's national bird, gliding by." },
     { id: 'poro', cat: 'luonto', fi: 'Poro', en: 'Reindeer', price: 260, note: 'Wanders over from the fells to say hello.' },
+
+    // for the den itself: rugs, a blanket and soft things, all at the door where she sleeps
+    { id: 'tyynyt', cat: 'koti', fi: 'Tyynyt', en: 'Cushions', price: 100, note: 'A soft heap of cushions by the door, for lounging about.' },
+    { id: 'kynttilat', cat: 'koti', fi: 'Kynttilät', en: 'Candlelight', price: 120, note: 'Candles in jars by the door, and a warm glow from inside the den once it gets dark.' },
+    { id: 'verho', cat: 'koti', fi: 'Oviverho', en: 'Door curtain', price: 140, note: 'A woollen curtain over the doorway, tied back at the sides. Keeps the draught out.' },
+    { id: 'talja', cat: 'koti', fi: 'Porontalja', en: 'Reindeer hide', price: 150, note: 'A soft reindeer hide to sleep on, as in every Lapland cabin. It lies in the doorway of the den.' },
+    { id: 'ryijy', cat: 'koti', fi: 'Ryijy', en: 'Rya rug', price: 170, note: 'A thick, shaggy Finnish rug, knotted by hand. Laid out in front of the den.' },
+    { id: 'peitto', cat: 'koti', fi: 'Torkkupeitto', en: 'Snuggle blanket', price: 190, note: 'A knitted wool blanket. At night she sleeps tucked up under it; by day it waits folded by the door.' },
   ];
 
   /* Finds from the lake bottom. */

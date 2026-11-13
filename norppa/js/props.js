@@ -117,6 +117,46 @@
     } };
   }
   const P = PN.Props = {};
+  /* A box with soft, rounded edges (a superellipsoid): folded cloth, cushions. e near 1 is a ball, near 0 a box. */
+  function softBox(w, h, d, e) {
+    const g = new T.SphereGeometry(1, 28, 18), p = g.attributes.position;
+    const f = (v) => Math.sign(v) * Math.pow(Math.abs(v), e);
+    for (let i = 0; i < p.count; i++) p.setXYZ(i, f(p.getX(i)) * w / 2, f(p.getY(i)) * h / 2, f(p.getZ(i)) * d / 2);
+    g.computeVertexNormals();
+    return g;
+  }
+  /* A cushion: square from above with soft corners, plump in the middle and thin at the edges. */
+  function cushionGeo(w, h, d) {
+    const g = new T.SphereGeometry(1, 28, 18), p = g.attributes.position;
+    const f = (v, e) => Math.sign(v) * Math.pow(Math.abs(v), e);
+    for (let i = 0; i < p.count; i++) {
+      const x = f(p.getX(i), 0.38), z = f(p.getZ(i), 0.38), edge = Math.max(Math.abs(x), Math.abs(z));
+      p.setXYZ(i, x * w / 2, p.getY(i) * h / 2 * (1 - 0.55 * edge * edge), z * d / 2);
+    }
+    g.computeVertexNormals();
+    return g;
+  }
+  /* Knitted wool: cream, red bands, a row of little hearts, blue diamonds and the V of the stitches. Shared by the folded
+     blanket at the den door and the one she sleeps under. */
+  let knitTex = null;
+  P.knitTex = function () {
+    if (knitTex) return knitTex;
+    knitTex = U.tex(256, 256, (c, w, h) => {
+      c.fillStyle = '#f3e9d6'; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#b8322b'; [[0, 24], [30, 6], [220, 6], [232, 24]].forEach((b) => c.fillRect(0, b[0], w, b[1]));
+      for (let x = 16; x < w; x += 32) {
+        c.beginPath(); c.moveTo(x, 138); c.bezierCurveTo(x - 2, 135, x - 11, 130, x - 11, 124); c.bezierCurveTo(x - 11, 117, x - 3, 115, x, 121);
+        c.bezierCurveTo(x + 3, 115, x + 11, 117, x + 11, 124); c.bezierCurveTo(x + 11, 130, x + 2, 135, x, 138); c.fill();
+      }
+      c.fillStyle = '#2f5d8c';
+      for (let x = 8; x < w; x += 16) [70, 186].forEach((y) => { c.beginPath(); c.moveTo(x, y - 6); c.lineTo(x + 6, y); c.lineTo(x, y + 6); c.lineTo(x - 6, y); c.fill(); });
+      c.globalAlpha = 0.16; c.strokeStyle = '#5a3a2a'; c.lineWidth = 1;
+      for (let y = 0; y < h; y += 6) for (let x = 0; x < w; x += 6) { c.beginPath(); c.moveTo(x, y); c.lineTo(x + 3, y + 5); c.lineTo(x + 6, y); c.stroke(); }
+      c.globalAlpha = 1;
+    });
+    knitTex.wrapS = knitTex.wrapT = T.RepeatWrapping;
+    return knitTex;
+  };
 
   /* ---------- fish ---------- */
   function fishTexture(look) {
@@ -1240,6 +1280,187 @@
         head.rotation.x = c > 6 && c < 8 ? Math.sin((c - 6) / 2 * Math.PI) * 0.5 : Math.sin(t * 0.8) * 0.04; head.rotation.y = Math.sin(t * 0.35) * 0.35;
       } };
     },
+    /* ---- the cosy den: all of these sit on the den, in its own space (the door is at z 1.9) ---- */
+    tyynyt() {
+      const g = new T.Group(), heap = new T.Group();
+      const pillow = (col, w, d) => U.mesh(cushionGeo(w, 0.2, d), U.mat(col, { roughness: 0.95 }), 0, 0, 0);
+      const a = pillow(0xe0a93b, 0.5, 0.5), b = pillow(0x3c8c8a, 0.46, 0.46), c = pillow(0xd9828f, 0.42, 0.42);
+      a.position.set(-0.08, 0.1, 0.02); a.rotation.y = 0.3;
+      b.position.set(0.22, 0.1, -0.16); b.rotation.set(0.05, -0.4, 0.04);
+      c.position.set(0.06, 0.27, -0.06); c.rotation.set(-0.95, 0.2, 0.1);              // leaning on the others
+      [a, b].forEach((q) => q.add(U.ball(0.025, U.mat(0xf7f1e3), 0, 0.1, 0, 1, 0.5, 1, 8)));
+      // and a little red heart on top
+      const hs = new T.Shape();
+      hs.moveTo(0, -0.11); hs.bezierCurveTo(-0.02, -0.08, -0.14, -0.02, -0.14, 0.04); hs.bezierCurveTo(-0.14, 0.11, -0.05, 0.13, 0, 0.07);
+      hs.bezierCurveTo(0.05, 0.13, 0.14, 0.11, 0.14, 0.04); hs.bezierCurveTo(0.14, -0.02, 0.02, -0.08, 0, -0.11);
+      const heart = U.mesh(new T.ExtrudeGeometry(hs, { depth: 0.04, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 4, curveSegments: 10 }), U.mat(0xc8323c, { roughness: 0.9 }), 0.3, 0.17, 0.1);
+      heart.rotation.set(-1.15, 0.4, 0);
+      heap.add(a, b, c, heart);
+      heap.rotation.y = -0.5;
+      g.add(heap);
+      return { g, conform(yAt) { heap.position.y = Math.min(yAt(-0.15, 0), yAt(0.2, -0.15)) + 0.01; } };
+    },
+    kynttilat() {
+      const g = new T.Group(), flames = [], halos = [], spots = [[-0.92, 2.18, 1], [-0.72, 2.42, 0.62]];
+      const glass = new T.MeshStandardMaterial({ color: 0xffe6c0, roughness: 0.12, transparent: true, opacity: 0.45, emissive: 0xff9a3a, emissiveIntensity: 0.35, depthWrite: false });
+      const wax = U.mat(0xf8f0dc, { roughness: 0.7, emissive: 0xffb060, emissiveIntensity: 0.25 });
+      const jars = spots.map((q, i) => {
+        const j = new T.Group(), k = q[2], fl = makeFlame(0.42 * k), halo = U.halo(0xffa04a, 0.75 * k, 0.5);
+        fl.g.position.y = 0.17 * k; halo.position.y = 0.2 * k;
+        const jar = U.mesh(new T.CylinderGeometry(0.075 * k, 0.07 * k, 0.2 * k, 14, 1, true), glass, 0, 0.1 * k, 0);
+        jar.renderOrder = 1;
+        j.add(U.cyl(0.058 * k, 0.058 * k, 0.12 * k, wax, 0, 0.06 * k, 0, 12), U.cyl(0.004, 0.004, 0.04 * k, U.mat(0x2b2f36), 0, 0.135 * k, 0, 4), jar, fl.g, halo);
+        j.position.set(q[0], 0, q[1]);
+        g.add(j); flames.push(fl); halos.push(halo);
+        return j;
+      });
+      // the warm glow from inside the den, laid over the dark doorway
+      const glowTex = U.tex(128, 128, (c, w, h) => {
+        const r = c.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2);
+        r.addColorStop(0, 'rgba(255,184,96,1)'); r.addColorStop(0.45, 'rgba(255,128,48,0.5)'); r.addColorStop(1, 'rgba(255,96,24,0)');
+        c.fillStyle = r; c.fillRect(0, 0, w, h);
+      });
+      const glow = new T.Mesh(new T.CircleGeometry(0.86, 28, 0, Math.PI), new T.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0.2, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      glow.position.set(0, 0, 1.875); glow.userData.noThumb = true; glow.renderOrder = 2;
+      g.add(glow);
+      return { g, conform(yAt) { jars.forEach((j) => { j.position.y = yAt(j.position.x, j.position.z); }); glow.position.y = Math.max(yAt(-0.4, 1.9), yAt(0.4, 1.9)) - 0.02; },
+        tick(t, env) {
+          flames.forEach((f, i) => f.tick(t, i * 1.7));
+          halos.forEach((h, i) => { h.material.opacity = (0.25 + 0.55 * env.night) * (0.85 + 0.15 * Math.sin(t * 8 + i * 2)); });
+          glow.material.opacity = (0.18 + 0.72 * env.night) * (0.9 + 0.06 * Math.sin(t * 5.3) + 0.04 * Math.sin(t * 13.1));
+        } };
+    },
+    verho() {
+      const tex = U.tex(128, 256, (c, w, h) => {
+        c.fillStyle = '#8f2a2a'; c.fillRect(0, 0, w, h);
+        c.fillStyle = '#f2e6cf'; c.fillRect(0, h - 42, w, 6); c.fillRect(0, h - 16, w, 6);                    // cream bands near the hem
+        c.fillStyle = '#2f5d8c'; c.fillRect(0, h - 34, w, 16);
+        c.fillStyle = '#f0b429'; for (let x = 4; x < w; x += 16) { c.beginPath(); c.moveTo(x, h - 26); c.lineTo(x + 4, h - 31); c.lineTo(x + 8, h - 26); c.lineTo(x + 4, h - 21); c.fill(); }
+        c.globalAlpha = 0.12; c.fillStyle = '#000'; for (let y = 0; y < h; y += 3) c.fillRect(0, y, w, 1);   // the weave
+        c.globalAlpha = 1;
+      });
+      const wool = new T.MeshStandardMaterial({ map: tex, roughness: 1, side: T.DoubleSide });
+      const g = new T.Group(), panels = [];
+      // a panel hangs from the top of the arch, is gathered back at the side by a tie, and falls to the ground
+      const panel = (sd) => {
+        const nu = 10, nv = 18, pos = [], uv = [], idx = [];
+        for (let j = 0; j <= nv; j++) {
+          const v = j / nv;
+          for (let i = 0; i <= nu; i++) {
+            const u = i / nu;
+            const ao = (88 - 64 * Math.min(1, v / 0.42)) * Math.PI / 180;                  // the outer edge follows the arch, then drops
+            const ox = v < 0.42 ? Math.cos(ao) * 1.02 : 0.98 + 0.06 * (v - 0.42), oy = v < 0.42 ? Math.sin(ao) * 1.02 : U.lerp(0.43, -0.3, (v - 0.42) / 0.58);
+            const tie = 0.5, ix = v < tie ? U.lerp(0.04, 0.82, Math.pow(v / tie, 0.8)) : U.lerp(0.82, 0.66, (v - tie) / (1 - tie));
+            const iy = v < tie ? U.lerp(0.99, 0.4, v / tie) : U.lerp(0.4, -0.3, (v - tie) / (1 - tie));
+            const x = U.lerp(ox, ix, u), y = U.lerp(oy, iy, u);
+            const fold = Math.sin(u * Math.PI * 5) * (0.02 + 0.03 * Math.abs(v - tie) * 2);
+            pos.push(sd * x, y, 2.03 + fold + 0.05 * u * (1 - Math.abs(v - tie) * 2));
+            uv.push(sd > 0 ? u : 1 - u, 1 - v);
+          }
+        }
+        for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a = j * (nu + 1) + i, b = a + 1, c2 = a + nu + 1, d = c2 + 1; idx.push(a, c2, b, b, c2, d); }
+        const geo = new T.BufferGeometry();
+        geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+        geo.setIndex(idx); geo.computeVertexNormals();
+        const m = new T.Mesh(geo, wool);
+        const cord = U.rot(U.torus(0.09, 0.022, U.mat(0xf0c860, { roughness: 0.6 }), sd * 0.86, 0.4, 2.07, TAU, 14), 0, 0.3 * sd, 1.2 * sd);
+        const tassel = U.cone(0.035, 0.12, U.mat(0xf0c860, { roughness: 0.8 }), sd * 0.9, 0.27, 2.1, 8);
+        g.add(m, cord, tassel); panels.push(m);
+      };
+      panel(-1); panel(1);
+      // a soft swag across the top
+      const swag = new T.Mesh(new T.TubeGeometry(new T.QuadraticBezierCurve3(new T.Vector3(-0.42, 0.96, 2.06), new T.Vector3(0, 0.78, 2.12), new T.Vector3(0.42, 0.96, 2.06)), 16, 0.06, 8, false), wool);
+      g.add(swag);
+      return { g, conform(yAt) {
+        // the hem rests on the ground on each side, however high the ground is there
+        panels.forEach((m) => {
+          const p = m.geometry.attributes.position;
+          for (let i = 0; i < p.count; i++) { const gy = yAt(p.getX(i), p.getZ(i)) + 0.01; if (p.getY(i) < gy) p.setY(i, gy); }
+          p.needsUpdate = true; m.geometry.computeVertexNormals();
+        });
+      } };
+    },
+    talja() {
+      // a reindeer hide: warm brown fur, darker down the spine, paler at the edges, in the shape of a hide
+      const W2 = 1.5, L2 = 1.9;
+      const tex = U.tex(192, 256, (c, w, h) => {
+        const r = U.rng(31);
+        c.save(); c.translate(w / 2, h / 2);
+        const sx = w / 2 / 1.0, sy = h / 2 / 1.0;
+        c.beginPath();
+        // outline: neck at the top, four leg flaps, a rounded rump
+        const pts = [[0, -0.98], [0.2, -0.88], [0.26, -0.68], [0.62, -0.72], [0.86, -0.62], [0.6, -0.46], [0.66, -0.1], [0.62, 0.3], [0.92, 0.48], [0.84, 0.66], [0.52, 0.6],
+          [0.38, 0.86], [0.12, 0.97], [-0.12, 0.97], [-0.38, 0.86], [-0.52, 0.6], [-0.84, 0.66], [-0.92, 0.48], [-0.62, 0.3], [-0.66, -0.1], [-0.6, -0.46], [-0.86, -0.62], [-0.62, -0.72], [-0.26, -0.68], [-0.2, -0.88]];
+        pts.forEach((q, i) => { const x = q[0] * sx * 0.98, y = q[1] * sy * 0.98; if (!i) c.moveTo(x, y); else { const p0 = pts[i - 1]; c.quadraticCurveTo(p0[0] * sx * 0.98, p0[1] * sy * 0.98, (p0[0] + q[0]) / 2 * sx * 0.98, (p0[1] + q[1]) / 2 * sy * 0.98); } });
+        c.closePath();
+        const gr = c.createRadialGradient(0, 0, 4, 0, 0, w * 0.62);
+        gr.addColorStop(0, '#7a5638'); gr.addColorStop(0.6, '#9c7656'); gr.addColorStop(1, '#d9c4a6');
+        c.fillStyle = gr; c.fill();
+        c.clip();
+        c.fillStyle = 'rgba(70,46,30,0.55)'; c.fillRect(-w * 0.07, -h / 2, w * 0.14, h);                                  // the darker spine
+        for (let i = 0; i < 2600; i++) {                                                                                  // fur strokes
+          const x = (r() - 0.5) * w, y = (r() - 0.5) * h, l = 3 + r() * 6, a = Math.atan2(y, x) + (r() - 0.5) * 0.6;
+          c.strokeStyle = r() < 0.5 ? 'rgba(255,240,220,0.18)' : 'rgba(40,24,14,0.16)'; c.lineWidth = 1;
+          c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke();
+        }
+        c.restore();
+      });
+      const geo = new T.PlaneGeometry(W2, L2, 14, 18);
+      geo.rotateX(-Math.PI / 2);
+      const hide = U.mesh(geo, new T.MeshStandardMaterial({ map: tex, roughness: 1, alphaTest: 0.5, side: T.DoubleSide }), 0, 0, 0);
+      hide.rotation.y = 0.95;                                     // lying the way she curls up on it
+      return { g: U.group(hide), flat: true,
+        conform(yAt) {
+          const p = geo.attributes.position, cs = Math.cos(hide.rotation.y), sn = Math.sin(hide.rotation.y);
+          for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, yAt(x * cs + z * sn, -x * sn + z * cs) + 0.012); }
+          p.needsUpdate = true; geo.computeVertexNormals(); geo.computeBoundingSphere();
+        } };
+    },
+    ryijy() {
+      // a rya rug: rich reds and oranges round a stepped diamond, a dark blue border and fringe at both ends
+      const tex = U.tex(160, 256, (c, w, h) => {
+        const r = U.rng(53), F = 18;
+        c.clearRect(0, 0, w, h);
+        c.fillStyle = '#26406b'; c.fillRect(0, F, w, h - 2 * F);
+        c.fillStyle = '#b8322b'; c.fillRect(10, F + 10, w - 20, h - 2 * F - 20);
+        const steps = ['#e0a93b', '#d4602e', '#f3e3c3', '#9c2a2a', '#e0a93b', '#26406b'];
+        steps.forEach((col, i) => {                                                                              // the stepped diamond in the middle
+          const rx = (w / 2 - 22) * (1 - i / steps.length), ry = (h / 2 - F - 26) * (1 - i / steps.length);
+          c.fillStyle = col; c.beginPath(); c.moveTo(w / 2, h / 2 - ry); c.lineTo(w / 2 + rx, h / 2); c.lineTo(w / 2, h / 2 + ry); c.lineTo(w / 2 - rx, h / 2); c.closePath(); c.fill();
+        });
+        c.fillStyle = '#f3e3c3';                                                                                 // little stars in the corners
+        [[30, F + 30], [w - 30, F + 30], [30, h - F - 30], [w - 30, h - F - 30]].forEach((q) => { for (let a = 0; a < 4; a++) { c.save(); c.translate(q[0], q[1]); c.rotate(a * Math.PI / 2); c.fillRect(-2, 0, 4, 9); c.restore(); } });
+        for (let i = 0; i < 3500; i++) {                                                                         // the shaggy pile
+          const x = r() * w, y = F + r() * (h - 2 * F);
+          c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'; c.fillRect(x, y, 1 + r() * 2, 2 + r() * 3);
+        }
+        c.fillStyle = '#efe2c6';                                                                                 // the fringe
+        for (let x = 3; x < w - 2; x += 6) { c.fillRect(x, 2 + r() * 3, 3, F - 2); c.fillRect(x, h - F, 3, F - 2 - r() * 3); }
+      });
+      const geo = new T.PlaneGeometry(1.15, 1.7, 10, 14);
+      geo.rotateX(-Math.PI / 2);
+      const rug = U.mesh(geo, new T.MeshStandardMaterial({ map: tex, roughness: 1, alphaTest: 0.5, side: T.DoubleSide }), 0, 0, 0);
+      rug.rotation.y = 1.35;
+      return { g: U.group(rug), flat: true,
+        conform(yAt) {
+          const p = geo.attributes.position, cs = Math.cos(rug.rotation.y), sn = Math.sin(rug.rotation.y);
+          for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, yAt(x * cs + z * sn, -x * sn + z * cs) + 0.014); }
+          p.needsUpdate = true; geo.computeVertexNormals(); geo.computeBoundingSphere();
+        } };
+    },
+    peitto() {
+      const tex = P.knitTex().clone(); tex.needsUpdate = true; tex.repeat.set(1, 0.6);
+      const wool = new T.MeshStandardMaterial({ map: tex, roughness: 1 });
+      const g = new T.Group(), pile = new T.Group();
+      [[0, 0.055, 0, 0], [0.015, 0.155, -0.01, 0.06], [-0.01, 0.25, 0.012, -0.05]].forEach((q, i) => {
+        const slab = U.mesh(softBox(0.78 - i * 0.03, 0.11, 0.52 - i * 0.02, 0.32), wool, q[0], q[1], q[2]);
+        slab.rotation.y = q[3];
+        pile.add(slab);
+      });
+      pile.rotation.y = 0.4;
+      g.add(pile);
+      return { g, setOut(on) { pile.visible = on; }, conform(yAt) { pile.position.y = Math.min(yAt(-0.3, 0), yAt(0.3, 0), yAt(0, 0.2)) - 0.005; } };
+    },
   };
   P.decor = (id, arg) => (decor[id] ? decor[id](arg) : { g: new T.Group() });
 
@@ -1368,7 +1589,7 @@
       Object.keys(PN.items).forEach((id) => {
         const it = PN.items[id], obj = P.item(id);
         const glows = [];
-        obj.traverse((o) => { if (o.isSprite) glows.push(o); });       // glows look odd in small pictures, and throw the framing off
+        obj.traverse((o) => { if (o.isSprite || o.userData.noThumb) glows.push(o); });       // glows look odd in small pictures, and throw the framing off
         glows.forEach((o) => o.parent.remove(o));
         scene.add(obj);
         box.setFromObject(obj); box.getCenter(c); box.getSize(s);
