@@ -42,6 +42,7 @@
     lock: '<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 018 0v3"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
     poo: '<path d="M8 19.5c-3.2 0-4-3.2-2-5-1-2 .2-4 3-4-.4-2 1.2-3.8 3.6-4-.4 2 2 2.2 2 4 2.6 0 4 2 3 4 2 1.8 1.2 5-2 5H8z"/>',
+    stack: '<rect x="7" y="4" width="9" height="4.5" rx="1.5"/><rect x="5" y="9.75" width="12" height="4.5" rx="1.5"/><rect x="4" y="15.5" width="16" height="4.5" rx="1.5"/>',
     up: '<path d="M12 19V6M6 11l6-6 6 6"/>',
     seal: '<path d="M2.5 17c.5-5.5 4.5-9.5 9.5-9.5 4 0 7.2 2.6 8 6.2.4 1.8-.8 3.3-2.6 3.3H2.5z"/><circle class="f" cx="15.5" cy="12" r="1.1"/>',
     thermo: '<path d="M10 13.5V5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0z"/>',

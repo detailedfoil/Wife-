@@ -1,9 +1,10 @@
-/* Pikku Norppa: the arcade. Six mini-games, each on a little stage of its own.
+/* Pikku Norppa: the arcade. Seven mini-games, each on a little stage of its own.
    Swimmy Seal: tap to swim up, slip between the ice and the kelp. Three goes, the best counts.
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
    Blackjack: beat the dealer for sardines. Löyly: keep the sauna heat just right.
+   Ice Stack: set sliding floes down on a tower; the overhang breaks off.
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
 (function (PN) {
   'use strict';
@@ -994,5 +995,139 @@
     };
   })();
 
-  G.ext.swim = swim; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
+  /* ================= Ice Stack ================= */
+  /* Stack, on ice: a floe slides across, tap to set it down. Whatever hangs over the edge breaks off, so the tower narrows.
+     Miss the tower altogether and the floe is lost; the third lost floe ends the game. */
+  const stack = (() => {
+    const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 3, HOP = 0.28, KEEP = 46;
+    const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
+    let view = null, bodyGeo = null, snowGeo = null, puffs = null;
+    let blocks = [], cuts = [], cur = null, top = null;
+    let score = 0, misses = 0, streak = 0, turn = 0, mode = 'idle', wait = 0, camY = 0, hopT = 1;
+    const at = new T.Vector3(), from = new T.Vector3(), to = new T.Vector3();
+
+    function floe(w, d, n) {
+      const g = new T.Group(), col = new T.Color().setHSL((0.56 + (n % 60) / 60) % 1, 0.7, 0.6);
+      g.add(new T.Mesh(bodyGeo, U.mat(col.getHex(), { roughness: 0.45 })), new T.Mesh(snowGeo, U.mat(0xffffff, { roughness: 1 })));
+      g.scale.set(w, 1, d);
+      view.scene.add(g);
+      return g;
+    }
+    function build() {
+      view = stage('#7fb6ee', '#e9f4ff', { ground: 0xcfe2ff, hemi: 2.1, key: 1.6 });
+      bodyGeo = new T.BoxGeometry(1, BH - SNOW, 1); bodyGeo.translate(0, (BH - SNOW) / 2, 0);
+      snowGeo = new T.BoxGeometry(1.03, SNOW, 1.03); snowGeo.translate(0, BH - SNOW / 2, 0);
+      const sc = view.scene;
+      // the iceberg it all stands on, and the lake far below
+      const berg = U.mesh(new T.BoxGeometry(S0, 14, S0), U.mat(0x9fd0f2, { roughness: 0.45 }), 0, -7 - SNOW, 0);
+      const cap = U.mesh(new T.BoxGeometry(S0 * 1.03, SNOW, S0 * 1.03), U.mat(0xffffff, { roughness: 1 }), 0, -SNOW / 2, 0);
+      const lake = U.mesh(new T.CircleGeometry(120, 40), U.mat(0x3f86c9, { roughness: 0.35 }), 0, -11, 0);
+      lake.rotation.x = -PI / 2;
+      sc.add(berg, cap, lake);
+      for (let i = 0; i < 22; i++) {
+        const a = rnd() * PI * 2, r = 4 + rnd() * 30, s = 0.8 + rnd() * 1.8;
+        const f = U.mesh(new T.CylinderGeometry(s, s * 0.9, 0.25, 7), U.mat(0xffffff, { roughness: 1 }), Math.cos(a) * r, -10.9, Math.sin(a) * r);
+        f.rotation.y = rnd() * 3; sc.add(f);
+      }
+      puffs = Puffs(sc, 40, 0xffffff, 1);
+    }
+    const lostText = () => misses + '/' + LIVES;
+    function hopTo() { from.copy(at); hopT = 0; }
+    function spawn() {
+      const axis = turn++ % 2 ? 'z' : 'x';
+      cur = { g: floe(top.w, top.d, score + 1), axis, p: -R, v: speedAt(score), w: top.w, d: top.d };
+      cur.g.position.set(top.x + (axis === 'x' ? -R : 0), top.y, top.z + (axis === 'z' ? -R : 0));
+      mode = 'slide'; hopTo();
+    }
+    function fall(g, sx, sz) { cuts.push({ g, vx: sx * 1.6, vz: sz * 1.6, vy: 0, rx: sz * 2.4, rz: -sx * 2.4 }); }
+    function drop() {
+      if (mode !== 'slide') return;
+      const x = cur.axis === 'x', c = x ? top.x : top.z, size = x ? top.w : top.d;
+      const delta = cur.p, ad = Math.abs(delta), sgn = delta < 0 ? -1 : 1;
+      if (ad >= size) {                                        // clean past the tower: the floe is lost
+        fall(cur.g, x ? sgn : 0, x ? 0 : sgn); cur = null; hopTo();
+        misses++; streak = 0; K.time(lostText()); K.big(tr('Miss')); A.play('nope'); actor.gesture('no', true);
+        mode = 'rest'; wait = 0.75;
+        return;
+      }
+      let keep = size, mid = c;
+      if (ad <= TOL) {                                         // spot on: nothing breaks, and a run of them wins some width back
+        streak++;
+        if (streak >= 3 && size < S0) keep = Math.min(S0, size + GROW);
+        K.big(tr('Perfect!')); A.play('match');
+        puffs.emit(top.x, top.y + 0.1, top.z, 10, 1.6, 0.1, 0.5, 4);
+      } else {
+        streak = 0; keep = size - ad; mid = c + delta / 2;
+        const off = floe(x ? ad : top.w, x ? top.d : ad, score + 1), oc = c + delta + sgn * (size - ad) / 2;
+        off.position.set(x ? oc : top.x, top.y, x ? top.z : oc);
+        fall(off, x ? sgn : 0, x ? 0 : sgn);
+        A.play('pop');
+      }
+      top = { x: x ? mid : top.x, z: x ? top.z : mid, w: x ? keep : top.w, d: x ? top.d : keep, y: top.y + BH };
+      cur.g.scale.set(top.w, 1, top.d); cur.g.position.set(top.x, top.y - BH, top.z);
+      blocks.push(cur.g); cur = null;
+      if (blocks.length > KEEP) view.scene.remove(blocks.shift());
+      score++; K.score(score); K.hint('');
+      if (score % 10 === 0) { A.play('award'); actor.gesture('happy', true); }
+      mode = 'rest'; wait = 0.16;
+    }
+    return {
+      label: 'Floes', label2: 'Lost', hint: 'Tap to set the floe down on the one below.',
+      view: () => view,
+      peek: () => (cur && mode === 'slide' ? cur.p : null),
+      start() {
+        if (!view) build();
+        blocks.concat(cuts.map((c) => c.g)).forEach((g) => view.scene.remove(g));
+        if (cur) view.scene.remove(cur.g);
+        blocks = []; cuts = []; cur = null; puffs.clear();
+        top = { x: 0, z: 0, w: S0, d: S0, y: 0 };
+        score = 0; misses = 0; streak = 0; turn = 0; mode = 'idle'; camY = 0; hopT = 1;
+        cast(view, 0.8, false);
+        face(PI / 4);
+        at.set(0, 0, 0);
+        K.time(lostText());
+      },
+      go() { spawn(); },
+      pointer(type) { if (type === 'down') drop(); },
+      key(k) { if (k === ' ' || k === 'Enter' || k === 'ArrowDown' || k === 'ArrowUp') drop(); },
+      update(dt, playing) {
+        clock += dt;
+        const half = lens(view), d = (R * 0.707 + S0 * 0.75) / Math.tan(half), k = d * 0.577;
+        camY = U.damp(camY, top.y, 4, dt);
+        view.camera.position.set(k, camY + 1.2 + k, k);
+        view.camera.lookAt(0, camY + 1.2, 0);
+        if (cur && mode === 'slide' && playing) {
+          cur.p += cur.v * dt;
+          if (cur.p > R) { cur.p = 2 * R - cur.p; cur.v = -cur.v; } else if (cur.p < -R) { cur.p = -2 * R - cur.p; cur.v = -cur.v; }
+          if (cur.axis === 'x') cur.g.position.x = top.x + cur.p; else cur.g.position.z = top.z + cur.p;
+        }
+        if (mode === 'rest' && playing) {
+          wait -= dt;
+          if (wait <= 0) {
+            if (misses >= LIVES) { mode = 'done'; K.over(tr(score >= 25 ? 'Wow!' : score >= 8 ? 'Nice!' : 'Done!')); }
+            else spawn();
+          }
+        }
+        // she rides the sliding floe, and hops across to each new one
+        if (cur) to.set(cur.g.position.x, top.y + BH, cur.g.position.z); else to.set(top.x, top.y, top.z);
+        if (hopT < 1) {
+          hopT = Math.min(1, hopT + dt / HOP);
+          const e = hopT * hopT * (3 - 2 * hopT);
+          at.lerpVectors(from, to, e); at.y += Math.sin(PI * hopT) * 0.55;
+        } else at.copy(to);
+        view.rig.position.copy(at);
+        for (let i = cuts.length - 1; i >= 0; i--) {
+          const c = cuts[i];
+          c.vy -= 14 * dt;
+          c.g.position.x += c.vx * dt; c.g.position.y += c.vy * dt; c.g.position.z += c.vz * dt;
+          c.g.rotation.x += c.rx * dt; c.g.rotation.z += c.rz * dt;
+          if (c.g.position.y < camY - 14) { view.scene.remove(c.g); cuts.splice(i, 1); }
+        }
+        puffs.update(dt, 0, 0);
+        actor.update(dt, clock, null);
+      },
+    };
+  })();
+
+  G.ext.swim = swim; G.ext.stack = stack; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
