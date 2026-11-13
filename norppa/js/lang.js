@@ -339,6 +339,7 @@
     'sardines won': 'voitettua sardiinia',
     'Sardines': 'Sardiinit',
     'Cash out': 'Kotiuta',
+    'Potential win: +{0} sardines · Total return: {1}': 'Mahdollinen voitto: +{0} sardiinia · Palautus yhteensä: {1}',
     'Bet {0}': 'Panos {0}',
     'Hit': 'Ota kortti',
     'Stand': 'Jää',
