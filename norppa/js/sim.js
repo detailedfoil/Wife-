@@ -47,11 +47,13 @@
     // muckLine clean she earns less, down to muckCut less when filthy. And she has tastes: every game she has (bar the ones left
     // out, at most skipMax) carries a taste from -tasteMax to +tasteMax, which is the percent more or less it pays. Playing a
     // game takes tasteDrop off it and shares that among the others; tastes drift tasteDrift points an hour towards a mix that is
-    // dealt afresh every tasteRoll. A game gives gameJoy happiness, more if she likes it (joyUp a point of taste) and less if not
-    // (joyDown a point), so from about -9 down it makes her glummer.
+    // dealt afresh every tasteRoll. Tastes no longer change a game's coins: they change her happiness, gameJoy plus joyPer a point
+    // of taste (so -7 to +11 a play), and her happiness sets one flat bonus on every game: happyMax percent at full happiness,
+    // nothing at happyMid, and -happyMax at the sulk line. Simulated: a random player gets about 0%, always her favourite about
+    // +4% (+6% on a long visit), one game over and over about -3%.
     muckLine: 70, muckCut: 0.25, muckMost: 15,
     tasteMax: 15, tasteDrop: 5, tasteDrift: 2.5, tasteRoll: 8 * H, skipMax: 2,
-    gameJoy: 14, joyUp: 0.4, joyDown: 1.6, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
+    gameJoy: 2, joyPer: 0.6, happyMax: 8, happyMid: 55, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -635,13 +637,21 @@
   /* How much less a mucky seal earns: nothing above muckLine, muckCut when filthy. */
   const muckLoss = (state) => (state.stats.clean >= T.muckLine ? 0 : T.muckCut * (T.muckLine - state.stats.clean) / T.muckLine);
   /* What a game's coins are multiplied by right now. */
-  const gameMult = (state, id) => (1 + tasteOf(state, id) / 100) * (1 - muckLoss(state));
-  const gameJoy = (taste) => T.gameJoy + taste * (taste >= 0 ? T.joyUp : T.joyDown);
+  /* The flat bonus her happiness gives every game, in percent: happyMax at 100, none at happyMid, -happyMax at the sulk line. */
+  const happyBonus = (state) => {
+    const j = state.stats.joy, lo = T.neglectLine + T.gameCalm;
+    const k = j >= T.happyMid ? (j - T.happyMid) / (100 - T.happyMid) : -(T.happyMid - j) / (T.happyMid - lo);
+    return Math.round(T.happyMax * clamp(k, -1, 1));
+  };
+  /* What a game's coins are multiplied by right now: her happiness, and muck. The game itself makes no difference. */
+  const gameMult = (state) => (1 + happyBonus(state) / 100) * (1 - muckLoss(state));
+  /* How much a game moves her happiness, by her taste for it. */
+  const gameJoy = (taste) => Math.round(T.gameJoy + taste * T.joyPer);
   /* What the Play menu shows: each game's taste, whether it is left out, and the muck loss, all in whole percent. */
   function gameMoods(state, now) {
     tasteSync(state, now);
-    const out = { muck: Math.round(muckLoss(state) * 100), games: {}, skips: state.skip.length, skipMax: T.skipMax };
-    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), skip: state.skip.indexOf(id) >= 0 }; });
+    const out = { muck: Math.round(muckLoss(state) * 100), happy: happyBonus(state), games: {}, skips: state.skip.length, skipMax: T.skipMax };
+    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: gameJoy(tasteOf(state, id)), skip: state.skip.indexOf(id) >= 0 }; });
     return out;
   }
   /* Leave a game out of her tastes, or put it back. A game left out never pays over the odds, but still wears out if played. */
@@ -665,8 +675,8 @@
     let coins = 0, best = false;
     const got = [];
     tasteSync(state, now || state.tasteAt);
-    const taste = tasteOf(state, game), muck = muckLoss(state);
-    coins = gamePay(game, score) * gameMult(state, game);
+    const taste = tasteOf(state, game), muck = muckLoss(state), happy = happyBonus(state);   // the bonus goes by how happy she was when the game began
+    coins = gamePay(game, score) * gameMult(state);
     const key = gm && gm.best;
     // In a timed game (low) the score is the seconds it took, so the best is the smallest, and 0 means it was lost.
     if (key && (gm.low ? score > 0 && (!c[key] || score < c[key]) : score > (c[key] || 0))) { c[key] = score; best = score > 0; }
@@ -693,7 +703,7 @@
     addXp(state, 8);
     learn(state, 'leikki');
     check(state);
-    return { coins, best, fish: got, tired, taste: Math.round(taste), muck: Math.round(muck * 100), joy, dirt };
+    return { coins, best, fish: got, tired, taste: Math.round(taste), happy, muck: Math.round(muck * 100), joy, dirt };
   }
 
   function buy(state, id) {
@@ -997,7 +1007,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, gameMoods, setSkip, tasteSync,
+    feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

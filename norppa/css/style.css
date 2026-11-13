@@ -176,8 +176,14 @@ h1, h2, h3, p { margin: 0; }
 .row em.risk { display: block; font: italic 600 12px/1.3 var(--display); color: #b02358; margin-top: 3px; }
 .row .side { font: 600 13px var(--display); color: var(--ink-soft); white-space: nowrap; text-align: right; }
 .row.off { opacity: .55; }
-.row .side .mood { display: block; font: 600 15px var(--display); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.row .side .mood { display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex-wrap: wrap; font: 600 15px var(--display); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .row .side .mood.up { color: #14784f; } .row .side .mood.down { color: #b02358; }
+.row .side .mood .ic { width: 18px; height: 18px; } .row .side .mood small { flex-basis: 100%; text-align: right; }
+.happy-card { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 10px; padding: 11px 13px; border-radius: 16px; background: #eef3fb; font: 500 14px/1.4 var(--body, inherit); }
+.happy-card .ic { width: 30px; height: 30px; flex: none; } .happy-card b { display: block; font-family: var(--display); }
+.happy-card.up { background: #e3f5ec; } .happy-card.up .ic, .happy-card.up b { color: #14784f; }
+.happy-card.down { background: #fbe6ee; } .happy-card.down .ic, .happy-card.down b { color: #b02358; }
+.note:has(.ic) { display: block; text-align: center; } .note .ic { width: 17px; height: 17px; display: inline-block; vertical-align: -3px; margin-right: 5px; }
 .row .side small { display: block; font: 600 11.5px var(--display); color: var(--ink-soft); margin-top: 2px; }
 .chips.wrap { flex-wrap: wrap; overflow: visible; }
 .chip-btn.on { background: var(--ink); color: #fff; }

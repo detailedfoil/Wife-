@@ -955,8 +955,11 @@
       : '<div class="bigscore">' + (gm.low ? PN.mmss(score) : score) + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     // why the coins are what they are: her taste for this game, and muck
-    if (!lost && r.taste > 0) html += '<p class="note up">' + tr('{0} is keen on this one: +{1}% coins.', UI.esc(state.name), r.taste) + '</p>';
-    else if (!lost && r.taste < 0) html += '<p class="note down">' + tr(r.joy < 0 ? '{0} is tired of this one: −{1}% coins, and she is glummer for it.' : '{0} is not so keen on this one: −{1}% coins.', UI.esc(state.name), -r.taste) + '</p>';
+    // why the coins are what they are: how happy she was, and muck; then what this game did to her happiness
+    if (!lost && r.happy > 0) html += '<p class="note up">' + UI.ic('smile') + tr('Happy seal: +{0}% coins.', r.happy) + '</p>';
+    else if (!lost && r.happy < 0) html += '<p class="note down">' + UI.ic('frown') + tr('Glum seal: −{0}% coins.', -r.happy) + '</p>';
+    if (r.joy > 0) html += '<p class="note up">' + UI.ic('up') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
+    else if (r.joy < 0) html += '<p class="note down">' + UI.ic('down') + tr('{0} is tired of this one: happiness −{1}.', UI.esc(state.name), -r.joy) + '</p>';
     if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';

@@ -46,6 +46,10 @@
     puff: '<circle cx="11" cy="12" r="5.6"/><path d="M11 3.2v1.9M11 18.9v1.9M2.2 12h1.9M4.8 5.8l1.3 1.3M4.8 18.2l1.3-1.3M15.6 6.6l1-1M15.6 17.4l1 1M16.6 12l4.6-2.6v5.2z"/><circle class="f" cx="9" cy="10.8" r="1"/>',
     stack: '<rect x="7" y="4" width="9" height="4.5" rx="1.5"/><rect x="5" y="9.75" width="12" height="4.5" rx="1.5"/><rect x="4" y="15.5" width="16" height="4.5" rx="1.5"/>',
     up: '<path d="M12 19V6M6 11l6-6 6 6"/>',
+    down: '<path d="M12 5v13M6 13l6 6 6-6"/>',
+    smile: '<circle cx="12" cy="12" r="9"/><circle class="f" cx="9" cy="10" r="1.2"/><circle class="f" cx="15" cy="10" r="1.2"/><path d="M8.2 14.2q3.8 3.6 7.6 0"/>',
+    frown: '<circle cx="12" cy="12" r="9"/><circle class="f" cx="9" cy="10" r="1.2"/><circle class="f" cx="15" cy="10" r="1.2"/><path d="M8.2 16.6q3.8-3.4 7.6 0"/>',
+    meh: '<circle cx="12" cy="12" r="9"/><circle class="f" cx="9" cy="10" r="1.2"/><circle class="f" cx="15" cy="10" r="1.2"/><path d="M8.5 15.3h7"/>',
     seal: '<path d="M2.5 17c.5-5.5 4.5-9.5 9.5-9.5 4 0 7.2 2.6 8 6.2.4 1.8-.8 3.3-2.6 3.3H2.5z"/><circle class="f" cx="15.5" cy="12" r="1.1"/>',
     thermo: '<path d="M10 13.5V5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0z"/>',
     hat: '<path d="M5 17c0-5 3-9 7-9s7 4 7 9"/><rect x="4" y="16.5" width="16" height="3.5" rx="1.7"/><circle cx="12" cy="5.8" r="2"/>',
@@ -271,9 +275,12 @@
       const why = (c) => tr(WHY[c.why]);
       const moods = S.gameMoods(st, now), owned = PN.GAME_ORDER.filter((id) => S.gameOwned(st, id));
       // what she makes of each game right now: the percent more or less it pays
-      const mood = (id) => { const m = moods.games[id]; return m.skip ? '<span class="mood">' + tr('left out') + '</span>' : '<span class="mood ' + (m.taste > 0 ? 'up' : m.taste < 0 ? 'down' : '') + '">' + (m.taste > 0 ? '+' : m.taste < 0 ? '\u2212' : '') + Math.abs(m.taste) + '%</span>'; };
+      // what a game does to her happiness: a face, an arrow and the points it moves it by
+      const face = (j) => (j > 0 ? 'smile' : j < 0 ? 'frown' : 'meh');
+      const mood = (id) => { const m = moods.games[id], j = m.joy, cls = j > 0 ? 'up' : j < 0 ? 'down' : ''; return '<span class="mood ' + cls + '" aria-label="' + tr('Happiness {0}', (j > 0 ? '+' : '') + j) + '">' + (m.skip ? '<small>' + tr('left out') + '</small>' : '') + ic(face(j)) + (j ? ic(j > 0 ? 'up' : 'down') : '') + (j > 0 ? '+' : j < 0 ? '\u2212' : '') + Math.abs(j) + '</span>'; };
+      const hb = moods.happy, happyCard = '<div class="happy-card ' + (hb > 0 ? 'up' : hb < 0 ? 'down' : '') + '">' + ic(face(hb)) + '<div><b>' + (hb > 0 ? tr('{0} is happy: +{1}% on every game.', esc(st.name), hb) : hb < 0 ? tr('{0} is glum: −{1}% on every game.', esc(st.name), -hb) : tr('{0} is content: no bonus yet.', esc(st.name))) + '</b> ' + tr('Happiness {0}%. Games with a smile lift it and the bonus with it, up to +{1}%. A frown brings it down.', Math.round(st.stats.joy), S.T.happyMax) + '</div></div>';
       let h = (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a sauna.', moods.muck) + '</div>' : '')
-        + '<p class="lead">' + tr('The percent by a game is what it pays extra or less right now, going by what {0} fancies. Each play wears a game out a little and lifts the others.', esc(st.name)) + '</p>';
+        + happyCard + '<p class="lead">' + tr('The number by a game is how much it moves her happiness. Each play wears a game out a little and makes the others more fun.') + '</p>';
       h += '<div class="rows">';
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back Angy.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
@@ -284,7 +291,7 @@
       });
       h += '</div>';
       if (owned.length >= 3) {
-        h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is dealt no likes or dislikes: it never pays extra, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
+        h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is never one of her favourites, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
           + owned.map((id) => '<button class="chip-btn' + (moods.games[id].skip ? ' on' : '') + '" data-do="skip" data-id="' + id + '" aria-pressed="' + moods.games[id].skip + '">' + tr(PN.GAMES[id].title) + '</button>').join('') + '</div>';
       }
       return h;
