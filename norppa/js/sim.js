@@ -34,7 +34,8 @@
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
-    gameEnergy: 12, gameCap: 60, catchKeepChance: 0.1,
+    gameEnergy: 12, gameMax: 150, catchKeepChance: 0.1,
+    playEnergy: 0.28, playEnergyMin: 3, playEnergyMax: 40,   // a game tires her by how long it lasted: 12 for a 43 second round of Fish Rain
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -577,14 +578,16 @@
     return loot;
   }
 
-  /* Rewards after a mini-game. fishMap: fish caught in Fish Rain. */
-  function gameReward(state, game, score, fishMap, found) {
-    const s = state.stats, c = state.counters;
+  /* Rewards after a mini-game. fishMap: fish caught in Fish Rain. secs: how long the game lasted, which sets the energy it costs.
+     Every game pays a * score^b coins (PN.GAMES[game].pay), tuned so a minute of play earns about the same in each game. */
+  function gameReward(state, game, score, fishMap, found, secs) {
+    const s = state.stats, c = state.counters, gm = PN.GAMES[game];
     let coins = 0, best = false;
     const got = [];
+    if (gm && gm.pay && score > 0) coins = Math.min(T.gameMax, gm.pay[0] * Math.pow(score, gm.pay[1]));
+    const key = gm && gm.best;
+    if (key && score > (c[key] || 0)) { c[key] = score; best = score > 0; }
     if (game === 'catch') {
-      coins = Math.min(T.gameCap, Math.round(score * PN.GAMES.catch.rate));
-      if (score > c.bestCatch) { c.bestCatch = score; best = score > 0; }
       // Only now and then does the seal get to keep a fish from the round.
       const caught = [];
       Object.keys(fishMap || {}).forEach((id) => { for (let i = 0; i < fishMap[id]; i++) caught.push(id); });
@@ -592,22 +595,16 @@
         const id = caught[Math.floor(rnd(state) * caught.length)];
         got.push({ id, n: 1, isNew: giveFish(state, id, 1) });
       }
-    } else if (game === 'ball') {
-      coins = Math.min(T.gameCap, Math.round(score * PN.GAMES.ball.rate));
-      if (score > c.bestBall) { c.bestBall = score; best = score > 0; }
-    } else if (PN.GAMES[game] && PN.GAMES[game].rate) {
-      const key = PN.GAMES[game].best;
-      coins = Math.min(T.gameCap, Math.round(score * PN.GAMES[game].rate));
-      if (score > (c[key] || 0)) { c[key] = score; best = score > 0; }
     }
-    coins = earn(state, coins);
-    s.energy = pct(s.energy - T.gameEnergy);
+    coins = earn(state, coins / T.earnRate);
+    const tired = secs > 0 ? clamp(Math.round(secs * T.playEnergy), T.playEnergyMin, T.playEnergyMax) : T.gameEnergy;
+    s.energy = pct(s.energy - tired);
     s.joy = pct(s.joy + 14);
     c.games++;
     addXp(state, 8);
     learn(state, 'leikki');
     check(state);
-    return { coins, best, fish: got };
+    return { coins, best, fish: got, tired };
   }
 
   function buy(state, id) {

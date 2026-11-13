@@ -100,7 +100,7 @@
     $('gBig').textContent = '';
     $('gHint').textContent = ext ? tr(ext.hint) : tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');
     if (ext) {
-      g = { id, ext, seal, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0 };
+      g = { id, ext, seal, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0, secs: 0 };
       ext.start();
       W.override = ext.view();
       return;
@@ -111,7 +111,7 @@
     seal.sulk = false; seal.petting = 0;
     seal.moveTo(0, LANE_Z, { speed: 3.2, face: 0 });
     g = { id, seal, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
-      keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null };
+      keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null, secs: 0 };
   };
 
   /* A finger on the screen says where the seal should go. */
@@ -127,7 +127,7 @@
   Games.update = function (dt) {
     if (!g) return;
     const s = g.seal;
-    g.clock += dt;
+    g.clock += dt; g.secs += dt;          // how long the game has lasted: what it costs in energy
     if (g.ext) { updateExt(dt); return; }
     if (g.phase === 'count') {
       const n = Math.floor(g.clock / 0.75);
@@ -331,7 +331,7 @@
 
   /* ---------- the end of any game ---------- */
   function finish(quit) {
-    const id = g.id, score = g.score, caught = g.caught;
+    const id = g.id, score = g.score, caught = g.caught, secs = g.secs;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
     if (g.ext && g.ext.stop) g.ext.stop();
     g = null;
@@ -339,7 +339,7 @@
     W.override = null;
     $('gamehud').hidden = true;
     let reward = null;
-    if (!(quit && score === 0)) reward = S.gameReward(PN.Game.state, id, score, caught);
+    if (!(quit && score === 0)) reward = S.gameReward(PN.Game.state, id, score, caught, null, secs);
     PN.Game.endGame(id, score, reward);
   }
 })(window.PN = window.PN || {});

@@ -1,8 +1,9 @@
-/* Pikku Norppa: the arcade. Four mini-games, each on a little stage of its own.
-   Swimmy Seal: tap to swim up, slip between the ice and the kelp.
+/* Pikku Norppa: the arcade. Six mini-games, each on a little stage of its own.
+   Swimmy Seal: tap to swim up, slip between the ice and the kelp. Three goes, the best counts.
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
+   Blackjack: beat the dealer for sardines. Löyly: keep the sauna heat just right.
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
 (function (PN) {
   'use strict';
@@ -118,9 +119,9 @@
 
   /* ================= Swimmy Seal ================= */
   const swim = (() => {
-    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 5;
+    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 5, GOES = 3;   // three goes; the best one is what pays
     let view = null, obs = [], bubbles = null, rays = [], drift = [];
-    let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false;
+    let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, best = 0, wait = 0;
 
     function frond(mat, ph) {
       const root = new T.Group(), joints = [];
@@ -192,29 +193,46 @@
       bubbles.emit(sx - 0.45, y, 0.25, 3, 0.5, 0.07, 0.9, -2.6);
       actor.gesture('boop', true);
     }
+    function point() {
+      score++; K.shown(score);
+      if (score > best) { best = score; K.result(best); }
+    }
     function die() {
       dead = true;
       A.play('thud');
       actor.gesture('surprise', true);
       bubbles.emit(sx, y, 0.3, 12, 1.6, 0.09, 1.1, -2.6);
-      K.over(tr(score >= 10 ? 'Wow!' : 'Bonk!'));
+      if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; }
+      else K.over(tr(best >= 10 ? 'Wow!' : 'Bonk!'));
     }
+    /* a fresh stretch of water for the next go */
+    function reset() {
+      y = 0.3; vy = 0; dead = false; live = false; score = 0; lastGapY = 0;
+      bubbles.clear();
+      halfW = H * W.aspect;
+      obs.forEach((o, i) => place(o, halfW + 3.2 + i * 3.5));
+    }
+    function nextGo() {
+      go++; reset();
+      K.time(go + '/' + GOES); K.shown(0); K.hint(''); K.big('');
+      live = true; flap();
+    }
+    const tap = () => { if (dead) { if (go < GOES && wait <= 0) nextGo(); } else flap(); };
     return {
-      label: 'Gaps', hint: 'Tap to swim up.',
+      label: 'Gaps', label2: 'Go', hint: 'Tap to swim up. Three goes, and the best one counts.',
       view: () => view,
       start() {
         if (!view) build();
         cast(view, 0.37, false);
         actor.g.position.set(0, -0.46, 0);
         face(PI / 2);
-        y = 0.3; vy = 0; dead = false; live = false; score = 0; lastGapY = 0;
-        bubbles.clear();
-        halfW = H * W.aspect;
-        obs.forEach((o, i) => place(o, halfW + 3.2 + i * 3.5));
+        go = 1; best = 0; wait = 0;
+        reset();
+        K.time(go + '/' + GOES);
       },
       go() { live = true; flap(); },
-      pointer(type) { if (type === 'down') flap(); },
-      key(k) { if (k === ' ' || k === 'ArrowUp' || k === 'w') flap(); },
+      pointer(type) { if (type === 'down') tap(); },
+      key(k) { if (k === ' ' || k === 'ArrowUp' || k === 'w') tap(); },
       update(dt, playing) {
         clock += dt;
         lens(view);
@@ -254,13 +272,14 @@
           if (ax < 0.44 + R * 0.8 && (y + R > o.top || y - R < o.bot)) { die(); return; }
           if (o.hasFish && ax < 0.55 && Math.abs(o.fish.position.y - y) < 0.6) {
             o.hasFish = false; o.fish.visible = false;
-            score++; K.score(score); A.play('gulp');
+            point(); A.play('gulp');
             bubbles.emit(o.x, o.mid, 0.2, 5, 0.9, 0.06, 0.7, -2);
           }
-          if (!o.passed && o.x + 0.5 < sx - R) { o.passed = true; score++; K.score(score); A.play('pop'); K.hint(''); }
+          if (!o.passed && o.x + 0.5 < sx - R) { o.passed = true; point(); A.play('pop'); K.hint(''); }
         });
         bubbles.update(dt, -dx, 0);
         if (live && !dead && rnd() < dt * 2) bubbles.emit(sx + 0.5, y + 0.1, 0.2, 1, 0.2, 0.05, 1, -2.2);
+        if (dead && go < GOES && wait > 0 && playing) { wait -= dt; if (wait <= 0) K.hint(tr('Best so far: {0}. Tap for go {1} of {2}.', best, go + 1, GOES)); }
         actor.update(dt, clock, null);
       },
     };
@@ -268,8 +287,7 @@
 
   /* ================= Snowball Toss =================
      Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
-     Every throw has new wind and the bucket stays where it is. A miss resets the
-     streak; you keep playing until you press Back, and the best streak is what pays out. */
+     Five throws, each with new wind; the bucket stays where it is. Every basket counts. */
   const toss = (() => {
     const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.65, HIT = 0.85, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
@@ -749,10 +767,11 @@
   })();
 
   /* ---------- Blackjack ----------
-     Bet 5 sardines, hit or stand, beat the dealer without going over 21. A win pays back 2.8 times the bet (your bet plus 1.8 times more).
-     You sit down with ten sardines and play until you cash out or they are all gone. Only the winnings turn into coins. */
+     Bet from 5 sardines up to all in, hit or stand, beat the dealer without going over 21. A win pays back 2.8 times the bet
+     (your bet plus 1.8 times more). You sit down with ten sardines and play until you cash out, they are all gone, or the house
+     runs out. Only the winnings turn into coins, half a coin a sardine. */
   const bj = (() => {
-    const START = 10, MIN = 5, PAY = 2.8, CAP = 120;   // 120 sardines of winnings is 40 coins, the most a game pays, so the table closes there
+    const START = 10, MIN = 5, PAY = 2.8, CAP = 120;   // the house can pay out 120 sardines of winnings (60 coins), then the table closes
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, frac = 0, mode = 'bet', wait = 0, msg = '', hide = true;
     const total = (h) => {
@@ -783,7 +802,7 @@
     // How much the bar says: nothing is 5, the top is everything, and in between is that share of what you have now.
     const betNow = () => Math.min(stack, Math.max(MIN, Math.round(frac * stack)));
     const betLabel = () => tr(frac >= 1 ? 'All in {0}' : 'Bet {0}', betNow());
-    function money() { K.shown(stack); K.result(Math.max(0, stack - START)); }
+    function money() { K.shown(stack); K.result(Math.min(CAP, Math.max(0, stack - START))); }
     function deal(b) {
       if (mode !== 'bet' || stack < MIN || b < 1) return;
       bet = b; stack -= b; money();

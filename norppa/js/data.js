@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '13 Nov 2026, 00:31';
+  PN.UPDATED = '13 Nov 2026, 01:25';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -304,16 +304,18 @@
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
   /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
   const GAMES = {
-    ball: { price: 0, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', rate: 1.7 },
-    catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', rate: 1.2 },
-    swim: { price: 450, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp.', best: 'best_swim', rate: 4.8, unit: 'gaps swum' },
-    toss: { price: 700, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. You get 5 throws.', best: 'best_toss', rate: 5.3, unit: 'baskets' },
-    sauna: { price: 850, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right. Unlocking it builds the sauna on the shore.', best: 'best_sauna', rate: 6.86, unit: 'rounds in a row' },
-    curl: { price: 1000, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', rate: 4, unit: 'points' },
-    sled: { price: 1250, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', rate: 0.096, unit: 'metres' },
-    bj: { price: 1500, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Choose your bet, from 5 sardines up to all in. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', rate: 0.5, unit: 'sardines won' },
+    ball: { price: 0, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', pay: [0.56, 1.1] },
+    catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
+    swim: { price: 450, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [0.82, 1.1], unit: 'gaps swum' },
+    toss: { price: 700, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. You get 5 throws.', best: 'best_toss', pay: [3.5, 1], unit: 'baskets' },
+    sauna: { price: 850, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right. Unlocking it builds the sauna on the shore.', best: 'best_sauna', pay: [13.8, 0.9], unit: 'rounds in a row' },
+    curl: { price: 1000, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
+    sled: { price: 1250, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
+    bj: { price: 1500, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Choose your bet, from 5 sardines up to all in. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'sardines won' },
   };
-  /* rate: base coins per point, tuned so a run at the player's high score pays about 48 on every game (then the earnings cut applies). */
+  /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
+     skill levels so a new player earns about 16 coins a minute, a casual one 24, a good one 31 and an expert 37, whichever game
+     they play, counting the whole visit (the 3-2-1, the play, the ending). Energy goes by how long you played, not per game. */
   PN.GAME_ORDER = ['ball', 'catch', 'swim', 'toss', 'sauna', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
   const ECON = { price: 2, cosmetic: 6, cosmeticFloor: 200, earn: 2 / 3, fishFood: 0.75 };
