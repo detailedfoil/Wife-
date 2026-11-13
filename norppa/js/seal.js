@@ -123,7 +123,9 @@
   /* The snuggle blanket, shaped to lie over the body: across the back from side to side, from near the tail up to the neck.
      Made in the body's own space (it rides on the body mesh), a little outside the fur, the hem hanging a touch wavy. */
   function blanketGeometry() {
-    const nu = 28, nv = 22, pos = [], uv = [], idx = [], Z0 = -0.86, Z1 = 0.24, TH = 1.95;
+    const nu = 28, nv = 22, pos = [], uv = [], idx = [], Z0 = -0.94, TH = 1.85;
+    // Curve round the neck: cover the shoulders without pulling over the face.
+    const front = (th) => 0.30 + 0.40 * Math.pow(Math.sin(th), 2);
     const at = (uz, th, off) => {
       const f = uz < 0 ? 1 - 0.5 * Math.pow(-uz, 1.5) : 1 + 0.05 * uz, rr = Math.sqrt(Math.max(0.02, 1 - uz * uz));
       const ux = Math.sin(th) * rr, uy = Math.cos(th) * rr;
@@ -134,12 +136,12 @@
       return [x + Math.sin(th) / n * off, y + Math.cos(th) / n * off, uz * 1.2];
     };
     for (let j = 0; j <= nv; j++) {
-      const v = j / nv, uz = Z0 + (Z1 - Z0) * v;
+      const v = j / nv;
       for (let i = 0; i <= nu; i++) {
-        const u = i / nu, th = -TH + 2 * TH * u;
-        const q = at(uz, th, 0.05);
+        const u = i / nu, th = -TH + 2 * TH * u, uz = Z0 + (front(th) - Z0) * v;
+        const q = at(uz, th, 0.075);
         q[1] -= Math.max(0, Math.abs(th) - 1.35) * 0.1 - Math.sin(uz * 11 + th * 2) * 0.008 * Math.max(0, Math.abs(th) - 1.0);
-        pos.push(q[0], q[1], q[2]); uv.push(u * 2, v * 1.4);
+        pos.push(q[0], q[1], q[2]); uv.push(u, v);
       }
     }
     for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
@@ -148,7 +150,7 @@
     g.setIndex(idx); g.computeVertexNormals();
     // the folded-over top edge by her neck
     const edge = [];
-    for (let i = 0; i <= 12; i++) { const th = -TH + 2 * TH * i / 12, q = at(Z1, th, 0.08); edge.push(new T.Vector3(q[0], q[1] - Math.max(0, Math.abs(th) - 1.35) * 0.1, q[2])); }
+    for (let i = 0; i <= 12; i++) { const th = -TH + 2 * TH * i / 12, q = at(front(th), th, 0.10); edge.push(new T.Vector3(q[0], q[1] - Math.max(0, Math.abs(th) - 1.35) * 0.1, q[2])); }
     const cuff = new T.TubeGeometry(new T.CatmullRomCurve3(edge), 40, 0.05, 8, false);
     return { g, cuff };
   }
@@ -355,9 +357,14 @@
       this.baseScale = this.isPup ? 0.4 : c.scale;
       this.shadow.scale.set(2.3, 1.2 + 2.2 * k, 1);
       this.applyScale();
+      if (this.blanket) this.makeBlanket();
     }
     applyScale() { this.g.scale.setScalar(this.baseScale * this.grow); }
     makeBlanket() {
+      if (this.blanket) {
+        const old = this.blanket; old.parent.remove(old);
+        old.traverse((m) => { if (m.isMesh) { m.geometry.dispose(); m.material.dispose(); } });
+      }
       const b = blanketGeometry(), tex = PN.Props.knitTex();
       const wool = new T.MeshStandardMaterial({ map: tex, roughness: 1, side: T.DoubleSide });
       const m = new T.Mesh(b.g, wool), cuff = new T.Mesh(b.cuff, new T.MeshStandardMaterial({ color: 0xb8322b, roughness: 1 }));
@@ -569,6 +576,10 @@
         this.blanket.visible = k > 0.03;
         this.blanket.position.y = 0.45 * (1 - k) * (1 - k);
         this.blanket.scale.set(1 + 0.12 * (1 - k), 1 + 0.12 * (1 - k), 1);
+        // Put back accessories aside for sleep; restore them when she wakes.
+        this.backA.visible = !asleep && k < 0.5;
+      } else {
+        this.backA.visible = !asleep;
       }
     }
   }

@@ -58,6 +58,7 @@
 
     seal = G.seal = new PN.Seal({ stage: state.stage });
     W.scene.add(seal.g); W.pickables.push(seal.g);
+    W.fitHome(seal.size);
     const d = W.DEN;
     if (isNew) seal.place(d.inside.x, W.groundY(d.inside.x, d.inside.z), d.inside.z, d.heading);
     else if (state.asleep) { seal.place(d.sleep.x, W.groundY(d.sleep.x, d.sleep.z), d.sleep.z, bedHeading()); seal.asleep = true; }
@@ -89,9 +90,14 @@
   /* Make the seal and the shore match the save. */
   function syncLook() {
     seal.setStage(state.stage);
+    seal.cosy = !!state.placed.peitto;
+    W.fitHome(seal.size);
     ['head', 'neck', 'face', 'back'].forEach((slot) => seal.setWear(slot, state.wearing[slot]));
     syncDirt();
     W.setDecor(state.placed);
+    if (seal.asleep && !bedBusy && !PN.Games.active) {
+      const p = W.DEN.sleep; seal.place(p.x, W.groundY(p.x, p.z), p.z, bedHeading());
+    }
     W.syncPoops(state.poops);
     poopN = state.poops.length;
   }
@@ -356,7 +362,7 @@
     // the snuggle blanket: over her while she sleeps in the den, folded by the door the rest of the time
     seal.cosy = !!state.placed.peitto;
     const folded = W.decorOf('peitto');
-    if (folded) folded.setOut(!seal.asleep);
+    if (folded) folded.setOut(!(seal.blanket && seal.blanket.visible));
     const sulk = state.grudge > 0 && !state.medLate && awake && !bedBusy;
     if (sulk !== seal.sulk && !G.busy) {
       seal.sulk = sulk;
@@ -671,7 +677,7 @@
 
   /* ---------- the ice hole ---------- */
   function holeEdge(s, out) {
-    const dx = W.HOME.x - W.HOLE.x, dz = W.HOME.z - W.HOLE.z, d = Math.hypot(dx, dz), far = 0.95 + 0.85 * s.size;
+    const dx = W.HOME.x - W.HOLE.x, dz = W.HOME.z - W.HOLE.z, d = Math.hypot(dx, dz), far = (W.holeRadius || 0.82) + 0.13 + 0.85 * s.size;
     return out.set(W.HOLE.x + dx / d * far, 0, W.HOLE.z + dz / d * far);
   }
   async function plunge(s) {
@@ -1300,7 +1306,7 @@
     });
     await UI.fade(true);
     S.evolve(state, Date.now());
-    seal.grow = 1; seal.setStage(state.stage); seal.applyScale();
+    seal.grow = 1; seal.setStage(state.stage); seal.applyScale(); syncLook();
     await UI.fade(false);
     const now = D.STAGES[state.stage];
     seal.gesture('happy', true); A.play('level'); FX.sparkle(head(), 14); FX.hearts(head(), 4);

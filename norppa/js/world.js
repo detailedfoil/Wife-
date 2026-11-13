@@ -420,7 +420,7 @@
     for (let i = 0; i < 11; i++) { const a = i / 11 * TAU + r() * 0.3, d = 1.02 + r() * 0.12, s = 0.13 + r() * 0.12; rimG.add(U.ball(s, snow, Math.cos(a) * d, 0.02, Math.sin(a) * d, 1.4, 0.55, 1, 8)); }
     holeG.position.copy(W.HOLE);
     water.userData.pick = { type: 'hole' };
-    W.holeWater = water;
+    W.holeWater = water; W.holeRadius = 0.82;
     scene.add(holeG);
   }
 
@@ -455,6 +455,16 @@
       const want = !!placed[id];
       if (want && !decor[id]) {
         const d = id === 'lights' || id === 'viirit' ? PN.Props.decor(id, W.DEN.arch) : PN.Props.decor(id);
+        if (d.conform) {
+          // Restore the original cloth before each fit, so growing and shrinking
+          // cannot accumulate offsets or leave a previously raised hem floating.
+          const original = d.conform, shapes = [];
+          d.g.traverse((m) => { if (m.isMesh && m.geometry.attributes.position) shapes.push({ p: m.geometry.attributes.position, base: m.geometry.attributes.position.array.slice() }); });
+          d.conform = (heightAt) => {
+            shapes.forEach(({ p, base }) => { p.array.set(base); p.needsUpdate = true; });
+            original.call(d, heightAt);
+          };
+        }
         if (ON_DEN[id]) {
           const o = ON_DEN[id]; d.g.position.set(o[0], o[1], o[2]); denG.add(d.g);
           if (d.conform) d.conform((x, z) => denGround(o[0] + x, o[2] + z) - o[1]);
@@ -480,10 +490,28 @@
       }
     });
   };
-  /* How high the ground is under a point given in the den's own space, measured from the den's floor. */
+  /* Resize the home to the resident, with enough height for the adult's head.
+     Decorations keep the doorway's local coordinates and are re-draped on the
+     actual ground after a resize, including when an old save opens mid-sleep. */
+  W.fitHome = function (size) {
+    const growth = U.clamp((size - 0.6) / 0.4, 0, 1);
+    const sx = 1 + 0.65 * growth, sy = 1 + 0.90 * growth, sz = 1 + 0.12 * growth;
+    const changed = Math.abs(denG.scale.x - sx) > 0.001;
+    denG.scale.set(sx, sy, sz); denG.updateMatrixWorld(true);
+    W.DEN.sleep = denG.localToWorld(new T.Vector3(0, 0, 1.9 + 0.32 * size / sz));
+    W.DEN.inside = denG.localToWorld(new T.Vector3(0, 0, 0.6));
+    if (changed) Object.keys(ON_DEN).forEach((id) => {
+      const d = decor[id], o = ON_DEN[id];
+      if (d && d.conform) d.conform((x, z) => denGround(o[0] + x, o[2] + z) - o[1]);
+    });
+    // Adult shoulders and scarves need clearance through the icy opening too.
+    const holeScale = 1 + 0.30 * growth;
+    W.holeG.scale.set(holeScale, 1, holeScale); W.holeRadius = 0.82 * holeScale;
+  };
+  /* Ground height in the scaled den's own coordinates. */
   function denGround(lx, lz) {
-    const c = Math.cos(W.DEN.heading), sn = Math.sin(W.DEN.heading);
-    return W.groundY(W.DEN.x + lx * c + lz * sn, W.DEN.z - lx * sn + lz * c) - denG.position.y;
+    const p = denG.localToWorld(new T.Vector3(lx, 0, lz));
+    return (W.groundY(p.x, p.z) - denG.position.y) / denG.scale.y;
   }
   W.decorOf = (id) => decor[id] || null;
   W.decorAt = (id, out) => {
