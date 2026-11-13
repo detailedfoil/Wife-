@@ -46,7 +46,7 @@
     // (joyDown a point), so from about -9 down it makes her glummer.
     muckLine: 70, muckCut: 0.25, muckMost: 15,
     tasteMax: 15, tasteDrop: 5, tasteDrift: 2.5, tasteRoll: 8 * H, skipMax: 2,
-    gameJoy: 14, joyUp: 0.4, joyDown: 1.6,
+    gameJoy: 14, joyUp: 0.4, joyDown: 1.6, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -696,9 +696,11 @@
     const tired = secs > 0 ? clamp(Math.round(secs * T.playEnergy), T.playEnergyMin, T.playEnergyMax) : T.gameEnergy;
     s.energy = pct(s.energy - tired);
     const joy = gameJoy(taste);
-    s.joy = pct(s.joy + joy);
+    // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her Angy.
+    const calm = T.neglectLine + T.gameCalm;
+    s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
     const dirt = gm && gm.muck ? clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) : 0;
-    s.clean = pct(s.clean - dirt);
+    s.clean = pct(Math.max(s.clean - dirt, Math.min(s.clean, calm)));
     tastePlayed(state, game);
     c.games++;
     addXp(state, 8);
