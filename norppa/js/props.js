@@ -1055,28 +1055,66 @@
       } };
     },
     sauna() {
-      const red = U.mat(C.falu, { roughness: 0.95 }), white = U.mat(0xf4f1ea, { roughness: 0.8 }), snow = U.mat(C.snow, { roughness: 1 });
+      // A small lakeside log sauna: low eaves, a high little window to hold the
+      // heat, a timber door, and a proper stove flue above the snowy ridge.
+      const timber = U.mat(C.woodLight, { roughness: 0.9 }), endgrain = U.mat(C.wood),
+        dark = U.mat(C.woodDark), snow = U.mat(C.snow, { roughness: 1 }),
+        roof = U.mat(0x39434a, { roughness: 0.95 }), iron = U.mat(0x3f454b, { roughness: 0.75 });
       const g = new T.Group();
-      g.add(U.box(2.3, 1.5, 1.9, red, 0, 0.75, 0));
-      [[-1.15, -0.95], [1.15, -0.95], [-1.15, 0.95], [1.15, 0.95]].forEach((p) => g.add(U.box(0.1, 1.5, 0.1, white, p[0], 0.75, p[1])));
-      // gable ends and roof
-      const gable = new T.Shape(); gable.moveTo(-1.2, 0); gable.lineTo(1.2, 0); gable.lineTo(0, 0.78); gable.closePath();
-      [-0.95, 0.95].forEach((z) => g.add(U.mesh(new T.ExtrudeGeometry(gable, { depth: 0.02, bevelEnabled: false }), red, 0, 1.5, z - 0.01)));
-      [-1, 1].forEach((s) => {
-        g.add(U.rot(U.box(1.62, 0.07, 2.3, U.mat(0x3a3f47), s * 0.66, 1.93, 0), 0, 0, s * -0.575));
-        g.add(U.rot(U.box(1.66, 0.22, 2.36, snow, s * 0.68, 2.06, 0), 0, 0, s * -0.575));
+      g.add(U.box(2.25, 1.58, 1.86, dark, 0, 0.91, 0));
+      // Overlapping round logs keep the walls readable at the home camera's distance.
+      for (let row = 0; row < 8; row++) {
+        const y = 0.26 + row * 0.19, m = row % 2 ? timber : endgrain;
+        [-1, 1].forEach((side) => {
+          g.add(U.rot(U.cyl(0.108, 0.108, 2.48, m, 0, y, side * 0.94, 12), 0, 0, Math.PI / 2));
+          g.add(U.rot(U.cyl(0.108, 0.108, 2.14, m, side * 1.12, y + 0.025, 0, 12), Math.PI / 2));
+        });
+      }
+      // Filled gables, with broad roof overhangs and a soft, thin snow cap.
+      const gable = new T.Shape();
+      gable.moveTo(-1.16, 0); gable.lineTo(1.16, 0); gable.lineTo(0, 0.67); gable.closePath();
+      g.add(U.mesh(new T.ExtrudeGeometry(gable, { depth: 1.9, bevelEnabled: false }), timber, 0, 1.64, -0.95));
+      [-1, 1].forEach((side) => {
+        g.add(U.rot(U.box(1.6, 0.09, 2.4, roof, side * 0.65, 2.04, 0), 0, 0, -side * 0.5));
+        g.add(U.rot(U.mesh(softBox(1.61, 0.14, 2.43, 0.16), snow, side * 0.65, 2.13, 0), 0, 0, -side * 0.5));
+        // Timber fascia below the snow makes the roof shape clear, even at night.
+        [-1.2, 1.2].forEach((z) => g.add(U.rot(U.box(1.6, 0.12, 0.075, dark, side * 0.65, 2.035, z), 0, 0, -side * 0.5)));
       });
-      g.add(U.ball(0.3, snow, 0, 2.42, 0, 0.9, 0.5, 4.0, 10));
-      // door, window, steps
-      g.add(U.box(0.62, 1.1, 0.06, white, -0.5, 0.57, 0.96), U.box(0.5, 1.0, 0.07, U.mat(C.woodDark), -0.5, 0.54, 0.97), U.ball(0.03, gold(), -0.32, 0.55, 1.02));
-      const glass = new T.MeshBasicMaterial({ color: 0xffc46b, toneMapped: false });
-      g.add(U.box(0.62, 0.62, 0.06, white, 0.5, 0.86, 0.96), U.box(0.5, 0.5, 0.07, glass, 0.5, 0.86, 0.97),
-        U.box(0.03, 0.5, 0.08, white, 0.5, 0.86, 0.975), U.box(0.5, 0.03, 0.08, white, 0.5, 0.86, 0.975));
-      g.add(U.box(0.8, 0.12, 0.4, U.mat(C.wood), -0.5, 0.06, 1.2), U.box(0.84, 0.05, 0.44, snow, -0.5, 0.14, 1.2));
-      g.add(U.box(0.26, 0.6, 0.26, U.mat(0x5b5f66), 0.55, 2.3, -0.3), U.box(0.3, 0.07, 0.3, snow, 0.55, 2.62, -0.3));
-      const halo = U.halo(0xffb45a, 2.2, 0.5); halo.position.set(0.5, 0.86, 1.15); g.add(halo);
-      return { g, chimney: new T.Vector3(0.55, 2.7, -0.3), door: new T.Vector3(-0.5, 0, 1.6),
-        tick(t, env) { glass.color.setHex(0xffc46b).multiplyScalar(0.5 + 0.5 * env.night); halo.material.opacity = 0.1 + 0.55 * env.night; } };
+      // Planked outward-opening sauna door and a chunky wooden pull handle.
+      g.add(U.box(0.78, 1.36, 0.13, dark, -0.49, 0.82, 1.055));
+      for (let i = 0; i < 5; i++) g.add(U.box(0.125, 1.22, 0.06, i % 2 ? timber : endgrain, -0.75 + i * 0.13, 0.81, 1.14));
+      g.add(U.box(0.045, 0.26, 0.055, dark, -0.25, 0.82, 1.21),
+        U.box(0.09, 0.04, 0.09, dark, -0.25, 0.72, 1.18), U.box(0.09, 0.04, 0.09, dark, -0.25, 0.92, 1.18));
+      // Small high windows, warm within, with a pale misted lower edge.
+      const glass = new T.MeshBasicMaterial({ color: 0xffce87, toneMapped: false });
+      const mist = new T.MeshBasicMaterial({ color: 0xffe4b8, toneMapped: false, transparent: true, opacity: 0.35 });
+      const window = () => U.group(U.box(0.72, 0.43, 0.10, dark), U.box(0.59, 0.30, 0.03, glass, 0, 0, 0.065),
+        U.box(0.59, 0.065, 0.035, mist, 0, -0.115, 0.07), U.box(0.035, 0.31, 0.04, timber, 0, 0, 0.09));
+      const frontWindow = window(); frontWindow.position.set(0.54, 1.19, 1.075); g.add(frontWindow);
+      const sideWindow = window(); sideWindow.rotation.y = Math.PI / 2; sideWindow.position.set(1.235, 1.22, -0.12); g.add(sideWindow);
+      // A modest wooden sign, rather than the large windows of a little house.
+      const signTex = U.tex(256, 80, (c, w, h) => {
+        c.fillStyle = '#b98a5a'; c.fillRect(0, 0, w, h);
+        c.fillStyle = '#38281f'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = 'bold 45px sans-serif'; c.fillText('SAUNA', w / 2, h / 2 + 2);
+      });
+      const sign = new T.MeshStandardMaterial({ map: signTex, roughness: 0.9 });
+      g.add(U.box(0.77, 0.24, 0.06, timber, -0.49, 1.625, 1.08), U.mesh(new T.PlaneGeometry(0.73, 0.22), sign, -0.49, 1.625, 1.115));
+      // Two low steps, and a water bucket with its ladle by the entrance.
+      g.add(U.box(0.91, 0.14, 0.42, dark, -0.49, 0.13, 1.25), U.box(1.02, 0.09, 0.38, endgrain, -0.49, 0.045, 1.58));
+      const bucket = U.group(U.cyl(0.17, 0.135, 0.29, timber, 0, 0.18, 0, 16),
+        U.rot(U.mesh(new T.CircleGeometry(0.145, 20), dark, 0, 0.33, 0), -Math.PI / 2),
+        U.rot(U.torus(0.16, 0.014, iron, 0, 0.27, 0), Math.PI / 2), U.rot(U.torus(0.14, 0.014, iron, 0, 0.09, 0), Math.PI / 2),
+        U.torus(0.16, 0.014, iron, 0, 0.31, 0, Math.PI, 16),
+        U.rot(U.cyl(0.013, 0.013, 0.47, dark, 0.04, 0.42, 0.01, 8), 0, 0, -0.35), U.ball(0.055, endgrain, -0.04, 0.20, 0.01, 1, 0.5, 1.2));
+      bucket.position.set(0.74, 0, 1.37); g.add(bucket);
+      // Stove flue: flashing, round pipe, an open dark mouth and a rain hood.
+      g.add(U.box(0.4, 0.08, 0.4, iron, 0.58, 2.16, -0.3), U.cyl(0.105, 0.105, 0.79, iron, 0.58, 2.56, -0.3, 16),
+        U.cyl(0.14, 0.14, 0.06, roof, 0.58, 2.96, -0.3, 16), U.cyl(0.085, 0.085, 0.08, U.mat(C.coal), 0.58, 3.01, -0.3, 16),
+        U.cone(0.19, 0.085, iron, 0.58, 3.09, -0.3, 16));
+      const halo = U.halo(0xffb45a, 1.8, 0.4); halo.position.set(0.54, 1.19, 1.28); g.add(halo);
+      return { g, chimney: new T.Vector3(0.58, 3.16, -0.3), door: new T.Vector3(-0.49, 0, 1.8),
+        tick(t, env) { glass.color.setHex(0xffce87).multiplyScalar(0.58 + 0.42 * env.night); halo.material.opacity = 0.08 + 0.42 * env.night; } };
     },
     /* ---- lights ---- */
     lumilyhty() {
