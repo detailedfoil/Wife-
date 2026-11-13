@@ -1455,7 +1455,7 @@
     function tap(lane) {
       if (mode !== 'ready' && mode !== 'play') return;
       const t = tile(next);
-      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); }
+      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; document.getElementById('pianoSong').hidden = true; K.hint(''); }
       else if (lane !== t.lane || (startOf(next) - pos) * (H / SPAN) > H * LINE) {
         if (lane === lastLane && clock - lastAt < BOUNCE) return;        // the same finger landing twice
         fail(lane, -1, tr('Wrong tile!'));
@@ -1497,14 +1497,29 @@
         if (!view) build();
         cast(view, 0.85, true);
         face(0);
-        song = PN.SONGS.ievan;
+        let picker = document.getElementById('pianoSong');
+        if (!picker) {
+          picker = document.createElement('select'); picker.id = 'pianoSong';
+          picker.setAttribute('aria-label', 'Choose a piano song');
+          picker.style.cssText = 'position:absolute;top:26%;left:50%;transform:translateX(-50%);max-width:90%;padding:10px 16px;border-radius:16px;background:#fff8ed;color:#365969;font:inherit;pointer-events:auto;z-index:5';
+          Object.keys(PN.SONGS).forEach((id) => { const opt = document.createElement('option'); opt.value = id; opt.textContent = PN.SONGS[id].title; picker.appendChild(opt); });
+          picker.value = 'ievan';
+          picker.addEventListener('change', () => {
+            if (mode !== 'ready') return;
+            song = PN.SONGS[picker.value]; const c = read(song); chart = c.tiles; total = c.len;
+            pos = 0; next = 0; n = 0; draw();
+          });
+          document.getElementById('gamehud').appendChild(picker);
+        }
+        picker.hidden = false;
+        song = PN.SONGS[picker.value] || PN.SONGS.ievan;
         const c = read(song); chart = c.tiles; total = c.len;
         pos = 0; next = 0; n = 0; mode = 'ready'; wait = 0; bad = -1; badTile = -1; lastLane = -1; lastAt = 0; bop = 0;
         el.hidden = false;
         size(); draw();
         A.hush(true);
       },
-      stop() { el.hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
+      stop() { el.hidden = true; document.getElementById('pianoSong').hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
       go() { K.score(0, true); },
       pointer() {},
       key() {},
