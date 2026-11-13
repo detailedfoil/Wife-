@@ -731,7 +731,7 @@
       && s.food > 50 && s.joy > 50 && state.griefUntil < now;
   }
 
-  /* Every pup is born with one or two little things to wear, so the family can be told apart. They are picked from a cute list
+  /* Every pup is born with one little thing to wear, and one in ten gets a second, so the family can be told apart. They are picked from a cute list
      (not the shop's silliest), from different places on the body, and avoid what a brother or sister already has on. */
   const PUP_WEAR = {
     head: ['pipo_red', 'pipo_blue', 'pipo_yellow', 'pipo_pink', 'pipo_green', 'earmuffs', 'bow', 'kukka', 'kissa', 'pupu', 'wreath', 'sieni', 'juhlahattu', 'baskeri', 'olkihattu', 'tonttu'],
@@ -745,7 +745,7 @@
     const slots = ['head', 'neck', 'face', 'back'], pick = (list) => list[Math.floor(rnd(state) * list.length)];
     const first = rnd(state) < 0.75 ? (rnd(state) < 0.6 ? 'head' : 'neck') : slots[Math.floor(rnd(state) * 4)];
     const chosen = [first];
-    if (rnd(state) < 0.5) { const rest = slots.filter((k) => k !== first); chosen.push(rest[Math.floor(rnd(state) * rest.length)]); }
+    if (rnd(state) < 0.1) { const rest = slots.filter((k) => k !== first); chosen.push(rest[Math.floor(rnd(state) * rest.length)]); }
     const wear = {};
     chosen.forEach((slot) => {
       const free = PUP_WEAR[slot].filter((id) => !taken[id]);
