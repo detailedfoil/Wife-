@@ -37,6 +37,7 @@
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
     // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean.
+    ballJoy: 1, ballJoyGoes: 6,   // a bounce on the nose lifts happiness by a point (a quarter of that if it is quick after the last), and only the first six an hour
     petJoy: 0.2, petJoyPats: 10,   // a pat lifts happiness by only a fifth of a point, and only the first ten an hour
     saunaRounds: 7, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
     gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
@@ -481,10 +482,10 @@
     if (s.energy < 6) return no('tired');
     const fresh = now - state.ballAt > 20e3;
     state.ballAt = now;
-    s.joy = pct(s.joy + (fresh ? 8 : 2));
+    if (now - state.ballWin.t0 > H) state.ballWin = { t0: now, n: 0 };
+    if (state.ballWin.n < T.ballJoyGoes) s.joy = pct(s.joy + (fresh ? T.ballJoy : T.ballJoy / 4));   // only a little cheer, and only the first few an hour
     s.energy = pct(s.energy - 2);
     state.counters.balls++;
-    if (now - state.ballWin.t0 > H) state.ballWin = { t0: now, n: 0 };
     if (fresh && state.ballWin.n < 6) { state.ballWin.n++; addXp(state, 3); }   // fun any time, friendship points a few times an hour
     learn(state, 'pallo');
     check(state);
