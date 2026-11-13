@@ -898,7 +898,7 @@
           else settle();
         } else if (mode === 'done') {
           if (stack < MIN) { el.hidden = true; K.over(tr('All gone!')); return; }
-          if (stack - START >= CAP) { el.hidden = true; K.over(tr('The house is out!')); return; }
+          if (stack - START >= CAP) { el.hidden = true; K.over(tr('You beat the house!')); return; }
           mode = 'bet'; you = []; house = []; hide = true; msg = tr('Place a bet.'); paint();
         }
       },

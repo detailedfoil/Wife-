@@ -339,7 +339,7 @@
     'You have {0} sardines. Place a bet.': 'Sinulla on {0} sardiinia. Aseta panos.',
     'Place a bet.': 'Aseta panos.',
     'All gone!': 'Kaikki meni!',
-    'The house is out!': 'Pankki on tyhjä!',
+    'You beat the house!': 'Löit pankin!',
     'Medicine': 'Lääke',
     'mood|Anxi': 'ahdistunut',
     'Pill photo +{0}': 'Pillerikuva +{0}',
