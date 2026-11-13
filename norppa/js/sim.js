@@ -479,12 +479,10 @@
     const s = state.stats;
     if (state.asleep) return no('asleep');
     if (state.grudge > T.sulkBlock) return no('sulk');
-    if (s.energy < 6) return no('tired');
     const fresh = now - state.ballAt > 20e3;
     state.ballAt = now;
     if (now - state.ballWin.t0 > H) state.ballWin = { t0: now, n: 0 };
     if (state.ballWin.n < T.ballJoyGoes) s.joy = pct(s.joy + (fresh ? T.ballJoy : T.ballJoy / 4));   // only a little cheer, and only the first few an hour
-    s.energy = pct(s.energy - 2);
     state.counters.balls++;
     if (fresh && state.ballWin.n < 6) { state.ballWin.n++; addXp(state, 3); }   // fun any time, friendship points a few times an hour
     learn(state, 'pallo');
