@@ -1112,6 +1112,17 @@
     if (!S.devRestore()) { noSave = false; A.play('nope'); UI.toast(tr('There is no earlier save to go back to.'), 'bolt', 'bad', 4500); return; }
     location.reload();
   };
+  /* Every game's best score back to zero; coins, the shop and the album are left alone. */
+  G.resetScores = async function () {
+    const v = await UI.modal({ title: tr('Reset high scores?'), html: '<p>' + tr('Every game\'s best score goes back to zero. Your coins and everything else stay.') + '</p>',
+      actions: [{ label: tr('Keep scores'), value: 0 }, { label: tr('Reset'), value: 1 }] });
+    if (v !== 1) return;
+    const c = state.counters;
+    c.bestCatch = 0; c.bestBall = 0; c.bestPairs = 0;
+    Object.keys(PN.GAMES).forEach((id) => { const k = PN.GAMES[id].best; if (k) c[k] = 0; });
+    A.play('tap'); save(); UI.renderSheet(); UI.refresh();
+    UI.toast(tr('High scores reset.'), 'check');
+  };
   G.resetGame = async function () {
     const v = await UI.modal({ title: tr('Start over?'), html: '<p>' + tr('This says goodbye to {0} for good, along with the coins, the album and everything on the shore.', plain()) + '</p>',
       actions: [{ label: tr('Keep {0}', plain()), value: 0 }, { label: tr('Start over'), value: 1 }] });
