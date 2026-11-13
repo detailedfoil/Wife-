@@ -453,7 +453,7 @@
     'Leave out': 'Jätä pois',
     'Only {0} games can be left out. Put one back first.': 'Pois voi jättää vain {0} peliä. Palauta ensin yksi.',
     'She is mucky: −{0}% coins. Time for a sauna.': 'Hän on likainen: −{0} % kolikoita. On saunan aika.',
-    'Ice Piano': 'Jääpiano',
+    'Kantele Tiles': 'Kantelelaatat',
     'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.': 'Napauta laattoja järjestyksessä, kun ne liukuvat alas, ja soita sävelmä. Tahti kiihtyy. Yksi virhe, ja peli päättyy.',
     'Tiles': 'Laatat',
     'Tap the Start tile, then every tile in order.': 'Napauta Aloita-laattaa ja sitten jokaista laattaa järjestyksessä.',
