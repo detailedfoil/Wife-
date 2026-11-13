@@ -1,4 +1,4 @@
-/* Pikku Norppa: the board behind Puffer Sweep. No drawing here, only the puzzle itself, so it can be tested on its own.
+/* Pikku Norppa: the board behind Puffer Sweeper. No drawing here, only the puzzle itself, so it can be tested on its own.
    A board is a grid of tiles with pufferfish under some of them. Every board handed out by make() can be cleared from the
    first tap without a single guess, using only the plain rule: look at one number, count the tiles around it.
    If the pufferfish it counts are all found, the rest around it are safe. If the hidden tiles around it are exactly the

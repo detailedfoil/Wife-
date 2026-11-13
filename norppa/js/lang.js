@@ -422,7 +422,7 @@
     'Floes': 'Lautat',
     'Tap to set the floe down on the one below.': 'Laske lautta alemman päälle napauttamalla.',
     'floes stacked': 'lauttaa pinottu',
-    'Puffer Sweep': 'Pallokalaharava',
+    'Puffer Sweeper': 'Pallokalaharavoija',
     'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.': 'Avaa jokainen ruutu herättämättä pallokalaa. Numero kertoo, montako pallokalaa ruudun ympärillä on. Mitä nopeammin selvität kentän, sitä enemmän kolikoita.',
     'Pufferfish': 'Pallokalat',
     'Tap any tile to start. Hold a tile to flag it.': 'Aloita napauttamalla mitä tahansa ruutua. Merkitse ruutu pitämällä sitä pohjassa.',

@@ -5,7 +5,7 @@
    Sled Run: steer down the hill between the trees.
    Blackjack: beat the dealer for sardines. Löyly: keep the sauna heat just right.
    Ice Stack: set sliding floes down on a tower; the overhang breaks off.
-   Puffer Sweep: minesweeper with pufferfish, one board against the clock.
+   Puffer Sweeper: minesweeper with pufferfish, one board against the clock.
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
 (function (PN) {
   'use strict';
@@ -1133,7 +1133,7 @@
     };
   })();
 
-  /* ================= Puffer Sweep ================= */
+  /* ================= Puffer Sweeper ================= */
   /* Minesweeper under the ice: nine by nine tiles with ten pufferfish under them. Tap a tile to open it; a number says how many
      pufferfish touch it. The first tap is always safe and opens a patch, and the pufferfish are only placed after it, on a board
      that sweep.js has checked can be cleared without one guess. Wake a pufferfish and it is over, with nothing to show for it.

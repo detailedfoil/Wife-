@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '13 Nov 2026, 12:30';
+  PN.UPDATED = '13 Nov 2026, 13:35';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -316,7 +316,7 @@
     catch: { price: 200, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
     swim: { price: 450, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
     stack: { price: 575, title: 'Ice Stack', icon: 'stack', tint: 'sea', text: 'Floes slide across. Tap to set each one down on the tower. Whatever hangs over breaks off. Miss the tower and it is over.', best: 'best_stack', pay: [0.78, 0.96], unit: 'floes stacked' },
-    puff: { price: 650, title: 'Puffer Sweep', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [55, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
+    puff: { price: 650, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [55, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
     toss: { price: 700, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.', best: 'best_toss', pay: [3.2, 1], unit: 'baskets' },
     sauna: { price: 850, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right. Unlocking it builds the sauna on the shore.', best: 'best_sauna', pay: [13.8, 0.9], unit: 'rounds in a row' },
     curl: { price: 1000, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
@@ -326,7 +326,7 @@
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
      skill levels so a new player earns about 16 coins a minute, a casual one 24, a good one 31 and an expert 37, whichever game
      they play, counting the whole visit (the 3-2-1, the play, the ending). Energy goes by how long you played, not per game. */
-  /* Puffer Sweep is the odd one out: one board, and the score is the seconds it took (low: smaller is better; 0 means a pufferfish
+  /* Puffer Sweeper is the odd one out: one board, and the score is the seconds it took (low: smaller is better; 0 means a pufferfish
      was woken, which pays nothing). It pays 55 * seconds^-0.3, so about 27 coins for 10 seconds or less (quick), 22 for 20 seconds,
      20 for 30, 17 for 45, 16 for a minute and 13 for two. A set board cleared faster is also more boards a minute, so quick players
      earn more a minute here than elsewhere and slow ones less: about 9, 19, 37 and 71 at the four skill levels. */
