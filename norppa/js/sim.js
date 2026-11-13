@@ -51,7 +51,7 @@
     // of taste (so -7 to +11 a play), and her happiness sets one flat bonus on every game: happyMax percent at full happiness,
     // rising from nothing at happyMid, and never a penalty. From a usual 70 happiness, favourites reach the full +8% in about 4 games and hold it;
     // a random mix takes 10 to 18 games and drifts about +4%; she must be above happyMid to earn anything.
-    muckLine: 70, muckCut: 0.25, muckMost: 15,
+    muckLine: 50, muckFirst: 0.01, muckCut: 0.25, muckMost: 15,   // nothing above 50 clean, 1% less at 50, climbing steeply (squared) to 25% less when filthy
     tasteMax: 15, tasteDrop: 5, tasteDrift: 2.5, tasteRoll: 8 * H, skipMax: 2,
     gameJoy: 2, joyPer: 0.6, happyMax: 8, happyMid: 55, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
@@ -634,8 +634,8 @@
     state.taste[id] = Math.max(-T.tasteMax, state.taste[id] - T.tasteDrop);
     others.forEach((x) => { state.taste[x] = Math.min(T.tasteMax, (state.taste[x] || 0) + T.tasteDrop / others.length); });
   }
-  /* How much less a mucky seal earns: nothing above muckLine, muckCut when filthy. */
-  const muckLoss = (state) => (state.stats.clean >= T.muckLine ? 0 : T.muckCut * (T.muckLine - state.stats.clean) / T.muckLine);
+  /* How much less a mucky seal earns: nothing above muckLine, muckFirst at it, then steeply more down to muckCut when filthy. */
+  const muckLoss = (state) => { const c = state.stats.clean; return c > T.muckLine ? 0 : T.muckFirst + (T.muckCut - T.muckFirst) * Math.pow((T.muckLine - Math.max(0, c)) / T.muckLine, 2); };
   /* What a game's coins are multiplied by right now. */
   /* The flat bonus her happiness gives every game, in percent: happyMax at 100, none at happyMid or below. */
   const happyBonus = (state) => {
