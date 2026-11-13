@@ -33,7 +33,7 @@
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
-    stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
+    stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
     // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean, unless she is Angy and still wants her sauna.
@@ -128,6 +128,9 @@
     fill(obj, base);
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
+    // One time only: pups now come at level 10, so a grown seal who is already there and has never had a pup is due one on this load
+    // (she still has to be awake, fed, happy and not sulking, like any birth).
+    if (obj && !obj.pupAtTen) { obj.pupAtTen = 1; if (obj.stage === 2 && obj.xp >= xpFor(T.pupLevel) && !obj.pups.length && !(obj.family && obj.family.length) && !obj.pupSeq) obj.nextPupAt = 0; }
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
     if (obj.owned && !obj.owned.sauna) { obj.owned.sauna = true; if (obj.placed) obj.placed.sauna = true; }   // the sauna is on everyone's shore now: it is how she gets clean
     return obj;
