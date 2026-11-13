@@ -59,6 +59,75 @@
     g.computeVertexNormals();
     return g;
   }
+  /* Fit neckwear to the same surface used by bodyGeometry. The old models are
+     authored around an XY hoop of radius .625; unwrap that hoop onto the sloping
+     shoulder, keeping the colour/UVs and the thickness of beads and fabric.
+     This runs on equip/growth only, never in the animation loop. */
+  // Cloth needs a few intermediate vertices to curve over the shoulder. Keeping
+  // just the corners of a long box/triangle would leave its faces cutting the fur.
+  function neckClothGeometry(geo) {
+    const input = geo.index ? geo.toNonIndexed() : geo, p = input.attributes.position, uv = input.attributes.uv;
+    const points = [], coords = [];
+    const split = (a, b, c, depth) => {
+      const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      const lengths = [dist(a, b), dist(b, c), dist(c, a)], longest = Math.max(...lengths);
+      if (longest > 0.10 && depth < 8) {
+        if (lengths[1] === longest) { const t = a; a = b; b = c; c = t; }
+        else if (lengths[2] === longest) { const t = c; c = b; b = a; a = t; }
+        const mid = a.map((v, i) => (v + b[i]) / 2);
+        split(a, mid, c, depth + 1); split(mid, b, c, depth + 1);
+      } else [a, b, c].forEach((v) => { points.push(...v.slice(0, 3)); coords.push(...v.slice(3)); });
+    };
+    for (let i = 0; i < p.count; i += 3) {
+      const at = (k) => [p.getX(k), p.getY(k), p.getZ(k), uv ? uv.getX(k) : 0, uv ? uv.getY(k) : 0];
+      split(at(i), at(i + 1), at(i + 2), 0);
+    }
+    const out = new T.BufferGeometry();
+    out.setAttribute('position', new T.Float32BufferAttribute(points, 3)); out.setAttribute('uv', new T.Float32BufferAttribute(coords, 2));
+    if (input !== geo) input.dispose(); geo.dispose();
+    return out;
+  }
+  function fitNeckwear(source, stage, id) {
+    const c = COAT[stage], bodyZ = 1.05 - 1.2 * c.body;
+    const shoulderZ = (0.27 - (c.head - 1) * 0.55 - bodyZ) / c.body, fitted = new T.Group();
+    const drapes = /^(scarf_|huivi$|solmuke$|solmio$|mitali$|bell$)/.test(id);
+    source.updateMatrixWorld(true);
+    source.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      let root = mesh;
+      while (root.parent && root.parent !== source) root = root.parent;
+      const hanging = drapes && root !== source.children[0];
+      let geo = mesh.geometry.clone(); geo.applyMatrix4(mesh.matrixWorld);
+      if (hanging && /^(BoxGeometry|ExtrudeGeometry)$/.test(mesh.geometry.type)) geo = neckClothGeometry(geo);
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), depth = p.getZ(i), radius = Math.hypot(x, y);
+        const angle = Math.atan2(y, x), sx = Math.cos(angle), sy = Math.sin(angle);
+        // The top lies behind the head; the lower part follows the chest.
+        // Loose ends turn back along the shoulder, clear of the front flippers.
+        const flipperClearance = 0.46 * Math.exp(-Math.pow((Math.abs(sx) - 0.85) / 0.24, 2)) * U.smooth(0.05, 0.5, -sy);
+        const z = shoulderZ - 0.35 / c.body * sy + depth * 0.45 - flipperClearance / c.body
+          - (hanging ? (0.25 + Math.max(0, radius - 0.68) * 2.8) / c.body : 0);
+        const uz = U.clamp(z / 1.2, -0.92, 0.92), rr = Math.sqrt(1 - uz * uz);
+        const f = uz < 0 ? 1 - 0.5 * Math.pow(-uz, 1.5) : 1 + 0.05 * uz;
+        let px = sx * rr * 0.8 * f, py = sy * rr * 0.64 * f;
+        if (sy < 0) { py *= 0.74; px *= 1 + 0.12 * -sy * rr; }
+        if (uz < 0) py -= 0.12 * uz * uz;
+        const delta = hanging ? U.clamp(radius - 0.625, -0.04, 0.10) : radius - 0.625;
+        const clearance = (0.08 + delta * 0.55) * (1 - 0.85 * U.smooth(0.2, 0.85, -sy));
+        px += sx * clearance; py += sy * clearance;
+        // The compressed underside rests above the snow instead of passing below it.
+        p.setXYZ(i, px, Math.max(0.025 - 0.46, py), uz * 1.2);
+      }
+      geo.computeVertexNormals(); geo.computeBoundingSphere();
+      const m = new T.Mesh(geo, mesh.material); m.castShadow = true;
+      fitted.add(m);
+    });
+    // Props.wear creates these geometries for this item; the fitted copies own their lifetime.
+    source.traverse((mesh) => { if (mesh.isMesh) mesh.geometry.dispose(); });
+    return fitted;
+  }
+
   /* The snuggle blanket, shaped to lie over the body: across the back from side to side, from near the tail up to the neck.
      Made in the body's own space (it rides on the body mesh), a little outside the fur, the hem hanging a touch wavy. */
   function blanketGeometry() {
@@ -250,7 +319,7 @@
       });
 
       // where things attach
-      this.neckA = new T.Group(); this.neckA.position.set(0, 0.74, 0.56); this.sq.add(this.neckA);
+      this.neckA = new T.Group(); this.body.add(this.neckA); // fitted in the torso's own coordinates
       this.mouthA = new T.Object3D(); this.mouthA.position.set(0, -0.3, 0.62); this.headP.add(this.mouthA);
       this.topA = new T.Object3D(); this.topA.position.set(0, 0.7, 0.05); this.headP.add(this.topA);
       this.noseA = new T.Object3D(); this.noseA.position.set(0, 0.05, 0.75); this.headP.add(this.noseA);
@@ -285,7 +354,10 @@
       this.body.position.set(0, 0.46, 1.05 - 1.2 * k);
       this.tailG.position.set(0, 0.17, 1.05 - 2.4 * k + 0.12);
       this.headP.scale.setScalar(c.head);
-      this.neckA.scale.setScalar(c.head);
+      // Growth changes the shoulder proportions, so refit from the original item.
+      if (this.wornId.neck) {
+        const id = this.wornId.neck; this.wornId.neck = null; this.setWear('neck', id);
+      }
       this.backA.position.set(0, 1.062, 1.05 - 1.44 * k); this.backA.scale.setScalar(0.5 + 0.5 * k);
       this.eyes.forEach((e) => e.g.scale.setScalar(c.eye));
       this.baseScale = this.isPup ? 0.4 : c.scale;
@@ -305,10 +377,14 @@
 
     setWear(slot, id) {
       if (this.wornId[slot] === id) return;
-      if (this.worn[slot]) this.worn[slot].parent.remove(this.worn[slot]);
+      if (this.worn[slot]) {
+        const old = this.worn[slot]; old.parent.remove(old);
+        if (slot === 'neck') old.traverse((m) => { if (m.isMesh) m.geometry.dispose(); });
+      }
       this.worn[slot] = null; this.wornId[slot] = id;
       if (!id) return;
-      const o = U.shadows(PN.Props.wear(id), true, false);
+      const source = PN.Props.wear(id);
+      const o = U.shadows(slot === 'neck' ? fitNeckwear(source, this.stage, id) : source, true, false);
       (slot === 'neck' ? this.neckA : slot === 'back' ? this.backA : this.headP).add(o);
       this.worn[slot] = o;
     }
