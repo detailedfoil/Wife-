@@ -273,7 +273,7 @@
   const toss = (() => {
     const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.65, HIT = 0.85, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
-    let wind = 0, score = 0, top = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
+    let wind = 0, score = 0, top = 0, tries = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
 
     function build() {
@@ -314,7 +314,9 @@
       sc.add(ball);
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
-    /* New wind and maybe a new distance, ready for the next throw. */
+    const THROWS = 5;
+    const throwsLeft = () => tr(THROWS - tries === 1 ? 'Last throw' : 'Throws left: {0}', THROWS - tries);
+    /* New wind, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
       wind = Math.round(10 * Math.pow(rnd(), 1.2) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
@@ -325,6 +327,7 @@
       K.time(wind ? Math.abs(wind).toFixed(1) + (wind > 0 ? ' →' : ' ←') : '0.0');
       ball.position.set(0, SY, SZ + ZB); ball.visible = true; ball.scale.setScalar(1);
       mode = 'ready'; rimHit = false;
+      K.hint(throwsLeft());
     }
     /* The throwing guide: shown each time the game opens, with the lean each wind strength needs. */
     let guideEl = null;
@@ -348,14 +351,14 @@
       guideEl.innerHTML = '<div class="tg-card"><b>' + tr('Aim into the wind') + '</b>' + svg
         + '<p>' + tr('Swipe up the screen along the line for the wind. The numbers are the wind, and wind 10 needs a 45 degree lean. If the flag blows right, swipe left.') + '</p>'
         + '<button class="btn" type="button">' + tr('Start throwing') + '</button></div>';
-      guideEl.querySelector('button').addEventListener('click', () => { A.play('tap'); guideEl.remove(); guideEl = null; mode = 'ready'; });
+      guideEl.querySelector('button').addEventListener('click', () => { A.play('tap'); guideEl.remove(); guideEl = null; mode = 'ready'; K.hint(throwsLeft()); });
       document.getElementById('gamehud').appendChild(guideEl);
       mode = 'guide'; K.hint('');
     }
     function launch(yaw) {
       const v = Math.sqrt(GRAV * RANGE / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
       bv.set(Math.tan(yaw) * ch, Math.sin(ELEV) * v, -ch);   // a sideways shot keeps its full reach, so leaning into the wind never falls short
-      mode = 'fly'; prevY = SY; spin = 8;
+      mode = 'fly'; prevY = SY; spin = 8; tries++;
       A.play('whoosh');
       K.hint('');
     }
@@ -375,13 +378,13 @@
       K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
-      label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Miss and the streak starts again.',
+      label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. You get 5 throws.',
       view: () => view,
       start() {
         if (!view) build();
         cast(view, 0.42, true);
         face(0);
-        score = 0; top = 0; puffs.clear();
+        score = 0; top = 0; tries = 0; puffs.clear();
         setUp();
         guide();
       },
@@ -440,8 +443,8 @@
         if ((mode === 'in' || mode === 'out') && playing) {
           wait -= dt;
           if (wait <= 0) {
-            if (mode === 'out') { score = 0; K.shown(0); }
-            setUp();
+            if (tries >= THROWS) { mode = 'done'; K.over(tr(score >= 5 ? 'Perfect!' : score >= 3 ? 'Nice!' : 'Done!')); }
+            else setUp();
           }
         }
         puffs.update(dt);
