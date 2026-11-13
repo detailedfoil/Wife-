@@ -59,12 +59,10 @@
     g.computeVertexNormals();
     return g;
   }
-  /* Fit neckwear to the same surface used by bodyGeometry. The old models are
-     authored around an XY hoop of radius .625; unwrap that hoop onto the sloping
-     shoulder, keeping the colour/UVs and the thickness of beads and fabric.
-     This runs on equip/growth only, never in the animation loop. */
-  // Cloth needs a few intermediate vertices to curve over the shoulder. Keeping
-  // just the corners of a long box/triangle would leave its faces cutting the fur.
+  /* Neckwear sits around the base of the head, tilted back over the nape and
+     forward under the chin. It is carried by the body rig, but never wrapped
+     around the torso. Original colour/UVs and ornament detail are preserved. */
+  // Subdivide loose cloth so it can drape smoothly around the neck.
   function neckClothGeometry(geo) {
     const input = geo.index ? geo.toNonIndexed() : geo, p = input.attributes.position, uv = input.attributes.uv;
     const points = [], coords = [];
@@ -89,7 +87,7 @@
   }
   function fitNeckwear(source, stage, id) {
     const c = COAT[stage], bodyZ = 1.05 - 1.2 * c.body;
-    const shoulderZ = (0.27 - (c.head - 1) * 0.55 - bodyZ) / c.body, fitted = new T.Group();
+    const fitted = new T.Group();
     const drapes = /^(scarf_|huivi$|solmuke$|solmio$|mitali$|bell$)/.test(id);
     source.updateMatrixWorld(true);
     source.traverse((mesh) => {
@@ -103,21 +101,15 @@
       for (let i = 0; i < p.count; i++) {
         const x = p.getX(i), y = p.getY(i), depth = p.getZ(i), radius = Math.hypot(x, y);
         const angle = Math.atan2(y, x), sx = Math.cos(angle), sy = Math.sin(angle);
-        // The top lies behind the head; the lower part follows the chest.
-        // Loose ends turn back along the shoulder, clear of the front flippers.
-        const flipperClearance = 0.46 * Math.exp(-Math.pow((Math.abs(sx) - 0.85) / 0.24, 2)) * U.smooth(0.05, 0.5, -sy);
-        const z = shoulderZ - 0.35 / c.body * sy + depth * 0.45 - flipperClearance / c.body
-          - (hanging ? (0.25 + Math.max(0, radius - 0.68) * 2.8) / c.body : 0);
-        const uz = U.clamp(z / 1.2, -0.92, 0.92), rr = Math.sqrt(1 - uz * uz);
-        const f = uz < 0 ? 1 - 0.5 * Math.pow(-uz, 1.5) : 1 + 0.05 * uz;
-        let px = sx * rr * 0.8 * f, py = sy * rr * 0.64 * f;
-        if (sy < 0) { py *= 0.74; px *= 1 + 0.12 * -sy * rr; }
-        if (uz < 0) py -= 0.12 * uz * uz;
-        const delta = hanging ? U.clamp(radius - 0.625, -0.04, 0.10) : radius - 0.625;
-        const clearance = (0.08 + delta * 0.55) * (1 - 0.85 * U.smooth(0.2, 0.85, -sy));
-        px += sx * clearance; py += sy * clearance;
-        // The compressed underside rests above the snow instead of passing below it.
-        p.setXYZ(i, px, Math.max(0.025 - 0.46, py), uz * 1.2);
+        // An anatomical collar: broad at the sides of the head, high at the
+        // nape, and low under the chin. Loose scarf ends remain at the chest.
+        const thickness = (radius - 0.625) * 0.75;
+        const px = (0.66 * c.head + thickness) * sx;
+        const py = 0.58 + (sy >= 0 ? 0.53 : 0.44 * c.head) * sy + thickness * sy;
+        const pz = 0.60 - 0.45 * c.head * sy + depth * 0.7 - thickness * 0.6 * sy;
+        // Convert the neck position into the body's local coordinates so it
+        // follows body motion without inheriting the head's independent turns.
+        p.setXYZ(i, px, Math.max(0.035, py) - 0.46, (pz - bodyZ) / c.body);
       }
       geo.computeVertexNormals(); geo.computeBoundingSphere();
       const m = new T.Mesh(geo, mesh.material); m.castShadow = true;
@@ -354,7 +346,7 @@
       this.body.position.set(0, 0.46, 1.05 - 1.2 * k);
       this.tailG.position.set(0, 0.17, 1.05 - 2.4 * k + 0.12);
       this.headP.scale.setScalar(c.head);
-      // Growth changes the shoulder proportions, so refit from the original item.
+      // Growth changes the neck proportions, so refit from the original item.
       if (this.wornId.neck) {
         const id = this.wornId.neck; this.wornId.neck = null; this.setWear('neck', id);
       }
@@ -540,7 +532,8 @@
       this.sq.position.y = p.lift;
       this.sq.rotation.set(-p.bPitch, 0, p.bRoll);
       this.headP.rotation.set(-p.pitch, p.yaw, p.roll);
-      this.headP.position.y = 0.78 - p.drop;
+      // A collar supports the chin: do not sink the sleeping head through it.
+      this.headP.position.y = 0.78 - (this.worn.neck ? p.drop * 0.1 : p.drop);
       this.shadow.material.opacity = 0.55 * U.clamp(1 - p.lift * 1.6, 0.25, 1);
 
       this.eyes.forEach((E) => {
@@ -561,6 +554,8 @@
       if (this.tear.visible) this.tear.position.y = onHead(0.5, -0.12, 1.02).y - ((t * 0.25 + this.seed) % 1) * 0.16;
 
       const clap = this.clap || 0, wave = this.wave || 0;
+      // Keep clapping flippers on the chest side of the scarf.
+      this.flipL.position.z = this.flipR.position.z = 0.36 - (this.worn.neck ? 0.34 * clap : 0);
       this.flipL.rotation.set(0.28 - p.fl * 0.8, 0.95 - clap * 1.5, 0.12 + p.fl * 0.5 + wave);
       this.flipR.rotation.set(0.28 - p.fr * 0.8, -0.95 + clap * 1.5, -0.12 - p.fr * 0.5);
       this.tailG.rotation.set(p.tail * 0.5 - 0.05, Math.sin(t * 1.3 + this.seed) * 0.06, 0);
