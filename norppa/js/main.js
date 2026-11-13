@@ -992,10 +992,12 @@
     seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.2, face: W.HOME_HEADING });
     UI.refresh();
     if (!r) return;
-    seal.gesture(r.best ? 'happy' : 'clap'); A.play(r.best ? 'award' : 'coin');
-    const title = tr(PN.GAMES[id].title);
-    const unit = tr(PN.GAMES[id].unit || (id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces')));
-    let html = '<div class="bigscore">' + score + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
+    const gm = PN.GAMES[id], lost = gm.low && !score;      // a timed game: the score is the seconds it took, and none means it was lost
+    seal.gesture(lost ? 'sad' : r.best ? 'happy' : 'clap'); A.play(lost ? 'sad' : r.best ? 'award' : 'coin');
+    const title = tr(gm.title);
+    const unit = tr(gm.unit || (id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces')));
+    let html = lost ? '<p>' + tr('You woke a pufferfish. No coins this time.') + '</p>'
+      : '<div class="bigscore">' + (gm.low ? PN.mmss(score) : score) + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';

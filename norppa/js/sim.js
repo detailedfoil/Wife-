@@ -583,13 +583,19 @@
 
   /* Rewards after a mini-game. fishMap: fish caught in Fish Rain. secs: how long the game lasted, which sets the energy it costs.
      Every game pays a * score^b coins (PN.GAMES[game].pay), tuned so a minute of play earns about the same in each game. */
+  function gamePay(game, score) {
+    const gm = PN.GAMES[game];
+    if (!gm || !gm.pay || !(score > 0)) return 0;
+    return Math.min(T.gameMax, gm.pay[0] * Math.pow(Math.max(score, gm.quick || 0), gm.pay[1]));
+  }
   function gameReward(state, game, score, fishMap, found, secs) {
     const s = state.stats, c = state.counters, gm = PN.GAMES[game];
     let coins = 0, best = false;
     const got = [];
-    if (gm && gm.pay && score > 0) coins = Math.min(T.gameMax, gm.pay[0] * Math.pow(score, gm.pay[1]));
+    coins = gamePay(game, score);
     const key = gm && gm.best;
-    if (key && score > (c[key] || 0)) { c[key] = score; best = score > 0; }
+    // In a timed game (low) the score is the seconds it took, so the best is the smallest, and 0 means it was lost.
+    if (key && (gm.low ? score > 0 && (!c[key] || score < c[key]) : score > (c[key] || 0))) { c[key] = score; best = score > 0; }
     if (game === 'catch') {
       // Only now and then does the seal get to keep a fish from the round.
       const caught = [];
@@ -897,7 +903,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
+    feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay,
     buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

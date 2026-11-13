@@ -1,10 +1,11 @@
-/* Pikku Norppa: the arcade. Seven mini-games, each on a little stage of its own.
+/* Pikku Norppa: the arcade. Eight mini-games, each on a little stage of its own.
    Swimmy Seal: tap to swim up, slip between the ice and the kelp. Three goes, the best counts.
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
    Blackjack: beat the dealer for sardines. Löyly: keep the sauna heat just right.
    Ice Stack: set sliding floes down on a tower; the overhang breaks off.
+   Puffer Sweep: minesweeper with pufferfish, one board against the clock.
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
 (function (PN) {
   'use strict';
@@ -1132,5 +1133,202 @@
     };
   })();
 
-  G.ext.swim = swim; G.ext.stack = stack; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
+  /* ================= Puffer Sweep ================= */
+  /* Minesweeper under the ice: nine by nine tiles with ten pufferfish under them. Tap a tile to open it; a number says how many
+     pufferfish touch it. The first tap is always safe and opens a patch, and the pufferfish are only placed after it, on a board
+     that sweep.js has checked can be cleared without one guess. Wake a pufferfish and it is over, with nothing to show for it.
+     Clear the lot and the coins go by the clock: the quicker, the more (data.js). The clock starts on the first tap.
+     Flags are optional. Hold a tile, or switch to Flag and tap. Tap a number whose flags are all down to open the rest around it. */
+  const puff = (() => {
+    const BW = 9, BH = 9, N = 10, CELLS = BW * BH, HOLD = 380, Sw = PN.Sweep;
+    const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21V4" stroke="#17264d" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M8.6 4.4l10.4 3.7-10.4 4z" fill="#f2683c" stroke="#f2683c" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+    const FISH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M19.2 4.8l-2.4 2.4M4.8 19.2l2.4-2.4M19.2 19.2l-2.4-2.4" stroke="#c9822a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
+      + '<circle cx="12" cy="12" r="7.2" fill="#f6c443"/><path d="M5.4 14.6a7.2 7.2 0 0 0 13.2 0z" fill="#fff1c9"/><circle cx="9.2" cy="10.4" r="1.5" fill="#17264d"/><circle cx="14.8" cy="10.4" r="1.5" fill="#17264d"/>'
+      + '<path d="M10.5 14.3h3" stroke="#17264d" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>';
+    let view = null, el = null, cells = [], prizeEl = null, modeEl = null, tipEl = null, fish = [];
+    let mines = null, num = null, open = null, mark = null, left = 0, flags = 0, t = 0, mode = 'idle', flagging = false, wait = 0, press = null, shownT = -1, shownP = -1;
+
+    /* A round little pufferfish for the water beside her. */
+    function puffer() {
+      const g = new T.Group(), skin = U.mat(0xf2c14e, { roughness: 0.6 }), thorn = U.mat(0xc98a2b, { roughness: 0.6 }), dark = U.mat(0x17264d, { roughness: 0.4 });
+      const up = new T.Vector3(0, 1, 0), v = new T.Vector3();
+      g.add(U.ball(0.3, skin, 0, 0, 0, 1, 1, 1, 20));
+      g.add(U.ball(0.27, U.mat(0xfff1c9, { roughness: 0.7 }), 0, -0.05, 0.03, 1, 0.95, 1, 18));
+      for (let i = 0; i < 34; i++) {
+        const y = 1 - (i + 0.5) / 17, r = Math.sqrt(1 - y * y), a = i * 2.39996, x = Math.cos(a) * r, z = Math.sin(a) * r;
+        if (z > 0.5 && y > -0.35 && y < 0.65) continue;                 // keep the face clear
+        const c = U.cone(0.034, 0.12, thorn, x * 0.32, y * 0.32, z * 0.32, 6);
+        c.quaternion.setFromUnitVectors(up, v.set(x, y, z));
+        g.add(c);
+      }
+      [-1, 1].forEach((sd) => {
+        g.add(U.ball(0.075, U.mat(0xffffff, { roughness: 0.3 }), sd * 0.115, 0.09, 0.245, 1, 1, 0.7, 12), U.ball(0.038, dark, sd * 0.12, 0.09, 0.3, 1, 1, 0.6, 10));
+        const fin = U.ball(0.09, thorn, sd * 0.31, -0.03, 0, 0.5, 1, 1.1, 10); fin.rotation.z = sd * 0.5; g.add(fin);
+      });
+      g.add(U.ball(0.045, dark, 0, -0.035, 0.292, 1, 0.5, 0.5, 10));
+      const tail = U.cone(0.12, 0.2, thorn, 0, 0, -0.38, 8); tail.rotation.x = PI / 2; tail.scale.x = 0.35; g.add(tail);
+      return g;
+    }
+    function build() {
+      view = stage('#86bdf0', '#eef7ff', { ground: 0xbfdcff, hemi: 2.0, key: 1.7 });
+      const sc = view.scene, snow = U.mat(0xffffff, { roughness: 1 }), ice = U.mat(0xa9d6f5, { roughness: 0.45 });
+      const lake = U.mesh(new T.CircleGeometry(80, 40), U.mat(0x2b68b3, { roughness: 0.3 }), 0, -0.2, 0);
+      lake.rotation.x = -PI / 2;
+      sc.add(lake, U.cyl(1.02, 0.9, 0.32, ice, 0, -0.18, 0, 9), U.cyl(1.06, 1.02, 0.06, snow, 0, 0, 0, 9));
+      const r = U.rng(81);
+      for (let i = 0; i < 16; i++) {
+        const a = r() * PI * 2, d = 3.2 + r() * 16, k = 0.4 + r() * 1.3;
+        const f = U.cyl(k, k * 0.92, 0.12, snow, Math.cos(a) * d, -0.16, Math.sin(a) * d - 4, 7);
+        f.rotation.y = r() * 3; sc.add(f);
+      }
+      [[-1.42, 0.35, 0.45], [1.45, -0.1, -0.4]].forEach((p, i) => { const g = puffer(); g.position.set(p[0], -0.12, p[1]); g.rotation.y = p[2]; sc.add(g); fish.push({ g, big: 1, y: -0.12, ph: i * 2.1 }); });
+      view.camera.position.set(0, 2.5, 7.2);
+      el = document.getElementById('puffBoard');
+      let h = '<div class="pf-tip" id="pfTip"></div><div class="pf-grid">';
+      for (let i = 0; i < CELLS; i++) h += '<button class="pf-c" data-i="' + i + '" tabindex="-1"></button>';
+      h += '</div><div class="pf-bar"><span class="pf-prize" id="pfPrize"></span><span class="pf-mode" id="pfMode" role="group"><button data-pf="dig"></button><button data-pf="flag"></button></span></div>';
+      el.innerHTML = h;
+      cells = Array.prototype.slice.call(el.querySelectorAll('.pf-c'));
+      prizeEl = document.getElementById('pfPrize'); modeEl = document.getElementById('pfMode'); tipEl = document.getElementById('pfTip');
+      const tile = (e) => { const b = e.target.closest ? e.target.closest('.pf-c') : null; return b ? +b.dataset.i : -1; };
+      const drop = () => { if (press) { clearTimeout(press.timer); press = null; } };
+      el.addEventListener('pointerdown', (e) => {
+        drop();
+        const i = tile(e);
+        if (i < 0 || (e.button != null && e.button > 0)) return;
+        press = { i, x: e.clientX, y: e.clientY, held: false, timer: setTimeout(() => { if (press && press.i === i) press.held = hold(i); }, HOLD) };
+      });
+      el.addEventListener('pointermove', (e) => { if (press && !press.held && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 14) drop(); });
+      el.addEventListener('pointerup', (e) => {
+        if (!press) return;
+        const p = press, at = document.elementFromPoint(e.clientX, e.clientY), b = at && at.closest ? at.closest('.pf-c') : null;
+        drop();
+        if (!p.held && b && +b.dataset.i === p.i) tap(p.i);
+      });
+      el.addEventListener('pointercancel', drop);
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      modeEl.addEventListener('click', (e) => { const b = e.target.closest('[data-pf]'); if (b) { flagging = b.dataset.pf === 'flag'; A.play('tap'); bar(); } });
+    }
+    function bar() {
+      const b = modeEl.children;
+      b[0].innerHTML = tr('Open'); b[1].innerHTML = FLAG + tr('Flag');
+      b[0].className = flagging ? '' : 'on'; b[1].className = flagging ? 'on' : '';
+      b[0].setAttribute('aria-pressed', String(!flagging)); b[1].setAttribute('aria-pressed', String(flagging));
+      el.classList.toggle('flagging', flagging);
+    }
+    function paint(i) {
+      const c = cells[i];
+      if (open[i]) { c.className = 'pf-c open n' + num[i]; c.textContent = num[i] || ''; }
+      else if (mark[i]) { c.className = 'pf-c flag'; c.innerHTML = FLAG; }
+      else { c.className = 'pf-c'; c.textContent = ''; }
+    }
+    function clockNow() {
+      const secs = Math.floor(t), prize = Math.floor(PN.Sim.gamePay('puff', Math.max(1, Math.ceil(t))));
+      if (secs !== shownT) { shownT = secs; K.time(PN.mmss(secs)); }
+      if (prize !== shownP) { shownP = prize; prizeEl.innerHTML = PN.UI.ic('coin') + '<b>' + prize + '</b>'; prizeEl.setAttribute('aria-label', tr('Coins for clearing it now: {0}', prize)); }
+    }
+    function setFlag(i) {
+      if (mode !== 'play' || open[i]) return;
+      mark[i] = mark[i] ? 0 : 1; flags += mark[i] ? 1 : -1;
+      paint(i); A.play('tick'); K.shown(N - flags);
+    }
+    /* A long press flags a shut tile. False: there was nothing to flag, so the press counts as a plain tap. */
+    function hold(i) {
+      if (mode !== 'play' || open[i]) return false;
+      const st = PN.Game.state;
+      if (st.settings.haptics && navigator.vibrate) { try { navigator.vibrate(14); } catch (e) { /* not allowed here */ } }
+      setFlag(i);
+      return true;
+    }
+    /* Open a tile and whatever comes with it. False: there was a pufferfish under it. */
+    function dig(i) {
+      if (mines[i]) { boom(i); return false; }
+      const got = Sw.flood(BW, BH, mines, num, open, i);
+      got.forEach((j) => { if (mark[j]) { mark[j] = 0; flags--; } paint(j); if (j !== i || got.length > 1) cells[j].classList.add('fresh'); });
+      left -= got.length;
+      return true;
+    }
+    function tap(i) {
+      const first = mode === 'ready';                           // the first tap always opens, whichever way the switch is set
+      if (first) {
+        mines = Sw.make(BW, BH, N, i); num = Sw.counts(BW, BH, mines);
+        mode = 'play'; tipEl.textContent = '';
+      }
+      if (mode !== 'play') return;
+      if (open[i]) {
+        if (!num[i]) return;
+        const nb = Sw.hood(BW, BH)[i];
+        let fl = 0, hid = 0;
+        nb.forEach((j) => { if (!open[j]) { if (mark[j]) fl++; else hid++; } });
+        if (fl !== num[i] || !hid) return;
+        const before = left;
+        for (let k = 0; k < nb.length; k++) { const j = nb[k]; if (!open[j] && !mark[j] && !dig(j)) return; }
+        A.play(before - left > 2 ? 'pop' : 'tap');
+      } else {
+        if (flagging && !first) { setFlag(i); return; }
+        if (mark[i]) return;                                   // a flag keeps a tile shut
+        const before = left;
+        if (!dig(i)) return;
+        A.play(before - left > 2 ? 'pop' : 'tap');
+      }
+      K.shown(N - flags);
+      if (left === 0) win();
+    }
+    function win() {
+      mode = 'won';
+      for (let i = 0; i < CELLS; i++) if (!open[i] && !mark[i]) { mark[i] = 1; paint(i); }
+      flags = N; K.shown(0);
+      K.result(Math.max(1, Math.ceil(t)));
+      A.play('award'); actor.gesture('happy', true);
+      K.over(tr('All clear!'));
+    }
+    function boom(i) {
+      mode = 'boom'; wait = 1.1;
+      for (let j = 0; j < CELLS; j++) {
+        if (mines[j] && !mark[j]) { cells[j].className = 'pf-c open puff' + (j === i ? ' hit' : ''); cells[j].innerHTML = FISH; }
+        else if (!mines[j] && mark[j]) cells[j].classList.add('wrong');
+      }
+      K.result(0);
+      A.play('thud'); actor.gesture('surprise', true);
+      fish.forEach((f) => { f.big = 1.4; });
+    }
+    return {
+      label: 'Pufferfish', label2: 'Time', nocount: true, hint: '',
+      view: () => view,
+      peek: () => ({ mines, open, mark, num, left, flags, t, mode, flagging }),
+      tap, hold,
+      start() {
+        if (!view) build();
+        cast(view, 0.85, true);
+        face(0);
+        mines = null; num = new Uint8Array(CELLS); open = new Uint8Array(CELLS); mark = new Uint8Array(CELLS);
+        left = CELLS - N; flags = 0; t = 0; mode = 'ready'; flagging = false; wait = 0; press = null; shownT = shownP = -1;
+        fish.forEach((f) => { f.big = 1; f.g.scale.setScalar(1); });
+        for (let i = 0; i < CELLS; i++) paint(i);
+        bar(); clockNow();
+        tipEl.textContent = tr('Tap any tile to start. Hold a tile to flag it.');
+        el.hidden = false;
+      },
+      stop() { if (press) { clearTimeout(press.timer); press = null; } el.hidden = true; },
+      go() { K.shown(N); },
+      pointer() {},
+      key() {},
+      update(dt, playing) {
+        clock += dt;
+        lens(view);
+        view.camera.lookAt(0, -2.0, 0);
+        fish.forEach((f) => {
+          f.g.position.y = f.y + Math.sin(clock * 1.4 + f.ph) * 0.045;
+          f.g.rotation.z = Math.sin(clock * 0.9 + f.ph) * 0.12;
+          f.g.scale.setScalar(U.damp(f.g.scale.x, f.big, 9, dt));
+        });
+        actor.update(dt, clock, null);
+        if (!playing) return;
+        if (mode === 'play') { t += dt; clockNow(); }
+        else if (mode === 'boom') { wait -= dt; if (wait <= 0) { mode = 'done'; A.play('nope'); K.over(tr('Pufferfish!')); } }
+      },
+    };
+  })();
+
+  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
