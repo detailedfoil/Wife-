@@ -245,6 +245,7 @@
     }
     if (!washing) syncDirt();
     syncPups();
+    tickVisits(now);
     if (saveT > 10) { saveT = 0; save(); }
     if (envT <= 0) { envT = 22; noticeSky(); }
     const free = G.ready && !G.busy && !PN.Games.active && !UI.modalOpen && !UI.sheetName && !washing && !bedBusy;
@@ -420,12 +421,12 @@
   /* Where each pup sits: by mother's flipper on the shore, in front of her nose at the den.
      Both spots are in plain view, clear of her head and of anything put out on the shore. */
   function pupSlot(i, out) {
-    const odd = i % 2;
+    const k = i % 4, odd = k % 2, far = k > 1;            // the first two spots are for her own pups, the others for visitors
     if (seal.asleep || state.asleep) {
-      out.set(anchor.x + (odd ? -0.25 : 1.05), 0, anchor.z + (odd ? 1.45 : 0.5));
+      out.set(anchor.x + (odd ? -0.25 : 1.05) + (far ? 0.85 : 0), 0, anchor.z + (odd ? 1.45 : 0.5) + (far ? 0.75 : 0));
       out.h = W.DEN.heading + (odd ? -0.2 : 0.25);
     } else {
-      out.set(anchor.x + (odd ? -1.5 : -0.65), 0, anchor.z + (odd ? 0 : 0.75));
+      out.set(anchor.x + (odd ? -1.5 : -0.65) + (far ? -0.95 : 0), 0, anchor.z + (odd ? 0 : 0.75) + (far ? 1.05 : 0));
       out.h = odd ? 0.9 : 0.55;
     }
     return out;
@@ -474,7 +475,112 @@
     });
     if (pupZ <= 0) pupZ = 3.1;
     Object.keys(pups).forEach((id) => pups[id].update(dt, t, W.groundY));
+    updateVisitors(dt);
   }
+
+  /* ---------- visiting pups ----------
+     A grown pup that has been called home from the Family album. It climbs out of the ice hole, hangs about on the shore,
+     and swims back when sent away or when its eight hours are up. */
+  const visitors = {};                                   // family number -> the visiting seal
+  function visitorList() { return Object.keys(visitors).sort((a, b) => a - b); }
+  function spawnVisitor(i, arriving) {
+    const f = state.family[i];
+    if (!f || visitors[i]) return;
+    const ps = visitors[i] = new PN.Seal({ pup: true, stage: 0 });
+    ps.visit = i;
+    Object.keys(f.wear || {}).forEach((slot) => ps.setWear(slot, f.wear[slot]));
+    ps.asleep = seal.asleep;
+    W.scene.add(ps.g); W.pickables.push(ps.g);
+    const s = pupSlot(state.pups.length + visitorList().indexOf(String(i)), v3);
+    if (arriving) {
+      const e = holeEdge(ps, v2);
+      ps.place(e.x, W.groundY(e.x, e.z), e.z, 0);
+      ps.asleep = false;
+      ps.moveTo(s.x, s.z, { speed: 2.2, face: s.h });
+      ps.gesture('happy', true);
+    } else ps.place(s.x, W.groundY(s.x, s.z), s.z, s.h);
+  }
+  async function visitorLeaves(i, animate) {
+    const ps = visitors[i];
+    if (!ps || ps.leaving) return;
+    ps.leaving = true; ps.asleep = false;
+    if (animate && ps.g.visible) {
+      ps.gesture('wave', true); A.play('chirp');
+      await wait(1.2);
+      const e = holeEdge(ps, v2).clone();
+      await ps.moveTo(e.x, e.z, { speed: 2.4 });
+      await plunge(ps);
+    }
+    W.scene.remove(ps.g);
+    const k = W.pickables.indexOf(ps.g);
+    if (k >= 0) W.pickables.splice(k, 1);
+    delete visitors[i];
+  }
+  function updateVisitors(dt) {
+    const inGame = !!PN.Games.active, ids = visitorList();
+    ids.forEach((id, k) => {
+      const ps = visitors[id];
+      if (!ps || ps.leaving) return;
+      ps.g.visible = !inGame;
+      const s = pupSlot(state.pups.length + k, v3), far = Math.hypot(s.x - ps.g.position.x, s.z - ps.g.position.z);
+      if (far > 0.55 && !ps.move && !inGame) { ps.asleep = false; ps.moveTo(s.x, s.z, { speed: 2.1, face: s.h }); }
+      if (!ps.move) ps.asleep = seal.asleep;
+      ps.setMood('happy');
+      ps.look = ps.asleep ? null : (k % 2 ? seal.g.position : W.camera.position);
+    });
+    ids.forEach((id) => visitors[id].update(dt, t, W.groundY));
+  }
+  /* Called every second or so, and when the game opens: pay the ones who have arrived, and see the others off. */
+  function tickVisits(now) {
+    const r = S.visitTick(state, now);
+    r.arrived.forEach((i) => {
+      const f = state.family[i], here = S.visitStatus(f, now) === 'here';
+      UI.toast(here ? tr('<b>{0}</b> is back for a visit! +{1} coins', UI.esc(f.name), f.coins) : tr('<b>{0}</b> came to visit while you were away. +{1} coins', UI.esc(f.name), f.coins), 'coin', '', 5200);
+      A.play('award');
+      if (here) { spawnVisitor(i, true); FX.hearts(head(), 4); if (!seal.asleep && !G.busy) seal.gesture('happy'); }
+    });
+    r.left.forEach((i) => { visitorLeaves(i, true); });
+    state.family.forEach((f, i) => { if (S.visitStatus(f, now) === 'here' && !visitors[i]) spawnVisitor(i, false); });
+    visitorList().forEach((id) => { const ps = visitors[id]; if (!ps.leaving && S.visitStatus(state.family[id], now) !== 'here') visitorLeaves(id, false); });
+    if (r.arrived.length || r.left.length) { S.save(state); UI.refresh(); if (UI.sheetName) UI.renderSheet(); }
+  }
+  G.callPup = async function (i) {
+    const f = state.family[i];
+    if (!f || f.fate !== 'grown' || UI.modalOpen) return;
+    const now = Date.now(), stat = S.visitStatus(f, now), name = UI.esc(f.name), close = [{ label: tr('Close'), value: 0 }];
+    A.play('tap');
+    if (stat === 'here') { G.visitInfo(i); return; }
+    if (stat === 'coming') { await UI.modal({ title: name, html: '<p>' + tr('{0} is on the way, and will be here in {1}.', name, UI.mins(f.arriveAt - now)) + '</p>', actions: close }); return; }
+    const wait = S.callWait(state, i, now);
+    if (wait > 0) { await UI.modal({ title: name, html: '<p>' + tr('{0} is busy being a seal. You can call {0} again in {1}.', name, UI.mins(wait)) + '</p>', actions: close }); return; }
+    if (S.visiting(state, now) >= S.T.maxVisitors) { await UI.modal({ title: name, html: '<p>' + tr('The shore is full. Two visitors at a time is the most.') + '</p>', actions: close }); return; }
+    const v = await UI.modal({ title: tr('Call {0} home?', name), html: '<p>' + tr('{0} will arrive in an hour, bring {1} coins as a present, and can stay for up to 8 hours. You can send {0} home sooner.', name, S.T.visitCoins) + '</p>',
+      actions: [{ label: tr('Call {0}', name), value: 1 }, { label: tr('Not now'), value: 0 }] });
+    if (v !== 1) return;
+    const r = S.callPup(state, i, Date.now());
+    if (!r.ok) { A.play('nope'); return; }
+    A.play('chirp'); S.save(state);
+    UI.toast(tr('You called {0}. {0} will be here in an hour.', name), 'heart', '', 4200);
+    UI.renderSheet(); UI.refresh();
+  };
+  G.visitInfo = async function (i) {
+    const f = state.family[i];
+    if (!f || UI.modalOpen || S.visitStatus(f, Date.now()) !== 'here') return;
+    const name = UI.esc(f.name);
+    A.play('tap');
+    const v = await UI.modal({ title: name, html: '<p>' + tr('{0} is visiting. {0} will head home in {1}.', name, UI.mins(f.leaveAt - Date.now())) + '</p>',
+      actions: [{ label: tr('Cuddle'), value: 'cuddle' }, { label: tr('Send home'), value: 'home' }, { label: tr('Close'), value: 0 }] });
+    const ps = visitors[i];
+    if (v === 'cuddle' && ps && !ps.leaving) {
+      if (!ps.asleep) { ps.gesture('happy', true); ps.petting = 0.8; ps.topA.getWorldPosition(v1); FX.hearts(v1, 2); }
+      A.play('squeak'); buzz(8);
+    } else if (v === 'home') {
+      if (!S.sendHome(state, i, Date.now()).ok) return;
+      S.save(state); visitorLeaves(i, true);
+      UI.toast(tr('{0} waves goodbye and swims home.', name), 'heart', '', 3800);
+      UI.refresh(); if (UI.sheetName) UI.renderSheet();
+    }
+  };
 
   async function birth() {
     G.busy = true;
@@ -1119,6 +1225,14 @@
   G.devPup = async function (what) {
     if (!state.dev || blocked()) return;
     const P = state.pups, T = S.T;
+    if (what === 'visit') {
+      const now = Date.now(), i = state.family.findIndex((f) => f.fate === 'grown' && S.visitStatus(f, now) === 'home');
+      if (i < 0) { A.play('nope'); UI.toast(tr('No grown-up pups to call yet. Try Say farewell now first.'), 'bolt', 'bad', 4200); return; }
+      const f = state.family[i]; f.callAt = now; f.arriveAt = now; f.leaveAt = now + S.T.visitStay; f.paid = false;
+      tickVisits(now);
+      UI.renderSheet(); save();
+      return;
+    }
     if (what === 'new') {
       if (P.length >= T.maxPups) { A.play('nope'); UI.toast(tr('Two pups is the most.'), 'bolt', 'bad'); return; }
       if (state.stage < 2) { state.stage = 2; state.ageMs = Math.max(state.ageMs, T.stageAge[1]); }
@@ -1296,6 +1410,7 @@
     }
     if (type === 'seal') {
       const s = hit.pick.seal;
+      if (s.visit != null) { G.visitInfo(s.visit); return; }
       if (s.isPup) { const i = pupIndexOf(s); if (i >= 0) { if (state.pups[i].ready) G.pupInfo(i); else cuddle(i); } return; }
       if (washing) return;
       if (seal.asleep) { head(v1); FX.zzz(v1); return; }

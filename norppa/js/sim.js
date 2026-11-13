@@ -32,6 +32,7 @@
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
+    visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
     gameEnergy: 12, gameMax: 150, catchKeepChance: 0.1,
@@ -108,6 +109,7 @@
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
+    if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
     if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;
    // a sauna bought in the old shop brings its game along   // anyone who already played Fish Rain keeps it
@@ -304,7 +306,7 @@
       }
       if (p.sick && p.starveMs > T.pupStarveToLost) {
         state.pups.splice(i, 1);
-        state.family.push({ name: p.name, bornAt: p.bornAt, endAt: t + dt, fate: 'lost' });
+        state.family.push({ name: p.name, bornAt: p.bornAt, endAt: t + dt, fate: 'lost', wear: p.wear || null });
         state.counters.pupsLost++;
         state.griefUntil = t + dt + DAY;
         const lose = Math.max(0, Math.min(state.xp - xpFloor(state), 60));
@@ -776,7 +778,7 @@
     const p = state.pups[i];
     if (!p || !p.ready) return no('notyet');
     state.pups.splice(i, 1);
-    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown' });
+    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', wear: p.wear || pupLook(state) });
     state.counters.pupsGrown++;
     const farewell = earn(state, 100);
     state.nextPupAt = Math.max(state.nextPupAt, now + DAY);
@@ -784,6 +786,50 @@
     learn(state, 'heihei');
     check(state);
     return ok({ name: p.name, coins: farewell });
+  }
+
+  /* ---------- Calling a grown pup home ----------
+     A pup that has grown up and swum off can be called from the Family album. It arrives an hour later (and pays 100 coins for
+     the visit), hangs about on the shore, and goes home when sent away or after 8 hours. Each pup can be called once every
+     12 hours, counted from the call, and two visitors at a time is the most. Stored on the family entry:
+     callAt (when it was called), arriveAt, leaveAt, paid. */
+  function visitStatus(f, now) {
+    if (!f || !f.arriveAt) return 'home';
+    if (now < f.arriveAt) return 'coming';
+    if (now < f.leaveAt) return 'here';
+    return 'home';
+  }
+  const visiting = (state, now) => state.family.filter((f) => visitStatus(f, now) !== 'home').length;
+  function callWait(state, i, now) {            // how long until this pup may be called again, 0 if it may
+    const f = state.family[i];
+    if (!f || state.dev) return 0;
+    return Math.max(0, (f.callAt || 0) + T.visitCooldown - now);
+  }
+  function callPup(state, i, now) {
+    const f = state.family[i];
+    if (!f || f.fate !== 'grown') return no('none');
+    if (visitStatus(f, now) !== 'home') return no('busy');
+    if (callWait(state, i, now) > 0) return no('wait');
+    if (visiting(state, now) >= T.maxVisitors) return no('full');
+    f.callAt = now; f.arriveAt = now + T.visitWait; f.leaveAt = f.arriveAt + T.visitStay; f.paid = false;
+    return ok({ name: f.name });
+  }
+  /* Time moves on: pups who have arrived pay their 100 coins (even if the game was closed for the whole visit), and pups whose
+     time is up go home. Returns the family numbers of each. */
+  function visitTick(state, now) {
+    const out = { arrived: [], left: [] };
+    state.family.forEach((f, i) => {
+      if (!f.arriveAt) return;
+      if (now >= f.arriveAt && !f.paid) { f.paid = true; f.coins = earn(state, T.visitCoins / T.earnRate); out.arrived.push(i); addXp(state, 5); }
+      if (now >= f.leaveAt) { f.arriveAt = 0; f.leaveAt = 0; out.left.push(i); }
+    });
+    return out;
+  }
+  function sendHome(state, i, now) {
+    const f = state.family[i];
+    if (!f || visitStatus(f, now) !== 'here') return no('none');
+    f.arriveAt = 0; f.leaveAt = 0;
+    return ok({ name: f.name });
   }
 
   /* One word for how the seal feels right now. */
@@ -852,6 +898,6 @@
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
-    buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, cuddlePup, graduatePup,
+    buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

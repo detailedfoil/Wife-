@@ -241,7 +241,7 @@
 
   const cell = (id, inner, cls, act) => '<button class="cell ' + (cls || '') + '" data-do="' + act + '" data-id="' + id + '">' + inner + '</button>';
   const names = (it) => '<b>' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
-  const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + '">' + ic(o.icon) + '</span><span class="txt"><b>'
+  const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + (o.img ? ' pic' : '') + '">' + (o.img ? '<img src="' + o.img + '" alt="">' : ic(o.icon)) + '</span><span class="txt"><b>'
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
   const napMs = (st) => Math.max(0, st.grudge) / (100 / S.T.sulkSleepH) * 3600e3;   // sleep it would take to sulk it off
@@ -337,15 +337,27 @@
       if (!st.pups.length && !st.family.length) {
         return '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
       }
+      PN.Thumbs.pups(st.pups.map((p) => p.wear).concat(st.family.map((f) => f.wear)));      // little portraits, drawn once for each outfit
+      const face = (w) => PN.Thumbs.pup(w);
       h += '<div class="rows">';
       st.pups.forEach((p) => {
         const left = Math.max(0, S.T.pupGrow - p.grownMs);
-        h += row({ icon: 'seal', tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
+        h += row({ icon: 'seal', img: face(p.wear), tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
           : p.food < 20 ? tr('Hungry. Pups feed from their mother, so keep {0} well fed.', esc(st.name)) : tr('Growing well. About {0} of good care to go.', mins(left).replace(/ \d+ min$/, '')),
           side: tr('born {0}', day(p.bornAt)) });
       });
-      st.family.slice().reverse().forEach((f) => {
-        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name), text: tr(f.fate === 'grown' ? 'Grew up and swims the lake.' : 'Did not make it. Remembered always.'), side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)) });
+      const now = Date.now();
+      st.family.map((f, i) => [f, i]).reverse().forEach(([f, i]) => {
+        const stat = S.visitStatus(f, now), wait = S.callWait(st, i, now);
+        let text = tr('Did not make it. Remembered always.');
+        if (f.fate === 'grown') {
+          text = stat === 'coming' ? tr('On the way! Arrives in {0}.', mins(f.arriveAt - now))
+            : stat === 'here' ? tr('Visiting now. Goes home in {0}.', mins(f.leaveAt - now))
+              : wait > 0 ? tr('Grew up and swims the lake. Can be called again in {0}.', mins(wait))
+                : tr('Grew up and swims the lake. Tap to call {0} home.', esc(f.name));
+        }
+        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f.wear), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name), text,
+          side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)), act: f.fate === 'grown' ? 'callpup' : '', id: i });
       });
       return h + '</div><p class="note">' + tr('Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.') + '</p>';
     },
@@ -390,6 +402,7 @@
         + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
         + (st.dev ? [
           ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
+          ['visit', 'Call a pup home now', 'Call the first grown-up pup back and skip the hour of waiting, to see the visit and the 100 coins. Dev mode also ignores the 12 hour wait between calls.', 'seal'],
           ['ready', 'Pups are ready to leave', 'Skip the four days of growing. Tap a pup, then Wave goodbye, to see it go.', 'star'],
           ['bye', 'Say farewell now', 'Send the first pup off into the lake straight away, with the wave, the coins and the splash.', 'heart'],
           ['dress', 'New outfits for the pups', 'Give every pup new random things to wear, different from each other.', 'star'],
@@ -428,6 +441,7 @@
     else if (act === 'devenergy') game.devEnergy();
     else if (act === 'devmed') game.devMed();
     else if (act === 'devpup') game.devPup(id);
+    else if (act === 'callpup') game.callPup(+id);
     else if (act === 'med') { UI.closeSheet(); game.openMed(); }
     else if (act === 'export') game.exportSave();
     else if (act === 'import') game.importSave();
@@ -447,12 +461,14 @@
   /* o: { title, html, art, actions: [{label, value, cls}] }. Resolves with the chosen value. */
   let modalBusy = Promise.resolve();
   UI.modalOpen = false;
+  UI.modalDelay = 500;          // ms after a pop-up opens in which its buttons ignore taps, so the second tap of a double tap cannot choose Close
   UI.modal = function (o) {
     const run = () => new Promise((resolve) => {
       const m = $('modal'), card = $('modalCard');
       card.innerHTML = (o.art ? '<img class="art" src="' + o.art + '" alt="">' : '') + '<h3>' + o.title + '</h3>' + (o.html || '')
         + '<div class="actions">' + (o.actions || [{ label: 'OK', value: 1 }]).map((a, i) => '<button class="btn ' + (a.cls || (i ? 'ghost' : '')) + '" data-i="' + i + '">' + a.label + '</button>').join('') + '</div>';
       m.hidden = false; UI.modalOpen = true;
+      const openedAt = performance.now();
       requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('open')));
       if (o.onOpen) o.onOpen(card);
       const done = (v) => {
@@ -462,6 +478,7 @@
       };
       function onClick(e) {
         const b = e.target.closest('.actions .btn'); if (!b) return;
+        if (performance.now() - openedAt < UI.modalDelay) return;
         PN.Audio.play('tap');
         const a = (o.actions || [{ value: 1 }])[+b.dataset.i];
         done(o.result ? o.result(a.value, card) : a.value);
