@@ -107,6 +107,7 @@
       await wait(0.8);
       await welcomeBack(sum);
     }
+    await pupNews();
     await dailyGift();
     G.ready = true;
     S.save(state);
@@ -172,6 +173,16 @@
       actions: [{ label: bad ? tr('I am here now') : 'Hei, ' + plain() + '!', value: 1 }] }).then(() => { if (!bad && morning) S.learn(state, 'huomenta'); });
   }
 
+  /* Told when the game opens again after she was ready: she met a special someone, and the pup is due in nine hours. */
+  async function pupNews() {
+    const n = S.pupNews(state, Date.now());
+    if (!n) return;
+    S.save(state);
+    A.play('sparkle'); seal.gesture('happy');
+    await UI.modal({ title: tr('A special someone'), html: tr('<p>{0} met a special someone while you were away.</p><p>Come back in {1} hours. That is when the pup will be born and appear.</p>', plain(), Math.round(n.ms / S.H)),
+      actions: [{ label: tr('How exciting!'), value: 1 }] });
+  }
+
   async function dailyGift() {
     const gift = S.dailyGift(state, Date.now());
     if (!gift) return;
@@ -235,7 +246,7 @@
       const sum = S.advance(state, now, { away: true });
       S.drain();
       syncLook(); syncPups();
-      if (gap > 30 * MIN && !PN.Games.active) welcomeBack(sum).then(dailyGift);
+      if (gap > 30 * MIN && !PN.Games.active) welcomeBack(sum).then(pupNews).then(dailyGift);
     } else S.advance(state, now);
 
     if (state.poops.length !== poopN) {
@@ -251,7 +262,8 @@
     const free = G.ready && !G.busy && !PN.Games.active && !UI.modalOpen && !UI.sheetName && !bedBusy;
     if (free) {
       if (S.canEvolve(state)) evolve();
-      else if (S.pupDue(state, now)) birth();
+      else if (S.pupBirthDue(state, now)) birth();
+      else if (S.pupDue(state, now)) { state.pupMet = 'ready'; S.save(state); }   // ready, but she waits for the game to be closed
       else {
         tutT += 1;
         if (tutT > 3) tutorial();

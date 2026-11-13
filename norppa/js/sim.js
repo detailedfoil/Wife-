@@ -31,7 +31,7 @@
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
-    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15,   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
+    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15, pupWait: 9 * H,   // once she has the xp the pup waits for the game to be closed; next load she has met someone, and the pup arrives pupWait later   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
@@ -96,7 +96,7 @@
       wearing: { head: null, neck: null, face: null, back: null },
       fish: { muikku: 5, ahven: 2 },
       trinkets: {}, words: {}, awards: {}, seen: {},
-      pups: [], family: [], nextPupAt: 0, pupSeq: 0, pupProg: 0,   // pupProg: friendship xp earned while no pup is at home; the next pup needs xpFor(pupLevel) of it
+      pups: [], family: [], nextPupAt: 0, pupSeq: 0, pupProg: 0, pupMet: 0, pupBirthAt: 0,   // pupMet: 0, 'ready' (told on the next load), 'waiting' (due at pupBirthAt)   // pupProg: friendship xp earned while no pup is at home; the next pup needs xpFor(pupLevel) of it
       fav: 'muikku', favKnown: false,
       gift: { last: dayKey(now), streak: 1 },
       dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0, juiceAt: 0,
@@ -130,9 +130,9 @@
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
-    // One time only: pups now come at level 10, so a grown seal who is already there and has never had a pup is due one on this load
-    // (she still has to be awake, fed, happy and not sulking, like any birth).
-    if (obj && !obj.pupAtTen) { obj.pupAtTen = 1; if (obj.stage === 2 && obj.pupProg >= xpFor(T.pupLevel) && !obj.pups.length && !(obj.family && obj.family.length) && !obj.pupSeq) obj.nextPupAt = 0; }
+    // One time only: pups now come at level 10, so a grown seal who is already there and has never had a pup has met someone: she is told on this load
+    // and the pup arrives pupWait later.
+    if (obj && !obj.pupAtTen) { obj.pupAtTen = 1; if (obj.stage === 2 && obj.pupProg >= xpFor(T.pupLevel) && !obj.pups.length && !(obj.family && obj.family.length) && !obj.pupSeq && !obj.pupMet) { obj.nextPupAt = 0; obj.pupMet = 'ready'; } }
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
     if (obj.owned && !obj.owned.sauna) { obj.owned.sauna = true; if (obj.placed) obj.placed.sauna = true; }   // the sauna is on everyone's shore now: it is how she gets clean
     return obj;
@@ -841,9 +841,17 @@
   function pupDue(state, now) {
     const s = state.stats;
     return state.stage === 2 && state.pups.length < T.maxPups && now >= state.nextPupAt
-      && state.pupProg >= xpFor(T.pupLevel) && !state.asleep && !state.sick && state.grudge <= 0
+      && state.pupProg >= xpFor(T.pupLevel) && !state.pupMet && !state.asleep && !state.sick && state.grudge <= 0
       && s.food > 50 && s.joy > 50 && state.griefUntil < now;
   }
+
+  /* The game was closed and has opened again: if she was ready, she has met a special someone and the pup is due pupWait from now. */
+  function pupNews(state, now) {
+    if (state.pupMet !== 'ready' || state.pups.length >= T.maxPups) return null;
+    state.pupMet = 'waiting'; state.pupBirthAt = now + T.pupWait;
+    return { at: state.pupBirthAt, ms: T.pupWait };
+  }
+  const pupBirthDue = (state, now) => state.pupMet === 'waiting' && now >= state.pupBirthAt && state.pups.length < T.maxPups && !state.asleep && !state.sick;
 
   /* Every pup is born with one little thing to wear, and one in ten gets a second, so the family can be told apart. They are picked from a cute list
      (not the shop's silliest), from different places on the body, and avoid what a brother or sister already has on. */
@@ -871,7 +879,7 @@
   function addPup(state, now, name) {
     const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false, wear: pupLook(state) };
     state.pups.push(p);
-    state.pupProg = 0;
+    state.pupProg = 0; state.pupMet = 0; state.pupBirthAt = 0;
     state.nextPupAt = now + T.pupGap;
     addXp(state, 20);
     learn(state, 'perhe');
@@ -1013,6 +1021,6 @@
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, gameMoods, setSkip, tasteSync,
-    buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
+    buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

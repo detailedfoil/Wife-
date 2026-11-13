@@ -377,7 +377,7 @@
       if (st.stage < 2) {
         const nx = D.STAGES[st.stage + 1];
         next = tr('Becomes a {0} at friendship level {1}.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage]);
-      } else next = st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once her pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
+      } else next = st.pupMet === 'waiting' ? tr('Expecting! The pup is due in about {0} hours.', Math.max(1, Math.ceil((st.pupBirthAt - Date.now()) / S.H))) : st.pupMet === 'ready' ? tr('Fully grown, and something is in the air. Close the game and come back to see.') : st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once her pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
         + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|Anxi') : tr(moods[S.mood(st)]))
         + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
