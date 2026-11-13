@@ -107,6 +107,7 @@
     if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: dayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
+    if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
     if (obj.owned && obj.owned.sauna) obj.owned['game_sauna'] = true;
    // a sauna bought in the old shop brings its game along   // anyone who already played Fish Rain keeps it
@@ -728,8 +729,31 @@
       && s.food > 50 && s.joy > 50 && state.griefUntil < now;
   }
 
+  /* Every pup is born with one or two little things to wear, so the family can be told apart. They are picked from a cute list
+     (not the shop's silliest), from different places on the body, and avoid what a brother or sister already has on. */
+  const PUP_WEAR = {
+    head: ['pipo_red', 'pipo_blue', 'pipo_yellow', 'pipo_pink', 'pipo_green', 'earmuffs', 'bow', 'kukka', 'kissa', 'pupu', 'wreath', 'sieni', 'juhlahattu', 'baskeri', 'olkihattu', 'tonttu'],
+    neck: ['scarf_red', 'scarf_green', 'scarf_blue', 'scarf_rainbow', 'huivi', 'solmuke', 'bell', 'kukkakaulus'],
+    face: ['punanena', 'glasses', 'shades', 'sydanlasit'],
+    back: ['ilmapallo', 'ankka', 'reppu', 'viitta', 'perhonen'],
+  };
+  function pupLook(state) {
+    const taken = {};
+    (state.pups || []).forEach((q) => { Object.keys(q.wear || {}).forEach((k) => { taken[q.wear[k]] = 1; }); });
+    const slots = ['head', 'neck', 'face', 'back'], pick = (list) => list[Math.floor(rnd(state) * list.length)];
+    const first = rnd(state) < 0.75 ? (rnd(state) < 0.6 ? 'head' : 'neck') : slots[Math.floor(rnd(state) * 4)];
+    const chosen = [first];
+    if (rnd(state) < 0.5) { const rest = slots.filter((k) => k !== first); chosen.push(rest[Math.floor(rnd(state) * rest.length)]); }
+    const wear = {};
+    chosen.forEach((slot) => {
+      const free = PUP_WEAR[slot].filter((id) => !taken[id]);
+      wear[slot] = pick(free.length ? free : PUP_WEAR[slot]);
+    });
+    return wear;
+  }
+
   function addPup(state, now, name) {
-    const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false };
+    const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false, wear: pupLook(state) };
     state.pups.push(p);
     state.nextPupAt = now + T.pupGap;
     addXp(state, 20);
@@ -828,6 +852,6 @@
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, wash, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward,
-    buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, cuddlePup, graduatePup,
+    buy, wear, place, sauna, dailyGift, canEvolve, evolve, pupDue, addPup, pupLook, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});

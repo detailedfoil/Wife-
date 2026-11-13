@@ -388,6 +388,14 @@
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
         + (st.dev ? '<button class="row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
+        + (st.dev ? [
+          ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
+          ['ready', 'Pups are ready to leave', 'Skip the four days of growing. Tap a pup, then Wave goodbye, to see it go.', 'star'],
+          ['bye', 'Say farewell now', 'Send the first pup off into the lake straight away, with the wave, the coins and the splash.', 'heart'],
+          ['dress', 'New outfits for the pups', 'Give every pup new random things to wear, different from each other.', 'star'],
+          ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
+          ['heal', 'Feed and cheer the pups', 'Full tummies, full happiness, and no longer poorly.', 'fish'],
+        ].map((r) => '<button class="row" data-do="devpup" data-id="' + r[0] + '"><span class="ic-wrap">' + ic(r[3]) + '</span><span class="txt"><b>' + tr(r[1]) + '</b><span class="d">' + tr(r[2]) + '</span></span></button>').join('') : '')
         + (st.dev ? '<button class="row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
         + '</div><p class="note" data-do="devtap">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + ' ' + tr('Last updated {0}.', updatedText()) + ' ' + tr('Weather data by Open-Meteo.com.').replace('Open-Meteo.com', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>') + '</p>';
     },
@@ -419,6 +427,7 @@
     else if (act === 'devreset') game.devReset();
     else if (act === 'devenergy') game.devEnergy();
     else if (act === 'devmed') game.devMed();
+    else if (act === 'devpup') game.devPup(id);
     else if (act === 'med') { UI.closeSheet(); game.openMed(); }
     else if (act === 'export') game.exportSave();
     else if (act === 'import') game.importSave();

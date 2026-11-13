@@ -436,6 +436,7 @@
       have[p.id] = 1;
       if (pups[p.id]) return;
       const ps = pups[p.id] = new PN.Seal({ pup: true, stage: 0 });
+      Object.keys(p.wear || {}).forEach((slot) => ps.setWear(slot, p.wear[slot]));
       const s = pupSlot(i, v3);
       ps.place(s.x, W.groundY(s.x, s.z), s.z, s.h);
       ps.asleep = seal.asleep;
@@ -1108,6 +1109,46 @@
     if (!state.dev) return;
     state.stats.energy = 100;
     A.play('sparkle'); FX.sparkle(head(), 8, 0xffc04a);
+    UI.refresh(); UI.renderSheet(); save();
+  };
+  /* Developer pup tools: the whole baby cycle on demand, so it can be seen without waiting days. */
+  function dressPup(p) {
+    const ps = pups[p.id];
+    if (ps) ['head', 'neck', 'face', 'back'].forEach((slot) => ps.setWear(slot, (p.wear || {})[slot] || null));
+  }
+  G.devPup = async function (what) {
+    if (!state.dev || blocked()) return;
+    const P = state.pups, T = S.T;
+    if (what === 'new') {
+      if (P.length >= T.maxPups) { A.play('nope'); UI.toast(tr('Two pups is the most.'), 'bolt', 'bad'); return; }
+      if (state.stage < 2) { state.stage = 2; state.ageMs = Math.max(state.ageMs, T.stageAge[1]); }
+      state.xp = Math.max(state.xp, S.xpFor(T.pupLevel)); state.maxLevel = Math.max(state.maxLevel, T.pupLevel);
+      if (state.asleep) S.wake(state);
+      syncLook(); UI.closeSheet();
+      await birth();
+      return;
+    }
+    if (!P.length) { A.play('nope'); UI.toast(tr('There are no pups yet.'), 'bolt', 'bad'); return; }
+    if (what === 'ready') {
+      P.forEach((p) => { p.grownMs = Math.max(p.grownMs, T.pupGrow); p.ready = true; p.sick = false; p.starveMs = 0; });
+      A.play('sparkle');
+    } else if (what === 'bye') {
+      const i = Math.max(0, P.findIndex((p) => p.ready));
+      P[i].grownMs = Math.max(P[i].grownMs, T.pupGrow); P[i].ready = true; P[i].sick = false; P[i].starveMs = 0;
+      UI.closeSheet();
+      await graduate(i);
+      return;
+    } else if (what === 'dress') {
+      P.forEach((p) => { p.wear = null; });
+      P.forEach((p) => { p.wear = S.pupLook(state); dressPup(p); });
+      A.play('sparkle');
+    } else if (what === 'sick') {
+      P.forEach((p) => { p.food = 0; p.sick = true; p.starveMs = Math.max(p.starveMs, T.pupStarveToSick + 1); });
+      A.play('nope');
+    } else if (what === 'heal') {
+      P.forEach((p) => { p.food = 100; p.joy = 100; p.sick = false; p.starveMs = 0; });
+      A.play('chirp');
+    }
     UI.refresh(); UI.renderSheet(); save();
   };
   G.devReset = async function () {
