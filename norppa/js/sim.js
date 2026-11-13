@@ -36,7 +36,7 @@
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
-    // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean.
+    // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean, unless she is Angy and still wants her sauna.
     ballJoy: 1, ballJoyGoes: 6,   // a bounce on the nose lifts happiness by a point (a quarter of that if it is quick after the last), and only the first six an hour
     petJoy: 0.2, petJoyPats: 10,   // a pat lifts happiness by only a fifth of a point, and only the first ten an hour
     saunaRounds: 7, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
@@ -743,7 +743,10 @@
   const saunaNeed = (state) => Math.max(1, Math.ceil((100 - state.stats.clean) * T.saunaRounds / 100 - 1e-9));
   function canSauna(state) {
     if (state.asleep) return no('asleep');
-    if (state.stats.clean >= T.saunaClean) return no('clean');
+    if (state.stats.clean >= T.saunaClean) {
+      const want = sulkNeeds(state);                       // already clean is no reason to refuse when the sauna is what an Angy seal is waiting for
+      if (!(want && !want.bath)) return no('clean');
+    }
     return ok({});
   }
   /* The end of a go: rounds of the need she got through. Whatever she managed counts, and the bonus is in proportion. */
