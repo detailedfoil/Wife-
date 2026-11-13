@@ -31,7 +31,7 @@
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
-    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 1,   // a pup is grown and ready to swim off after 2 days; one at a time, and the friendship points for the next one only count once it has gone
+    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15,   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,

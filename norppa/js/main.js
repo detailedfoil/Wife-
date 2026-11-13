@@ -590,8 +590,16 @@
       actions: [{ label: tr('Oh my!'), value: 1 }] });
     const name = await UI.askName({ title: tr('Name the pup'), text: tr('What will the little one be called?'), ok: tr('Welcome, little one') });
     const p = S.addPup(state, Date.now(), name);
+    let twin = null;
+    if (Math.random() < T.twinChance) {   // now and then there are two
+      await UI.modal({ title: tr('Twins!'), html: tr('<p>There is a second kuutti curled up beside the first.</p>'), actions: [{ label: tr('Twice the fluff'), value: 1 }] });
+      const name2 = await UI.askName({ title: tr('Name the twin'), text: tr('What will the twin be called?'), ok: tr('Welcome, little one') });
+      twin = S.addPup(state, Date.now(), name2);
+    }
     syncPups();
     const ps = pups[p.id];
+    const pt = twin && pups[twin.id];
+    if (pt) { const d = W.DEN; pt.place(d.sleep.x + 0.6, W.groundY(d.sleep.x + 0.6, d.sleep.z), d.sleep.z, d.heading); pt.gesture('happy'); }
     if (ps) {
       const d = W.DEN;
       ps.place(d.sleep.x, W.groundY(d.sleep.x, d.sleep.z), d.sleep.z, d.heading);
@@ -1208,7 +1216,7 @@
       return;
     }
     if (what === 'new') {
-      if (P.length >= T.maxPups) { A.play('nope'); UI.toast(tr('One pup at a time.'), 'bolt', 'bad'); return; }
+      if (P.length >= T.maxPups) { A.play('nope'); UI.toast(tr('Two pups is the most.'), 'bolt', 'bad'); return; }
       if (state.stage < 2) { state.stage = 2; state.ageMs = Math.max(state.ageMs, T.stageAge[1]); }
       state.xp = Math.max(state.xp, S.xpFor(T.pupLevel)); state.pupProg = Math.max(state.pupProg, S.xpFor(T.pupLevel)); state.maxLevel = Math.max(state.maxLevel, T.pupLevel);
       if (state.asleep) S.wake(state);
