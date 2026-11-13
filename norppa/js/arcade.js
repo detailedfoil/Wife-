@@ -997,9 +997,9 @@
 
   /* ================= Ice Stack ================= */
   /* Stack, on ice: a floe slides across, tap to set it down. Whatever hangs over the edge breaks off, so the tower narrows.
-     Miss the tower altogether and the floe is lost; the third lost floe ends the game. */
+     Miss the tower altogether and the game is over. */
   const stack = (() => {
-    const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 3, HOP = 0.28, KEEP = 46;
+    const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 1, HOP = 0.28, KEEP = 46;
     const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
     let view = null, bodyGeo = null, snowGeo = null, puffs = null;
     let blocks = [], cuts = [], cur = null, top = null;
@@ -1031,7 +1031,6 @@
       }
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
-    const lostText = () => misses + '/' + LIVES;
     function hopTo() { from.copy(at); hopT = 0; }
     function spawn() {
       const axis = turn++ % 2 ? 'z' : 'x';
@@ -1046,7 +1045,7 @@
       const delta = cur.p, ad = Math.abs(delta), sgn = delta < 0 ? -1 : 1;
       if (ad >= size) {                                        // clean past the tower: the floe is lost
         fall(cur.g, x ? sgn : 0, x ? 0 : sgn); cur = null; hopTo();
-        misses++; streak = 0; K.time(lostText()); K.big(tr('Miss')); A.play('nope'); actor.gesture('no', true);
+        misses++; streak = 0; A.play('nope'); actor.gesture('no', true);
         mode = 'rest'; wait = 0.75;
         return;
       }
@@ -1072,7 +1071,7 @@
       mode = 'rest'; wait = 0.16;
     }
     return {
-      label: 'Floes', label2: 'Lost', hint: 'Tap to set the floe down on the one below.',
+      label: 'Floes', hint: 'Tap to set the floe down on the one below.',
       view: () => view,
       peek: () => (cur && mode === 'slide' ? cur.p : null),
       start() {
@@ -1085,7 +1084,6 @@
         cast(view, 0.8, false);
         face(PI / 4);
         at.set(0, 0, 0);
-        K.time(lostText());
       },
       go() { spawn(); },
       pointer(type) { if (type === 'down') drop(); },
