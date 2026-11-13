@@ -1038,13 +1038,13 @@
   const medEl = (id) => document.getElementById(id);
   G.openMed = function () {
     const info = S.medInfo(state, Date.now()), box = medEl('medCam');
-    if (info.taken && info.photo) return;
+    if (info.taken) return;
     box.hidden = false; medBusy = false; medFound = false;
     medEl('medPic').hidden = true;
     medEl('medTitle').textContent = tr('Medicine time');
     medEl('medShoot').textContent = tr('Take photo'); medEl('medShoot').disabled = false;
     medEl('medSkip').textContent = tr('I took it'); medEl('medSkip').hidden = info.taken;
-    medEl('medMsg').textContent = tr('Take a photo of the pill on a plain surface for {0} bonus coins.', S.T.medBonus);
+    medEl('medMsg').textContent = tr('Take a photo of the pill on a plain surface for {0} bonus coins. Tapping I took it skips the bonus for today.', S.T.medBonus);
   };
   G.closeMed = function () { medEl('medCam').hidden = true; medBusy = false; medFound = false; };
   G.medPhoto = function () { if (!medBusy) { const f = medEl('medFile'); f.value = ''; f.click(); } };   // opens the phone's own camera

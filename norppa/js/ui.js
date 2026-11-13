@@ -112,7 +112,7 @@
     chip.hidden = !sn;
     if (sn) chip.textContent = st.medLate ? tr('Anxi: needs her medicine') : tr('Angy: {0} of sleep left', mins(napMs(st)));
     const mi = S.medInfo(st, Date.now()), mc = $('medChip');
-    mc.hidden = !st.name || (mi.taken && mi.photo) || S.dayKey(Date.now()) <= st.med.since;
+    mc.hidden = !st.name || mi.taken || S.dayKey(Date.now()) <= st.med.since;
     if (!mc.hidden) mc.textContent = mi.taken ? tr('Pill photo +{0}', S.T.medBonus) : tr('Medicine');
     $('sleepLabel').textContent = tr(st.asleep ? 'Wake' : 'Sleep');
     const need = { feed: st.stats.food < 25 || st.sick || st.pups.some((p) => p.sick), play: st.stats.joy < 30 && !st.asleep, wash: st.stats.clean < 25, sleep: st.stats.energy < 20 && !st.asleep };

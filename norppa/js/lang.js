@@ -347,7 +347,7 @@
     'Retake': 'Ota uudelleen',
     'Yes, that is it': 'Kyllä, se on tuo',
     'Is this the pill? The green ring shows where I found it.': 'Onko tämä pilleri? Vihreä rengas näyttää, mistä löysin sen.',
-    'Take a photo of the pill on a plain surface for {0} bonus coins.': 'Ota pilleristä kuva tasaista taustaa vasten, niin saat {0} bonuskolikkoa.',
+    'Take a photo of the pill on a plain surface for {0} bonus coins. Tapping I took it skips the bonus for today.': 'Ota pilleristä kuva tasaista taustaa vasten, niin saat {0} bonuskolikkoa. Painamalla Otin sen ohitat päivän bonuksen.',
     'Looking at the photo...': 'Katson kuvaa...',
     'I cannot see the pill. Put it on its own on a plain, darker surface, get close, and try again.': 'En näe pilleriä. Laita se yksin tasaiselle, tummemmalle alustalle, mene lähelle ja yritä uudelleen.',
     '{0} took her medicine. +{1} coins for the photo!': '{0} otti lääkkeensä. +{1} kolikkoa kuvasta!',

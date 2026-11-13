@@ -342,7 +342,8 @@
     const today = dayKey(now), m = state.med, first = m.day !== today;
     let coins = 0;
     if (first) { m.day = today; m.n = (m.n || 0) + 1; }
-    if (photo && m.photoDay !== today) { m.photoDay = today; coins = T.medBonus; state.coins += coins; }
+    if (photo && first && m.photoDay !== today) {   // the bonus is for the photo that takes the pill; tapping I took it first forfeits it
+      m.photoDay = today; coins = T.medBonus; state.coins += coins; }
     if (state.medLate) { state.medLate = false; state.grudge = 0; state.sulkWant = null; emit('forgiven'); }
     return { ok: first || coins > 0, first, coins };
   }
