@@ -52,9 +52,17 @@
     const v = o.vol == null ? 0.2 : o.vol;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(v, t + (o.attack || 0.008));
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const release = o.release || 0;
+    if (release) {
+      // Keep the note audible for its whole duration, then let it ring out.
+      g.gain.exponentialRampToValueAtTime(v * 0.65, t + dur);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + release);
+    } else {
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    }
     osc.connect(g); g.connect(sfx);
-    osc.start(t); osc.stop(t + dur + 0.03);
+    osc.onended = () => { osc.disconnect(); g.disconnect(); };
+    osc.start(t); osc.stop(t + dur + release + 0.03);
   }
   function noise(dur, o) {
     if (!ctx || !A.sound) return;
@@ -128,9 +136,9 @@
   /* One note of a tune, for Ice Piano: a soft reed, a little like a small accordion. */
   A.note = function (freq, len) {
     if (!ctx || !A.sound) return;
-    tone(freq, len, { type: 'triangle', vol: 0.3, attack: 0.005 });
-    tone(freq * 2, len * 0.7, { vol: 0.07, attack: 0.005 });
-    tone(freq / 2, len, { vol: 0.1, attack: 0.01 });
+    tone(freq, len, { type: 'triangle', vol: 0.3, attack: 0.005, release: 0.12 });
+    tone(freq * 2, len, { vol: 0.07, attack: 0.005, release: 0.12 });
+    tone(freq / 2, len, { vol: 0.1, attack: 0.01, release: 0.12 });
   };
   /* Quieten the wandering background tune while a game plays its own. */
   A.hush = function (on) { if (ctx) musicBus.gain.setTargetAtTime(on ? 0 : 0.22, ctx.currentTime, 0.08); };
