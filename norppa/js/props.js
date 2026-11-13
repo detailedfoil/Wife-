@@ -636,9 +636,7 @@
         const eye = U.group(U.mesh(rim, frame, 0, 0, -0.011), U.mesh(lens, new T.MeshStandardMaterial({ color: 0xff8fb0, roughness: 0.1, transparent: true, opacity: 0.55, side: T.DoubleSide })));
         eye.position.set(s * 0.235, 0.03, 0.6); eye.rotation.y = s * 0.3;
         g.add(eye);
-        const arm = U.cyl(0.013, 0.013, 0.5, frame, s * 0.5, 0.06, 0.36, 6);
-        arm.rotation.set(Math.PI / 2, 0, s * -0.38);
-        g.add(arm);
+        g.add(temple(frame, s, 0.1));
       });
       g.add(U.rot(U.cyl(0.014, 0.014, 0.12, frame, 0, 0.1, 0.645, 6), 0, 0, Math.PI / 2));
       return g;
@@ -760,6 +758,17 @@
     const tip = U.rot(U.box(0.2, 0.07, 0.076, new T.MeshStandardMaterial({ color: b, roughness: 1 }), 0.602, -0.69, 0.189), 0.1, 0, 0.22);
     return U.group(ring, end, tip, U.ball(0.125, flat, 0.52, -0.28, 0.15, 1, 0.9, 0.8));
   }
+  /* A glasses arm: from the outer edge of the frame, back along the side of the head to the ear, just above the fur. */
+  function temple(frame, s, y) {
+    const R = [0.618, 0.564, 0.582], pts = [];
+    const pitch = Math.asin(y / R[1]);
+    for (let i = 0; i <= 8; i++) {
+      const yaw = 0.62 + (1.42 - 0.62) * i / 8, k = 1.035;
+      pts.push(new T.Vector3(s * Math.sin(yaw) * Math.cos(pitch) * R[0] * k, y, Math.cos(yaw) * Math.cos(pitch) * R[2] * k));
+    }
+    pts.unshift(new T.Vector3(s * 0.39, y, 0.565));                     // the hinge on the frame
+    return new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 24, 0.013, 6, false), frame);
+  }
   function specs(dark) {
     const frame = U.mat(dark ? 0x15171c : 0x6b3f2a, { roughness: 0.35 });
     const g = new T.Group();
@@ -772,9 +781,7 @@
         lens.rotation.y = s * 0.3;
         g.add(lens);
       }
-      const arm = U.cyl(0.013, 0.013, 0.5, frame, s * 0.5, 0.06, 0.36, 6);
-      arm.rotation.set(Math.PI / 2, 0, s * -0.38);
-      g.add(arm);
+      g.add(temple(frame, s, 0.06));
     });
     g.add(U.rot(U.cyl(0.014, 0.014, 0.14, frame, 0, 0.075, 0.645, 6), 0, 0, Math.PI / 2));
     return g;

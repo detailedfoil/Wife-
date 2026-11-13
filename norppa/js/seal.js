@@ -206,9 +206,9 @@
         for (let i = 0; i < 3; i++) {
           const wg = new T.CylinderGeometry(0.0055, 0.002, 0.36, 4); wg.translate(0, 0.18, 0);
           const wk = new T.Mesh(wg, S.whisker);
-          wk.position.copy(pad.position).add(new T.Vector3(s * 0.09, -0.01 + (i - 1) * 0.035, 0.05));
-          wk.rotation.set(0, 0, -s * (Math.PI / 2 + (i - 1) * 0.26));
-          wk.rotation.y = s * 0.2;
+          wk.position.copy(pad.position).add(new T.Vector3(s * 0.1, -0.01 + (i - 1) * 0.035, 0.0));     // rooted in the cheek pad
+          wk.rotation.order = 'YZX';
+          wk.rotation.set(0, s * 0.42, -s * (Math.PI / 2 + (i - 1) * 0.24));                                  // swept back along the face
           this.muzzle.add(wk);
           this.muzzle.add(U.ball(0.011, S.dark, pad.position.x + s * (0.02 + i * 0.035), pad.position.y + 0.02 - (i % 2) * 0.045, pad.position.z + 0.098 - i * 0.012));
         }
