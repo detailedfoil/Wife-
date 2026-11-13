@@ -326,6 +326,32 @@
       ball.position.set(0, SY, SZ + ZB); ball.visible = true; ball.scale.setScalar(1);
       mode = 'ready'; rimHit = false;
     }
+    /* The throwing guide: shown each time the game opens, with the lean each wind strength needs. */
+    let guideEl = null;
+    function guide() {
+      if (guideEl) guideEl.remove();
+      const rows = [[0, 0], [2.5, 16], [5, 28], [7.5, 37], [10, 45]];
+      const OX = 150, OY = 262, LEN = 215, col = ['#ffffff', '#bfe3ff', '#ffe08a', '#ffb066', '#ff7a6b'];
+      let svg = '<svg viewBox="-40 0 380 290" aria-hidden="true">';
+      rows.forEach((r, i) => {
+        [-1, 1].forEach((side) => {
+          if (!r[1] && side > 0) return;
+          const a = r[1] * PI / 180, x = OX + side * Math.sin(a) * LEN, y = OY - Math.cos(a) * LEN;
+          svg += '<line x1="' + OX + '" y1="' + OY + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="' + col[i] + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 10"/>';
+          const lx = OX + side * Math.sin(a) * (LEN + 16), ly = OY - Math.cos(a) * (LEN + 16) + 5;
+          svg += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" fill="' + col[i] + '">' + (r[0] ? String(r[0]) : '0') + '</text>';
+        });
+      });
+      svg += '<circle cx="' + OX + '" cy="' + (OY + 8) + '" r="16" fill="#fff"/></svg>';
+      guideEl = document.createElement('div');
+      guideEl.className = 'tg';
+      guideEl.innerHTML = '<div class="tg-card"><b>' + tr('Aim into the wind') + '</b>' + svg
+        + '<p>' + tr('Swipe up the screen along the line for the wind. The numbers are the wind, and wind 10 needs a 45 degree lean. If the flag blows right, swipe left.') + '</p>'
+        + '<button class="btn" type="button">' + tr('Start throwing') + '</button></div>';
+      guideEl.querySelector('button').addEventListener('click', () => { A.play('tap'); guideEl.remove(); guideEl = null; mode = 'ready'; });
+      document.getElementById('gamehud').appendChild(guideEl);
+      mode = 'guide'; K.hint('');
+    }
     function launch(yaw) {
       const v = Math.sqrt(GRAV * RANGE / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
       bv.set(Math.tan(yaw) * ch, Math.sin(ELEV) * v, -ch);   // a sideways shot keeps its full reach, so leaning into the wind never falls short
@@ -350,7 +376,7 @@
       else K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
-      label: 'Baskets', label2: 'Wind', back: true, hint: 'Flick the snowball into the bucket. Miss and the streak starts again.',
+      label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Miss and the streak starts again.',
       view: () => view,
       start() {
         if (!view) build();
@@ -358,7 +384,9 @@
         face(0);
         score = 0; top = 0; puffs.clear();
         setUp();
+        guide();
       },
+      stop() { if (guideEl) { guideEl.remove(); guideEl = null; } },
       go() {},
       pointer(type, x, y) {
         if (mode !== 'ready') return;
