@@ -35,8 +35,9 @@
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
-    gameEnergy: 12, gameMax: 150, catchKeepChance: 0.1,
-    playEnergy: 0.28, playEnergyMin: 3, playEnergyMax: 40,   // a game tires her by how long it lasted: 12 for a 43 second round of Fish Rain
+    gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
+    catchKeepChance: 0.1,
+    playEnergy: 0.14, playEnergyMin: 2, playEnergyMax: 20, playEnergyNeed: 6,   // a game tires her by how long it lasted: 6 for a 43 second round of Fish Rain (halved, by request)
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
@@ -512,7 +513,7 @@
     if (state.asleep) return no('asleep');
     if (state.sick) return no('sick');
     if (state.grudge > T.sulkBlock) return no('sulk');
-    if (state.stats.energy < 12) return no('tired');
+    if (state.stats.energy < T.playEnergyNeed) return no('tired');
     return ok({});
   }
 
@@ -586,7 +587,7 @@
   function gamePay(game, score) {
     const gm = PN.GAMES[game];
     if (!gm || !gm.pay || !(score > 0)) return 0;
-    return Math.min(T.gameMax, gm.pay[0] * Math.pow(Math.max(score, gm.quick || 0), gm.pay[1]));
+    return Math.min(T.gameMax, gm.pay[0] * Math.pow(Math.max(score, gm.quick || 0), gm.pay[1])) * T.gameBoost;
   }
   function gameReward(state, game, score, fishMap, found, secs) {
     const s = state.stats, c = state.counters, gm = PN.GAMES[game];
