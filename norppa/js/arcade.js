@@ -1337,7 +1337,7 @@
      tile is not in, or let a tile slide off the bottom, and it is over. The first tile waits for the first tap.
      The score is the tiles played. Tunes live in data.js (PN.SONGS). */
   const piano = (() => {
-    const LANES = 4, SPAN = 11, LINE = 0.74, START = 155, RISE = 5, MAX = 190, BOUNCE = 0.09;
+    const LANES = 4, SPAN = 11, LINE = 0.74, START = 78, RISE = 5, MAX = 120, BOUNCE = 0.09;
     const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
     let view = null, el = null, cv = null, g2 = null, W = 0, H = 0, song = null, chart = [], total = 0;
     let pos = 0, next = 0, n = 0, mode = 'idle', wait = 0, bad = -1, badTile = -1, lastLane = -1, lastAt = 0, bop = 0, why = '';
