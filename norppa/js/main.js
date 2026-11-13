@@ -957,7 +957,6 @@
     // why the coins are what they are: her taste for this game, and muck
     // why the coins are what they are: how happy she was, and muck; then what this game did to her happiness
     if (!lost && r.happy > 0) html += '<p class="note up">' + UI.ic('smile') + tr('Happy seal: +{0}% coins.', r.happy) + '</p>';
-    else if (!lost && r.happy < 0) html += '<p class="note down">' + UI.ic('frown') + tr('Glum seal: −{0}% coins.', -r.happy) + '</p>';
     if (r.joy > 0) html += '<p class="note up">' + UI.ic('up') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
     else if (r.joy < 0) html += '<p class="note down">' + UI.ic('down') + tr('{0} is tired of this one: happiness −{1}.', UI.esc(state.name), -r.joy) + '</p>';
     if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';

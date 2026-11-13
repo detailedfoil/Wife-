@@ -49,8 +49,8 @@
     // game takes tasteDrop off it and shares that among the others; tastes drift tasteDrift points an hour towards a mix that is
     // dealt afresh every tasteRoll. Tastes no longer change a game's coins: they change her happiness, gameJoy plus joyPer a point
     // of taste (so -7 to +11 a play), and her happiness sets one flat bonus on every game: happyMax percent at full happiness,
-    // nothing at happyMid, and -happyMax at the sulk line. Simulated: a random player gets about 0%, always her favourite about
-    // +4% (+6% on a long visit), one game over and over about -3%.
+    // rising from nothing at happyMid, and never a penalty. From a usual 70 happiness, favourites reach the full +8% in about 4 games and hold it;
+    // a random mix takes 10 to 18 games and drifts about +4%; she must be above happyMid to earn anything.
     muckLine: 70, muckCut: 0.25, muckMost: 15,
     tasteMax: 15, tasteDrop: 5, tasteDrift: 2.5, tasteRoll: 8 * H, skipMax: 2,
     gameJoy: 2, joyPer: 0.6, happyMax: 8, happyMid: 55, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
@@ -637,11 +637,9 @@
   /* How much less a mucky seal earns: nothing above muckLine, muckCut when filthy. */
   const muckLoss = (state) => (state.stats.clean >= T.muckLine ? 0 : T.muckCut * (T.muckLine - state.stats.clean) / T.muckLine);
   /* What a game's coins are multiplied by right now. */
-  /* The flat bonus her happiness gives every game, in percent: happyMax at 100, none at happyMid, -happyMax at the sulk line. */
+  /* The flat bonus her happiness gives every game, in percent: happyMax at 100, none at happyMid or below. */
   const happyBonus = (state) => {
-    const j = state.stats.joy, lo = T.neglectLine + T.gameCalm;
-    const k = j >= T.happyMid ? (j - T.happyMid) / (100 - T.happyMid) : -(T.happyMid - j) / (T.happyMid - lo);
-    return Math.round(T.happyMax * clamp(k, -1, 1));
+    return Math.round(T.happyMax * clamp((state.stats.joy - T.happyMid) / (100 - T.happyMid), 0, 1));   // never a penalty: a glum seal just earns the base rate
   };
   /* What a game's coins are multiplied by right now: her happiness, and muck. The game itself makes no difference. */
   const gameMult = (state) => (1 + happyBonus(state) / 100) * (1 - muckLoss(state));
