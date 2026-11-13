@@ -287,7 +287,7 @@
 
   /* ================= Snowball Toss =================
      Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
-     Five throws, each with new wind; the bucket stays where it is. Every basket counts. */
+     New wind every throw; the bucket stays where it is. Keep throwing until the third miss. Every basket counts. */
   const toss = (() => {
     const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.65, HIT = 0.85, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
     let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
@@ -332,8 +332,8 @@
       sc.add(ball);
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
-    const THROWS = 5;
-    const throwsLeft = () => tr(THROWS - tries === 1 ? 'Last throw' : 'Throws left: {0}', THROWS - tries);
+    const LIVES = 3;   // tries counts the misses: three and the game is over, like Swimmy Seal's three goes
+    const throwsLeft = () => tr(LIVES - tries === 1 ? 'One miss left' : 'Misses left: {0}', LIVES - tries);
     /* New wind, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
@@ -376,7 +376,7 @@
     function launch(yaw) {
       const v = Math.sqrt(GRAV * RANGE / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
       bv.set(Math.tan(yaw) * ch, Math.sin(ELEV) * v, -ch);   // a sideways shot keeps its full reach, so leaning into the wind never falls short
-      mode = 'fly'; prevY = SY; spin = 8; tries++;
+      mode = 'fly'; prevY = SY; spin = 8;
       A.play('whoosh');
       K.hint('');
     }
@@ -396,7 +396,7 @@
       K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
-      label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. You get 5 throws.',
+      label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Three misses and it is over.',
       view: () => view,
       start() {
         if (!view) build();
@@ -461,7 +461,8 @@
         if ((mode === 'in' || mode === 'out') && playing) {
           wait -= dt;
           if (wait <= 0) {
-            if (tries >= THROWS) { mode = 'done'; K.over(tr(score >= 5 ? 'Perfect!' : score >= 3 ? 'Nice!' : 'Done!')); }
+            if (mode === 'out') tries++;
+            if (tries >= LIVES) { mode = 'done'; K.over(tr(score >= 15 ? 'Wow!' : score >= 5 ? 'Nice!' : 'Done!')); }
             else setUp();
           }
         }
