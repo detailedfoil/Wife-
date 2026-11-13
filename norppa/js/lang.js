@@ -337,7 +337,6 @@
     'A tie. You get your bet back.': 'Tasapeli. Saat panoksesi takaisin.',
     'Dealer wins. You lose {0}.': 'Jakaja voittaa. Menetit {0}.',
     'You have {0} sardines. Place a bet.': 'Sinulla on {0} sardiinia. Aseta panos.',
-    'Place a bet.': 'Aseta panos.',
     'All gone!': 'Kaikki meni!',
     'You beat the house!': 'Löit pankin!',
     'Medicine': 'Lääke',

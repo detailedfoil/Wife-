@@ -769,13 +769,16 @@
   })();
 
   /* ---------- Blackjack ----------
-     Bet from 5 sardines up to all in, hit or stand, beat the dealer without going over 21. A win pays back 2.8 times the bet
-     (your bet plus 1.8 times more). You sit down with ten sardines and play until you cash out, they are all gone, or the house
-     runs out. Only the winnings turn into coins, half a coin a sardine. */
+     Bet from 5 sardines up to all in, hit or stand, beat the dealer without going over 21. A win pays back 3.5 times the bet
+     (your bet plus 2.5 times more). You sit down with ten sardines and play until you cash out, they are all gone, or the house
+     runs out at 50 sardines of winnings. Only the winnings turn into coins, 0.7 a sardine (data.js), so at most 35 a visit.
+     Tuned by simulating thousands of visits with the hit-under-16, stand-on-16 rule: small, steady bets make about 27 coins
+     a minute, like the other games, and bolder betting pays about the same on average but far more often ends with nothing.
+     The dealer is quick and the next bet is ready the moment a hand is over, so a hand takes about four seconds. */
   const bj = (() => {
-    const START = 10, MIN = 5, PAY = 2.8, CAP = 120;   // the house can pay out 120 sardines of winnings (60 coins), then the table closes
+    const START = 10, MIN = 5, PAY = 3.5, CAP = 50;    // the house can pay out 50 sardines of winnings (35 coins), then the table closes
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, frac = 0, mode = 'bet', wait = 0, msg = '', hide = true;
+    let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, frac = 0, mode = 'bet', wait = 0, msg = '', hide = true, lock = 0;
     const total = (h) => {
       let t = 0, aces = 0;
       h.forEach((c) => { const r = c % 13; if (r === 0) { aces++; t += 11; } else t += Math.min(10, r + 1); });
@@ -810,7 +813,7 @@
       bet = b; stack -= b; money();
       shuffle(); you = [draw(), draw()]; house = [draw(), draw()]; hide = true; msg = '';
       A.play('pop');
-      if (total(you) === 21) { mode = 'house'; wait = 0.7; } else mode = 'play';
+      if (total(you) === 21) { mode = 'house'; wait = 0.5; } else mode = 'play';
       paint();
     }
     function settle() {
@@ -820,18 +823,20 @@
       else if (p === d) { stack += bet; msg = tr('A tie. You get your bet back.'); A.play('tap'); }
       else { msg = tr('Dealer wins. You lose {0}.', bet); A.play('nope'); actor.gesture('shake', true); }
       money();
-      mode = 'done'; wait = 1.5;
+      // The next bet is ready straight away, with this hand left on the table until the next deal. A short lock stops a quick
+      // double tap on Hit dealing a hand by mistake. Only the end of the table (all gone, or the house beaten) waits a moment.
+      if (stack < MIN || stack - START >= CAP) { mode = 'done'; wait = 1.1; } else { mode = 'bet'; lock = 0.35; }
       paint();
     }
     function act(a) {
-      if (a === 'bet') return deal(betNow());
+      if (a === 'bet') { if (lock <= 0) deal(betNow()); return; }
       if (mode !== 'play') return;
       if (a === 'hit') {
         you.push(draw()); A.play('pop');
         if (total(you) > 21) { hide = false; settle(); }
-        else if (total(you) === 21) { mode = 'house'; wait = 0.6; paint(); }
+        else if (total(you) === 21) { mode = 'house'; wait = 0.4; paint(); }
         else paint();
-      } else if (a === 'stand') { A.play('tap'); mode = 'house'; wait = 0.5; paint(); }
+      } else if (a === 'stand') { A.play('tap'); mode = 'house'; wait = 0.3; paint(); }
     }
     function build() {
       view = stage('#0d2b3a', '#1c6a55', { ground: 0x224a40, hemi: 1.9, key: 1.6 });
@@ -875,7 +880,7 @@
         if (!view) build();
         cast(view, 0.62, true);
         face(0);
-        stack = START; bet = 0; frac = 0; you = []; house = []; mode = 'bet'; hide = true;
+        stack = START; bet = 0; frac = 0; you = []; house = []; mode = 'bet'; hide = true; lock = 0;
         msg = tr('You have {0} sardines. Place a bet.', START);
         el.hidden = false;
         paint();
@@ -889,17 +894,17 @@
         lens(view);
         view.camera.lookAt(0, -0.75, 0);
         actor.update(dt, clock, null);
+        if (lock > 0) lock -= dt;
         if (!playing || wait <= 0) return;
         wait -= dt;
         if (wait > 0) return;
         if (mode === 'house') {
-          if (hide) { hide = false; A.play('pop'); wait = 0.6; paint(); }
-          else if (total(house) < 17) { house.push(draw()); A.play('pop'); wait = 0.6; paint(); }
+          if (hide) { hide = false; A.play('pop'); wait = 0.4; paint(); }
+          else if (total(house) < 17) { house.push(draw()); A.play('pop'); wait = 0.4; paint(); }
           else settle();
         } else if (mode === 'done') {
           if (stack < MIN) { el.hidden = true; K.over(tr('All gone!')); return; }
           if (stack - START >= CAP) { el.hidden = true; K.over(tr('You beat the house!')); return; }
-          mode = 'bet'; you = []; house = []; hide = true; msg = tr('Place a bet.'); paint();
         }
       },
     };

@@ -1,6 +1,6 @@
 /* Pikku Norppa: lets the game open with no signal.
    Online, the newest files are always fetched; the copy kept here is only the fallback. */
-const CACHE = 'pikku-norppa-v78';
+const CACHE = 'pikku-norppa-v79';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/blackjack-table.css', 'vendor/three.min.js',
   'js/data.js', 'js/lang.js', 'js/sim.js', 'js/astro.js', 'js/audio.js', 'js/props.js', 'js/seal.js', 'js/fx.js', 'js/world.js', 'js/ui.js', 'js/games.js', 'js/arcade.js', 'js/pill.js', 'js/main.js',
