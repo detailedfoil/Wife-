@@ -1208,9 +1208,9 @@
       return;
     }
     if (what === 'new') {
-      if (P.length >= T.maxPups) { A.play('nope'); UI.toast(tr('Two pups is the most.'), 'bolt', 'bad'); return; }
+      if (P.length >= T.maxPups) { A.play('nope'); UI.toast(tr('One pup at a time.'), 'bolt', 'bad'); return; }
       if (state.stage < 2) { state.stage = 2; state.ageMs = Math.max(state.ageMs, T.stageAge[1]); }
-      state.xp = Math.max(state.xp, S.xpFor(T.pupLevel)); state.maxLevel = Math.max(state.maxLevel, T.pupLevel);
+      state.xp = Math.max(state.xp, S.xpFor(T.pupLevel)); state.pupProg = Math.max(state.pupProg, S.xpFor(T.pupLevel)); state.maxLevel = Math.max(state.maxLevel, T.pupLevel);
       if (state.asleep) S.wake(state);
       syncLook(); UI.closeSheet();
       await birth();

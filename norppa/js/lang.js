@@ -176,7 +176,6 @@
     'not at the moment': 'ei juuri nyt',
     'going backwards': 'menee taaksepäin',
     'paused while poorly': 'tauolla sairauden ajan',
-    'Fully grown. With friendship level {0} and a happy, well-fed life, a pup may arrive.': 'Täysikasvuinen. Kun ystävyys on tasolla {0} ja elämä on onnellista ja kylläistä, perheeseen voi syntyä kuutti.',
     'Change name': 'Vaihda nimi',
 
     // ----- settings -----
@@ -385,7 +384,6 @@
     'The pups go hungry and fall poorly, to see how they look and how they get better.': 'Pennuille tulee nälkä ja ne sairastuvat, jotta näet miltä ne näyttävät ja miten ne paranevat.',
     'Feed and cheer the pups': 'Ruoki ja ilahduta pennut',
     'Full tummies, full happiness, and no longer poorly.': 'Vatsat täynnä, ilo täynnä, eikä enää sairasta.',
-    'Two pups is the most.': 'Pentuja voi olla enintään kaksi.',
     'There are no pups yet.': 'Pentuja ei vielä ole.',
     'Medicine is due now': 'Lääke on myöhässä nyt',
     'Forget the medicine for today and make it overdue, for testing.': 'Unohda tämän päivän lääke ja tee siitä myöhässä oleva, testausta varten.',
@@ -405,6 +403,9 @@
     '{0} is poorly and the juice costs more than you have. The neighbours can spare a bottle.': '{0} on kipeänä, eivätkä kolikot riitä mehuun. Naapurit voivat antaa pullon.',
     'Squeaky clean.': 'Putipuhdas.',
     'Squeaky clean!': 'Putipuhdas!',
+    'One pup at a time.': 'Vain yksi pentu kerrallaan.',
+    'Fully grown. The friendship points for the next pup start counting once her pup has swum off.': 'Täysikasvuinen. Seuraavan pennun ystävyyspisteet alkavat kertyä, kun hänen pentunsa on uinut pois.',
+    'Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.': 'Täysikasvuinen. Pentu voi tulla {0} ystävyyspisteen kuluttua, jos hän on iloinen ja kylläinen.',
     'Happiness {0}': 'Ilo {0}',
     '{0} is happy: +{1}% on every game.': '{0} on iloinen: +{1} % jokaisesta pelistä.',
     '{0} is content: no bonus yet.': '{0} on tyytyväinen: ei vielä bonusta.',

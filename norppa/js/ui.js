@@ -381,7 +381,7 @@
         const how = { sick: 'paused while poorly', back: 'going backwards', well: 'nicely', slow: 'slowly', none: 'not at the moment' }[S.growth(st)];
         growing = line('Growing', tr(how)) + line('Good care', tr('{0} of {1} days', done, needD));
         next = tr('Becomes a {0} at friendship level {1} after {2} days of good care. Growing slows once a bar drops below half, and being left hungry, grubby or glum sets it back.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage], needD);
-      } else next = tr('Fully grown. With friendship level {0} and a happy, well-fed life, a pup may arrive.', S.T.pupLevel);
+      } else next = st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once her pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
         + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|Anxi') : tr(moods[S.mood(st)]))
         + growing

@@ -31,7 +31,7 @@
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
-    pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
+    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 1,   // a pup is grown and ready to swim off after 2 days; one at a time, and the friendship points for the next one only count once it has gone
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
@@ -96,7 +96,7 @@
       wearing: { head: null, neck: null, face: null, back: null },
       fish: { muikku: 5, ahven: 2 },
       trinkets: {}, words: {}, awards: {}, seen: {},
-      pups: [], family: [], nextPupAt: 0, pupSeq: 0,
+      pups: [], family: [], nextPupAt: 0, pupSeq: 0, pupProg: 0,   // pupProg: friendship xp earned while no pup is at home; the next pup needs xpFor(pupLevel) of it
       fav: 'muikku', favKnown: false,
       gift: { last: dayKey(now), streak: 1 },
       dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0, juiceAt: 0,
@@ -114,6 +114,7 @@
   /* Fill in anything an older save is missing. */
   function migrate(obj) {
     const base = newState(obj && obj.createdAt ? obj.createdAt : Date.now());
+    const hadProg = !!(obj && obj.pupProg !== undefined);
     const fill = (dst, src) => {
       Object.keys(src).forEach((k) => {
         const v = src[k];
@@ -126,11 +127,12 @@
     if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: dayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
+    if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
     // One time only: pups now come at level 10, so a grown seal who is already there and has never had a pup is due one on this load
     // (she still has to be awake, fed, happy and not sulking, like any birth).
-    if (obj && !obj.pupAtTen) { obj.pupAtTen = 1; if (obj.stage === 2 && obj.xp >= xpFor(T.pupLevel) && !obj.pups.length && !(obj.family && obj.family.length) && !obj.pupSeq) obj.nextPupAt = 0; }
+    if (obj && !obj.pupAtTen) { obj.pupAtTen = 1; if (obj.stage === 2 && obj.pupProg >= xpFor(T.pupLevel) && !obj.pups.length && !(obj.family && obj.family.length) && !obj.pupSeq) obj.nextPupAt = 0; }
     if (obj.counters && obj.counters.bestCatch > 0) obj.owned['game_catch'] = true;
     if (obj.owned && !obj.owned.sauna) { obj.owned.sauna = true; if (obj.placed) obj.placed.sauna = true; }   // the sauna is on everyone's shore now: it is how she gets clean
     return obj;
@@ -167,6 +169,7 @@
 
   function addXp(state, n) {
     state.xp += n * T.xpRate;
+    if (!state.pups.length) state.pupProg += n * T.xpRate;
     const L = level(state).level;
     while (state.maxLevel < L) {
       state.maxLevel++;
@@ -838,7 +841,7 @@
   function pupDue(state, now) {
     const s = state.stats;
     return state.stage === 2 && state.pups.length < T.maxPups && now >= state.nextPupAt
-      && level(state).level >= T.pupLevel && !state.asleep && !state.sick && state.grudge <= 0
+      && state.pupProg >= xpFor(T.pupLevel) && !state.asleep && !state.sick && state.grudge <= 0
       && s.food > 50 && s.joy > 50 && state.griefUntil < now;
   }
 
@@ -868,6 +871,7 @@
   function addPup(state, now, name) {
     const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false, wear: pupLook(state) };
     state.pups.push(p);
+    state.pupProg = 0;
     state.nextPupAt = now + T.pupGap;
     addXp(state, 20);
     learn(state, 'perhe');
