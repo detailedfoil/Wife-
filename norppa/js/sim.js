@@ -32,7 +32,7 @@
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 4 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 2,
-    visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
+    farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 12,
     diveCooldown: 25 * 60e3, saunaCooldown: 45 * 60e3,
     gameEnergy: 12, gameMax: 150, catchKeepChance: 0.1,
@@ -780,7 +780,7 @@
     state.pups.splice(i, 1);
     state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', wear: p.wear || pupLook(state) });
     state.counters.pupsGrown++;
-    const farewell = earn(state, 100);
+    const farewell = earn(state, T.farewellCoins / T.earnRate);   // exactly 200 coins
     state.nextPupAt = Math.max(state.nextPupAt, now + DAY);
     addXp(state, 40);
     learn(state, 'heihei');
