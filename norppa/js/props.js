@@ -57,6 +57,56 @@
     return t;
   };
   U.repaint = () => painted.forEach((p) => { try { paint(p); } catch (e) { /* leave that one as it is */ } });
+  /* Quiet, seamless colour washes for the home scene. No bump maps or grain:
+     the original lighting and round silhouettes do the work. Painted once, shared,
+     and restored through U.repaint with the rest of the game's canvas textures. */
+  const surfaceTextures = {}, homeMaterials = new WeakMap();
+  U.surfaceTex = (kind) => {
+    if (surfaceTextures[kind]) return surfaceTextures[kind];
+    const tex = U.tex(256, 256, (c, w, h) => {
+      const r = U.rng(kind === 'wood' ? 731 : kind === 'stone' ? 349 : 127);
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+      // Wrap every soft wash at the tile edges so large surfaces have no seams.
+      for (let i = 0; i < 34; i++) {
+        const x = r() * w, y = r() * h, radius = 12 + r() * 36;
+        for (let dy = -h; dy <= h; dy += h) for (let dx = -w; dx <= w; dx += w) {
+          const g = c.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, radius);
+          g.addColorStop(0, kind === 'stone' ? 'rgba(95,110,125,0.09)' : 'rgba(115,140,170,0.055)');
+          g.addColorStop(1, 'rgba(115,140,170,0)');
+          c.fillStyle = g; c.fillRect(0, 0, w, h);
+        }
+      }
+      if (kind === 'wood') {
+        // Broad, faint grain, periodic in both directions; no sharp outlines.
+        for (let i = 0; i < 12; i++) {
+          const x = i * w / 12, phase = r() * TAU;
+          c.strokeStyle = 'rgba(100,72,48,0.075)'; c.lineWidth = 1.5 + r() * 2;
+          for (let offset = -w; offset <= w; offset += w) {
+            c.beginPath();
+            for (let y = 0; y <= h; y += 4) {
+              const xx = x + offset + 3 * Math.sin(y / h * TAU + phase);
+              if (y === 0) c.moveTo(xx, y); else c.lineTo(xx, y);
+            }
+            c.stroke();
+          }
+        }
+      }
+    });
+    tex.wrapS = tex.wrapT = T.RepeatWrapping;
+    return (surfaceTextures[kind] = tex);
+  };
+  // Clone only home-scene materials: thumbnails, clothing and games keep their art.
+  U.homeMaterial = (material) => {
+    if (!material.isMeshStandardMaterial || material.map || material.transparent) return material;
+    if (homeMaterials.has(material)) return homeMaterials.get(material);
+    const color = material.color.getHex(), C = PN.COL;
+    const kind = [C.wood, C.woodDark, C.woodLight].includes(color) ? 'wood'
+      : color === C.snow ? 'snow' : color === C.stone ? 'stone' : null;
+    if (!kind) return material;
+    const soft = material.clone(); soft.map = U.surfaceTex(kind);
+    homeMaterials.set(material, soft);
+    return soft;
+  };
   U.mesh = (geo, material, x, y, z) => { const m = new T.Mesh(geo, material); m.position.set(x || 0, y || 0, z || 0); return m; };
   U.ball = (r, material, x, y, z, sx, sy, sz, seg) => {
     const m = U.mesh(new T.SphereGeometry(r, seg || 16, Math.max(8, Math.round((seg || 16) * 0.7))), material, x, y, z);

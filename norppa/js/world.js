@@ -66,18 +66,20 @@
       g.applyMatrix4(p.m); n += g.attributes.position.count;
       return { g, c: p.c };
     });
-    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), uv = new Float32Array(n * 2);
     let o = 0;
     list.forEach((it) => {
       const cnt = it.g.attributes.position.count;
       pos.set(it.g.attributes.position.array, o * 3); nor.set(it.g.attributes.normal.array, o * 3);
       for (let i = 0; i < cnt; i++) { col[(o + i) * 3] = it.c.r; col[(o + i) * 3 + 1] = it.c.g; col[(o + i) * 3 + 2] = it.c.b; }
+      for (let i = 0; i < cnt; i++) { uv[(o + i) * 2] = pos[(o + i) * 3] / 3; uv[(o + i) * 2 + 1] = pos[(o + i) * 3 + 2] / 3; }
       o += cnt;
     });
     const out = new T.BufferGeometry();
     out.setAttribute('position', new T.BufferAttribute(pos, 3));
     out.setAttribute('normal', new T.BufferAttribute(nor, 3));
     out.setAttribute('color', new T.BufferAttribute(col, 3));
+    out.setAttribute('uv', new T.BufferAttribute(uv, 2));
     return out;
   };
 
@@ -282,11 +284,14 @@
       col[k] = 0.80 * shade; col[k + 1] = 0.87 * shade; col[k + 2] = 0.985 * shade;
       if (i < N && j < N) { const p = j * (N + 1) + i; idx.push(p, p + N + 1, p + 1, p + 1, p + N + 1, p + N + 2); }
     }
+    const uv = new Float32Array((N + 1) * (N + 1) * 2);
+    for (let k = 0; k < uv.length / 2; k++) { uv[k * 2] = pos[k * 3] / 3; uv[k * 2 + 1] = pos[k * 3 + 2] / 3; }
     const g = new T.BufferGeometry();
+    g.setAttribute('uv', new T.BufferAttribute(uv, 2));
     g.setAttribute('position', new T.BufferAttribute(pos, 3));
     g.setAttribute('color', new T.BufferAttribute(col, 3));
     g.setIndex(idx); g.computeVertexNormals();
-    groundMat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+    groundMat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: U.surfaceTex('snow') });
     const ground = W.ground = new T.Mesh(g, groundMat);
     ground.receiveShadow = true;
     scene.add(ground);
@@ -299,7 +304,7 @@
         c.fillStyle = 'rgba(255,255,255,' + (0.18 + r() * 0.3) + ')';
         c.beginPath(); c.ellipse(r() * w, r() * h, 30 + r() * 80, 8 + r() * 22, r() * 0.5 - 0.25, 0, TAU); c.fill();
       }
-      c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1.2;
+      c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.2; c.lineJoin = 'round';
       for (let i = 0; i < 9; i++) {                         // cracks
         let x = r() * w, y = r() * h; c.beginPath(); c.moveTo(x, y);
         for (let k = 0; k < 6; k++) { x += (r() - 0.5) * 130; y += (r() - 0.5) * 130; c.lineTo(x, y); }
@@ -354,9 +359,9 @@
       M.compose(tmpV.set(p[0], y + p[2] * 0.85, p[1]), Q.setFromEuler(E.set(0, 0, 0)), new T.Vector3(p[2] * 1.15, p[2] * 0.42, p[2] * 0.9));
       white.push({ geo: new T.SphereGeometry(1, 10, 8), m: M.clone(), c: cSnow });
     });
-    const tg = new T.Mesh(U.merge(green), new T.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+    const tg = new T.Mesh(U.merge(green), new T.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: U.surfaceTex('stone') }));
     tg.castShadow = true;
-    treeSnow = new T.Mesh(U.merge(white), new T.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+    treeSnow = new T.Mesh(U.merge(white), new T.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: U.surfaceTex('snow') }));
     treeSnow.castShadow = true;
     scene.add(tg, treeSnow);
 
@@ -369,11 +374,11 @@
   }
 
   function buildDen(scene) {
-    const snow = denMat = new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1 });     // snow in winter, bare rock once it melts
+    const snow = denMat = new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1, map: U.surfaceTex('snow') });     // snow in winter, bare rock once it melts
     denG = W.denG = new T.Group();
     const mound = new T.Mesh(new T.SphereGeometry(1, 30, 14, 0, TAU, 0, Math.PI / 2), snow);
     mound.scale.set(1.75, 1.3, 1.6);
-    const tunnel = new T.Mesh(new T.CylinderGeometry(1.02, 1.02, 1.1, 22, 1, true, Math.PI / 2, Math.PI), tunnelMat = new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1, side: T.DoubleSide }));
+    const tunnel = new T.Mesh(new T.CylinderGeometry(1.02, 1.02, 1.1, 22, 1, true, Math.PI / 2, Math.PI), tunnelMat = new T.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 1, side: T.DoubleSide, map: U.surfaceTex('snow') }));
     tunnel.rotation.x = Math.PI / 2; tunnel.position.z = 1.35;
     const rim = U.torus(0.93, 0.14, snow, 0, 0, 1.9, Math.PI, 22);
     const dark = new T.Mesh(new T.CircleGeometry(0.87, 24, 0, Math.PI), new T.MeshBasicMaterial({ color: 0x0b1430 }));
@@ -462,6 +467,7 @@
           if (d.conform) { const cs = Math.cos(s[2]), sn = Math.sin(s[2]); d.conform((x, z) => W.groundY(s[0] + x * cs + z * sn, s[1] - x * sn + z * cs) - y0); }
           W.scene.add(d.g);
         }
+        d.g.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(U.homeMaterial) : U.homeMaterial(o.material); });
         U.shadows(d.g, !d.flat, id === 'sauna' || !!d.flat);
         d.g.traverse((o) => { if (o.isMesh && (o.material.isMeshBasicMaterial || o.material.transparent)) o.castShadow = false; });
         d.g.userData.pick = { type: 'decor', id };
