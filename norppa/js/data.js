@@ -317,7 +317,7 @@
     swim: { price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
     stack: { price: 575, muck: 6, title: 'Ice Stack', icon: 'stack', tint: 'sea', text: 'Floes slide across. Tap to set each one down on the tower. Whatever hangs over breaks off. Miss the tower and it is over.', best: 'best_stack', pay: [0.78, 0.96], unit: 'floes stacked' },
     puff: { price: 650, muck: 5, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [60.5, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
-    piano: { price: 775, muck: 3, title: 'Ice Piano', icon: 'piano', tint: 'sky', text: 'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.', best: 'best_piano', pay: [0.2, 1], unit: 'tiles played' },
+    piano: { price: 775, muck: 3, title: 'Kantele Tiles', icon: 'piano', tint: 'sky', text: 'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.', best: 'best_piano', pay: [0.2, 1], unit: 'tiles played' },
     toss: { price: 700, muck: 10, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.', best: 'best_toss', pay: [3.2, 1], unit: 'baskets' },
     sauna: { price: 0, muck: 0, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right.', unit: 'rounds' },   // not a game to play for coins: it is how she gets clean (see Sim.saunaDone), so it is not in GAME_ORDER
     curl: { price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
@@ -331,7 +331,7 @@
      was woken, which pays nothing). It pays 60.5 * seconds^-0.3 (10% above the balanced rate, by request), so about 30 coins for 10 seconds or less (quick), 25 for 20 seconds,
      22 for 30, 19 for 45, 18 for a minute and 14 for two. A set board cleared faster is also more boards a minute, so quick players
      earn more a minute here than elsewhere and slow ones less: about 10, 21, 41 and 79 at the four skill levels. */
-  /* Tunes for Ice Piano. Each note is a pitch and how long it lasts in sixteenths; a bar line (|) is only there for reading.
+  /* Tunes for Kantele Tiles. Each note is a pitch and how long it lasts in sixteenths; a bar line (|) is only there for reading.
      bpm is the speed on the sheet; the game starts at 78 and steps up by 7.5 at every half loop to 134 (62 felt sluggish and 155 was far too fast).
      Ievan polkka is a traditional Finnish polka tune. */
   PN.SONGS = {
