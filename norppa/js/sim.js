@@ -31,7 +31,7 @@
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
-    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 18 * H, maxPups: 1,   // a pup is grown and ready to swim off after 2 days; one at a time, and the friendship points for the next one only count once it has gone
+    pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 1,   // a pup is grown and ready to swim off after 2 days; one at a time, and the friendship points for the next one only count once it has gone
     farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
@@ -825,7 +825,7 @@
 
   function canEvolve(state) {
     if (state.stage >= 2 || state.asleep || state.sick) return false;
-    return state.ageMs >= T.stageAge[state.stage] && level(state).level >= T.stageLevel[state.stage];
+    return level(state).level >= T.stageLevel[state.stage];   // she grows up by friendship level, not by age: level 6 for a youngster, level 10 for a grown-up who can have pups
   }
 
   function evolve(state, now) {

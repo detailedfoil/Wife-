@@ -374,17 +374,12 @@
       const line = (a, b) => '<div class="statline"><span>' + tr(a) + '</span><b>' + b + '</b></div>';
       const stage = D.STAGES[st.stage], favIt = PN.items[st.fav];
       let next;
-      let growing = '';
       if (st.stage < 2) {
-        const nx = D.STAGES[st.stage + 1], needD = S.T.stageAge[st.stage] / S.DAY;
-        const done = (Math.floor(Math.min(st.ageMs / S.DAY, needD) * 10) / 10).toFixed(1).replace('.', fi ? ',' : '.');
-        const how = { sick: 'paused while poorly', back: 'going backwards', well: 'nicely', slow: 'slowly', none: 'not at the moment' }[S.growth(st)];
-        growing = line('Growing', tr(how)) + line('Good care', tr('{0} of {1} days', done, needD));
-        next = tr('Becomes a {0} at friendship level {1} after {2} days of good care. Growing slows once a bar drops below half, and being left hungry, grubby or glum sets it back.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage], needD);
+        const nx = D.STAGES[st.stage + 1];
+        next = tr('Becomes a {0} at friendship level {1}.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage]);
       } else next = st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once her pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
         + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|Anxi') : tr(moods[S.mood(st)]))
-        + growing
         + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
         + line('Strokes', st.counters.pets) + line('Meals', st.counters.feeds) + line('Dives', st.counters.dives) + line('Games played', st.counters.games)
         + (st.counters.pupsGrown + st.counters.pupsLost ? line('Pups raised', st.counters.pupsGrown) + line('Pups lost', st.counters.pupsLost) : '')
@@ -410,7 +405,7 @@
         + (st.dev ? [
           ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
           ['visit', 'Call a pup home now', 'Call the first grown-up pup back and skip the hour of waiting, to see the visit and the 100 coins. Dev mode also ignores the 12 hour wait between calls.', 'seal'],
-          ['ready', 'Pups are ready to leave', 'Skip the four days of growing. Tap a pup, then Wave goodbye, to see it go.', 'star'],
+          ['ready', 'Pups are ready to leave', 'Skip the two days of growing. Tap a pup, then Wave goodbye, to see it go.', 'star'],
           ['bye', 'Say farewell now', 'Send the first pup off into the lake straight away, with the wave, the coins and the splash.', 'heart'],
           ['dress', 'New outfits for the pups', 'Give every pup new random things to wear, different from each other.', 'star'],
           ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
