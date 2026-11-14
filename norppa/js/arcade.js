@@ -1381,6 +1381,7 @@
   const piano = (() => {
     const LANES = 4, SPAN = 11, LINE = 0.74, START = 78, RISE = 7.5, MAX = 134, BOUNCE = 0.09;
     const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    let kantele = null;
     let view = null, el = null, cv = null, g2 = null, W = 0, H = 0, song = null, chart = [], total = 0;
     let pos = 0, next = 0, n = 0, mode = 'idle', wait = 0, bad = -1, badTile = -1, lastLane = -1, lastAt = 0, bop = 0, why = '';
 
@@ -1477,6 +1478,37 @@
         const f = U.cyl(k, k * 0.92, 0.12, snow, Math.cos(a) * d, -0.16, Math.sin(a) * d - 4, 7);
         f.rotation.y = r() * 3; sc.add(f);
       }
+      // A small five-string kantele: tapered wooden soundbox, bridge and tuning pins.
+      // Attached to the seal's squash rig so pups and adults hold the same proportions.
+      kantele = new T.Group();
+      const outline = new T.Shape();
+      outline.moveTo(-0.68, -0.22); outline.lineTo(0.66, -0.14);
+      outline.quadraticCurveTo(0.76, -0.12, 0.69, 0.02);
+      outline.lineTo(0.32, 0.32); outline.quadraticCurveTo(0.26, 0.37, 0.15, 0.34);
+      outline.lineTo(-0.68, 0.10); outline.quadraticCurveTo(-0.76, 0.02, -0.68, -0.22);
+      const wood = U.mat(0xdba361, { roughness: 0.8 });
+      const body = new T.Mesh(new T.ExtrudeGeometry(outline, { depth: 0.09, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.035, bevelThickness: 0.025, curveSegments: 12 }), wood);
+      kantele.add(body);
+      const dark = U.mat(0x805331, { roughness: 0.85 });
+      const hole = U.mesh(new T.CircleGeometry(0.065, 24), dark, -0.05, 0, 0.117);
+      kantele.add(hole);
+      const stringMat = U.mat(0xffedbb, { roughness: 0.35, metalness: 0.3 });
+      function bar(x1, y1, x2, y2, radius, material, z) {
+        const d = new T.Vector3(x2 - x1, y2 - y1, 0);
+        const mesh = new T.Mesh(new T.CylinderGeometry(radius, radius, d.length(), 8), material);
+        mesh.position.set((x1 + x2) / 2, (y1 + y2) / 2, z);
+        mesh.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
+        kantele.add(mesh);
+      }
+      bar(-0.57, -0.16, -0.57, 0.09, 0.024, dark, 0.14);
+      for (let i = 0; i < 5; i++) {
+        const y = -0.14 + i * 0.052, x = 0.56 - i * 0.072, endY = -0.09 + i * 0.085;
+        bar(-0.57, y, x, endY, 0.008, stringMat, 0.155);
+        const pin = U.mesh(new T.SphereGeometry(0.023, 10, 8), dark, x, endY, 0.155);
+        kantele.add(pin);
+      }
+      kantele.position.set(0, 0.37, 1.0);
+      kantele.rotation.set(-0.35, 0, -0.10);
       view.camera.position.set(0, 2.5, 7.2);
       el = document.getElementById('pianoBoard'); cv = document.getElementById('pianoCanvas'); g2 = cv.getContext('2d');
       el.addEventListener('pointerdown', (e) => {
@@ -1497,6 +1529,7 @@
         if (!view) build();
         cast(view, 0.85, true);
         face(0);
+        actor.sq.add(kantele);
         let picker = document.getElementById('pianoSong');
         if (!picker) {
           picker = document.createElement('select'); picker.id = 'pianoSong';
@@ -1519,7 +1552,7 @@
         size(); draw();
         A.hush(true);
       },
-      stop() { el.hidden = true; document.getElementById('pianoSong').hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
+      stop() { if (kantele.parent) kantele.parent.remove(kantele); actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); el.hidden = true; document.getElementById('pianoSong').hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
       go() { K.score(0, true); },
       pointer() {},
       key() {},
@@ -1530,6 +1563,10 @@
         bop = Math.max(0, bop - dt * 7);
         view.rig.position.y = Math.sin(bop * PI) * 0.07;
         actor.update(dt, clock, null);
+        actor.flipL.position.set(0.62, 0.31, 0.78);
+        actor.flipR.position.set(-0.62, 0.31, 0.78);
+        actor.flipL.rotation.set(-0.12 - bop * 0.18, -0.45, 0.18);
+        actor.flipR.rotation.set(-0.12, 0.45, -0.18);
         if (!W) size();
         if (playing && mode === 'play') {
           pos += dt * bpm(pos) / 15;
