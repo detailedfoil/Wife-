@@ -6,7 +6,7 @@
   'use strict';
 
   const FI = {
-    "Twenty buses. Choose your seat while the bus crawls past. You have 1.1 seconds. Buses grow every four stops. After each choice, green seats are best and red are worst.": "Kaksikymmentä bussia. Valitse penkkisi bussin lipuessa ohi. Sinulla on 1,1 sekuntia aikaa. Bussit kasvavat neljän pysäkin välein. Valinnan jälkeen vihreät penkit ovat parhaat ja punaiset huonoimmat.",
+    "Sit as far away from the other seals as you can. Be quick!": "Istu mahdollisimman kauas muista norpista. Ole nopea!",
     // Game instructions and bus messages.
     "Seal Seat Shuffle": "Norpan paikkapulma",
     "points out of 2,000": "pistettä / 2 000",
@@ -376,7 +376,7 @@
     'Too hot!': 'Liian kuuma!',
     'Too cold!': 'Liian kylmä!',
     'Blackjack': 'Blackjack',
-    'Choose your bet, from 5 sardines up to a third of your pile. Beat the dealer without going over 21. Cash out when you like.': 'Valitse panos, 5 sardiinista kolmannekseen kasastasi. Voita jakaja menemättä yli 21:n. Kotiuta voitot milloin haluat.',
+    'Beat the dealer without going over 21. Cash out when you like.': 'Voita jakaja menemättä yli 21:n. Kotiuta voitot milloin haluat.',
     'A third': 'Kolmannes',
     'How much to bet': 'Panoksen suuruus',
     'All in': 'Kaikki peliin',
@@ -494,7 +494,7 @@
     'scoops stacked': 'palloa pinottu',
     'Sweet!': 'Herkullista!',
     'Tap to stack the ice cream. Keep your cone balanced!': 'Pinoa jäätelöä napauttamalla. Pidä tötterö tasapainossa!',
-    'Build a delicious ice cream tower! Tap to stack each scoop neatly. Overhanging bits tumble off—how tall can your cone grow?': 'Rakenna herkullinen jäätelötorni! Pinoa pallot siististi napauttamalla. Yli jäävät palat putoavat pois – kuinka korkean tötterön saat?',
+    'Build a delicious ice cream tower! Tap to stack each scoop neatly. Overhanging bits tumble off': 'Rakenna herkullinen jäätelötorni! Pinoa pallot siististi napauttamalla. Yli jäävät palat putoavat pois',
     'Floes slide across. Tap to set each one down on the tower. Whatever hangs over breaks off. Miss the tower and it is over.': 'Jäälautat liukuvat ohi. Laske jokainen torniin napauttamalla. Reunan yli jäävä osa lohkeaa pois. Jos lautta menee tornin ohi, peli päättyy.',
     'Floes': 'Lautat',
     'Tap to set the floe down on the one below.': 'Laske lautta alemman päälle napauttamalla.',
