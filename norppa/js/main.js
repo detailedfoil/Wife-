@@ -1013,6 +1013,14 @@
   }
 
   /* ---------- shop ---------- */
+  const cosmeticVisitors = () => state.family.map((f, i) => ({ f, i }))
+    .filter(({ f }) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here');
+  function dressCosmeticTarget(target) {
+    if (typeof target === 'string' && /^family:\d+$/.test(target)) {
+      const i = Number(target.slice(7)), f = state.family[i], ps = visitors[i];
+      if (f && ps) ['head', 'neck', 'face', 'back'].forEach((slot) => ps.setWear(slot, (f.wear || {})[slot] || null));
+    } else { const p = state.pups.find((p) => p.id === target); if (p) dressPup(p); }
+  }
   let choosingCosmetic = false;
   G.cosmetic = async function (id) {
     if (choosingCosmetic) return;
@@ -1021,7 +1029,8 @@
     choosingCosmetic = true;
     try {
       const seals = [{ id: null, name: state.name, owned: state.owned, wear: state.wearing }]
-        .concat(state.pups.map((p) => ({ id: p.id, name: p.name, owned: p.owned || {}, wear: p.wear || {} })));
+        .concat(state.pups.map((p) => ({ id: p.id, name: p.name, owned: p.owned || {}, wear: p.wear || {} })))
+        .concat(cosmeticVisitors().map(({ f, i }) => ({ id: 'family:' + i, name: f.name, owned: f.owned || {}, wear: f.wear || {} })));
       const actions = seals.map((p) => {
         const own = p.owned[id] || Object.values(p.wear).includes(id);
         const label = own ? tr(p.wear[it.slot] === id ? 'Take off' : 'tag|Wear') : tr('Buy for {0} coins', S.price(state, it.price));
@@ -1031,13 +1040,13 @@
       const target = await UI.modal({ title: tr('Who is this for?'), art: PN.Thumbs.get(id), actions });
       if (target === 'cancel') return;
       const p = seals.find((p) => p.id === target);
-      if (!p || (target != null && !state.pups.some((q) => q.id === target))) return;
+      if (!p) return; // The simulation rechecks that a visitor is still here before changing anything.
       if (p.owned[id] || Object.values(p.wear).includes(id)) G.wear(id, target);
       else G.buy(id, target);
     } finally { choosingCosmetic = false; }
   };
   G.buy = function (id, target) {
-    if (PN.items[id] && PN.items[id].kind === 'wear' && target === undefined && state.pups.length) return G.cosmetic(id);
+    if (PN.items[id] && PN.items[id].kind === 'wear' && target === undefined && (state.pups.length || cosmeticVisitors().length)) return G.cosmetic(id);
     const r = S.buy(state, id, target), it = PN.items[id];
     if (!r.ok) {
       A.play('nope');
@@ -1046,7 +1055,7 @@
     }
     A.play('coin');
     if (it.kind === 'wear') {
-      if (target != null) { const p = state.pups.find((p) => p.id === target); if (p) dressPup(p); }
+      if (target != null) dressCosmeticTarget(target);
       else seal.setWear(it.slot, state.wearing[it.slot]);
       if (!seal.asleep) { seal.gesture('happy'); A.play('chirp'); }
       FX.sparkle(head(), 10);
@@ -1059,11 +1068,11 @@
     UI.renderSheet(); UI.refresh(); save();
   };
   G.wear = function (id, target) {
-    if (target === undefined && state.pups.length) return G.cosmetic(id);
+    if (target === undefined && (state.pups.length || cosmeticVisitors().length)) return G.cosmetic(id);
     const r = S.wear(state, id, target), it = PN.items[id];
     if (!r.ok) return;
     A.play('pop');
-    if (target != null) { const p = state.pups.find((p) => p.id === target); if (p) dressPup(p); }
+    if (target != null) dressCosmeticTarget(target);
     else seal.setWear(it.slot, state.wearing[it.slot]);
     if (r.on) FX.sparkle(head(), 6);
     UI.renderSheet(); save();
