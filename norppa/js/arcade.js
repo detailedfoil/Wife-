@@ -1906,7 +1906,7 @@
       elapsed += dt;
       if (phase === 'arrive') {
         bus.position.z = travel * Math.pow(1 - Math.min(1, elapsed / ARRIVE), 3);
-        if (elapsed >= ARRIVE) { bus.position.z = 0; phase = 'choose'; deadline = performance.now() + 2000; elapsed = 0; K.time('2.0'); }
+        if (elapsed >= ARRIVE) { bus.position.z = 0; phase = 'choose'; deadline = performance.now() + 1500; elapsed = 0; K.time('1.5'); }
       } else if (phase === 'choose') {
         const left = Math.max(0, (deadline - performance.now()) / 1000); K.time(left.toFixed(1));
         if (!left) choose(-1);

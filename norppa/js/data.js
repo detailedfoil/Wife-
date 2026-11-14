@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 12:55';
+  PN.UPDATED = '14 Nov 2026, 12:58';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -313,7 +313,7 @@
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
   /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
   const GAMES = {
-    shuffle: { price: 0, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Twenty buses. Two seconds to find your space. Buses grow every four stops. After each choice, green seats are best and red are worst.', best: 'best_shuffle', pay: [0.025, 1], unit: 'points out of 2,000' },
+    shuffle: { price: 0, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Twenty buses. 1.5 seconds to find your space. Buses grow every four stops. After each choice, green seats are best and red are worst.', best: 'best_shuffle', pay: [0.025, 1], unit: 'points out of 2,000' },
     ball: { price: 0, muck: 7, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', pay: [0.56, 1.1] },
     catch: { price: 200, muck: 6, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
     swim: { price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
