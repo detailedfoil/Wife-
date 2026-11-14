@@ -1585,16 +1585,26 @@
   G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
 
-/* Seal Seat Shuffle: ten quick stops, scored by the nearest passenger. */
+/* Seal Seat Shuffle: a roofless Three.js bus, viewed from above. */
 (function (PN) {
   'use strict';
-  const K = PN.Games.kit;
-  let root, canvas, ctx, round, total, seats, phase, elapsed, deadline, chosen, best, points;
-  const rows = 8;
+  const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit;
+  const ROWS = 8, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22;
+  const ray = new T.Raycaster(), pointer = new T.Vector2(), matrix = new T.Matrix4();
+  const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
+  let view = null, bus, scenery, cushions, pickSeats, player, playerRig;
+  let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1;
+  let busWidth = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0;
+  let materials, geometry, templates, wheels = [], batches = [];
+  const ownedGeometries = new Set(), ownedMaterials = new Set();
+  const color = new T.Color();
+
   function layout(n) {
     const side = Math.ceil(n / 2), list = [];
-    for (let r = 0; r < rows; r++) for (let c = 0; c < side * 2; c++)
-      list.push({ x: c + (c >= side ? 0.8 : 0), y: r * 1.15, occupied: false });
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < side * 2; c++) {
+      const x = c + (c >= side ? 0.8 : 0);
+      list.push({ x, y: r * 1.15, z: r * 1.15 - 3.725, occupied: false });
+    }
     return list;
   }
   function evaluate(list) {
@@ -1602,76 +1612,306 @@
     list.forEach(s => { s.distance = s.occupied ? 0 : Math.min(...occupied.map(p => Math.hypot(s.x - p.x, s.y - p.y))); });
     return Math.max(...list.map(s => s.distance));
   }
+  function mat(hex, extra) {
+    const m = new T.MeshStandardMaterial(Object.assign({ color: hex, roughness: 0.76 }, extra));
+    ownedMaterials.add(m); return m;
+  }
+  function geo(g) { ownedGeometries.add(g); return g; }
+  function roundedBox() {
+    const g = new T.BoxGeometry(1, 1, 1, 6, 6, 6), p = g.attributes.position;
+    const inner = new T.Vector3(), v = new T.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      inner.set(U.clamp(v.x, -0.40, 0.40), U.clamp(v.y, -0.40, 0.40), U.clamp(v.z, -0.40, 0.40));
+      v.sub(inner).normalize().multiplyScalar(0.10).add(inner);
+      p.setXYZ(i, v.x, v.y, v.z);
+    }
+    g.computeVertexNormals(); return geo(g);
+  }
+  function box(parent, m, w, h, d, x, y, z) {
+    const mesh = new T.Mesh(geometry.round, m);
+    mesh.scale.set(w, h, d); mesh.position.set(x, y, z); parent.add(mesh); return mesh;
+  }
+  function ball(parent, m, x, y, z, sx, sy, sz) {
+    const mesh = new T.Mesh(geometry.ball, m);
+    mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); parent.add(mesh); return mesh;
+  }
+  function transform(x, y, z, sx, sy, sz) {
+    position.set(x, y, z); scale.set(sx, sy, sz);
+    return matrix.compose(position, rotation, scale);
+  }
+  function instanced(parent, g, m, transforms) {
+    const mesh = new T.InstancedMesh(g, m, transforms.length);
+    transforms.forEach((v, i) => mesh.setMatrixAt(i, v));
+    mesh.instanceMatrix.needsUpdate = true;
+    // Buses move beyond their resting bounds during the short transitions.
+    mesh.frustumCulled = false;
+    parent.add(mesh); batches.push(mesh); return mesh;
+  }
+
+  /* Use the game's actual seal models for passengers too. Freeze three coats
+     into instanced batches so a wide bus does not need dozens of live rigs. */
+  function makeTemplate(stage) {
+    const seal = new PN.Seal({ stage });
+    seal.freeY = true; seal.shadow.visible = false; seal.heading = Math.PI;
+    seal.g.rotation.y = Math.PI; seal.g.scale.setScalar(0.29);
+    seal.update(0, 0, null); seal.g.updateMatrixWorld(true);
+    const bounds = new T.Box3(), center = new T.Vector3();
+    seal.g.traverseVisible(m => {
+      if (!m.isMesh || m.material.opacity === 0) return;
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      bounds.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld));
+    });
+    bounds.getCenter(center);
+    const parts = [];
+    seal.g.traverseVisible(m => {
+      if (!m.isMesh || m.material.opacity === 0) return;
+      const local = m.matrixWorld.clone(); local.elements[12] -= center.x; local.elements[14] -= center.z;
+      parts.push({ geometry: m.geometry, material: m.material, matrix: local });
+    });
+    return { seal, parts };
+  }
+  function passengers(places) {
+    const groups = new Map(), translation = new T.Matrix4();
+    places.forEach((p, i) => {
+      const template = templates[p.coat == null ? i % templates.length : p.coat];
+      translation.makeTranslation(p.x, 0.94, p.z);
+      template.parts.forEach(part => {
+        const key = part.geometry.uuid + '/' + part.material.uuid;
+        if (!groups.has(key)) groups.set(key, { part, transforms: [] });
+        groups.get(key).transforms.push(new T.Matrix4().multiplyMatrices(translation, part.matrix));
+      });
+    });
+    groups.forEach(({ part, transforms }) => instanced(bus, part.geometry, part.material, transforms));
+  }
+  function build() {
+    const scene = new T.Scene(); scene.background = new T.Color(0xcbdfe5);
+    scene.add(new T.HemisphereLight(0xfffaf0, 0x718d9b, 2.0));
+    const sun = new T.DirectionalLight(0xffffff, 1.7); sun.position.set(-5, 14, -8); scene.add(sun);
+    const camera = new T.OrthographicCamera(-7, 7, 10, -10, 0.1, 180);
+    camera.up.set(0, 0, -1); camera.position.set(0, 26, -8.2); camera.lookAt(0, 0.65, 0);
+    view = { scene, camera };
+    geometry = {
+      round: roundedBox(), ball: geo(new T.SphereGeometry(1, 16, 12)),
+      tire: geo(new T.CylinderGeometry(0.45, 0.45, 0.28, 20)),
+      hub: geo(new T.CylinderGeometry(0.24, 0.24, 0.30, 16)),
+      hit: geo(new T.BoxGeometry(0.96, 0.85, 1.10)),
+      marker: geo(new T.TorusGeometry(0.38, 0.035, 8, 28)),
+    };
+    materials = {
+      paint: mat(0x5a9ca9), trim: mat(0x3c7182), cream: mat(0xf4eee0), floor: mat(0xcdd6cc),
+      seat: mat(0x80aeb7), cushion: mat(0xffffff), frame: mat(0x486b7a), tire: mat(0x334453), hub: mat(0xb6cbd0),
+      glass: mat(0xc0e4ec, { roughness: 0.25 }), light: mat(0xffe4a2, { emissive: 0xffd388, emissiveIntensity: 0.35 }),
+      red: mat(0xdc807b), road: mat(0x8eabb8), line: mat(0xeaf1e8), snow: mat(0xe6f1ed),
+      green: mat(0x77a59a), gold: mat(0xffd36b, { emissive: 0xffcc54, emissiveIntensity: 0.4 }),
+      mint: mat(0x79e6c4, { emissive: 0x60c9aa, emissiveIntensity: 0.5 }), blue: mat(0x3975a1),
+    };
+    if (!templates) templates = [0, 1, 2].map(makeTemplate);
+    if (!player) {
+      player = new PN.Seal({ stage: PN.Game.state.stage }); player.freeY = true; player.shadow.visible = false;
+      playerRig = new T.Group(); playerRig.add(player.g);
+    }
+    playerRig.visible = false;
+  }
+  function clearBus() {
+    if (bus) view.scene.remove(bus);
+    if (scenery) view.scene.remove(scenery);
+    if (playerRig.parent) playerRig.parent.remove(playerRig);
+    batches.forEach(mesh => mesh.dispose()); batches = []; wheels = [];
+  }
+  function makeBus() {
+    clearBus();
+    bus = new T.Group(); scenery = new T.Group(); view.scene.add(scenery, bus);
+    const center = (seats[0].x + seats[seats.length - 1].x) / 2;
+    busWidth = Math.ceil(round / 2) * 2 + 1.15;
+    const half = busWidth / 2;
+    // A quiet snowy street. All surfaces, kerbs and lane marks are meshes.
+    box(scenery, materials.snow, 130, 0.16, 160, 0, -0.16, 0);
+    box(scenery, materials.road, busWidth + 3.3, 0.08, 150, 0, -0.02, 0);
+    [-1, 1].forEach(sign => {
+      const x = sign * (half + 1.8);
+      box(scenery, materials.cream, 0.23, 0.18, 150, x, 0.05, 0);
+      for (let z = -25; z <= 25; z += 3.2) box(scenery, materials.line, 0.07, 0.015, 1.35, sign * (half + 1.1), 0.035, z);
+      for (let i = 0; i < 5; i++) {
+        ball(scenery, materials.snow, sign * (half + 2.4 + i % 2), 0.05, -10 + i * 5, 0.8, 0.20, 1.4);
+        ball(scenery, materials.green, sign * (half + 3.3), 0.25, -11 + i * 5, 0.65, 0.5, 0.65);
+      }
+    });
+    // Chassis, exposed floor, low cutaway walls and separate window panels.
+    box(bus, materials.trim, busWidth, 0.38, 11.8, 0, 0.43, -0.1);
+    box(bus, materials.floor, busWidth - 0.25, 0.14, 11.25, 0, 0.68, 0.02);
+    [-1, 1].forEach(sign => {
+      const x = sign * (half - 0.10);
+      box(bus, materials.paint, 0.18, 0.53, 10.9, x, 0.86, -0.05);
+      box(bus, materials.cream, 0.20, 0.10, 10.9, x, 1.14, -0.05);
+      for (let i = 0; i < ROWS; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 2) * 2].z);
+      // Mirror stalks are outside the cabin, away from the selectable seats.
+      box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, -5.12);
+      box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, -5.12);
+      [-3.7, 3.9].forEach(z => {
+        const wheel = new T.Group(); wheel.position.set(sign * (half - 0.03), 0.44, z);
+        const tire = new T.Mesh(geometry.tire, materials.tire), hub = new T.Mesh(geometry.hub, materials.hub);
+        tire.rotation.z = hub.rotation.z = Math.PI / 2;
+        wheel.add(tire, hub); bus.add(wheel); wheels.push(wheel);
+      });
+    });
+    box(bus, materials.paint, busWidth, 0.67, 0.45, 0, 0.83, -5.63);
+    box(bus, materials.glass, busWidth - 0.42, 0.10, 0.55, 0, 1.25, -5.34);
+    box(bus, materials.trim, busWidth + 0.08, 0.17, 0.26, 0, 0.48, -5.91);
+    box(bus, materials.paint, busWidth, 0.60, 0.27, 0, 0.93, 5.52);
+    box(bus, materials.cream, busWidth, 0.08, 0.29, 0, 1.26, 5.52);
+    box(bus, materials.trim, busWidth + 0.06, 0.16, 0.24, 0, 0.48, 5.72);
+    [-1, 1].forEach(sign => {
+      box(bus, materials.light, 0.36, 0.22, 0.10, sign * (half - 0.40), 0.85, -5.88);
+      box(bus, materials.red, 0.20, 0.22, 0.08, sign * (half - 0.25), 0.95, 5.68);
+    });
+    // A little Finnish flag on the nose, constructed from solid geometry.
+    box(bus, materials.cream, 0.65, 0.04, 0.38, 0, 1.19, -5.65);
+    box(bus, materials.blue, 0.12, 0.015, 0.38, -0.1, 1.218, -5.65);
+    box(bus, materials.blue, 0.65, 0.015, 0.10, 0, 1.22, -5.65);
+    // Driver's cabin and steering wheel remain clear of the eight scored rows.
+    const driverX = -half + 0.70;
+    box(bus, materials.frame, 0.67, 0.15, 0.70, driverX, 0.83, -4.94);
+    const steering = new T.Mesh(geometry.marker, materials.frame);
+    steering.position.set(driverX, 1.14, -5.38); steering.rotation.x = -Math.PI * 0.30; steering.scale.setScalar(0.50); bus.add(steering);
+    box(bus, materials.cream, 0.70, 0.035, 0.64, half - 0.65, 0.77, -4.93);
+    const cushionMatrices = [], backs = [], legs = [], hits = [];
+    seats.forEach(s => {
+      s.worldX = s.x - center;
+      cushionMatrices.push(transform(s.worldX, 0.83, s.z, 0.84, 0.18, 0.93).clone());
+      backs.push(transform(s.worldX, 1.06, s.z + 0.44, 0.85, 0.53, 0.14).clone());
+      legs.push(transform(s.worldX, 0.74, s.z, 0.13, 0.24, 0.60).clone());
+      hits.push(transform(s.worldX, 1.04, s.z, 1, 1, 1).clone());
+    });
+    cushions = instanced(bus, geometry.round, materials.cushion, cushionMatrices);
+    instanced(bus, geometry.round, materials.seat, backs);
+    instanced(bus, geometry.round, materials.frame, legs);
+    pickSeats = instanced(bus, geometry.hit, materials.seat, hits);
+    pickSeats.visible = false; // Raycaster still tests the explicit hit mesh; it is never rendered.
+    passengers(seats.filter(s => s.occupied).map(s => ({ x: s.worldX, z: s.z })).concat([{ x: driverX, z: -4.94, coat: 1 }]));
+    bus.add(playerRig); playerRig.visible = false;
+    paintSeats(); fitCamera();
+    travel = (view.camera.top - view.camera.bottom) / 0.93 + 14;
+    bus.position.z = travel; bus.updateMatrixWorld(true);
+  }
+  function fitCamera() {
+    const camera = view.camera, w = window.innerWidth, h = window.innerHeight;
+    lastWidth = w; lastHeight = h;
+    camera.updateMatrixWorld(true);
+    const bounds = new T.Box3(), p = new T.Vector3();
+    for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
+      for (const y of [0, 2.0]) for (const z of [-6.05, 5.9]) bounds.expandByPoint(p.set(x, y, z).applyMatrix4(camera.matrixWorldInverse));
+    const header = document.querySelector('.g-top').getBoundingClientRect();
+    const hint = document.getElementById('gHint').getBoundingClientRect();
+    const top = Math.max(70, header.bottom + 16), bottom = Math.min(h - 65, hint.top - 15);
+    const availableH = Math.max(80, bottom - top), availableW = Math.max(100, w - 28), aspect = w / h;
+    const halfH = Math.max((bounds.max.y - bounds.min.y) * h / availableH, (bounds.max.x - bounds.min.x) * w / availableW / aspect) * 0.52;
+    const screenCenter = 1 - (top + bottom) / h;
+    const cy = (bounds.min.y + bounds.max.y) / 2 - screenCenter * halfH;
+    camera.left = -halfH * aspect; camera.right = halfH * aspect;
+    camera.top = cy + halfH; camera.bottom = cy - halfH;
+    camera.updateProjectionMatrix();
+  }
+  function paintSeats() {
+    seats.forEach((s, i) => {
+      const optimal = (phase === 'reveal' || phase === 'depart' || phase === 'done') && !s.occupied && Math.abs(s.distance - best) < 1e-7;
+      color.setHex(optimal ? 0xffd36b : i === chosen ? 0x79e6c4 : 0x80aeb7);
+      cushions.setColorAt(i, color);
+    });
+    cushions.instanceColor.needsUpdate = true;
+  }
   function next() {
     round++; seats = layout(round);
     const shuffled = seats.slice();
     for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
     shuffled.slice(0, Math.max(2, Math.round(seats.length * (0.16 + Math.random() * 0.12)))).forEach(s => s.occupied = true);
-    best = evaluate(seats); chosen = -1; points = null; phase = 'arrive'; elapsed = 0;
+    best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
     K.time('—'); K.hint('Bus ' + round + ' / 10 · Find your personal space');
+    makeBus();
+  }
+  function seatPlayer(s) {
+    playerRig.visible = true; playerRig.position.set(s.worldX, 0.92, s.z); playerRig.scale.setScalar(1);
+    player.heading = Math.PI; player.g.rotation.y = Math.PI; player.g.position.set(0, 0, 0);
+    player.gesture('nod', true); player.update(0, clock, null); playerRig.updateMatrixWorld(true);
+    // Measure the complete dressed seal in its holder's space, independent of
+    // the bus's position and of the miniature scale used in a previous round.
+    const bounds = new T.Box3(), inverse = playerRig.matrixWorld.clone().invert();
+    player.g.traverseVisible(m => {
+      if (!m.isMesh || m.material.opacity === 0) return;
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      bounds.union(m.geometry.boundingBox.clone().applyMatrix4(new T.Matrix4().multiplyMatrices(inverse, m.matrixWorld)));
+    });
+    const size = bounds.getSize(new T.Vector3()), center = bounds.getCenter(new T.Vector3());
+    const k = Math.min(0.82 / size.x, 0.95 / size.z, 0.90 / size.y);
+    player.g.position.set(-center.x, -bounds.min.y, -center.z); playerRig.scale.setScalar(k);
+    const ring = new T.Mesh(geometry.marker, materials.mint);
+    ring.rotation.x = -Math.PI / 2; ring.position.set(s.worldX, 0.94, s.z); ring.scale.set(1.04, 1.14, 1); bus.add(ring);
   }
   function choose(i) {
     if (phase !== 'choose') return;
     if (performance.now() >= deadline) i = -1;
     if (i >= 0 && seats[i].occupied) return;
-    chosen = i; points = i < 0 ? 0 : Math.min(100, Math.round(100 * seats[i].distance / best));
+    chosen = i;
+    const points = i < 0 ? 0 : Math.min(100, Math.round(100 * seats[i].distance / best));
     total += points; K.score(total); K.time('0.0'); phase = 'reveal'; elapsed = 0;
+    if (i >= 0) seatPlayer(seats[i]);
+    paintSeats();
     K.hint(i < 0 ? 'Time up · 0 points · Gold shows the best seats' : '+' + points + ' points · Gold shows the best seats');
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }
-  function pill(x,y,w,h,color,r=9) {
-    ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill();
-  }
-  function seal(x,y,s,player) {
-    ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
-    ctx.fillStyle=player?'#f7faf5':'#aebfcb'; ctx.beginPath(); ctx.ellipse(0,1,8,11,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(-8,3,4,2,-0.5,0,Math.PI*2); ctx.ellipse(8,3,4,2,0.5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#273c50'; for(const x of [-3,3]) {ctx.beginPath();ctx.arc(x,-4,1.15,0,Math.PI*2);ctx.fill();}
-    ctx.beginPath();ctx.ellipse(0,-1,1.6,1,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#e7aeb6';ctx.beginPath();ctx.arc(-5,-1,1.5,0,Math.PI*2);ctx.arc(5,-1,1.5,0,Math.PI*2);ctx.fill();ctx.restore();
-  }
-  function draw() {
-    const rect=canvas.getBoundingClientRect(), w=rect.width,h=rect.height,dpr=Math.min(devicePixelRatio||1,2);
-    if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
-    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
-    pill(0,0,w,h,'#dcecf0',0);pill(w*.05,0,w*.9,h,'#a9bdc8',0);
-    ctx.strokeStyle='#e5edf0';ctx.lineWidth=3;ctx.setLineDash([15,22]);ctx.beginPath();ctx.moveTo(w*.09,0);ctx.lineTo(w*.09,h);ctx.moveTo(w*.91,0);ctx.lineTo(w*.91,h);ctx.stroke();ctx.setLineDash([]);
-    const side=Math.ceil(round/2), unit=Math.min((w-42)/(side*2+1.8),(h-100)/10.6,43), bw=(side*2+1.8)*unit,bh=10.6*unit;
-    const ox=(w-bw)/2, oy=(h-bh)/2 + (phase==='arrive' ? (1-Math.min(1,elapsed/.24))*(h+bh) : phase==='depart' ? -Math.min(1,elapsed/.22)*(h+bh) : 0);
-    pill(ox-5,oy+bh*.18,10,bh*.18,'#34495a',4);pill(ox+bw-5,oy+bh*.18,10,bh*.18,'#34495a',4);pill(ox-5,oy+bh*.72,10,bh*.15,'#34495a',4);pill(ox+bw-5,oy+bh*.72,10,bh*.15,'#34495a',4);
-    pill(ox,oy,bw,bh,'#528c98',18);pill(ox+6,oy+unit*1.3,bw-12,bh-unit*1.6,'#e8e7db',10);pill(ox+10,oy+9,bw-20,unit*.75,'#bce6e9',8);
-    ctx.fillStyle='#244653';ctx.font='bold '+Math.max(10,unit*.3)+'px sans-serif';ctx.textAlign='center';ctx.fillText('NORPPA  •  '+round, w/2,oy+unit*1.1);
-    seats.forEach((s,i)=>{
-      const x=ox+unit*(.9+s.x),y=oy+unit*(1.95+s.y),sw=unit*.82,sh=unit*.94;
-      s.hit={x:x-sw/2,y:y-sh/2,w:sw,h:sh};
-      const gold=(phase==='reveal'||phase==='depart')&&!s.occupied&&Math.abs(s.distance-best)<1e-7;
-      pill(x-sw/2,y-sh/2,sw,sh,gold?'#ffd46b':i===chosen?'#82c6b3':'#86aab3',Math.min(6,unit*.16));
-      pill(x-sw/2+2,y+sh*.25,sw-4,sh*.19,gold?'#c99f42':'#5e8794',3);
-      if(s.occupied||i===chosen)seal(x,y-1,unit*.033,i===chosen);
-      if(gold){ctx.fillStyle='#795500';ctx.font='bold '+unit*.4+'px sans-serif';ctx.fillText('★',x,y+unit*.12);}
-      if(i===chosen){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(x-sw/2,y-sh/2,sw,sh);}
-    });
-    if(phase==='choose'){const f=Math.max(0,(deadline-performance.now())/3000);pill(12,h-12,w-24,5,'#c4d6db',2);pill(12,h-12,(w-24)*f,5,f<.33?'#d98080':'#528c98',2);}
-  }
   PN.Games.ext.shuffle = {
-    label:'Points', label2:'Time', hint:'Choose the seat furthest from its nearest seal.', nocount:true,
-    view:()=>null,
-    start(){
-      root=document.createElement('div');root.style.cssText='position:absolute;inset:80px 0 70px;pointer-events:auto;overflow:hidden;touch-action:none';
-      canvas=document.createElement('canvas');canvas.style.cssText='width:100%;height:100%;display:block';canvas.setAttribute('aria-label','Bus seats. Tap an empty seat furthest from the other seals.');root.appendChild(canvas);document.getElementById('gamehud').appendChild(root);ctx=canvas.getContext('2d');
-      canvas.addEventListener('pointerdown',e=>{if(e.button>0)return;e.preventDefault();const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const i=seats.findIndex(s=>s.hit&&x>=s.hit.x&&x<=s.hit.x+s.hit.w&&y>=s.hit.y&&y<=s.hit.y+s.hit.h);if(i>=0)choose(i);});
-      round=0;total=0;next();draw();
+    label: 'Points', label2: 'Time', hint: 'Choose the seat furthest from its nearest seal.', nocount: true,
+    view: () => view,
+    start() {
+      build();
+      const st = PN.Game.state;
+      player.setStage(st.stage); player.grow = PN.Game.seal.grow; player.applyScale();
+      ['head', 'neck', 'face', 'back'].forEach(slot => player.setWear(slot, st.wearing[slot]));
+      round = 0; total = 0; clock = 0; next();
     },
-    go(){K.score(0,true);}, pointer(){},
-    update(dt,playing){if(!playing)return;elapsed+=dt;
-      if(phase==='arrive'&&elapsed>=.24){phase='choose';deadline=performance.now()+3000;elapsed=0;}
-      else if(phase==='choose'){const left=Math.max(0,(deadline-performance.now())/1000);K.time(left.toFixed(1));if(!left)choose(-1);}
-      else if(phase==='reveal'&&elapsed>=.65){phase='depart';elapsed=0;}
-      else if(phase==='depart'&&elapsed>=.22){if(round===10){phase='done';K.over(total+' / 1,000');K.hint('Ten buses · A little space to yourself');}else next();}
-      draw();
+    go() { K.score(0, true); },
+    pointer(type, x, y) {
+      if (type !== 'down' || phase !== 'choose') return;
+      if (performance.now() >= deadline) { choose(-1); return; }
+      const rect = W.renderer.domElement.getBoundingClientRect();
+      pointer.set((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1);
+      view.camera.updateMatrixWorld(true); bus.updateMatrixWorld(true);
+      ray.setFromCamera(pointer, view.camera);
+      const hit = ray.intersectObject(pickSeats, false)[0];
+      if (hit) choose(hit.instanceId);
     },
-    stop(){if(root)root.remove();root=null;phase='done';},
-    // Pure helpers for checking layout and distance scoring.
-    layout,evaluate
+    update(dt, playing) {
+      if (!view) return;
+      if (lastWidth !== window.innerWidth || lastHeight !== window.innerHeight) fitCamera();
+      clock += dt;
+      if (!playing) return;
+      elapsed += dt;
+      if (phase === 'arrive') {
+        bus.position.z = travel * Math.pow(1 - Math.min(1, elapsed / ARRIVE), 3);
+        if (elapsed >= ARRIVE) { bus.position.z = 0; phase = 'choose'; deadline = performance.now() + 3000; elapsed = 0; K.time('3.0'); }
+      } else if (phase === 'choose') {
+        const left = Math.max(0, (deadline - performance.now()) / 1000); K.time(left.toFixed(1));
+        if (!left) choose(-1);
+      } else if (phase === 'reveal' && elapsed >= REVEAL) { phase = 'depart'; elapsed = 0; }
+      else if (phase === 'depart') {
+        bus.position.z = -travel * Math.pow(Math.min(1, elapsed / DEPART), 2);
+        if (elapsed >= DEPART) {
+          if (round === 10) { phase = 'done'; K.over(total + ' / 1,000'); K.hint('Ten buses · A little space to yourself'); }
+          else next();
+        }
+      }
+      wheels.forEach(wheel => { wheel.rotation.x = bus.position.z / 0.45; });
+      if (playerRig.visible) player.update(dt, clock, null);
+    },
+    stop() {
+      clearBus();
+      ownedGeometries.forEach(g => g.dispose()); ownedMaterials.forEach(m => m.dispose());
+      ownedGeometries.clear(); ownedMaterials.clear();
+      // Native seal geometry/materials are shared with the home scene. Keep
+      // these four rigs for replay, as the other arcade games do with their actor.
+      view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done';
+    },
+    layout, evaluate,
+    peek: () => ({ round, total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 1.04, z: s.z, occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
