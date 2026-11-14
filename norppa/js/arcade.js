@@ -1590,7 +1590,7 @@
   'use strict';
   const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit;
   const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22, CRAWL = 0.18, CRAWL_START = 0.22;
-  const ray = new T.Raycaster(), pointer = new T.Vector2(), matrix = new T.Matrix4();
+  const tapPosition = new T.Vector3(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
   let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
   let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1;
@@ -1941,11 +1941,20 @@
       if (type !== 'down' || phase !== 'choose') return;
       if (performance.now() >= deadline) { choose(-1); return; }
       const rect = W.renderer.domElement.getBoundingClientRect();
-      pointer.set((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1);
       view.camera.updateMatrixWorld(true); bus.updateMatrixWorld(true);
-      ray.setFromCamera(pointer, view.camera);
-      const hit = ray.intersectObject(pickSeats, false)[0];
-      if (hit) choose(hit.instanceId);
+      let nearest = -1, shortest = Infinity;
+      seats.forEach((seat, i) => {
+        if (seat.occupied) return;
+        // Compare on-screen centres so perspective and the moving bus cannot
+        // make a near miss disappear into the aisle, a seat back or the road.
+        tapPosition.set(seat.worldX, 0.97, seat.z);
+        bus.localToWorld(tapPosition); tapPosition.project(view.camera);
+        const dx = rect.left + (tapPosition.x * 0.5 + 0.5) * rect.width - x;
+        const dy = rect.top + (-tapPosition.y * 0.5 + 0.5) * rect.height - y;
+        const distance = dx * dx + dy * dy;
+        if (distance < shortest) { shortest = distance; nearest = i; }
+      });
+      if (nearest >= 0) choose(nearest);
     },
     update(dt, playing) {
       if (!view) return;
