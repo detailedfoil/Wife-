@@ -24,7 +24,7 @@
     diveSulkChance: 0.15, diveSulk: 100,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
-    medHour: 6, medBonus: 100,             // she is Anxi from 6am until she has had it; a photo of the pill earns a bonus
+    medHour: 5, medBonus: 100,             // she is Anxi from 5am until she has had it; a photo of the pill earns a bonus
     sulkTreats: 3, sulkPats: 3,           // she picks three different treats and wants three head pats and a bath
     sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the three pats together a fifth, and the sauna a fifth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
@@ -71,6 +71,13 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   };
 
+  // Medicine days roll over at 5am in the player's local time, including DST changes.
+  const medDayKey = (t) => {
+    const d = new Date(t);
+    if (d.getHours() < T.medHour) d.setDate(d.getDate() - 1);
+    return dayKey(d);
+  };
+
   /* Small seeded random, kept in the save so catch-up is repeatable. */
   function rnd(state) {
     state.seed = (state.seed + 0x6D2B79F5) | 0;
@@ -88,7 +95,7 @@
       asleep: false, sleepKind: null, wakeAt: 100,
       sick: false, wellMs: 0, starveMs: 0, filthMs: 0,
       grudge: 0, griefUntil: 0, neglectMs: 0,
-      med: { day: '', photoDay: '', since: dayKey(now), n: 0 }, medLate: false,   // her daily medicine: the day it was last taken, and the day the routine began
+      med: { day: '', photoDay: '', since: medDayKey(now), n: 0 }, medLate: false,   // her daily medicine: the day it was last taken, and the day the routine began
       poops: [], poopT: 1.5,
       coins: 40, coinCarry: 0,
       pantry: { muikku: 5, ahven: 2 },
@@ -124,7 +131,7 @@
       });
       return dst;
     };
-    if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: dayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
+    if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: medDayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
@@ -351,10 +358,10 @@
   }
 
   /* Move the world forward to now. Returns what happened in between. */
-  /* Her daily medicine. From 6am she is Anxi until she has had it.
-     The day starts afresh at midnight, and the routine begins the day after it first appears. */
+  /* Her daily medicine resets at 5am. Before then, keep yesterday's dose and photo credit.
+     The routine begins on the medicine day after it first appears. */
   function medInfo(state, now) {
-    const today = dayKey(now), m = state.med;
+    const today = medDayKey(now), m = state.med;
     const taken = m.day === today;
     return { taken, photo: m.photoDay === today, late: !taken && today > m.since && localHour(now) >= T.medHour };
   }
@@ -366,7 +373,7 @@
     if (late) state.grudge = 100;
   }
   function takeMed(state, now, photo) {
-    const today = dayKey(now), m = state.med, first = m.day !== today;
+    const today = medDayKey(now), m = state.med, first = m.day !== today;
     let coins = 0;
     if (first) { m.day = today; m.n = (m.n || 0) + 1; }
     if (photo && first && m.photoDay !== today) {   // the bonus is for the photo that takes the pill; tapping I took it first forfeits it
