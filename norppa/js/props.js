@@ -673,6 +673,7 @@
       return g;
     },
     glasses: () => specs(false),
+    husbi_glasses: () => husbiGlasses(),
     shades: () => specs(true),
     punanena() {
       return U.group(U.ball(0.088, U.mat(0xe5262e, { roughness: 0.2, emissive: 0x7a0a10, emissiveIntensity: 0.5 }), 0, -0.075, 0.63, 1, 1, 1, 16), U.ball(0.022, U.glow(0xffffff), -0.03, -0.04, 0.7));
@@ -826,15 +827,43 @@
     return U.group(ring, end, tip, U.ball(0.125, flat, 0.52, -0.28, 0.15, 1, 0.9, 0.8));
   }
   /* A glasses arm: from the outer edge of the frame, back along the side of the head to the ear, just above the fur. */
-  function temple(frame, s, y) {
+  function temple(frame, s, y, hinge) {
     const R = [0.618, 0.564, 0.582], pts = [];
     const pitch = Math.asin(y / R[1]);
     for (let i = 0; i <= 8; i++) {
-      const yaw = 0.62 + (1.42 - 0.62) * i / 8, k = 1.035;
+      const start = hinge ? 0.84 : 0.62, yaw = start + (1.42 - start) * i / 8, k = 1.035;
       pts.push(new T.Vector3(s * Math.sin(yaw) * Math.cos(pitch) * R[0] * k, y, Math.cos(yaw) * Math.cos(pitch) * R[2] * k));
     }
-    pts.unshift(new T.Vector3(s * 0.39, y, 0.565));                     // the hinge on the frame
+    pts.unshift(hinge || new T.Vector3(s * 0.39, y, 0.565));                     // the hinge on the frame
     return new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 24, 0.013, 6, false), frame);
+  }
+  /* Husbi's glasses: chunky black square frames, softly rounded corners and
+     a slightly narrower bottom, based on the reference pair. Head-local like
+     the other eyewear, so both pups and adults inherit the correct fit. */
+  function husbiGlasses() {
+    const frame = U.mat(0x15171c, { roughness: 0.32 }), g = new T.Group();
+    const outline = (scale, Kind) => {
+      const s = new (Kind || T.Shape)(), p = (x) => x * scale;
+      s.moveTo(p(-0.17), p(0.16)); s.lineTo(p(0.17), p(0.16));
+      s.quadraticCurveTo(p(0.205), p(0.16), p(0.20), p(0.12));
+      s.lineTo(p(0.178), p(-0.105)); s.quadraticCurveTo(p(0.17), p(-0.15), p(0.13), p(-0.15));
+      s.lineTo(p(-0.13), p(-0.15)); s.quadraticCurveTo(p(-0.17), p(-0.15), p(-0.178), p(-0.105));
+      s.lineTo(p(-0.20), p(0.12)); s.quadraticCurveTo(p(-0.205), p(0.16), p(-0.17), p(0.16));
+      s.closePath(); return s;
+    };
+    const outer = outline(1); outer.holes.push(outline(0.82, T.Path));
+    const rim = new T.ExtrudeGeometry(outer, { depth: 0.025, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.004, bevelSegments: 2, curveSegments: 10 });
+    rim.translate(0, 0, -0.0125);
+    const lensGeo = new T.ShapeGeometry(outline(0.82), 10);
+    const glass = new T.MeshPhysicalMaterial({ color: 0xdcecff, roughness: 0.08, transparent: true, opacity: 0.08, depthWrite: false, side: T.DoubleSide });
+    [-1, 1].forEach((side) => {
+      const eye = U.group(new T.Mesh(rim, frame), U.mesh(lensGeo, glass, 0, 0, 0.003));
+      eye.position.set(side * 0.235, 0.045, 0.62); eye.rotation.y = side * 0.30; g.add(eye);
+      g.add(temple(frame, side, 0.075, new T.Vector3(side * 0.43, 0.075, 0.558)));
+    });
+    const bridge = new T.QuadraticBezierCurve3(new T.Vector3(-0.065, 0.085, 0.666), new T.Vector3(0, 0.12, 0.677), new T.Vector3(0.065, 0.085, 0.666));
+    g.add(new T.Mesh(new T.TubeGeometry(bridge, 12, 0.018, 8, false), frame));
+    return g;
   }
   function specs(dark) {
     const frame = U.mat(dark ? 0x15171c : 0x6b3f2a, { roughness: 0.35 });

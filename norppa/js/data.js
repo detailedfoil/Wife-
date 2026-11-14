@@ -118,6 +118,7 @@
     { id: 'viikset', slot: 'face', cat: 'kasvot', fi: 'Viikset', en: 'Moustache', price: 90 },
     { id: 'silmalappu', slot: 'face', cat: 'kasvot', fi: 'Silmälappu', en: 'Eye patch', price: 90 },
     { id: 'glasses', slot: 'face', cat: 'kasvot', fi: 'Silmälasit', en: 'Round glasses', price: 130 },
+    { id: 'husbi_glasses', slot: 'face', cat: 'kasvot', fi: 'Husbi-lasit', en: 'Husbi glasses', price: 130 },
     { id: 'shades', slot: 'face', cat: 'kasvot', fi: 'Aurinkolasit', en: 'Sunglasses', price: 130 },
     { id: 'sydanlasit', slot: 'face', cat: 'kasvot', fi: 'Sydänlasit', en: 'Heart glasses', price: 150 },
     { id: 'monokkeli', slot: 'face', cat: 'kasvot', fi: 'Monokkeli', en: 'Monocle', price: 160 },
