@@ -1923,7 +1923,7 @@
     total += points; K.score(total); phase = 'reveal'; elapsed = 0;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
-    K.hint(i < 0 ? 'Time up · 0 points · Green = best · Red = worst' : '+' + points + ' points · Green = best · Red = worst');
+    K.hint(i < 0 ? 'You missed the bus! · 0 points' : '+' + points + ' points · Green = best · Red = worst');
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }
   PN.Games.ext.shuffle = {
