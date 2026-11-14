@@ -1052,7 +1052,7 @@
   const stack = (() => {
     const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 1, HOP = 0.28, KEEP = 46;
     const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
-    let view = null, bodyGeo = null, softGeo = null, puffs = null;
+    let view = null, bodyGeo = null, softGeo = null, puffs = null, circleGeo = null, scoopPoints = null, baseIce = null;
     let history = [], revealT = 0;
     const flavours = [0xf7d5df, 0xffedc6, 0xc4e4cc, 0xd2b5a5, 0xd6cdf1, 0xf5d3a9];
     const towerBounds = new T.Box3(), revealCentre = new T.Vector3(), revealSize = new T.Vector3();
@@ -1067,14 +1067,39 @@
       view.scene.add(g);
       return g;
     }
+    // Only the newest four layers need their own deforming geometry. Older
+    // scoops share one circular shape, also used when batching the full tower.
+    function roundScoop(mesh, target, dt) {
+      const previous = mesh.userData.round || 0;
+      const amount = Math.min(target, previous + dt * 0.9);
+      if (amount === previous) return;
+      mesh.userData.round = amount;
+      if (amount >= 1) {
+        if (mesh.geometry !== circleGeo) mesh.geometry.dispose();
+        mesh.geometry = circleGeo;
+      } else {
+        const p = mesh.geometry.attributes.position, power = 0.18 + 0.82 * U.smooth(0, 1, amount);
+        for (let i = 0; i < p.count; i++) {
+          const x = scoopPoints[i * 3], z = scoopPoints[i * 3 + 2];
+          p.setX(i, Math.sign(x) * Math.pow(Math.abs(x), power) / 2);
+          p.setZ(i, Math.sign(z) * Math.pow(Math.abs(z), power) / 2);
+        }
+        p.needsUpdate = true; mesh.geometry.computeVertexNormals(); mesh.geometry.computeBoundingSphere();
+      }
+    }
     function build() {
       view = stage('#efdff3', '#fff5e5', { ground: 0xe7d5cf, hemi: 2.1, key: 1.6 });
       bodyGeo = new T.BoxGeometry(1, BH, 1); bodyGeo.translate(0, BH / 2, 0);
       // Rounded ice cream retains the same exact footprint and height as the slab.
       softGeo = new T.SphereGeometry(1, 24, 16);
+      scoopPoints = softGeo.attributes.position.array.slice();
       const points = softGeo.attributes.position, rounded = (x) => Math.sign(x) * Math.pow(Math.abs(x), 0.18);
       for (let i = 0; i < points.count; i++) points.setXYZ(i, rounded(points.getX(i)) / 2, (rounded(points.getY(i)) + 1) * BH / 2, rounded(points.getZ(i)) / 2);
       softGeo.computeVertexNormals();
+      circleGeo = softGeo.clone();
+      const roundPoints = circleGeo.attributes.position;
+      for (let i = 0; i < roundPoints.count; i++) { roundPoints.setX(i, scoopPoints[i * 3] / 2); roundPoints.setZ(i, scoopPoints[i * 3 + 2] / 2); }
+      circleGeo.computeVertexNormals();
       const sc = view.scene;
       const waffle = U.tex(256, 256, (c, w, h) => {
         c.fillStyle = '#dbad78'; c.fillRect(0, 0, w, h);
@@ -1084,7 +1109,7 @@
       waffle.wrapS = waffle.wrapT = T.RepeatWrapping; waffle.repeat.set(3, 2);
       const cone = U.cyl(1.45, 0.025, 4, new T.MeshStandardMaterial({ map: waffle, roughness: 0.95 }), 0, -2.1, 0, 48);
       const rim = U.rot(U.torus(1.40, 0.075, U.mat(0xe4b884), 0, -0.10, 0, PI * 2, 48), PI / 2);
-      const base = U.mesh(softGeo, U.mat(flavours[1], { roughness: 0.95 }), 0, -BH, 0); base.scale.set(S0, 1, S0);
+      const base = baseIce = U.mesh(softGeo.clone(), U.mat(flavours[1], { roughness: 0.95 }), 0, -BH, 0); base.scale.set(S0, 1, S0);
       const plate = U.cyl(3.0, 2.85, 0.16, U.mat(0xfff8ef), 0, -4.20, 0, 48);
       sc.add(cone, rim, base, plate);
       puffs = Puffs(sc, 40, 0xffffff, 1);
@@ -1122,7 +1147,7 @@
       }
       top = { x: x ? mid : top.x, z: x ? top.z : mid, w: x ? keep : top.w, d: x ? top.d : keep, y: top.y + BH };
       cur.g.scale.set(top.w, 1, top.d); cur.g.position.set(top.x, top.y - BH, top.z);
-      cur.g.children[0].geometry = softGeo; cur.g.userData.settle = 0;
+      cur.g.children[0].geometry = softGeo.clone(); cur.g.userData.settle = 0; cur.g.userData.layer = score + 1;
       cur.g.updateMatrixWorld(true); towerBounds.expandByObject(cur.g);
       blocks.push(cur.g); cur = null;
       // Retain the entire tower for the reveal, batching older layers for phones.
@@ -1130,7 +1155,8 @@
         const parts = [];
         for (let i = 0; i < 16; i++) {
           const old = blocks.shift(); old.updateMatrixWorld(true);
-          parts.push({ geo: softGeo, m: old.children[0].matrixWorld.clone(), c: old.children[0].material.color }); view.scene.remove(old);
+          parts.push({ geo: circleGeo, m: old.children[0].matrixWorld.clone(), c: old.children[0].material.color }); view.scene.remove(old);
+          if (old.children[0].geometry !== circleGeo) old.children[0].geometry.dispose();
         }
         const batch = new T.Mesh(U.merge(parts), U.mat(0xffffff, { vertexColors: true, roughness: 0.95 }));
         history.push(batch); view.scene.add(batch);
@@ -1145,10 +1171,16 @@
       peek: () => (cur && mode === 'slide' ? cur.p : null),
       start() {
         if (!view) build();
-        blocks.concat(cuts.map((c) => c.g)).forEach((g) => view.scene.remove(g));
+        blocks.concat(cuts.map((c) => c.g)).forEach((g) => {
+          view.scene.remove(g);
+          const geo = g.children[0].geometry;
+          if (geo !== bodyGeo && geo !== softGeo && geo !== circleGeo) geo.dispose();
+        });
         if (cur) view.scene.remove(cur.g);
         history.forEach((m) => { view.scene.remove(m); m.geometry.dispose(); }); history = [];
         blocks = []; cuts = []; cur = null; puffs.clear(); revealT = 0;
+        if (baseIce.geometry !== circleGeo) baseIce.geometry.dispose();
+        baseIce.geometry = softGeo.clone(); baseIce.userData.round = 0; baseIce.scale.set(S0, 1, S0);
         towerBounds.set(new T.Vector3(-3, -4.3, -3), new T.Vector3(3, 0, 3));
         top = { x: 0, z: 0, w: S0, d: S0, y: 0 };
         score = 0; misses = 0; streak = 0; turn = 0; mode = 'idle'; camY = 0; hopT = 1;
@@ -1177,8 +1209,13 @@
             else spawn();
           }
         }
+        // Each scoop becomes circular/oval as four more successful layers land.
+        roundScoop(baseIce, Math.min(1, score / 4), dt);
+        const baseWidth = U.lerp(S0, 2.90, baseIce.userData.round || 0);
+        baseIce.scale.set(baseWidth, 1, baseWidth);
         // Give each landed scoop a tiny squash as its corners soften.
         blocks.forEach((g) => {
+          roundScoop(g.children[0], U.clamp((score - g.userData.layer) / 4, 0, 1), dt);
           g.userData.settle = Math.min(1, (g.userData.settle || 0) + dt / 0.28);
           g.children[0].scale.y = 1 - 0.07 * Math.sin(g.userData.settle * PI);
         });
