@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 20:30';
+  PN.UPDATED = '14 Nov 2026, 20:45';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -60,7 +60,7 @@
       note: 'Fish baked inside a rye loaf. Very filling.' },
     { id: 'lohikeitto', fi: 'Lohikeitto', en: 'Salmon soup', food: 48, joy: 14, price: 24,
       note: 'Creamy, warm, with plenty of dill.' },
-    { id: 'sealsius', fi: 'Norpsius', en: 'Sealsius energy drink', food: 4, joy: 6, energy: 35, price: 60,   // 150 coins: a can is about that much play's worth of energy (at 50 it paid for itself three times over)
+    { id: 'sealsius', fi: 'Norpsius', en: 'Sealsius energy drink', food: 4, joy: 6, energy: 35, price: 20,
      
       note: 'Zero sugar, seven vitamins and a very high squeak content. A burst of energy, but only a sip of dinner.' },
     /* full: fills tummy, happiness and energy at once (not cleanliness). Dear on purpose: it is for a visit with no time to play. */
