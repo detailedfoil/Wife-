@@ -1589,12 +1589,12 @@
 (function (PN) {
   'use strict';
   const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit;
-  const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22;
+  const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22, CRAWL = 0.18, CRAWL_START = 0.22;
   const ray = new T.Raycaster(), pointer = new T.Vector2(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
   let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
   let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1;
-  let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0;
+  let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0, departFrom = 0;
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
   const color = new T.Color();
@@ -1813,7 +1813,7 @@
     camera.setViewOffset(w, h, 0, -centerNdc * h / 2, w, h);
     const corners = [], p = new T.Vector3(), elevation = 35 * Math.PI / 180;
     for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
-      for (const y of [-0.65, 2.0]) for (const z of [-6.05 - busExtra / 2, 5.9 + busExtra / 2]) corners.push(new T.Vector3(x, y, z));
+      for (const y of [-0.65, 2.0]) for (const z of [-6.40 - busExtra / 2, 6.25 + busExtra / 2]) corners.push(new T.Vector3(x, y, z));
     let distance = 18;
     for (let i = 0; i < 65; i++) {
       camera.position.set(0, 0.65 + Math.sin(elevation) * distance, -Math.cos(elevation) * distance);
@@ -1844,7 +1844,7 @@
     for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
     shuffled.slice(0, Math.max(2, Math.round(seats.length * (0.16 + Math.random() * 0.12)))).forEach(s => s.occupied = true);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
-    K.time('—'); K.hint('Bus ' + round + ' / 20 · Find your personal space');
+    K.hint('Bus ' + round + ' / 20 · Find your personal space');
     makeBus();
   }
   function seatPlayer(s) {
@@ -1871,14 +1871,14 @@
     if (i >= 0 && seats[i].occupied) return;
     chosen = i;
     const points = i < 0 ? 0 : Math.min(100, Math.round(100 * seats[i].distance / best));
-    total += points; K.score(total); K.time('0.0'); phase = 'reveal'; elapsed = 0;
+    total += points; K.score(total); phase = 'reveal'; elapsed = 0;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
     K.hint(i < 0 ? 'Time up · 0 points · Green = best · Red = worst' : '+' + points + ' points · Green = best · Red = worst');
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }
   PN.Games.ext.shuffle = {
-    label: 'Points', label2: 'Time', hint: 'Choose the seat furthest from its nearest seal.', nocount: true,
+    label: 'Points', hint: 'Choose the seat furthest from its nearest seal.', nocount: true,
     view: () => view,
     start() {
       build();
@@ -1905,20 +1905,27 @@
       if (!playing) return;
       elapsed += dt;
       if (phase === 'arrive') {
-        bus.position.z = travel * Math.pow(1 - Math.min(1, elapsed / ARRIVE), 3);
-        if (elapsed >= ARRIVE) { bus.position.z = 0; phase = 'choose'; deadline = performance.now() + 1500; elapsed = 0; K.time('1.5'); }
+        const t = Math.min(elapsed, ARRIVE), u = t / ARRIVE;
+        // Ease from a fast arrival to the same nonzero speed as the crawl.
+        bus.position.z = CRAWL_START + CRAWL * (ARRIVE - t)
+          + (travel - CRAWL_START - CRAWL * ARRIVE) * Math.pow(1 - u, 3);
+        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = performance.now() + 1500; elapsed = 0; }
       } else if (phase === 'choose') {
-        const left = Math.max(0, (deadline - performance.now()) / 1000); K.time(left.toFixed(1));
-        if (!left) choose(-1);
-      } else if (phase === 'reveal' && elapsed >= REVEAL) { phase = 'depart'; elapsed = 0; }
-      else if (phase === 'depart') {
-        bus.position.z = -travel * Math.pow(Math.min(1, elapsed / DEPART), 2);
+        bus.position.z -= CRAWL * dt;
+        if (performance.now() >= deadline) choose(-1);
+      } else if (phase === 'reveal') {
+        bus.position.z -= CRAWL * dt;
+        if (elapsed >= REVEAL) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
+      } else if (phase === 'depart') {
+        const t = Math.min(elapsed, DEPART);
+        // Accelerate out of the crawl without a position or speed jump.
+        bus.position.z = departFrom - CRAWL * t - travel * Math.pow(t / DEPART, 3);
         if (elapsed >= DEPART) {
           if (round === 20) { phase = 'done'; K.over(total + ' / 2,000'); K.hint('Twenty buses · A little space to yourself'); }
           else next();
         }
       }
-      wheels.forEach(wheel => { wheel.rotation.x = bus.position.z / 0.45; });
+      wheels.forEach(wheel => { wheel.rotation.x = bus.position.z / 0.60; });
       if (playerRig.visible) player.update(dt, clock, null);
     },
     stop() {
@@ -1930,6 +1937,6 @@
       view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done';
     },
     layout, evaluate,
-    peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z, occupied: s.occupied, distance: s.distance })) }),
+    peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
