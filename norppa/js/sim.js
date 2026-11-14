@@ -132,7 +132,8 @@
       return dst;
     };
     if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: medDayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
-    if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }   // one time only: the Angy rules changed, so everyone starts clean
+    if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }
+    if (obj && !obj.angyDiveOnly) { obj.angyDiveOnly = 1; if (!obj.medLate) { obj.grudge = 0; obj.sulkWant = null; } }   // one time only: being left alone no longer makes her Angy, so neglect sulks already on a save end   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
@@ -295,9 +296,7 @@
     if (neglected) {
       state.neglectMs += dt;
       sum.neglectH += h;
-      const g0 = state.grudge;
-      state.grudge = Math.min(100, state.grudge + T.grudgePerH * h);
-      if (g0 <= 0 && state.grudge > 0) sum.sulk = true;
+      // being left alone no longer makes her Angy: that now comes only from a bad dive (and the late medicine)
       const lose = Math.max(0, Math.min(state.xp - xpFloor(state), T.xpLossPerH * h));
       state.xp -= lose; sum.xpLost += lose;
       // and sets her growing back, though never below where her current stage began
