@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 01:10';
+  PN.UPDATED = '14 Nov 2026, 01:40';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -334,12 +334,15 @@
   /* Tunes for Kantele Tiles. Each note is a pitch and how long it lasts in sixteenths; a bar line (|) is only there for reading.
      bpm is the speed on the sheet; the game starts at 78 and steps up by 7.5 at every half loop to 134 (62 felt sluggish and 155 was far too fast).
      Ievan polkka is a traditional Finnish polka tune. */
+  /* speed multiplies the scroll speed and pay multiplies what each tile is worth. Both are set so that every tune earns what Ievan polkka does
+     at every skill level (checked with the balance bot: within about 3 to 10% a minute from a new player to an expert), because the tunes differ in how
+     fast their notes come and how many tiles a loop holds. The speed-up steps come every half of Ievan's 83 tiles, whichever tune it is. */
   PN.SONGS = {
     // Public domain compositions; original synthesized melody playback, no third-party recordings.
     // Maamme: Fredrik Pacius (1848); National Library source: https://www.finna.fi/Record/fikka.5828760
-    maamme: { title: 'Maamme · Finnish national anthem', bpm: 90, notes: 'E4:2 C#4:2 D4:2 | E4:6 A4:2 B4:3 E4:1 | C#5:8 A4:4 | F#4:3 B4:1 A4:4 G#4:4 | A4:8 | E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:4 E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:6 E4:2 | A4:3 E4:1 C#4:2 E4:2 A4:2 B4:2 | C#5:8 A4:4 | F#4:3 B4:1 A4:4 G#4:4 | A4:8 | E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:4 E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:6 E4:2 | A4:3 E4:1 C#4:2 E4:2 A4:2 B4:2 | C#5:8 A4:4 | F#4:3 B4:1 A4:4 G#4:4 | A4:8' },
+    maamme: { title: 'Maamme · Finnish national anthem', bpm: 90, speed: 1.96, pay: 1.38, notes: 'E4:2 C#4:2 D4:2 | E4:6 A4:2 B4:3 E4:1 | C#5:8 A4:4 | F#4:3 B4:1 A4:4 G#4:4 | A4:8 | E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:4 E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:6 E4:2 | A4:3 E4:1 C#4:2 E4:2 A4:2 B4:2 | C#5:8 A4:4 | F#4:3 B4:1 A4:4 G#4:4 | A4:8 | E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:4 E4:4 | B4:3 A4:1 G#4:2 F#4:2 E4:2 D4:2 | C#4:2 F#4:2 E4:6 E4:2 | A4:3 E4:1 C#4:2 E4:2 A4:2 B4:2 | C#5:8 A4:4 | F#4:3 B4:1 A4:4 G#4:4 | A4:8' },
     // Beethoven: https://www.ibiblio.org/mutopia/cgibin/piece-info.cgi?id=528
-    ode: { title: 'Ode to Joy', bpm: 108, notes: 'E4:4 E4:4 F4:4 G4:4 | G4:4 F4:4 E4:4 D4:4 | C4:4 C4:4 D4:4 E4:4 | E4:6 D4:2 D4:8 | E4:4 E4:4 F4:4 G4:4 | G4:4 F4:4 E4:4 D4:4 | C4:4 C4:4 D4:4 E4:4 | D4:6 C4:2 C4:8 | D4:4 D4:4 E4:4 C4:4 | D4:4 E4:2 F4:2 E4:4 C4:4 | D4:4 E4:2 F4:2 E4:4 D4:4 | C4:4 D4:4 G3:8 | E4:4 E4:4 F4:4 G4:4 | G4:4 F4:4 E4:4 D4:4 | C4:4 C4:4 D4:4 E4:4 | D4:6 C4:2 C4:8' },
+    ode: { title: 'Ode to Joy', bpm: 108, speed: 3.04, pay: 0.97, notes: 'E4:4 E4:4 F4:4 G4:4 | G4:4 F4:4 E4:4 D4:4 | C4:4 C4:4 D4:4 E4:4 | E4:6 D4:2 D4:8 | E4:4 E4:4 F4:4 G4:4 | G4:4 F4:4 E4:4 D4:4 | C4:4 C4:4 D4:4 E4:4 | D4:6 C4:2 C4:8 | D4:4 D4:4 E4:4 C4:4 | D4:4 E4:2 F4:2 E4:4 C4:4 | D4:4 E4:2 F4:2 E4:4 D4:4 | C4:4 D4:4 G3:8 | E4:4 E4:4 F4:4 G4:4 | G4:4 F4:4 E4:4 D4:4 | C4:4 C4:4 D4:4 E4:4 | D4:6 C4:2 C4:8' },
     ievan: { title: 'Ievan polkka', bpm: 100, notes:
       'D4:2 G4:2 G4:3 A4:1 Bb4:2 G4:1 G4:2 G4:1 G4:1 Bb4:1 | A4:2 F4:2 F4:2 A4:2 Bb4:2 G4:2 G4:2 G4:1 G4:1 | '
       + 'D4:2 G4:2 G4:3 A4:1 Bb4:2 G4:2 G4:2 G4:1 Bb4:1 | D5:1 D5:1 D5:1 C5:1 Bb4:2 A4:2 Bb4:2 G4:2 G4:2 G4:1 Bb4:1 | '

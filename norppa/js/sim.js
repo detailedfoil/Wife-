@@ -681,13 +681,13 @@
     if (!gm || !gm.pay || !(score > 0)) return 0;
     return Math.min(T.gameMax, gm.pay[0] * Math.pow(Math.max(score, gm.quick || 0), gm.pay[1])) * T.gameBoost;
   }
-  function gameReward(state, game, score, fishMap, found, secs, now) {
+  function gameReward(state, game, score, fishMap, found, secs, now, payMult) {
     const s = state.stats, c = state.counters, gm = PN.GAMES[game];
     let coins = 0, best = false;
     const got = [];
     tasteSync(state, now || state.tasteAt);
     const taste = tasteOf(state, game), muck = muckLoss(state), happy = happyBonus(state);   // the bonus goes by how happy she was when the game began
-    coins = gamePay(game, score) * gameMult(state);
+    coins = gamePay(game, score * (payMult || 1)) * gameMult(state);   // payMult: a tune that pays differently per tile (Kantele Tiles), so its score and best stay in tiles
     const key = gm && gm.best;
     // In a timed game (low) the score is the seconds it took, so the best is the smallest, and 0 means it was lost.
     if (key && (gm.low ? score > 0 && (!c[key] || score < c[key]) : score > (c[key] || 0))) { c[key] = score; best = score > 0; }

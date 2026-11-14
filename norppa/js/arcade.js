@@ -1412,7 +1412,10 @@
     }
     const tile = (i) => chart[i % chart.length];
     const startOf = (i) => Math.floor(i / chart.length) * total + tile(i).at;
-    const bpm = (p) => Math.min(MAX, START + RISE * Math.floor(p / (total / 2)));     // a step up at every half loop
+    // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
+    // (for Ievan that is exactly half a loop). song.speed scales it all so every tune earns what Ievan does.
+    const REF = 83;
+    const bpm = (p) => (song.speed || 1) * Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length)));
     function size() {
       const r = el.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       if (!r.width) return;
@@ -1533,6 +1536,7 @@
         const songs = Object.keys(PN.SONGS);
         song = PN.SONGS[songs[Math.floor(Math.random() * songs.length)]];
         const c = read(song); chart = c.tiles; total = c.len;
+        PN.Games.opts = { pay: song.pay || 1 };
         pos = 0; next = 0; n = 0; mode = 'ready'; wait = 0; bad = -1; badTile = -1; lastLane = -1; lastAt = 0; bop = 0;
         el.hidden = false;
         size(); draw();
