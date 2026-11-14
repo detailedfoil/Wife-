@@ -6,6 +6,7 @@
   'use strict';
 
   const FI = {
+    "Twenty buses. Choose your seat while the bus crawls past. You have 1.1 seconds. Buses grow every four stops. After each choice, green seats are best and red are worst.": "Kaksikymmentä bussia. Valitse penkkisi bussin lipuessa ohi. Sinulla on 1,1 sekuntia aikaa. Bussit kasvavat neljän pysäkin välein. Valinnan jälkeen vihreät penkit ovat parhaat ja punaiset huonoimmat.",
     // Game instructions and bus messages.
     "Seal Seat Shuffle": "Norpan paikkapulma",
     "points out of 2,000": "pistettä / 2 000",
