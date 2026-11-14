@@ -25,8 +25,8 @@
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
     medHour: 5, medBonus: 100,             // she is Anxi from 5am until she has had it; a photo of the pill earns a bonus
-    sulkTreats: 3, sulkPats: 3,           // she picks three different treats and wants three head pats and a bath
-    sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the three pats together a fifth, and the sauna a fifth
+    sulkTreats: 3, sulkPats: 20,          // she picks three different treats and wants twenty head pats and a bath
+    sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the twenty pats together a fifth, and the sauna a fifth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
     nurseMin: 35, nurseGain: 15, nurseCost: 2.25,
     pupFood: 9, pupJoy: 6,
@@ -197,7 +197,7 @@
     });
   }
 
-  /* What a sulking seal wants before she will forgive you: three different treats of her own choosing, three head pats and a sauna.
+  /* What a sulking seal wants before she will forgive you: three different treats of her own choosing, twenty head pats and a sauna.
      She chooses when the sulk starts (or the first time anyone looks), from treats the shop sells at a fair price. */
   function sulkNeeds(state) {
     if (!(state.grudge > 0)) { state.sulkWant = null; return null; }
