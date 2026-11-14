@@ -393,7 +393,8 @@
       const tog = (k, label, icon, text) => '<button class="row" data-do="toggle" data-id="' + k + '"><span class="ic-wrap">' + ic(icon) + '</span><span class="txt"><b>' + tr(label) + '</b><span class="d">' + tr(text) + '</span></span><span class="toggle' + (st.settings[k] ? ' on' : '') + '"></span></button>';
       const seg = ['live', 'day', 'night'].map((m) => '<button class="' + (st.settings.sky === m ? 'on' : '') + '" data-do="sky" data-id="' + m + '">' + tr({ live: 'Real time', day: 'Day', night: 'Night' }[m]) + '</button>').join('');
       const lang = ['en', 'fi'].map((m) => '<button class="' + (PN.lang === m ? 'on' : '') + '" data-do="lang" data-id="' + m + '">' + { en: 'English', fi: 'Suomi' }[m] + '</button>').join('');
-      return '<div class="rows">' + tog('sound', 'Sound', 'sound', 'Squeaks, splashes and chimes.') + tog('music', 'Music', 'music', 'A kantele, the Finnish lap harp, plays now and then.')
+      return '<div class="rows">' + tog('sound', 'Sound', 'sound', 'Squeaks, splashes and chimes.') + tog('music', 'Music', 'music', 'Gentle little melodies, with room for quiet.')
+        + '<div class="row"><span class="ic-wrap">' + ic('music') + '</span><span class="txt"><b>' + tr('Background instrument') + '</b><span class="d">' + tr('Choose a sound for your quiet moments.') + '</span><span class="music-choices">' + PN.Audio.instruments.map((i) => '<button class="music-choice' + (PN.Audio.instrument === i.id ? ' on' : '') + '" data-do="instrument" data-id="' + i.id + '" aria-pressed="' + (PN.Audio.instrument === i.id) + '"><b>' + tr(i.name) + '</b><span class="d">' + tr(i.description) + '</span></button>').join('') + '</span></span></div>'
         + (navigator.vibrate ? tog('haptics', 'Buzz', 'bolt', 'A little buzz under your finger when you stroke and tap.') : '')
         + '<div class="row"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Language') + '</b><span class="d">' + tr('Play in English or in Finnish.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + lang + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight and the weather over Inari in Lapland as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
@@ -434,6 +435,7 @@
     else if (act === 'unlock') game.unlockGame(id);
     else if (act === 'skip') game.skipGame(id);
     else if (act === 'dive') game.dive();
+    else if (act === 'instrument') game.setSetting('instrument', id);
     else if (act === 'toggle') game.setSetting(id, !game.state.settings[id]);
     else if (act === 'sky') game.setSetting('sky', id);
     else if (act === 'lang') game.setSetting('lang', id);

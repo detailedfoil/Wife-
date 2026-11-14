@@ -111,7 +111,7 @@
       taste: {}, tasteGoal: {}, tasteAt: now, tasteRollAt: 0, tasteKey: '', skip: [],
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
-      settings: { sound: true, music: true, sky: 'live', haptics: true },
+      settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true },
       tut: 0,
     };
     s.fav = ['muikku', 'kuore', 'ahven', 'sarki', 'siika'][Math.floor(rnd(s) * 5)];

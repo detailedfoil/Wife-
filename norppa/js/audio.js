@@ -1,9 +1,30 @@
 /* Pikku Norppa: sound.
    Every sound is made on the spot with the Web Audio API, so there are no sound files.
-   The music is a few plucked notes on a kantele, the Finnish lap harp. */
+   The original kantele and selectable gentle folk-inspired instruments play short phrases. */
 (function (PN) {
   'use strict';
-  const A = PN.Audio = { sound: true, music: true };
+  const A = PN.Audio = { sound: true, music: true, instrument: 'original' };
+  A.instruments = [
+    { id: 'original', name: 'Original', description: 'Our familiar little kantele tune.' },
+    { id: 'kantele', name: 'Kantele', description: 'New little lullabies on plucked strings.' },
+    { id: 'jouhikko', name: 'Jouhikko', description: 'Warm bowed strings, slow as drifting snow.' },
+    { id: 'flute', name: 'Pitkähuilu', description: 'An airy flute beside a quiet lake.' },
+    { id: 'accordion', name: 'Accordion', description: 'Soft reeds and a cosy fireside sway.' },
+  ];
+  let hushed = false, phraseIndex = 0;
+  const voices = new Set();
+  function trackVoice(src, gain, nodes) {
+    const voice = { src, gain }; voices.add(voice);
+    src.onended = () => { voices.delete(voice); src.disconnect(); gain.disconnect(); (nodes || []).forEach(n => n.disconnect()); };
+  }
+  function stopMusicNotes() {
+    if (!ctx) return;
+    voices.forEach(({ src, gain }) => {
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setTargetAtTime(0, ctx.currentTime, 0.035);
+      try { src.stop(ctx.currentTime + 0.18); } catch (e) { /* already ended */ }
+    });
+  }
   let ctx = null, master, sfx, musicBus, windGain, windFilter, noiseBuf, strings = [], started = false, musicTimer = 0, lastAt = {};
 
   function ensure() {
@@ -131,6 +152,7 @@
     const src = ctx.createBufferSource(), g = ctx.createGain();
     src.buffer = strings[i]; g.gain.value = vol;
     src.connect(g); g.connect(musicBus);
+    trackVoice(src, g);
     src.start(ctx.currentTime + (at || 0));
   }
   /* One note of a tune, for Ice Piano: a soft reed, a little like a small accordion. */
@@ -141,14 +163,59 @@
     tone(freq / 2, len, { vol: 0.1, attack: 0.01, release: 0.12 });
   };
   /* Quieten the wandering background tune while a game plays its own. */
-  A.hush = function (on) { if (ctx) musicBus.gain.setTargetAtTime(on ? 0 : 0.22, ctx.currentTime, 0.08); };
+  A.hush = function (on) { hushed = on; if (on) stopMusicNotes(); if (ctx) musicBus.gain.setTargetAtTime(on ? 0 : 0.22, ctx.currentTime, 0.08); };
   A.pluck = (i, vol) => { if (A.sound) pluck(i, vol == null ? 0.5 : vol); };
+
+  /* Original miniatures in D pentatonic: gentle cadences and space to breathe.
+     Synthesized colours inspired by folk instruments, not sampled recordings. */
+  const melodies = [
+    [[0, 1], [2, 1], [4, 2], [2, 1], [1, 1], [0, 3]],
+    [[4, 2], [5, 1], [7, 1], [5, 2], [4, 1], [2, 3]],
+    [[2, 1], [1, 1], [0, 2], [1, 1], [4, 2], [2, 1], [0, 3]],
+    [[0, 2], [4, 1], [5, 2], [4, 1], [2, 2], [0, 3]],
+  ];
+  const pitches = [293.66, 329.63, 369.99, 392, 440, 493.88, 587.33, 659.25];
+  function folkNote(index, duration, at, vol) {
+    if (A.instrument === 'kantele') { pluck(index, vol, at); return; }
+    const bowed = A.instrument === 'jouhikko', flute = A.instrument === 'flute';
+    const freq = pitches[index] * (bowed ? 0.5 : 1);
+    const harmonics = flute ? [1, 0.13, 0.035] : bowed ? [1, 0.3, 0.16, 0.07] : [1, 0.32, 0.12];
+    const t = ctx.currentTime + at, attack = bowed ? 0.38 : 0.2, release = 0.55;
+    harmonics.forEach((weight, h) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.frequency.value = freq * (h + 1);
+      const lfo = ctx.createOscillator(), depth = ctx.createGain();
+      lfo.frequency.value = bowed ? 4.2 : 3.4; depth.gain.value = bowed ? 4 : 1.6;
+      lfo.connect(depth); depth.connect(osc.detune);
+      const peak = vol * weight * (flute ? 0.28 : 0.22);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peak, t + attack);
+      g.gain.linearRampToValueAtTime(peak * 0.75, t + duration);
+      g.gain.linearRampToValueAtTime(0, t + duration + release);
+      osc.connect(g); g.connect(musicBus);
+      trackVoice(osc, g, [lfo, depth]);
+      osc.start(t); lfo.start(t);
+      osc.stop(t + duration + release + 0.02); lfo.stop(t + duration + release + 0.02);
+    });
+  }
+  function folkPhrase() {
+    const notes = melodies[phraseIndex++ % melodies.length];
+    const beat = A.instrument === 'jouhikko' ? 0.95 : A.instrument === 'accordion' ? 0.8 : 0.72;
+    let at = 0;
+    notes.forEach(([index, beats], i) => {
+      folkNote(index, beat * beats * 0.88, at, 0.48);
+      if (A.instrument === 'kantele' && i === 0) pluck(0, 0.17, at + 0.035);
+      at += beat * beats;
+    });
+    musicTimer = setTimeout(phrase, (at + 3.5) * 1000);
+  }
 
   /* A slow wandering tune: a short phrase, then a long breath. */
   let step = 2;
   function phrase() {
     clearTimeout(musicTimer);
-    if (!ctx || !A.music || !A.sound || document.hidden) { musicTimer = setTimeout(phrase, 4000); return; }
+    if (!ctx || !A.music || !A.sound || hushed || document.hidden) { musicTimer = setTimeout(phrase, 4000); return; }
+    if (A.instrument !== 'original') { folkPhrase(); return; }
     const n = 3 + Math.floor(Math.random() * 4);
     let at = 0;
     for (let i = 0; i < n; i++) {
@@ -187,8 +254,20 @@
     startWind();
     musicTimer = setTimeout(phrase, 2500);
   };
-  A.setSound = function (on) { A.sound = on; if (master) master.gain.setTargetAtTime(on ? 0.9 : 0, ctx.currentTime, 0.05); };
-  A.setMusic = function (on) { A.music = on; };
+  A.setSound = function (on) { A.sound = on; if (!on) stopMusicNotes(); if (master) master.gain.setTargetAtTime(on ? 0.9 : 0, ctx.currentTime, 0.05); };
+  A.setMusic = function (on) {
+    if (A.music === on) return;
+    A.music = on;
+    if (!on) stopMusicNotes();
+    else if (started) { clearTimeout(musicTimer); musicTimer = setTimeout(phrase, 350); }
+  };
+  A.setInstrument = function (id) {
+    id = A.instruments.some(i => i.id === id) ? id : 'original';
+    if (A.instrument === id) return;
+    A.instrument = id; phraseIndex = 0;
+    stopMusicNotes();
+    if (started) { clearTimeout(musicTimer); musicTimer = setTimeout(phrase, 350); }
+  };
   A.pause = function () { if (ctx && ctx.state === 'running') ctx.suspend(); };
   A.resume = function () { if (ctx && started && ctx.state === 'suspended') ctx.resume(); };
 })(window.PN = window.PN || {});

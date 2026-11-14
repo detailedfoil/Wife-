@@ -84,6 +84,7 @@
   function applySettings() {
     A.setSound(state.settings.sound);
     A.setMusic(state.settings.music);
+    A.setInstrument(state.settings.instrument);
     W.skyMode = Q.get('sky') || state.settings.sky;
   }
 

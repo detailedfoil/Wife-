@@ -353,3 +353,9 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .tg-card svg text { font: 700 17px var(--display); }
 .tg-card p { margin: 6px 0 14px; font-size: 14.5px; line-height: 1.35; color: #d7e4f7; }
 .tg-card .btn { width: 100%; justify-content: center; padding: 14px 10px; }
+
+/* Comfortable instrument choices even on narrow phone screens. */
+.music-choices { display: grid; gap: 7px; margin-top: 10px; }
+.music-choice { text-align: left; padding: 10px 12px; border: 2px solid var(--ice); border-radius: 14px; background: #f5faff; color: var(--ink); min-height: 48px; }
+.music-choice.on { border-color: #508db1; background: #e2f2fa; }
+.music-choice:focus-visible { outline: 3px solid #508db1; outline-offset: 2px; }
