@@ -187,7 +187,7 @@
     'Pitkähuilu': 'Pitkähuilu',
     'Accordion': 'Haitari',
     'Background instrument': 'Taustamusiikin soitin',
-    'Choose a sound for your quiet moments.': 'Valitse soitin rauhallisiin hetkiin.',
+    'A random instrument each time you open the game. Change it here anytime.': 'Soitin arvotaan aina, kun avaat pelin. Voit vaihtaa sen täällä milloin vain.',
     'Gentle little melodies, with room for quiet.': 'Lempeitä sävelmiä ja rauhallisia taukoja.',
     'Our familiar little kantele tune.': 'Tuttu pieni kantelesävelmämme.',
     'New little lullabies on plucked strings.': 'Uusia pieniä kehtolauluja näppäillyillä kielillä.',

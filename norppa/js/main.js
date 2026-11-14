@@ -49,6 +49,8 @@
     const saved = S.load();
     const isNew = !saved || !saved.name;
     state = G.state = saved || S.newState(Date.now());
+    // Pick once per page load; settings changes keep this session's choice.
+    state.settings.instrument = A.instruments[Math.floor(Math.random() * A.instruments.length)].id;
     PN.setLang(state.settings.lang || PN.guessLang());
     let sum = null;
     if (!isNew) sum = S.advance(state, Date.now(), { away: true });
