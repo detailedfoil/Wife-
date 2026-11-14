@@ -133,6 +133,7 @@
     };
     if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: medDayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }
+    if (obj && !obj.shufflePaid) { obj.shufflePaid = 1; if (obj.owned) delete obj.owned.game_shuffle; }   // one time only: Seal Seat Shuffle was free and now costs coins, so everyone buys it afresh
     if (obj && !obj.angyDiveOnly) { obj.angyDiveOnly = 1; if (!obj.medLate) { obj.grudge = 0; obj.sulkWant = null; } }   // one time only: being left alone no longer makes her Angy, so neglect sulks already on a save end   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
