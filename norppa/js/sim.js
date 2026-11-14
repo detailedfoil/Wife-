@@ -104,7 +104,7 @@
       fish: { muikku: 5, ahven: 2 },
       trinkets: {}, words: {}, awards: {}, seen: {},
       pups: [], family: [], nextPupAt: 0, pupSeq: 0, pupProg: 0, pupMet: 0, pupBirthAt: 0,   // pupMet: 0, 'ready' (told on the next load), 'waiting' (due at pupBirthAt)   // pupProg: friendship xp earned while no pup is at home; the next pup needs xpFor(pupLevel) of it
-      fav: 'muikku', favKnown: false,
+      fav: 'muikku', favKnown: false, coffee: false,
       gift: { last: dayKey(now), streak: 1 },
       dive: { readyAt: 0 }, saunaAt: 0, ballAt: 0, handoutAt: 0, juiceAt: 0,
       petWin: { t0: 0, n: 0 }, ballWin: { t0: 0, n: 0 },
@@ -226,7 +226,7 @@
   }
 
   function fallAsleep(state, t, kind, wakeAt) {
-    state.asleep = true; state.sleepKind = kind; state.wakeAt = wakeAt;
+    state.asleep = true; state.sleepKind = kind; state.wakeAt = wakeAt; state.coffee = false;
   }
 
   function addPoop(state) {
@@ -258,7 +258,7 @@
     // Dozing off and waking without help.
     if (!state.asleep) {
       if (s.energy <= 6) fallAsleep(state, t, night ? 'night' : 'nap', night ? 100 : 60);
-      else if (away && night && s.energy < 70) fallAsleep(state, t, 'night', 100);
+      else if (away && night && (s.energy < 70 || state.coffee)) fallAsleep(state, t, 'night', 100);
     } else if (state.sleepKind === 'night' ? (s.energy >= 99.5 && !isBedtime(t + dt)) : s.energy >= state.wakeAt) {
       state.asleep = false; state.sleepKind = null;
     }
@@ -425,6 +425,15 @@
       });
       addXp(state, 3); check(state);
       return ok({ med: true });
+    }
+    if (it.full) {                         // coffee: tummy, happiness and energy all full at once. Not cleanliness, and it cures nothing (Angy, Anxi, poorly)
+      if (state.asleep) return no('asleep');
+      state.pantry[id]--;
+      s.food = s.joy = s.energy = 100;
+      state.coffee = true;                 // so she still goes to bed when the game is closed for the night
+      state.counters.feeds++;
+      addXp(state, 4); check(state);
+      return ok({ full: true });
     }
     const before = s.food, fav = id === state.fav;   // she can be fed in her sleep
     state.pantry[id]--;

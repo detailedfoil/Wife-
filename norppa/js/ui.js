@@ -238,6 +238,9 @@
   };
 
   const cell = (id, inner, cls, act) => '<button class="cell ' + (cls || '') + '" data-do="' + act + '" data-id="' + id + '">' + inner + '</button>';
+  /* What a thing to eat or drink does, shown under its Finnish name in the shop and the pantry. */
+  const effect = (it) => it.full ? tr('Fills tummy, happiness and energy') : it.kind === 'med' || it.med ? tr('Cures a poorly seal') : it.energy ? tr('Energy +{0}, tummy +{1}', it.energy, it.food) : tr('Tummy +{0}', it.food);
+  const eats = (it) => '<b>' + esc(it.fi) + '</b><small>' + effect(it) + '</small>';
   const names = (it) => '<b>' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
   const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + (o.img ? ' pic' : '') + '">' + (o.img ? '<img src="' + o.img + '" alt="">' : ic(o.icon)) + '</span><span class="txt"><b>'
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
@@ -268,7 +271,7 @@
       }
       return sulkBanner + '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p>' + juice + '<div class="grid">' + ids.map((id) => {
         const it = PN.items[id];
-        return cell(id, thumb(id) + names(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
+        return cell(id, thumb(id) + eats(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
       }).join('') + '</div>';
     },
     play(st) {
@@ -303,7 +306,7 @@
       const price = (it) => coinTag(S.price(st, it.price), st.coins >= S.price(st, it.price) ? 'buy' : 'cant');
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
-        h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + names(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
+        h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + eats(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
       } else {
         // one shelf for each kind of thing, with a row of shortcuts at the top
         const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = (wear ? D.WEAR : D.DECOR).filter((it) => !it.hidden);

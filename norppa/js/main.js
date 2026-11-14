@@ -809,7 +809,8 @@
     const r = S.feed(state, id), it = PN.items[id];
     if (!r.ok) {
       A.play('nope');
-      if (r.why === 'asleep') UI.toast(whyText('asleep') + tr(' Wake first, or wait for morning.'), 'zzz');
+      if (r.why === 'asleep' && it && it.full) UI.toast(tr('{0} is fast asleep. Coffee is for when she is awake.', nm()), 'zzz');
+      else if (r.why === 'asleep') UI.toast(whyText('asleep') + tr(' Wake first, or wait for morning.'), 'zzz');
       else if (r.why === 'notsick') UI.toast(tr('Nobody is poorly. Save the juice for a rainy day.'), 'med');
       return;
     }
@@ -821,10 +822,11 @@
         return;
       }
       const awake = !seal.asleep;
-      if (it.energy) { if (awake) seal.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.4); FX.sparkle(head(), 6, 0xffc04a); }
+      if (it.full) { seal.gesture('gulp', true); A.play('gulp'); A.play('chirp'); FX.sparkle(head(), 14, 0xffc04a); FX.hearts(head(), 3); seal.gesture('happy'); }
+      else if (it.energy) { if (awake) seal.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.4); FX.sparkle(head(), 6, 0xffc04a); }
       else { if (awake) seal.gesture('chomp', true); A.play('munch'); }
       if (r.fav) { FX.hearts(head(), 4); A.play('chirp'); if (awake) seal.gesture('happy'); }
-      else if (it.kind === 'food') FX.hearts(head(), 1);
+      else if (it.kind === 'food' && !it.full) FX.hearts(head(), 1);
       if (!awake) FX.zzz(head());
       buzz(10);
     });

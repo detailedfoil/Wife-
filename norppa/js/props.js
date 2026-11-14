@@ -366,6 +366,15 @@
       g.add(U.rot(U.torus(0.03, 0.007, metal, 0, 0.5, 0, TAU, 14), Math.PI / 2, 0, 0));
       return g;
     },
+    /* A big enamel mug of coffee, steam and all. */
+    kahvi() {
+      const enamel = U.mat(0xf4f1ea, { roughness: 0.3 }), rim = U.mat(0x2b4d8c, { roughness: 0.35 });
+      const g = U.group(U.cyl(0.17, 0.15, 0.3, enamel, 0, 0.15, 0, 22), U.cyl(0.155, 0.155, 0.01, U.mat(0x3a2415, { roughness: 0.25 }), 0, 0.298, 0, 22));
+      const lip = U.torus(0.17, 0.014, rim, 0, 0.3, 0); lip.rotation.x = Math.PI / 2; g.add(lip);
+      const handle = U.torus(0.085, 0.022, enamel, 0.19, 0.16, 0, Math.PI, 12); handle.rotation.z = -Math.PI / 2; g.add(handle);
+      [[-0.05, 0.4, 0.035], [0.04, 0.47, 0.03], [-0.01, 0.55, 0.024]].forEach((p) => g.add(U.ball(p[2], U.mat(0xffffff, { transparent: true, opacity: 0.55 }), p[0], p[1], 0)));
+      return g;
+    },
     lakkamehu() {
       const glass = new T.MeshStandardMaterial({ color: 0xffb02e, roughness: 0.12, transparent: true, opacity: 0.86,
         emissive: 0xc46a00, emissiveIntensity: 0.45 });
