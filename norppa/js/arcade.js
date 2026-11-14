@@ -1610,8 +1610,59 @@
   }
   function evaluate(list) {
     const occupied = list.filter(s => s.occupied);
-    list.forEach(s => { s.distance = s.occupied ? 0 : Math.min(...occupied.map(p => Math.hypot(s.x - p.x, s.y - p.y))); });
-    return Math.max(...list.map(s => s.distance));
+    let best = 0;
+    list.forEach(s => {
+      let nearest = s.occupied ? 0 : Infinity;
+      if (!s.occupied) occupied.forEach(p => {
+        const squared = (s.x - p.x) ** 2 + (s.y - p.y) ** 2;
+        if (squared < nearest) nearest = squared;
+      });
+      s.distance = Math.sqrt(nearest); best = Math.max(best, s.distance);
+    });
+    return best;
+  }
+  /* Uniform passenger scatter favours corners: they have fewer neighbours.
+     Vary the region of the open gap instead, then verify the real distances.
+     The selected region never changes a seat's score or the heat map. */
+  function populateSeats(list, round, random) {
+    random = random || Math.random;
+    const columns = Math.ceil(round / 4) * 2, rows = list.length / columns;
+    const category = i => {
+      const row = Math.floor(i / columns), column = i % columns;
+      const end = row === 0 || row === rows - 1, side = column === 0 || column === columns - 1;
+      return end && side ? 'corner' : end || side ? 'edge' : 'interior';
+    };
+    const roll = random();
+    const region = roll < 0.12 ? 'corner' : columns > 2 ? (roll < 0.55 ? 'edge' : 'interior') : 'edge';
+    const targets = list.map((s, i) => i).filter(i => category(i) === region);
+    const target = list[targets[Math.floor(random() * targets.length)]];
+    let fallback = null, fallbackScore = -1;
+    for (let attempt = 0; attempt < 18; attempt++) {
+      list.forEach(s => { s.occupied = false; });
+      const radius = 1.1 + random() * 1.4;
+      const pool = list.filter(s => (s.x - target.x) ** 2 + (s.y - target.y) ** 2 > radius * radius);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const count = Math.min(pool.length, Math.max(2, Math.round(list.length * (0.16 + random() * 0.12))));
+      pool.slice(0, count).forEach(s => { s.occupied = true; });
+      for (let correction = 0; correction < 8; correction++) {
+        const best = evaluate(list);
+        const winners = list.map((s, i) => !s.occupied && Math.abs(s.distance - best) < 1e-7 ? i : -1).filter(i => i >= 0);
+        if (winners.every(i => category(i) === region)) return;
+        // Fill competing gaps outside the intended region with real passengers.
+        const competing = winners.filter(i => category(i) !== region && list[i] !== target);
+        if (!competing.length) break;
+        list[competing[Math.floor(random() * competing.length)]].occupied = true;
+        if (list.filter(s => s.occupied).length >= Math.ceil(list.length * 0.40)) break;
+      }
+      const best = evaluate(list);
+      const winners = list.map((s, i) => !s.occupied && Math.abs(s.distance - best) < 1e-7 ? i : -1).filter(i => i >= 0);
+      const score = winners.filter(i => category(i) === region).length / winners.length;
+      if (score > fallbackScore) { fallbackScore = score; fallback = list.map(s => s.occupied); }
+    }
+    // A bounded fallback keeps generation quick on phones, even with unusual RNG.
+    list.forEach((s, i) => { s.occupied = fallback[i]; });
   }
   function mat(hex, extra) {
     const m = new T.MeshStandardMaterial(Object.assign({ color: hex, roughness: 0.76 }, extra));
@@ -1840,9 +1891,7 @@
   }
   function next() {
     round++; seats = layout(round);
-    const shuffled = seats.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
-    shuffled.slice(0, Math.max(2, Math.round(seats.length * (0.16 + Math.random() * 0.12)))).forEach(s => s.occupied = true);
+    populateSeats(seats, round);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
     K.hint('Bus ' + round + ' / 20 · Find your personal space');
     makeBus();
@@ -1936,7 +1985,7 @@
       // these four rigs for replay, as the other arcade games do with their actor.
       view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done';
     },
-    layout, evaluate,
+    layout, evaluate, populateSeats,
     peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
