@@ -1499,6 +1499,17 @@
     // How tall a sixteenth is on screen. A tune with faster notes (song.speed) gets shorter tiles, not a faster scroll: it moves down the screen at
     // the same pace as Ievan polkka and just fits more, shorter tiles in view.
     const unit = () => H / SPAN / ((song && song.speed) || 1);
+    let lastSong = null;
+    function pickSong() {
+      // Remember the last tune across reloads, with an in-memory fallback if storage is blocked.
+      try { lastSong = localStorage.getItem('pikkunorppa.kantele.lastSong') || lastSong; } catch (e) { /* storage is optional */ }
+      const songs = Object.keys(PN.SONGS), fresh = songs.filter((id) => id !== lastSong);
+      const choices = fresh.length ? fresh : songs;
+      const id = choices[Math.floor(Math.random() * choices.length)];
+      lastSong = id;
+      try { localStorage.setItem('pikkunorppa.kantele.lastSong', id); } catch (e) { /* keep the in-memory choice */ }
+      return PN.SONGS[id];
+    }
     const tile = (i) => chart[i % chart.length];
     const startOf = (i) => Math.floor(i / chart.length) * total + tile(i).at;
     // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
@@ -1632,8 +1643,7 @@
         cast(view, 0.85, true);
         face(0);
         actor.sq.add(kantele);
-        const songs = Object.keys(PN.SONGS);
-        song = PN.SONGS[songs[Math.floor(Math.random() * songs.length)]];
+        song = pickSong();
         const c = read(song); chart = c.tiles; total = c.len;
         PN.Games.opts = { pay: song.pay || 1 };
         songTitle(song.title);   // keep the current tune visible throughout the round
