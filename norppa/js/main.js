@@ -165,7 +165,7 @@
     if (sum.pupLost.length) { bad = true; sum.pupLost.forEach((n) => add('heart', tr('<b>{0}</b> went too long without milk and did not make it.', UI.esc(n)), 'bad')); }
     if (sum.sick && state.sick) { bad = true; add('med', tr('{0} has fallen poorly. Cloudberry juice or steady care will mend it.', plain()), 'bad'); }
     if (sum.pupSick.length) { bad = true; sum.pupSick.forEach((n) => { if (state.pups.some((p) => p.name === n && p.sick)) add('med', tr('<b>{0}</b> is poorly from hunger. Feed {1} so she can nurse.', UI.esc(n), plain()), 'bad'); }); }
-    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry, grubby or glum for {0} hour.', 'Was left hungry, grubby or glum for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
+    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry or grubby for {0} hour.', 'Was left hungry or grubby for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
     if (state.medLate) { bad = true; add('anxi', tr('{0} is Anxi. She needs her medicine.', plain()), 'bad'); }
@@ -555,7 +555,8 @@
     const r = S.visitTick(state, now);
     r.arrived.forEach((i) => {
       const f = state.family[i], here = S.visitStatus(f, now) === 'here';
-      UI.toast(here ? tr('<b>{0}</b> is back for a visit! +{1} coins', UI.esc(f.name), f.coins) : tr('<b>{0}</b> came to visit while you were away. +{1} coins', UI.esc(f.name), f.coins), 'coin', '', 5200);
+      if (f.coins) UI.toast(here ? tr('<b>{0}</b> is back for a visit! +{1} coins', UI.esc(f.name), f.coins) : tr('<b>{0}</b> came to visit while you were away. +{1} coins', UI.esc(f.name), f.coins), 'coin', '', 5200);
+      else UI.toast(here ? tr('<b>{0}</b> is back for a visit!', UI.esc(f.name)) : tr('<b>{0}</b> came to visit while you were away.', UI.esc(f.name)), 'heart', '', 5200);
       A.play('award');
       if (here) { spawnVisitor(i, true); FX.hearts(head(), 4); if (!seal.asleep && !G.busy) seal.gesture('happy'); }
     });
@@ -574,7 +575,7 @@
     const wait = S.callWait(state, i, now);
     if (wait > 0) { await UI.modal({ title: name, html: '<p>' + tr('{0} is busy being a seal. You can call {0} again in {1}.', name, UI.mins(wait)) + '</p>', actions: close }); return; }
     if (S.visiting(state, now) >= S.T.maxVisitors) { await UI.modal({ title: name, html: '<p>' + tr('The shore is full. Two visitors at a time is the most.') + '</p>', actions: close }); return; }
-    const v = await UI.modal({ title: tr('Call {0} home?', name), html: '<p>' + tr('{0} will arrive in an hour, bring {1} coins as a present, and can stay for up to 8 hours. You can send {0} home sooner.', name, S.T.visitCoins) + '</p>',
+    const v = await UI.modal({ title: tr('Call {0} home?', name), html: '<p>' + (S.presentsLeft(state, now) > 0 ? tr('{0} will arrive in an hour, bring {1} coins as a present, and can stay for up to 8 hours. You can send {0} home sooner.', name, S.T.visitCoins) : tr('Two visits a day bring presents. {0} will still come and stay, but today\'s presents have been given.', name)) + '</p>',
       actions: [{ label: tr('Call {0}', name), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (v !== 1) return;
     const r = S.callPup(state, i, Date.now());

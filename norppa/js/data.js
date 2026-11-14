@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 18:40';
+  PN.UPDATED = '14 Nov 2026, 20:30';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -60,7 +60,8 @@
       note: 'Fish baked inside a rye loaf. Very filling.' },
     { id: 'lohikeitto', fi: 'Lohikeitto', en: 'Salmon soup', food: 48, joy: 14, price: 24,
       note: 'Creamy, warm, with plenty of dill.' },
-    { id: 'sealsius', fi: 'Norpsius', en: 'Sealsius energy drink', food: 4, joy: 6, energy: 35, price: 20,
+    { id: 'sealsius', fi: 'Norpsius', en: 'Sealsius energy drink', food: 4, joy: 6, energy: 35, price: 60,   // 150 coins: a can is about that much play's worth of energy (at 50 it paid for itself three times over)
+     
       note: 'Zero sugar, seven vitamins and a very high squeak content. A burst of energy, but only a sip of dinner.' },
     /* full: fills tummy, happiness and energy at once (not cleanliness). Dear on purpose: it is for a visit with no time to play. */
     { id: 'kahvi', fi: 'Kahvi', en: 'Coffee', full: true, food: 0, price: 160,
@@ -316,7 +317,7 @@
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
   /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
   const GAMES = {
-    shuffle: { price: 100, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Twenty buses. Choose your seat while the bus crawls past. You have 1.1 seconds. Buses grow every four stops. After each choice, green seats are best and red are worst.', best: 'best_shuffle', pay: [0.0103, 1.06], unit: 'points out of 2,000' },
+    shuffle: { price: 100, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Twenty buses. Choose your seat while the bus crawls past. You have 1.1 seconds. Buses grow every four stops. After each choice, green seats are best and red are worst.', best: 'best_shuffle', pay: [0.181, 0.7], unit: 'points out of 2,000' },
     ball: { price: 0, muck: 7, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', pay: [0.56, 1.1] },
     catch: { price: 200, muck: 6, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
     swim: { price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
@@ -327,7 +328,7 @@
     sauna: { price: 0, muck: 0, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right.', unit: 'rounds' },   // not a game to play for coins: it is how she gets clean (see Sim.saunaDone), so it is not in GAME_ORDER
     curl: { price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
     sled: { price: 1250, muck: 12, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
-    bj: { price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Choose your bet, from 5 sardines up to all in. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.7, 1], unit: 'sardines won' },
+    bj: { price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Choose your bet, from 5 sardines up to a third of your pile. Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'sardines won' },
   };
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
      skill levels so a new player earns about 16 coins a minute, a casual one 24, a good one 31 and an expert 37, whichever game

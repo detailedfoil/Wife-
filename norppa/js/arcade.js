@@ -809,7 +809,9 @@
      a minute, like the other games, and bolder betting pays about the same on average but far more often ends with nothing.
      The dealer is quick and the next bet is ready the moment a hand is over, so a hand takes about four seconds. */
   const bj = (() => {
-    const START = 10, MIN = 5, PAY = 3.5, CAP = 50;    // the house can pay out 50 sardines of winnings (35 coins), then the table closes
+    const START = 10, MIN = 5, PAY = 3.5, CAP = 50;    // the house can pay out 50 sardines of winnings (25 coins), then the table closes
+    // The most she can bet is a third of her pile (5 at least). All in, over and over, paid twice what any other game does for no skill at all.
+    const most = () => Math.min(stack, Math.max(MIN, Math.floor(stack / 3)));
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, frac = 0, mode = 'bet', wait = 0, msg = '', hide = true, lock = 0;
     const total = (h) => {
@@ -830,7 +832,7 @@
       const btn = (act, label, cls, off) => '<button data-bj="' + act + '" class="' + (cls || '') + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
       let btns = '';
       if (mode === 'bet') btns = '<div class="bj-slide"><input type="range" id="bjRange" min="0" max="100" step="1" value="' + Math.round(frac * 100) + '" aria-label="' + tr('How much to bet') + '">'
-        + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + MIN + '</span><span>' + tr('All in') + '</span></span></div>' + btn('bet', betLabel(), 'go', stack < MIN);
+        + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + MIN + '</span><span>' + tr('A third') + '</span></span></div>' + btn('bet', betLabel(), 'go', stack < MIN);
       else btns = btn('hit', tr('Hit'), '', mode !== 'play') + btn('stand', tr('Stand'), 'go', mode !== 'play');
       el.innerHTML = '<div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (house.length ? (hide ? '?' : total(house)) : '') + '</b></div><div class="bj-cards">'
         + house.map((c, i) => card(c, hide && i === 1)).join('') + '</div></div>'
@@ -838,8 +840,8 @@
         + '<div class="bj-msg">' + msg + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div>';
     }
     // How much the bar says: nothing is 5, the top is everything, and in between is that share of what you have now.
-    const betNow = () => Math.min(stack, Math.max(MIN, Math.round(frac * stack)));
-    const betLabel = () => tr(frac >= 1 ? 'All in {0}' : 'Bet {0}', betNow());
+    const betNow = () => Math.min(most(), Math.max(MIN, Math.round(MIN + frac * (most() - MIN))));
+    const betLabel = () => tr('Bet {0}', betNow());
     const potentialLabel = () => {
       if (mode === 'done' || (mode === 'bet' && stack < MIN)) return '';
       const stake = mode === 'bet' ? betNow() : bet, back = Math.round(stake * PAY);
@@ -1633,7 +1635,7 @@
   const tapPosition = new T.Vector3(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
   let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
-  let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1;
+  let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1, hold = 0;
   let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0, departFrom = 0;
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
@@ -1959,7 +1961,10 @@
     if (performance.now() >= deadline) i = -1;
     if (i >= 0 && seats[i].occupied) return;
     chosen = i;
-    const points = i < 0 ? 0 : Math.min(100, Math.round(100 * seats[i].distance / best));
+    // Points run from the worst free seat (0) to the best (100). Measured from nothing, a seat tapped without looking still scored about 56.
+    const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
+    const points = i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
+    hold = Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter
     total += points; K.score(total); phase = 'reveal'; elapsed = 0;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
@@ -2013,7 +2018,7 @@
         if (performance.now() >= deadline) choose(-1);
       } else if (phase === 'reveal') {
         bus.position.z -= CRAWL * dt;
-        if (elapsed >= REVEAL) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
+        if (elapsed >= REVEAL + hold) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
       } else if (phase === 'depart') {
         const t = Math.min(elapsed, DEPART);
         // Accelerate out of the crawl without a position or speed jump.

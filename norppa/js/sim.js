@@ -32,6 +32,7 @@
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15, pupWait: 9 * H,   // once she has the xp the pup waits for the game to be closed; next load she has met someone, and the pup arrives pupWait later   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
+    tuckSettle: 30 * 60e3, visitPresents: 2, gameFull: 24,   // a tuck pays once she has slept this long; this many pup visits a day bring presents; a game this many seconds long gives full friendship and happiness
     growCoins: 50, farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
@@ -90,7 +91,7 @@
   function newState(now) {
     const s = {
       v: 1, createdAt: now, lastSeen: now, seed: (now % 2147483647) | 0,
-      angyCleared: 1, shufflePaid: 1, angyDiveOnly: 1,   // the one-time changes in migrate() are for older saves: a new one starts with them done, or it would lose Seal Seat Shuffle (and an Angy spell) the second time it is opened
+      angyCleared: 1, shufflePaid: 1, angyDiveOnly: 1, shuffleScore2: 1, tuckXp: 0, tuckAt: 0, visitDay: '', visitN: 0,   // the one-time changes in migrate() are for older saves: a new one starts with them done, or it would lose Seal Seat Shuffle (and an Angy spell) the second time it is opened
       name: '', stage: 0, ageMs: 0, xp: 0, maxLevel: 1,
       stats: { food: 62, joy: 70, energy: 88, clean: 90 },
       asleep: false, sleepKind: null, wakeAt: 100,
@@ -134,6 +135,7 @@
     };
     if (obj && !obj.med) obj.med = { day: '', photoDay: '', since: medDayKey(Date.now()), n: 0 };   // for an old save the medicine routine starts tomorrow
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }
+    if (obj && !obj.shuffleScore2) { obj.shuffleScore2 = 1; if (obj.counters) obj.counters.best_shuffle = 0; }   // one time only: Seal Seat Shuffle scores seats differently now, so the old best is cleared
     if (obj && !obj.shufflePaid) { obj.shufflePaid = 1; if (obj.owned) delete obj.owned.game_shuffle; }   // one time only: Seal Seat Shuffle was free and now costs coins, so everyone buys it afresh
     if (obj && !obj.angyDiveOnly) { obj.angyDiveOnly = 1; if (!obj.medLate) { obj.grudge = 0; obj.sulkWant = null; } }   // one time only: being left alone no longer makes her Angy, so neglect sulks already on a save end   // one time only: the Angy rules changed, so everyone starts clean
     fill(obj, base);
@@ -236,7 +238,9 @@
 
   /* How well she is growing right now, from 0 (not at all) to 1 (full speed).
      Her lowest need decides it, and a sulk slows it. Asleep for the night, a hungry tummy matters a bit less. */
-  const lowNeed = (state) => { const s = state.stats; return Math.min(s.food + (state.asleep && state.sleepKind === 'night' ? T.sleepGrace : 0), s.joy, s.clean); };
+  // Neglect is hunger and dirt. Happiness used to count too, but it empties in under three hours awake, so a seal visited five times a day
+  // was 'neglected' most of the time and lost more than half the friendship she earned. A glum seal now just earns no happiness bonus.
+  const lowNeed = (state) => { const s = state.stats; return Math.min(s.food + (state.asleep && state.sleepKind === 'night' ? T.sleepGrace : 0), s.clean); };
   function care(state) {
     if (state.sick) return 0;
     const low = lowNeed(state);
@@ -262,7 +266,9 @@
       else if (away && night && (s.energy < 70 || state.coffee)) fallAsleep(state, t, 'night', 100);
     } else if (state.sleepKind === 'night' ? (s.energy >= 99.5 && !isBedtime(t + dt)) : s.energy >= state.wakeAt) {
       state.asleep = false; state.sleepKind = null;
+      if (state.tuckXp) { addXp(state, state.tuckXp); state.tuckXp = 0; }   // slept until she woke by herself
     }
+    if (state.asleep && state.tuckXp && t + dt - state.tuckAt >= T.tuckSettle) { addXp(state, state.tuckXp); state.tuckXp = 0; }
     const asleep = state.asleep;
     if (asleep) sum.sleptH += h;
 
@@ -476,7 +482,7 @@
     const night = isBedtime(now);
     fallAsleep(state, now, night ? 'night' : 'nap', night ? 100 : 95);
     state.counters.tucks++;
-    addXp(state, s.energy < 50 ? 5 : 2);
+    state.tuckXp = s.energy < 50 ? 5 : 2; state.tuckAt = now;   // paid once she has slept half an hour (tucking her in and waking her straight away used to pay every time)
     learn(state, 'hyvaa_yota'); learn(state, 'pesa');
     check(state);
     return ok({ night });
@@ -485,7 +491,7 @@
   function wake(state) {
     const s = state.stats;
     if (!state.asleep) return no('awake');
-    state.asleep = false; state.sleepKind = null;
+    state.asleep = false; state.sleepKind = null; state.tuckXp = 0;   // woken early: no friendship for the tuck
     if (s.energy < 45) { s.joy = pct(s.joy - 6); return ok({ grumpy: true }); }
     return ok({ grumpy: false });
   }
@@ -715,15 +721,17 @@
     coins = earn(state, coins / T.earnRate);
     const tired = secs > 0 ? clamp(Math.round(secs * T.playEnergy), T.playEnergyMin, T.playEnergyMax) : T.gameEnergy;
     s.energy = pct(s.energy - tired);
-    const joy = gameJoy(taste);
+    // Friendship and happiness go by how long she played, a point of friendship per 3 seconds up to the usual 8 (losing on purpose at once
+    // used to count as a full game). No seconds given (old callers) means a full game.
+    const part = secs > 0 ? clamp(secs / T.gameFull, 0, 1) : 1;
+    const joy = Math.round(gameJoy(taste) * part);
     // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her Angy.
     const calm = T.neglectLine + T.gameCalm;
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
     const dirt = gm && gm.muck ? clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) : 0;
     s.clean = pct(Math.max(s.clean - dirt, Math.min(s.clean, calm)));
-    tastePlayed(state, game);
-    c.games++;
-    addXp(state, 8);
+    if (part >= 0.5) { tastePlayed(state, game); c.games++; }
+    addXp(state, secs > 0 ? Math.min(8, Math.floor(secs / 3)) : 8);
     learn(state, 'leikki');
     check(state);
     return { coins, best, fish: got, tired, taste: Math.round(taste), happy, muck: Math.round(muck * 100), joy, dirt };
@@ -791,7 +799,7 @@
     s.clean = rounds >= need ? 100 : pct(s.clean + rounds * 100 / T.saunaRounds);
     s.joy = pct(s.joy + T.saunaJoy * frac);
     if (s.clean >= 60) state.filthMs = 0;
-    const coins = earn(state, T.saunaBonus * frac / T.earnRate);
+    const coins = was < 60 ? earn(state, T.saunaBonus * frac / T.earnRate) : 0;   // the coins are for a real wash, begun under 60% clean (a one-round top-up used to pay the full 12)
     c.saunas++; c.washes++;
     addXp(state, was < 60 ? 6 : 2);
     if (state.sick && rounds >= need) state.wellMs += H;
@@ -964,11 +972,18 @@
     const out = { arrived: [], left: [] };
     state.family.forEach((f, i) => {
       if (!f.arriveAt) return;
-      if (now >= f.arriveAt && !f.paid) { f.paid = true; f.coins = earn(state, T.visitCoins / T.earnRate); out.arrived.push(i); addXp(state, 5); }
+      if (now >= f.arriveAt && !f.paid) {
+        f.paid = true; f.coins = 0;
+        const day = dayKey(f.arriveAt);
+        if (state.visitDay !== day) { state.visitDay = day; state.visitN = 0; }
+        if (state.visitN < T.visitPresents) { state.visitN++; f.coins = earn(state, T.visitCoins / T.earnRate); addXp(state, 5); }   // the first two visits of the day bring presents
+        out.arrived.push(i);
+      }
       if (now >= f.leaveAt) { f.arriveAt = 0; f.leaveAt = 0; out.left.push(i); }
     });
     return out;
   }
+  const presentsLeft = (state, now) => (state.visitDay === dayKey(now) ? Math.max(0, T.visitPresents - (state.visitN || 0)) : T.visitPresents);
   function sendHome(state, i, now) {
     const f = state.family[i];
     if (!f || visitStatus(f, now) !== 'here') return no('none');
@@ -1042,6 +1057,6 @@
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, gameMoods, setSkip, tasteSync,
-    buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, visiting, cuddlePup, graduatePup,
+    buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
