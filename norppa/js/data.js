@@ -313,6 +313,7 @@
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
   /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
   const GAMES = {
+    shuffle: { price: 0, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Ten buses. Three seconds to find the seat furthest from the other seals. The bus gets wider every two stops!', best: 'best_shuffle', pay: [0.025, 1], unit: 'points out of 1,000' },
     ball: { price: 0, muck: 7, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', pay: [0.56, 1.1] },
     catch: { price: 200, muck: 6, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
     swim: { price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
@@ -361,7 +362,7 @@
   /* muck: how mucky a game leaves her, in cleanliness points a minute of play (sim.js: a mucky seal earns less). Sledging and
      snowballs are the muckiest; the piano, the card table and anything in the water the least. */
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
-  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'curl', 'sled', 'bj'];
+  PN.GAME_ORDER = ['ball', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'curl', 'sled', 'bj', 'shuffle'];
   PN.GAMES = GAMES;
   const ECON = { price: 2, food: 1.25, cosmetic: 6, cosmeticFloor: 200, cosmeticCut: 0.85, earn: 2 / 3, fishFood: 0.75 };   // food: fish and food cost a quarter more; cosmeticCut: things to wear and for the shore cost 15% less
   PN.ECON = ECON;
@@ -394,3 +395,4 @@
     words: byId(WORDS), awards: byId(AWARDS) };
   PN.items = items;
 })(window.PN = window.PN || {});
+

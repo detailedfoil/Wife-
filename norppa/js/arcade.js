@@ -1584,3 +1584,94 @@
 
   G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
+
+/* Seal Seat Shuffle: ten quick stops, scored by the nearest passenger. */
+(function (PN) {
+  'use strict';
+  const K = PN.Games.kit;
+  let root, canvas, ctx, round, total, seats, phase, elapsed, deadline, chosen, best, points;
+  const rows = 8;
+  function layout(n) {
+    const side = Math.ceil(n / 2), list = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < side * 2; c++)
+      list.push({ x: c + (c >= side ? 0.8 : 0), y: r * 1.15, occupied: false });
+    return list;
+  }
+  function evaluate(list) {
+    const occupied = list.filter(s => s.occupied);
+    list.forEach(s => { s.distance = s.occupied ? 0 : Math.min(...occupied.map(p => Math.hypot(s.x - p.x, s.y - p.y))); });
+    return Math.max(...list.map(s => s.distance));
+  }
+  function next() {
+    round++; seats = layout(round);
+    const shuffled = seats.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
+    shuffled.slice(0, Math.max(2, Math.round(seats.length * (0.16 + Math.random() * 0.12)))).forEach(s => s.occupied = true);
+    best = evaluate(seats); chosen = -1; points = null; phase = 'arrive'; elapsed = 0;
+    K.time('—'); K.hint('Bus ' + round + ' / 10 · Find your personal space');
+  }
+  function choose(i) {
+    if (phase !== 'choose') return;
+    if (performance.now() >= deadline) i = -1;
+    if (i >= 0 && seats[i].occupied) return;
+    chosen = i; points = i < 0 ? 0 : Math.min(100, Math.round(100 * seats[i].distance / best));
+    total += points; K.score(total); K.time('0.0'); phase = 'reveal'; elapsed = 0;
+    K.hint(i < 0 ? 'Time up · 0 points · Gold shows the best seats' : '+' + points + ' points · Gold shows the best seats');
+    PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
+  }
+  function pill(x,y,w,h,color,r=9) {
+    ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill();
+  }
+  function seal(x,y,s,player) {
+    ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
+    ctx.fillStyle=player?'#f7faf5':'#aebfcb'; ctx.beginPath(); ctx.ellipse(0,1,8,11,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-8,3,4,2,-0.5,0,Math.PI*2); ctx.ellipse(8,3,4,2,0.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#273c50'; for(const x of [-3,3]) {ctx.beginPath();ctx.arc(x,-4,1.15,0,Math.PI*2);ctx.fill();}
+    ctx.beginPath();ctx.ellipse(0,-1,1.6,1,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e7aeb6';ctx.beginPath();ctx.arc(-5,-1,1.5,0,Math.PI*2);ctx.arc(5,-1,1.5,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  function draw() {
+    const rect=canvas.getBoundingClientRect(), w=rect.width,h=rect.height,dpr=Math.min(devicePixelRatio||1,2);
+    if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    pill(0,0,w,h,'#dcecf0',0);pill(w*.05,0,w*.9,h,'#a9bdc8',0);
+    ctx.strokeStyle='#e5edf0';ctx.lineWidth=3;ctx.setLineDash([15,22]);ctx.beginPath();ctx.moveTo(w*.09,0);ctx.lineTo(w*.09,h);ctx.moveTo(w*.91,0);ctx.lineTo(w*.91,h);ctx.stroke();ctx.setLineDash([]);
+    const side=Math.ceil(round/2), unit=Math.min((w-42)/(side*2+1.8),(h-100)/10.6,43), bw=(side*2+1.8)*unit,bh=10.6*unit;
+    const ox=(w-bw)/2, oy=(h-bh)/2 + (phase==='arrive' ? (1-Math.min(1,elapsed/.24))*(h+bh) : phase==='depart' ? -Math.min(1,elapsed/.22)*(h+bh) : 0);
+    pill(ox-5,oy+bh*.18,10,bh*.18,'#34495a',4);pill(ox+bw-5,oy+bh*.18,10,bh*.18,'#34495a',4);pill(ox-5,oy+bh*.72,10,bh*.15,'#34495a',4);pill(ox+bw-5,oy+bh*.72,10,bh*.15,'#34495a',4);
+    pill(ox,oy,bw,bh,'#528c98',18);pill(ox+6,oy+unit*1.3,bw-12,bh-unit*1.6,'#e8e7db',10);pill(ox+10,oy+9,bw-20,unit*.75,'#bce6e9',8);
+    ctx.fillStyle='#244653';ctx.font='bold '+Math.max(10,unit*.3)+'px sans-serif';ctx.textAlign='center';ctx.fillText('NORPPA  •  '+round, w/2,oy+unit*1.1);
+    seats.forEach((s,i)=>{
+      const x=ox+unit*(.9+s.x),y=oy+unit*(1.95+s.y),sw=unit*.82,sh=unit*.94;
+      s.hit={x:x-sw/2,y:y-sh/2,w:sw,h:sh};
+      const gold=(phase==='reveal'||phase==='depart')&&!s.occupied&&Math.abs(s.distance-best)<1e-7;
+      pill(x-sw/2,y-sh/2,sw,sh,gold?'#ffd46b':i===chosen?'#82c6b3':'#86aab3',Math.min(6,unit*.16));
+      pill(x-sw/2+2,y+sh*.25,sw-4,sh*.19,gold?'#c99f42':'#5e8794',3);
+      if(s.occupied||i===chosen)seal(x,y-1,unit*.033,i===chosen);
+      if(gold){ctx.fillStyle='#795500';ctx.font='bold '+unit*.4+'px sans-serif';ctx.fillText('★',x,y+unit*.12);}
+      if(i===chosen){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(x-sw/2,y-sh/2,sw,sh);}
+    });
+    if(phase==='choose'){const f=Math.max(0,(deadline-performance.now())/3000);pill(12,h-12,w-24,5,'#c4d6db',2);pill(12,h-12,(w-24)*f,5,f<.33?'#d98080':'#528c98',2);}
+  }
+  PN.Games.ext.shuffle = {
+    label:'Points', label2:'Time', hint:'Choose the seat furthest from its nearest seal.', nocount:true,
+    view:()=>null,
+    start(){
+      root=document.createElement('div');root.style.cssText='position:absolute;inset:80px 0 70px;pointer-events:auto;overflow:hidden;touch-action:none';
+      canvas=document.createElement('canvas');canvas.style.cssText='width:100%;height:100%;display:block';canvas.setAttribute('aria-label','Bus seats. Tap an empty seat furthest from the other seals.');root.appendChild(canvas);document.getElementById('gamehud').appendChild(root);ctx=canvas.getContext('2d');
+      canvas.addEventListener('pointerdown',e=>{if(e.button>0)return;e.preventDefault();const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const i=seats.findIndex(s=>s.hit&&x>=s.hit.x&&x<=s.hit.x+s.hit.w&&y>=s.hit.y&&y<=s.hit.y+s.hit.h);if(i>=0)choose(i);});
+      round=0;total=0;next();draw();
+    },
+    go(){K.score(0,true);}, pointer(){},
+    update(dt,playing){if(!playing)return;elapsed+=dt;
+      if(phase==='arrive'&&elapsed>=.24){phase='choose';deadline=performance.now()+3000;elapsed=0;}
+      else if(phase==='choose'){const left=Math.max(0,(deadline-performance.now())/1000);K.time(left.toFixed(1));if(!left)choose(-1);}
+      else if(phase==='reveal'&&elapsed>=.65){phase='depart';elapsed=0;}
+      else if(phase==='depart'&&elapsed>=.22){if(round===10){phase='done';K.over(total+' / 1,000');K.hint('Ten buses · A little space to yourself');}else next();}
+      draw();
+    },
+    stop(){if(root)root.remove();root=null;phase='done';},
+    // Pure helpers for checking layout and distance scoring.
+    layout,evaluate
+  };
+})(window.PN);
