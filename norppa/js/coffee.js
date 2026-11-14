@@ -1,7 +1,8 @@
 /* Pikku Norppa: the rules behind Coffee Memory. No drawing here, only the order and the checking, so it can be tested on its own.
    Customers keep coming for as long as every drink is right. An order is shown, then hidden, and the drink is built step by step from
-   memory. The steps always come in the same order: size, base, temperature, milk, syrup, extras. Orders start short and get a step longer
-   every two drinks served, up to all six. The first wrong choice ends the game; the score is the drinks served. There is no clock. */
+   memory. The steps always come in the same order: size, base, temperature, milk, syrup, extras. Every drink served adds one more item to
+   remember: the first order is size and base, then temperature, milk and syrup come in, then extras one at a time up to all four.
+   The first wrong choice ends the game; the score is the drinks served. There is no clock. */
 (function (PN) {
   'use strict';
 
@@ -15,15 +16,17 @@
     { id: 'extras', title: 'Extras', ask: 'Add the extras, then tap Done', multi: true, opts: [['shot', 'Extra shot', '⚡'], ['cinnamon', 'Cinnamon', '🧂'], ['sprinkles', 'Choc sprinkles', '🍫'], ['cream', 'Whipped cream', '🍦']] },
   ];
   const byId = {}; STEPS.forEach((s) => { byId[s.id] = s; });
-  const FIRST = 2, EVERY = 2, TWO_EXTRAS = 12;   // orders start with two steps, gain one every two drinks served, and ask for two extras from the twelfth drink
+  const FIRST = 2, SINGLES = 5;   // the first order has two items, and every drink served adds one; the first five items are one choice each, the rest are extras
 
   const label = (stepId, optId) => { const o = byId[stepId].opts.find((x) => x[0] === optId); return o ? o[1] : optId; };
   const icon = (stepId, optId) => { const o = byId[stepId].opts.find((x) => x[0] === optId); return o ? o[2] : ''; };
 
-  /* How many steps the order for the next customer has, given the drinks served so far: two at the start, then one more every two drinks, six at most. */
-  const stepCount = (served) => Math.min(STEPS.length, FIRST + Math.floor(served / EVERY));
-  /* How many extras it asks for: one, or two once she has served a dozen. */
-  const extraCount = (served) => (served >= TWO_EXTRAS ? 2 : 1);
+  /* How many items the next customer's order has, given the drinks served so far: two at the start, one more with every drink. */
+  const itemCount = (served) => FIRST + served;
+  /* How many steps that order has: the single-choice ones, then the extras step once there are more than five items. */
+  const stepCount = (served) => (itemCount(served) > SINGLES ? STEPS.length : itemCount(served));
+  /* How many extras it asks for: one for the sixth item, one more for each item after, up to every extra there is. */
+  const extraCount = (served) => Math.min(byId.extras.opts.length, Math.max(0, itemCount(served) - SINGLES));
 
   function pickOne(list, rng) { return list[Math.floor(rng() * list.length) % list.length]; }
   function pickSome(list, n, rng) {
@@ -105,5 +108,5 @@
     return r;
   }
 
-  PN.Coffee = { STEPS, byId, label, icon, stepCount, extraCount, makeOrder, lines, run };
+  PN.Coffee = { STEPS, byId, label, icon, itemCount, stepCount, extraCount, makeOrder, lines, run };
 })(window.PN = window.PN || {});
