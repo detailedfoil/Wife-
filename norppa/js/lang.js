@@ -528,7 +528,7 @@
     'Size': 'Koko', 'Base': 'Pohja', 'Temperature': 'Lämpötila', 'Milk': 'Maito', 'Syrup': 'Siirappi', 'Extras': 'Lisät',
     'Choose the size': 'Valitse koko', 'Choose the base': 'Valitse pohja', 'Hot or iced?': 'Kuumana vai jäisenä?', 'Choose the milk': 'Valitse maito', 'Choose a syrup': 'Valitse siirappi', 'Add the extras, then tap Done': 'Lisää lisukkeet ja napauta sitten Valmis',
     'Small': 'Pieni', 'Medium': 'Keskikokoinen', 'Large': 'Suuri',
-    'Coffee': 'Kahvi', 'Decaf': 'Kofeiiniton', 'Matcha': 'Matcha',
+    'Dark roast': 'Tumma paahto', 'Light roast': 'Vaalea paahto', 'Decaf': 'Kofeiiniton', 'Matcha': 'Matcha',
     'Hot': 'Kuuma', 'Iced': 'Jäinen',
     'Black': 'Musta', 'Oat': 'Kaura', 'Coconut': 'Kookos', 'Almond': 'Manteli',
     'No syrup': 'Ei siirappia', 'Vanilla': 'Vanilja', 'Caramel': 'Karamelli', 'Hazelnut': 'Hasselpähkinä', 'Mint': 'Minttu',

@@ -8,11 +8,11 @@
   /* Every step and what can be chosen at it: [id, English label, little picture]. Extras are the one step where you can choose several. */
   const STEPS = [
     { id: 'size', title: 'Size', ask: 'Choose the size', opts: [['small', 'Small', '🥛'], ['medium', 'Medium', '☕'], ['large', 'Large', '🍵']] },
-    { id: 'base', title: 'Base', ask: 'Choose the base', opts: [['coffee', 'Coffee', '☕'], ['decaf', 'Decaf', '🌙'], ['matcha', 'Matcha', '🍃']] },
+    { id: 'base', title: 'Base', ask: 'Choose the base', opts: [['dark', 'Dark roast', '🟤'], ['light', 'Light roast', '🟡'], ['decaf', 'Decaf', '🌙'], ['matcha', 'Matcha', '🍃']] },
     { id: 'temp', title: 'Temperature', ask: 'Hot or iced?', opts: [['hot', 'Hot', '🔥'], ['iced', 'Iced', '🧊']] },
     { id: 'milk', title: 'Milk', ask: 'Choose the milk', opts: [['black', 'Black', '⚫'], ['milk', 'Milk', '🥛'], ['oat', 'Oat', '🌾'], ['coconut', 'Coconut', '🥥'], ['almond', 'Almond', '🌰']] },
     { id: 'syrup', title: 'Syrup', ask: 'Choose a syrup', opts: [['none', 'No syrup', '🚫'], ['vanilla', 'Vanilla', '🌼'], ['caramel', 'Caramel', '🍯'], ['hazelnut', 'Hazelnut', '🌰'], ['mint', 'Mint', '🌿']] },
-    { id: 'extras', title: 'Extras', ask: 'Add the extras, then tap Done', multi: true, opts: [['shot', 'Extra shot', '⚡'], ['cinnamon', 'Cinnamon', '🟤'], ['sprinkles', 'Choc sprinkles', '🍫'], ['cream', 'Whipped cream', '🍦']] },
+    { id: 'extras', title: 'Extras', ask: 'Add the extras, then tap Done', multi: true, opts: [['shot', 'Extra shot', '⚡'], ['cinnamon', 'Cinnamon', '🧂'], ['sprinkles', 'Choc sprinkles', '🍫'], ['cream', 'Whipped cream', '🍦']] },
   ];
   const byId = {}; STEPS.forEach((s) => { byId[s.id] = s; });
   const FIRST = 2, EVERY = 2, TWO_EXTRAS = 12;   // orders start with two steps, gain one every two drinks served, and ask for two extras from the twelfth drink
