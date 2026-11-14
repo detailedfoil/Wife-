@@ -1419,7 +1419,16 @@
     // (for Ievan that is exactly half a loop). song.speed scales it all so every tune earns what Ievan does.
     const REF = 83;
     const bpm = (p) => (song.speed || 1) * Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length)));
-    function songTitle(text) { const e = document.getElementById('gSong'); if (e) { e.textContent = text; e.hidden = !text; } }
+    function songTitle(text) {
+      let e = document.getElementById('gSong');
+      // Older cached HTML may not contain the title element yet.
+      if (!e) {
+        e = document.createElement('div'); e.id = 'gSong'; e.className = 'g-song';
+        document.getElementById('gamehud').appendChild(e);
+      }
+      e.style.cssText = 'position:absolute;top:calc(66px + env(safe-area-inset-top, 0px));left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;padding:7px 14px;border-radius:16px;background:rgba(16,43,82,.88);color:#fff;font:700 16px var(--body, sans-serif);line-height:1.3;text-align:center;text-shadow:none;z-index:4;pointer-events:none';
+      e.textContent = text; e.hidden = !text;
+    }
     function size() {
       const r = el.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       if (!r.width) return;
@@ -1463,7 +1472,7 @@
     function tap(lane) {
       if (mode !== 'ready' && mode !== 'play') return;
       const t = tile(next);
-      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); songTitle(''); }
+      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); }
       else if (lane !== t.lane || (startOf(next) - pos) * unit() > H * LINE) {
         if (lane === lastLane && clock - lastAt < BOUNCE) return;        // the same finger landing twice
         fail(lane, -1, tr('Wrong tile!'));
@@ -1541,7 +1550,7 @@
         song = PN.SONGS[songs[Math.floor(Math.random() * songs.length)]];
         const c = read(song); chart = c.tiles; total = c.len;
         PN.Games.opts = { pay: song.pay || 1 };
-        songTitle(song.title);   // the tune's name sits at the top until the first tap
+        songTitle(song.title);   // keep the current tune visible throughout the round
         pos = 0; next = 0; n = 0; mode = 'ready'; wait = 0; bad = -1; badTile = -1; lastLane = -1; lastAt = 0; bop = 0;
         el.hidden = false;
         size(); draw();
