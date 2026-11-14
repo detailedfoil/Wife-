@@ -1909,7 +1909,7 @@
         // Ease from a fast arrival to the same nonzero speed as the crawl.
         bus.position.z = CRAWL_START + CRAWL * (ARRIVE - t)
           + (travel - CRAWL_START - CRAWL * ARRIVE) * Math.pow(1 - u, 3);
-        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = performance.now() + 1500; elapsed = 0; }
+        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = performance.now() + 1100; elapsed = 0; }
       } else if (phase === 'choose') {
         bus.position.z -= CRAWL * dt;
         if (performance.now() >= deadline) choose(-1);
