@@ -1688,19 +1688,14 @@
     const scene = new T.Scene(); scene.background = new T.Color(0xcbdfe5);
     scene.add(new T.HemisphereLight(0xfffaf0, 0x718d9b, 2.0));
     const sun = new T.DirectionalLight(0xffffff, 1.7); sun.position.set(-5, 14, -8); scene.add(sun);
-    const camera = new T.OrthographicCamera(-7, 7, 10, -10, 0.1, 180);
-    // Face the approaching bus: its nose points down the screen, with enough
-    // elevation to keep every seat visible above the front and seat backs.
-    const elevation = Math.PI / 3, distance = 24; // 60 degrees above the road.
+    const camera = new T.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 500);
     camera.up.set(0, 1, 0);
-    camera.position.set(0, 0.65 + Math.sin(elevation) * distance, -Math.cos(elevation) * distance);
-    camera.lookAt(0, 0.65, 0);
     view = { scene, camera };
     geometry = {
       round: roundedBox(), ball: geo(new T.SphereGeometry(1, 16, 12)),
       tire: geo(new T.CylinderGeometry(0.45, 0.45, 0.28, 20)),
       hub: geo(new T.CylinderGeometry(0.24, 0.24, 0.30, 16)),
-      hit: geo(new T.BoxGeometry(0.96, 0.85, 1.10)),
+      hit: geo(new T.BoxGeometry(0.96, 0.10, 1.10)),
       marker: geo(new T.TorusGeometry(0.38, 0.035, 8, 28)),
     };
     materials = {
@@ -1786,7 +1781,7 @@
       cushionMatrices.push(transform(s.worldX, 0.83, s.z, 0.84, 0.18, 0.93).clone());
       backs.push(transform(s.worldX, 1.06, s.z + 0.44, 0.85, 0.53, 0.14).clone());
       legs.push(transform(s.worldX, 0.74, s.z, 0.13, 0.24, 0.60).clone());
-      hits.push(transform(s.worldX, 1.04, s.z, 1, 1, 1).clone());
+      hits.push(transform(s.worldX, 0.97, s.z, 1, 1, 1).clone());
     });
     cushions = instanced(bus, geometry.round, materials.cushion, cushionMatrices);
     instanced(bus, geometry.round, materials.seat, backs);
@@ -1796,26 +1791,33 @@
     passengers(seats.filter(s => s.occupied).map(s => ({ x: s.worldX, z: s.z })).concat([{ x: driverX, z: -4.94, coat: 1 }]));
     bus.add(playerRig); playerRig.visible = false;
     paintSeats(); fitCamera();
-    travel = (view.camera.top - view.camera.bottom) / 0.93 + 14;
+    travel = Math.max(60, view.camera.position.length() * 3);
     bus.position.z = travel; bus.updateMatrixWorld(true);
   }
   function fitCamera() {
     const camera = view.camera, w = window.innerWidth, h = window.innerHeight;
     lastWidth = w; lastHeight = h;
-    camera.updateMatrixWorld(true);
-    const bounds = new T.Box3(), p = new T.Vector3();
-    for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
-      for (const y of [0, 2.0]) for (const z of [-6.05, 5.9]) bounds.expandByPoint(p.set(x, y, z).applyMatrix4(camera.matrixWorldInverse));
     const header = document.querySelector('.g-top').getBoundingClientRect();
     const hint = document.getElementById('gHint').getBoundingClientRect();
     const top = Math.max(70, header.bottom + 16), bottom = Math.min(h - 65, hint.top - 15);
-    const availableH = Math.max(80, bottom - top), availableW = Math.max(100, w - 28), aspect = w / h;
-    const halfH = Math.max((bounds.max.y - bounds.min.y) * h / availableH, (bounds.max.x - bounds.min.x) * w / availableW / aspect) * 0.52;
-    const screenCenter = 1 - (top + bottom) / h;
-    const cy = (bounds.min.y + bounds.max.y) / 2 - screenCenter * halfH;
-    camera.left = -halfH * aspect; camera.right = halfH * aspect;
-    camera.top = cy + halfH; camera.bottom = cy - halfH;
-    camera.updateProjectionMatrix();
+    camera.aspect = w / h;
+    // Frame the bus between the HUD and hint without flattening its depth.
+    const centerNdc = 1 - (top + bottom) / h;
+    camera.setViewOffset(w, h, 0, -centerNdc * h / 2, w, h);
+    const corners = [], p = new T.Vector3(), elevation = 35 * Math.PI / 180;
+    for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
+      for (const y of [0, 2.0]) for (const z of [-6.05, 5.9]) corners.push(new T.Vector3(x, y, z));
+    let distance = 18;
+    for (let i = 0; i < 65; i++) {
+      camera.position.set(0, 0.65 + Math.sin(elevation) * distance, -Math.cos(elevation) * distance);
+      camera.lookAt(0, 0.65, 0); camera.updateMatrixWorld(true);
+      if (corners.every(c => {
+        p.copy(c).project(camera);
+        const px = (p.x * 0.5 + 0.5) * w, py = (-p.y * 0.5 + 0.5) * h;
+        return px >= 16 && px <= w - 16 && py >= top && py <= bottom;
+      })) break;
+      distance *= 1.045;
+    }
   }
   function paintSeats() {
     seats.forEach((s, i) => {
@@ -1917,6 +1919,6 @@
       view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done';
     },
     layout, evaluate,
-    peek: () => ({ round, total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 1.04, z: s.z, occupied: s.occupied, distance: s.distance })) }),
+    peek: () => ({ round, total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z, occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
