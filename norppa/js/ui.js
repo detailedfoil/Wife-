@@ -312,7 +312,7 @@
         const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = (wear ? D.WEAR : D.DECOR).filter((it) => !it.hidden);
         const one = (it) => {
           const own = st.owned[it.id], on = wear ? st.wearing[it.slot] === it.id : st.placed[it.id];
-          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(wear ? (on ? 'Wearing' : 'tag|Wear') : (on ? 'Out' : 'Put out')) + '</span>' : price(it)), '', own ? (wear ? 'wear' : 'place') : 'buy');
+          return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(wear ? (st.pups.length ? 'Choose seal' : on ? 'Wearing' : 'tag|Wear') : (on ? 'Out' : 'Put out')) + '</span>' : price(it)), '', own ? (wear ? 'wear' : 'place') : 'buy');
         };
         h = '<p class="lead">' + tr(wear ? 'Tap something you own to put it on or take it off.' : 'Things for the shore. Tap one you own to put it out or tidy it away.') + '</p>'
           + '<div class="chips">' + cats.map((c) => '<button class="chip-btn" data-do="jump" data-id="cat-' + c.id + '">' + tr(c.t) + '</button>').join('') + '</div>'
