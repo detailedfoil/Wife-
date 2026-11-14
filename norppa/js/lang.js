@@ -6,6 +6,29 @@
   'use strict';
 
   const FI = {
+    // Game instructions and bus messages.
+    "Seal Seat Shuffle": "Norpan paikkapulma",
+    "points out of 2,000": "pistettä / 2 000",
+    "rounds": "kierrosta",
+    "Hold to throw water on the stones. Keep the heat just right.": "Heitä vettä kiukaalle painamalla. Pidä lämpö sopivana.",
+    "Choose the seat furthest from its nearest seal.": "Valitse tyhjä penkki mahdollisimman kaukaa lähimmästä norpasta.",
+    "Bus {0} / {1} · Find your personal space": "Bussi {0}/{1} · Etsi oma rauhallinen paikka",
+    "You missed the bus! · 0 points": "Myöhästyit bussista! · 0 pistettä",
+    "+{0} points · Green = best · Red = worst": "+{0} pistettä · Vihreä = paras · Punainen = huonoin",
+    "Twenty buses · A little space to yourself": "Kaksikymmentä bussia · Pieni hetki omaa rauhaa",
+    "Hop aboard and find a little breathing room! Tap an empty seat as the bus rolls past. The farther you sit from the nearest seal, the more points you earn. Green seats show the cosiest spots for personal space.": "Hyppää kyytiin ja etsi oma rauhallinen paikka! Napauta tyhjää penkkiä bussin lipuessa ohi. Mitä kauempana lähin norppa on, sitä enemmän pisteitä saat. Vihreät penkit näyttävät parhaat paikat omalle rauhalle.",
+    "A little nose, a big balancing act! Slide beneath the ball to bounce it on your nose. Keep it off the snow and see how many bounces you can manage.": "Pieni nenä, suuri tasapainotemppu! Liu’u pallon alle ja pompauta sitä nenälläsi. Pidä pallo poissa lumesta ja kerää mahdollisimman monta pomppua.",
+    "A fishy feast is falling from the sky! Slide your seal left and right to catch as many fish as you can, and dodge the snowballs. A few tasty catches may come home with you.": "Taivaalta sataa kalaherkkuja! Liu’uta norppaa sivuttain, nappaa mahdollisimman monta kalaa ja väistä lumipalloja. Muutama maukas saalis voi lähteä kotiin mukaasi.",
+    "Flippers at the ready! Tap to swim up and glide through the gaps between ice and kelp. Pass as many gaps as you can without bumping into anything. Your best swim counts.": "Räpylät valmiiksi! Ui ylöspäin napauttamalla ja sujahda jään ja levän väleistä. Pujottele mahdollisimman monesta välistä törmäämättä mihinkään. Paras uintisi lasketaan.",
+    "One more scoop? Tap to drop each layer onto your ice cream tower. Line them up neatly: the bits hanging over tumble off. Build the tallest treat you can before a scoop misses!": "Vielä yksi pallo? Pudota kerros jäätelötorniin napauttamalla. Tähtää siististi: reunan yli jäävät palat putoavat pois. Rakenna mahdollisimman korkea herkku ennen kuin pallo menee ohi!",
+    "Shh… the pufferfish are snoozing! Open every safe tile to win. Each number tells you how many puffers hide in the surrounding tiles. Hold to mark a suspicious spot, and let the sleepy little fish rest.": "Ssh… pallokalat torkkuvat! Voitat avaamalla kaikki turvalliset ruudut. Numero kertoo, montako pallokalaa piileskelee viereisissä ruuduissa. Merkitse epäilyttävä ruutu pitkällä painalluksella ja anna pikkuisten nukkua.",
+    "Play a sweet little kantele tune! Tap the Start tile, then tap each tile in order as it slides down. Keep the melody going for as long as you can: a missed or wrong tile ends your song.": "Soita suloinen kantelesävelmä! Napauta Aloita-laattaa ja sitten laattoja järjestyksessä niiden liukuessa alas. Jatka soittoa niin pitkään kuin pystyt: väärä tai ohitettu laatta päättää sävelmän.",
+    "A snowy little trick shot! Swipe to toss your snowball into the bucket. Watch the wind and aim against it. Land as many snowballs as you can before your misses run out.": "Pieni luminen tarkkuustemppu! Heitä lumipallo ämpäriin pyyhkäisemällä. Tarkkaile tuulta ja tähtää sitä vastaan. Kerää mahdollisimman monta osumaa ennen kuin ohiheitot loppuvat.",
+    "Time for warm flippers and a sparkling clean seal! Hold to splash water on the stones, then let go to cool down. Keep the needle in the green to finish each round and wash the muck away.": "Aika lämmittää räpylät ja pestä norppa putipuhtaaksi! Heitä vettä kiukaalle painamalla ja anna lämmön laskea päästämällä irti. Pidä neula vihreällä, niin kierrokset valmistuvat ja lika huuhtoutuu pois.",
+    "A seal makes a lovely curling stone! Pull back and release to slide across the ice. Aim for the middle of the rings: the closer you stop, the more points you earn.": "Norppa on mainio curlingkivi! Vedä taaksepäin ja päästä irti, niin norppa liukuu jäätä pitkin. Tähtää renkaiden keskelle: mitä lähemmäs pysähdyt, sitä enemmän pisteitä saat.",
+    "Hold on to your flippers! Slide your finger to steer your sled around trees and rocks. Scoop up fish, soar over ramps and travel as far as you can before a tumble ends your ride.": "Pidä räpylöistä kiinni! Ohjaa pulkkaa sormea liikuttamalla ja väistele puita ja kiviä. Nappaa kaloja, liidä hyppyreistä ja laske mahdollisimman pitkälle ennen kuin törmäys päättää retken.",
+    "A cosy card game with a fishy prize! Place a sardine bet and try to get closer to 21 than the dealer without going over. Hit takes another card; Stand keeps your hand. Cash out to take your winnings home.": "Kodikas korttipeli ja kalaisa palkinto! Panosta sardiineja ja pyri lähemmäs lukua 21 kuin jakaja menemättä sen yli. Ota kortti antaa uuden kortin, ja Jää pitää korttisi ennallaan. Lunasta voitot, kun haluat viedä saaliin kotiin.",
+
     // ----- the page itself -----
     "Your seal's snowy home": 'Norppasi luminen koti',
     'About your seal': 'Tietoja norpastasi',
@@ -772,3 +795,4 @@
   };
   PN.LANG = { FI, NOTES, WORD_NOTES, AWARDS };
 })(window.PN = window.PN || {});
+

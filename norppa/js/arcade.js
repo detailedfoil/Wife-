@@ -1979,7 +1979,7 @@
     round++; seats = layout(round);
     populateSeats(seats, round);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
-    K.hint('Bus ' + round + ' / 20 · Find your personal space');
+    K.hint(tr('Bus {0} / {1} · Find your personal space', round, 20));
     makeBus();
   }
   function seatPlayer(s) {
@@ -2012,7 +2012,7 @@
     total += points; K.score(total); phase = 'reveal'; elapsed = 0;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
-    K.hint(i < 0 ? 'You missed the bus! · 0 points' : '+' + points + ' points · Green = best · Red = worst');
+    K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }
   PN.Games.ext.shuffle = {
@@ -2068,7 +2068,7 @@
         // Accelerate out of the crawl without a position or speed jump.
         bus.position.z = departFrom - CRAWL * t - travel * Math.pow(t / DEPART, 3);
         if (elapsed >= DEPART) {
-          if (round === 20) { phase = 'done'; K.over(total + ' / 2,000'); K.hint('Twenty buses · A little space to yourself'); }
+          if (round === 20) { phase = 'done'; K.over(total + ' / 2,000'); K.hint(tr('Twenty buses · A little space to yourself')); }
           else next();
         }
       }
@@ -2087,3 +2087,4 @@
     peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
+
