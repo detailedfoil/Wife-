@@ -1691,7 +1691,7 @@
     const camera = new T.OrthographicCamera(-7, 7, 10, -10, 0.1, 180);
     // Face the approaching bus: its nose points down the screen, with enough
     // elevation to keep every seat visible above the front and seat backs.
-    camera.up.set(0, 1, 0); camera.position.set(0, 22, -13); camera.lookAt(0, 0.65, 0);
+    camera.up.set(0, 1, 0); camera.position.set(0, 19, -16); camera.lookAt(0, 0.65, 0);
     view = { scene, camera };
     geometry = {
       round: roundedBox(), ball: geo(new T.SphereGeometry(1, 16, 12)),
