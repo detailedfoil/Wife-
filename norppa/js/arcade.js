@@ -1592,16 +1592,16 @@
   const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22;
   const ray = new T.Raycaster(), pointer = new T.Vector2(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
-  let view = null, bus, scenery, cushions, pickSeats, player, playerRig;
+  let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
   let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1;
   let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0;
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
   const color = new T.Color();
 
-  const rowsFor = n => FIRST_ROWS + n - 1;
+  const rowsFor = n => FIRST_ROWS + Math.floor((n - 1) / 4) * 2;
   function layout(n) {
-    const side = Math.ceil(n / 2), rows = rowsFor(n), list = [];
+    const side = Math.ceil(n / 4), rows = rowsFor(n), list = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < side * 2; c++) {
       const x = c + (c >= side ? 0.8 : 0);
       list.push({ x, y: r * ROW_PITCH, z: (r - (rows - 1) / 2) * ROW_PITCH + 0.3, occupied: false });
@@ -1694,18 +1694,18 @@
     view = { scene, camera };
     geometry = {
       round: roundedBox(), ball: geo(new T.SphereGeometry(1, 16, 12)),
-      tire: geo(new T.CylinderGeometry(0.45, 0.45, 0.28, 20)),
+      tire: geo(new T.CylinderGeometry(0.60, 0.60, 0.28, 20)),
       hub: geo(new T.CylinderGeometry(0.24, 0.24, 0.30, 16)),
       hit: geo(new T.BoxGeometry(0.96, 0.10, 1.10)),
       marker: geo(new T.TorusGeometry(0.38, 0.035, 8, 28)),
     };
     materials = {
-      paint: mat(0x5a9ca9), trim: mat(0x3c7182), cream: mat(0xf4eee0), floor: mat(0xcdd6cc),
-      seat: mat(0x80aeb7), cushion: mat(0xffffff), frame: mat(0x486b7a), tire: mat(0x334453), hub: mat(0xb6cbd0),
-      glass: mat(0xc0e4ec, { roughness: 0.25 }), light: mat(0xffe4a2, { emissive: 0xffd388, emissiveIntensity: 0.35 }),
-      red: mat(0xdc807b), road: mat(0x8eabb8), line: mat(0xeaf1e8), snow: mat(0xe6f1ed),
-      green: mat(0x77a59a), gold: mat(0xffd36b, { emissive: 0xffcc54, emissiveIntensity: 0.4 }),
-      mint: mat(0x79e6c4, { emissive: 0x60c9aa, emissiveIntensity: 0.5 }), blue: mat(0x3975a1),
+      paint: mat(0xf3bc42), trim: mat(0x28568a), cream: mat(0xf4eee0), floor: mat(0xe9d7b5),
+      seat: mat(0x6b9bdd), cushion: mat(0xffffff), frame: mat(0x315584), tire: mat(0x334453), hub: mat(0xb6cbd0),
+      glass: mat(0xa8def1, { roughness: 0.18, transparent: true, opacity: 0.20, depthWrite: false }), light: mat(0xffe4a2, { emissive: 0xffd388, emissiveIntensity: 0.35 }),
+      red: mat(0xdc807b), road: mat(0x7f919d), line: mat(0xeaf1e8), snow: mat(0xe6f1ed),
+      green: mat(0x62a984), gold: mat(0xffd36b, { emissive: 0xffcc54, emissiveIntensity: 0.4 }),
+      mint: mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.25 }), blue: mat(0x3975a1),
     };
     if (!templates) templates = [0, 1, 2].map(makeTemplate);
     if (!player) {
@@ -1724,42 +1724,45 @@
     clearBus();
     bus = new T.Group(); scenery = new T.Group(); view.scene.add(scenery, bus);
     const center = (seats[0].x + seats[seats.length - 1].x) / 2;
-    busWidth = Math.ceil(round / 2) * 2 + 1.15;
+    busWidth = Math.ceil(round / 4) * 2 + 1.15;
     const half = busWidth / 2, rows = rowsFor(round);
     busExtra = (rows - FIRST_ROWS) * ROW_PITCH;
     const front = z => z - busExtra / 2, rear = z => z + busExtra / 2;
     // A quiet snowy street. All surfaces, kerbs and lane marks are meshes.
-    box(scenery, materials.snow, 130, 0.16, 160, 0, -0.16, 0);
-    box(scenery, materials.road, busWidth + 3.3, 0.08, 150, 0, -0.02, 0);
+    box(scenery, materials.snow, 130, 0.16, 160, 0, -0.71, 0);
+    box(scenery, materials.road, busWidth + 3.3, 0.08, 150, 0, -0.57, 0);
     [-1, 1].forEach(sign => {
       const x = sign * (half + 1.8);
-      box(scenery, materials.cream, 0.23, 0.18, 150, x, 0.05, 0);
-      for (let z = -25; z <= 25; z += 3.2) box(scenery, materials.line, 0.07, 0.015, 1.35, sign * (half + 1.1), 0.035, z);
+      box(scenery, materials.cream, 0.23, 0.18, 150, x, -0.50, 0);
+      for (let z = -25; z <= 25; z += 3.2) box(scenery, materials.line, 0.07, 0.015, 1.35, sign * (half + 1.1), -0.515, z);
       for (let i = 0; i < 5; i++) {
-        ball(scenery, materials.snow, sign * (half + 2.4 + i % 2), 0.05, -10 + i * 5, 0.8, 0.20, 1.4);
-        ball(scenery, materials.green, sign * (half + 3.3), 0.25, -11 + i * 5, 0.65, 0.5, 0.65);
+        ball(scenery, materials.snow, sign * (half + 2.4 + i % 2), -0.50, -10 + i * 5, 0.8, 0.20, 1.4);
+        ball(scenery, materials.green, sign * (half + 3.3), -0.30, -11 + i * 5, 0.65, 0.5, 0.65);
       }
     });
     // Chassis, exposed floor, low cutaway walls and separate window panels.
-    box(bus, materials.trim, busWidth, 0.38, 11.8 + busExtra, 0, 0.43, -0.1);
+    box(bus, materials.trim, busWidth, 0.95, 11.8 + busExtra, 0, 0.12, -0.1);
     box(bus, materials.floor, busWidth - 0.25, 0.14, 11.25 + busExtra, 0, 0.68, 0.02);
     [-1, 1].forEach(sign => {
       const x = sign * (half - 0.10);
       box(bus, materials.paint, 0.18, 0.53, 10.9 + busExtra, x, 0.86, -0.05);
       box(bus, materials.cream, 0.20, 0.10, 10.9 + busExtra, x, 1.14, -0.05);
-      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 2) * 2].z);
+      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 4) * 2].z);
       // Mirror stalks are outside the cabin, away from the selectable seats.
       box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, front(-5.12));
       box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, front(-5.12));
       [front(-3.7), rear(3.9)].forEach(z => {
-        const wheel = new T.Group(); wheel.position.set(sign * (half - 0.03), 0.44, z);
+        const wheel = new T.Group(); wheel.position.set(sign * (half - 0.03), 0.05, z);
         const tire = new T.Mesh(geometry.tire, materials.tire), hub = new T.Mesh(geometry.hub, materials.hub);
         tire.rotation.z = hub.rotation.z = Math.PI / 2;
         wheel.add(tire, hub); bus.add(wheel); wheels.push(wheel);
       });
     });
-    box(bus, materials.paint, busWidth, 0.67, 0.45, 0, 0.83, front(-5.63));
-    box(bus, materials.glass, busWidth - 0.42, 0.10, 0.55, 0, 1.25, front(-5.34));
+    box(bus, materials.paint, busWidth, 1.18, 0.45, 0, 0.58, front(-5.63));
+    // Open windscreen: the driver is visible above the taller front panel.
+    [-1, 1].forEach(sign => box(bus, materials.cream, 0.10, 0.60, 0.12, sign * (half - 0.20), 1.47, front(-5.34)));
+    box(bus, materials.paint, busWidth - 0.12, 0.08, 0.12, 0, 1.80, front(-5.34));
+    box(bus, materials.cream, busWidth - 0.35, 0.10, 0.06, 0, 0.42, front(-5.88));
     box(bus, materials.trim, busWidth + 0.08, 0.17, 0.26, 0, 0.48, front(-5.91));
     box(bus, materials.paint, busWidth, 0.60, 0.27, 0, 0.93, rear(5.52));
     box(bus, materials.cream, busWidth, 0.08, 0.29, 0, 1.26, rear(5.52));
@@ -1787,12 +1790,13 @@
       hits.push(transform(s.worldX, 0.97, s.z, 1, 1, 1).clone());
     });
     cushions = instanced(bus, geometry.round, materials.cushion, cushionMatrices);
-    instanced(bus, geometry.round, materials.seat, backs);
+    seatBacks = instanced(bus, geometry.round, materials.cushion, backs);
     instanced(bus, geometry.round, materials.frame, legs);
     pickSeats = instanced(bus, geometry.hit, materials.seat, hits);
     pickSeats.visible = false; // Raycaster still tests the explicit hit mesh; it is never rendered.
     passengers(seats.filter(s => s.occupied).map(s => ({ x: s.worldX, z: s.z })).concat([{ x: driverX, z: front(-4.94), coat: 1 }]));
     bus.add(playerRig); playerRig.visible = false;
+    cushions.name = 'shuffle-seat-cushions';
     paintSeats(); fitCamera();
     travel = Math.max(60, view.camera.position.length() * 3);
     bus.position.z = travel; bus.updateMatrixWorld(true);
@@ -1809,7 +1813,7 @@
     camera.setViewOffset(w, h, 0, -centerNdc * h / 2, w, h);
     const corners = [], p = new T.Vector3(), elevation = 35 * Math.PI / 180;
     for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
-      for (const y of [0, 2.0]) for (const z of [-6.05 - busExtra / 2, 5.9 + busExtra / 2]) corners.push(new T.Vector3(x, y, z));
+      for (const y of [-0.65, 2.0]) for (const z of [-6.05 - busExtra / 2, 5.9 + busExtra / 2]) corners.push(new T.Vector3(x, y, z));
     let distance = 18;
     for (let i = 0; i < 65; i++) {
       camera.position.set(0, 0.65 + Math.sin(elevation) * distance, -Math.cos(elevation) * distance);
@@ -1823,12 +1827,16 @@
     }
   }
   function paintSeats() {
+    const revealing = phase === 'reveal' || phase === 'depart' || phase === 'done';
+    const empty = seats.filter(s => !s.occupied), worst = Math.min(...empty.map(s => s.distance));
     seats.forEach((s, i) => {
-      const optimal = (phase === 'reveal' || phase === 'depart' || phase === 'done') && !s.occupied && Math.abs(s.distance - best) < 1e-7;
-      color.setHex(optimal ? 0xffd36b : i === chosen ? 0x79e6c4 : 0x80aeb7);
-      cushions.setColorAt(i, color);
+      if (revealing && !s.occupied) {
+        const quality = best - worst < 1e-7 ? 1 : (s.distance - worst) / (best - worst);
+        color.setHSL(quality / 3, 0.82, 0.48);
+      } else color.setHex(s.occupied ? 0x507bb5 : 0x6b9bdd);
+      cushions.setColorAt(i, color); seatBacks.setColorAt(i, color);
     });
-    cushions.instanceColor.needsUpdate = true;
+    cushions.instanceColor.needsUpdate = seatBacks.instanceColor.needsUpdate = true;
   }
   function next() {
     round++; seats = layout(round);
@@ -1836,7 +1844,7 @@
     for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
     shuffled.slice(0, Math.max(2, Math.round(seats.length * (0.16 + Math.random() * 0.12)))).forEach(s => s.occupied = true);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
-    K.time('—'); K.hint('Bus ' + round + ' / 10 · Find your personal space');
+    K.time('—'); K.hint('Bus ' + round + ' / 20 · Find your personal space');
     makeBus();
   }
   function seatPlayer(s) {
@@ -1866,7 +1874,7 @@
     total += points; K.score(total); K.time('0.0'); phase = 'reveal'; elapsed = 0;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
-    K.hint(i < 0 ? 'Time up · 0 points · Gold shows the best seats' : '+' + points + ' points · Gold shows the best seats');
+    K.hint(i < 0 ? 'Time up · 0 points · Green = best · Red = worst' : '+' + points + ' points · Green = best · Red = worst');
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }
   PN.Games.ext.shuffle = {
@@ -1898,7 +1906,7 @@
       elapsed += dt;
       if (phase === 'arrive') {
         bus.position.z = travel * Math.pow(1 - Math.min(1, elapsed / ARRIVE), 3);
-        if (elapsed >= ARRIVE) { bus.position.z = 0; phase = 'choose'; deadline = performance.now() + 3000; elapsed = 0; K.time('3.0'); }
+        if (elapsed >= ARRIVE) { bus.position.z = 0; phase = 'choose'; deadline = performance.now() + 2000; elapsed = 0; K.time('2.0'); }
       } else if (phase === 'choose') {
         const left = Math.max(0, (deadline - performance.now()) / 1000); K.time(left.toFixed(1));
         if (!left) choose(-1);
@@ -1906,7 +1914,7 @@
       else if (phase === 'depart') {
         bus.position.z = -travel * Math.pow(Math.min(1, elapsed / DEPART), 2);
         if (elapsed >= DEPART) {
-          if (round === 10) { phase = 'done'; K.over(total + ' / 1,000'); K.hint('Ten buses · A little space to yourself'); }
+          if (round === 20) { phase = 'done'; K.over(total + ' / 2,000'); K.hint('Twenty buses · A little space to yourself'); }
           else next();
         }
       }
