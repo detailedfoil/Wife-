@@ -1044,40 +1044,47 @@
     };
   })();
 
-  /* ================= Ice Stack ================= */
-  /* Stack, on ice: a floe slides across, tap to set it down. Whatever hangs over the edge breaks off, so the tower narrows.
+  /* ================= Ice Cream Stack ================= */
+  /* Stack ice cream: a layer slides across, tap to set it down. Whatever hangs over the edge breaks off, so the tower narrows.
      Miss the tower altogether and the game is over. */
   const stack = (() => {
     const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 1, HOP = 0.28, KEEP = 46;
     const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
-    let view = null, bodyGeo = null, snowGeo = null, puffs = null;
+    let view = null, bodyGeo = null, softGeo = null, puffs = null;
+    let history = [], revealT = 0;
+    const flavours = [0xf7d5df, 0xffedc6, 0xc4e4cc, 0xd2b5a5, 0xd6cdf1, 0xf5d3a9];
+    const towerBounds = new T.Box3(), revealCentre = new T.Vector3(), revealSize = new T.Vector3();
     let blocks = [], cuts = [], cur = null, top = null;
     let score = 0, misses = 0, streak = 0, turn = 0, mode = 'idle', wait = 0, camY = 0, hopT = 1;
     const at = new T.Vector3(), from = new T.Vector3(), to = new T.Vector3();
 
     function floe(w, d, n) {
-      const g = new T.Group(), col = new T.Color().setHSL((0.56 + (n % 60) / 60) % 1, 0.7, 0.6);
-      g.add(new T.Mesh(bodyGeo, U.mat(col.getHex(), { roughness: 0.45 })), new T.Mesh(snowGeo, U.mat(0xffffff, { roughness: 1 })));
+      const g = new T.Group();
+      g.add(new T.Mesh(bodyGeo, U.mat(flavours[n % flavours.length], { roughness: 0.95 })));
       g.scale.set(w, 1, d);
       view.scene.add(g);
       return g;
     }
     function build() {
-      view = stage('#7fb6ee', '#e9f4ff', { ground: 0xcfe2ff, hemi: 2.1, key: 1.6 });
-      bodyGeo = new T.BoxGeometry(1, BH - SNOW, 1); bodyGeo.translate(0, (BH - SNOW) / 2, 0);
-      snowGeo = new T.BoxGeometry(1.03, SNOW, 1.03); snowGeo.translate(0, BH - SNOW / 2, 0);
+      view = stage('#efdff3', '#fff5e5', { ground: 0xe7d5cf, hemi: 2.1, key: 1.6 });
+      bodyGeo = new T.BoxGeometry(1, BH, 1); bodyGeo.translate(0, BH / 2, 0);
+      // Rounded ice cream retains the same exact footprint and height as the slab.
+      softGeo = new T.SphereGeometry(1, 24, 16);
+      const points = softGeo.attributes.position, rounded = (x) => Math.sign(x) * Math.pow(Math.abs(x), 0.18);
+      for (let i = 0; i < points.count; i++) points.setXYZ(i, rounded(points.getX(i)) / 2, (rounded(points.getY(i)) + 1) * BH / 2, rounded(points.getZ(i)) / 2);
+      softGeo.computeVertexNormals();
       const sc = view.scene;
-      // the iceberg it all stands on, and the lake far below
-      const berg = U.mesh(new T.BoxGeometry(S0, 14, S0), U.mat(0x9fd0f2, { roughness: 0.45 }), 0, -7 - SNOW, 0);
-      const cap = U.mesh(new T.BoxGeometry(S0 * 1.03, SNOW, S0 * 1.03), U.mat(0xffffff, { roughness: 1 }), 0, -SNOW / 2, 0);
-      const lake = U.mesh(new T.CircleGeometry(120, 40), U.mat(0x3f86c9, { roughness: 0.35 }), 0, -11, 0);
-      lake.rotation.x = -PI / 2;
-      sc.add(berg, cap, lake);
-      for (let i = 0; i < 22; i++) {
-        const a = rnd() * PI * 2, r = 4 + rnd() * 30, s = 0.8 + rnd() * 1.8;
-        const f = U.mesh(new T.CylinderGeometry(s, s * 0.9, 0.25, 7), U.mat(0xffffff, { roughness: 1 }), Math.cos(a) * r, -10.9, Math.sin(a) * r);
-        f.rotation.y = rnd() * 3; sc.add(f);
-      }
+      const waffle = U.tex(256, 256, (c, w, h) => {
+        c.fillStyle = '#dbad78'; c.fillRect(0, 0, w, h);
+        c.strokeStyle = 'rgba(145,92,45,0.24)'; c.lineWidth = 3;
+        for (let x = -w; x < w * 2; x += 32) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + w, h); c.moveTo(x, 0); c.lineTo(x - w, h); c.stroke(); }
+      });
+      waffle.wrapS = waffle.wrapT = T.RepeatWrapping; waffle.repeat.set(3, 2);
+      const cone = U.cyl(1.45, 0.025, 4, new T.MeshStandardMaterial({ map: waffle, roughness: 0.95 }), 0, -2.1, 0, 48);
+      const rim = U.rot(U.torus(1.40, 0.075, U.mat(0xe4b884), 0, -0.10, 0, PI * 2, 48), PI / 2);
+      const base = U.mesh(softGeo, U.mat(flavours[1], { roughness: 0.95 }), 0, -BH, 0); base.scale.set(S0, 1, S0);
+      const plate = U.cyl(3.0, 2.85, 0.16, U.mat(0xfff8ef), 0, -4.20, 0, 48);
+      sc.add(cone, rim, base, plate);
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
     function hopTo() { from.copy(at); hopT = 0; }
@@ -1113,21 +1120,34 @@
       }
       top = { x: x ? mid : top.x, z: x ? top.z : mid, w: x ? keep : top.w, d: x ? top.d : keep, y: top.y + BH };
       cur.g.scale.set(top.w, 1, top.d); cur.g.position.set(top.x, top.y - BH, top.z);
+      cur.g.children[0].geometry = softGeo; cur.g.userData.settle = 0;
+      cur.g.updateMatrixWorld(true); towerBounds.expandByObject(cur.g);
       blocks.push(cur.g); cur = null;
-      if (blocks.length > KEEP) view.scene.remove(blocks.shift());
+      // Retain the entire tower for the reveal, batching older layers for phones.
+      if (blocks.length > KEEP + 15) {
+        const parts = [];
+        for (let i = 0; i < 16; i++) {
+          const old = blocks.shift(); old.updateMatrixWorld(true);
+          parts.push({ geo: softGeo, m: old.children[0].matrixWorld.clone(), c: old.children[0].material.color }); view.scene.remove(old);
+        }
+        const batch = new T.Mesh(U.merge(parts), U.mat(0xffffff, { vertexColors: true, roughness: 0.95 }));
+        history.push(batch); view.scene.add(batch);
+      }
       score++; K.score(score); K.hint('');
       if (score % 10 === 0) { A.play('award'); actor.gesture('happy', true); }
       mode = 'rest'; wait = 0.16;
     }
     return {
-      label: 'Floes', hint: 'Tap to set the floe down on the one below.',
+      label: 'Scoops', hint: 'Tap to stack the ice cream. Keep your cone balanced!',
       view: () => view,
       peek: () => (cur && mode === 'slide' ? cur.p : null),
       start() {
         if (!view) build();
         blocks.concat(cuts.map((c) => c.g)).forEach((g) => view.scene.remove(g));
         if (cur) view.scene.remove(cur.g);
-        blocks = []; cuts = []; cur = null; puffs.clear();
+        history.forEach((m) => { view.scene.remove(m); m.geometry.dispose(); }); history = [];
+        blocks = []; cuts = []; cur = null; puffs.clear(); revealT = 0;
+        towerBounds.set(new T.Vector3(-3, -4.3, -3), new T.Vector3(3, 0, 3));
         top = { x: 0, z: 0, w: S0, d: S0, y: 0 };
         score = 0; misses = 0; streak = 0; turn = 0; mode = 'idle'; camY = 0; hopT = 1;
         cast(view, 0.8, false);
@@ -1151,9 +1171,29 @@
         if (mode === 'rest' && playing) {
           wait -= dt;
           if (wait <= 0) {
-            if (misses >= LIVES) { mode = 'done'; K.over(tr(score >= 25 ? 'Wow!' : score >= 8 ? 'Nice!' : 'Done!')); }
+            if (misses >= LIVES) { mode = 'reveal'; revealT = 0; }
             else spawn();
           }
+        }
+        // Give each landed scoop a tiny squash as its corners soften.
+        blocks.forEach((g) => {
+          g.userData.settle = Math.min(1, (g.userData.settle || 0) + dt / 0.28);
+          g.children[0].scale.y = 1 - 0.07 * Math.sin(g.userData.settle * PI);
+        });
+        if (mode === 'reveal' || mode === 'done') {
+          revealT += dt;
+          const progress = U.smooth(0, 1.8, revealT);
+          towerBounds.getCenter(revealCentre); towerBounds.getSize(revealSize);
+          revealCentre.y += 0.7;
+          const radius = Math.hypot(revealSize.x, revealSize.y + 2, revealSize.z) / 2;
+          const vertical = view.camera.fov * PI / 360;
+          const distance = radius / Math.sin(Math.min(half, vertical)) * 1.10;
+          const direction = new T.Vector3(1, 0.65, 1).normalize();
+          const target = revealCentre.clone().addScaledVector(direction, distance);
+          view.camera.position.lerp(target, progress);
+          const focus = new T.Vector3(0, camY + 1.2, 0).lerp(revealCentre, progress);
+          view.camera.lookAt(focus);
+          if (mode === 'reveal' && revealT >= 3.6) { mode = 'done'; K.over(tr('Sweet!')); }
         }
         // she rides the sliding floe, and hops across to each new one
         if (cur) to.set(cur.g.position.x, top.y + BH, cur.g.position.z); else to.set(top.x, top.y, top.z);
