@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 14:15';
+  PN.UPDATED = '14 Nov 2026, 14:30';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -63,7 +63,7 @@
     { id: 'sealsius', fi: 'Norpsius', en: 'Sealsius energy drink', food: 4, joy: 6, energy: 35, price: 20,
       note: 'Zero sugar, seven vitamins and a very high squeak content. A burst of energy, but only a sip of dinner.' },
     /* full: fills tummy, happiness and energy at once (not cleanliness). Dear on purpose: it is for a visit with no time to play. */
-    { id: 'kahvi', fi: 'Kahvi', en: 'Coffee', full: true, food: 0, price: 120,
+    { id: 'kahvi', fi: 'Kahvi', en: 'Coffee', full: true, food: 0, price: 160,
       note: 'A big mug of strong coffee. Fills her tummy, happiness and energy in one go. She still needs her sauna.' },
     { id: 'lakkamehu', fi: 'Lakkamehu', en: 'Cloudberry juice', med: true, price: 25,
       note: 'Golden and full of vitamins. Makes a poorly seal better.' },
