@@ -1589,7 +1589,7 @@
 (function (PN) {
   'use strict';
   const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit;
-  const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22, CRAWL = 0.18, CRAWL_START = 0.22;
+  const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22, CRAWL = 0.80, CRAWL_START = 0.70;
   const tapPosition = new T.Vector3(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
   let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
@@ -1864,7 +1864,7 @@
     camera.setViewOffset(w, h, 0, -centerNdc * h / 2, w, h);
     const corners = [], p = new T.Vector3(), elevation = 35 * Math.PI / 180;
     for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
-      for (const y of [-0.65, 2.0]) for (const z of [-6.40 - busExtra / 2, 6.25 + busExtra / 2]) corners.push(new T.Vector3(x, y, z));
+      for (const y of [-0.65, 2.0]) for (const z of [-6.05 - busExtra / 2 - CRAWL_START, 5.9 + busExtra / 2 + CRAWL_START]) corners.push(new T.Vector3(x, y, z));
     let distance = 18;
     for (let i = 0; i < 65; i++) {
       camera.position.set(0, 0.65 + Math.sin(elevation) * distance, -Math.cos(elevation) * distance);
