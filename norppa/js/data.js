@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 02:10';
+  PN.UPDATED = '14 Nov 2026, 01:00';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -55,7 +55,7 @@
   /* Shop food that is not a fish. */
   const FOODS = [
     { id: 'katkarapu', fi: 'Katkarapu', en: 'Shrimp', food: 8, joy: 14, price: 10,
-      note: 'A little treat. Cheers anyone up.' },
+      note: 'A little treat, but only a snack.' },
     { id: 'kalakukko', fi: 'Kalakukko', en: 'Fish pie', food: 42, joy: 8, price: 18,
       note: 'Fish baked inside a rye loaf. Very filling.' },
     { id: 'lohikeitto', fi: 'Lohikeitto', en: 'Salmon soup', food: 48, joy: 14, price: 24,

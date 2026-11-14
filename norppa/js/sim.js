@@ -430,7 +430,6 @@
     state.pantry[id]--;
     s.food = pct(s.food + it.food);
     if (it.energy) s.energy = pct(s.energy + it.energy);
-    s.joy = pct(s.joy + (it.joy || 2) + (fav ? 8 : 0));
     if (fav && !state.favKnown) { state.favKnown = true; learn(state, 'herkku'); }
     state.counters.feeds++;
     const want = sulkNeeds(state);
