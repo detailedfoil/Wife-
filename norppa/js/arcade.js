@@ -1678,7 +1678,90 @@
     };
   })();
 
-  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
+  /* ---------- Coffee Memory (developer mode only, plain 2D screens for now) ----------
+     Customers keep coming while every drink is right, and the orders get longer. A ticket is shown, then hidden, and the drink is built from
+     memory one step at a time: size, base, temperature, milk, syrup, extras. The first wrong choice ends the game: it shows what was wanted,
+     closes by itself and pays coins for the drinks served. No clock. The rules live in coffee.js. */
+  const coffee = (() => {
+    const C = PN.Coffee, END_WAIT = 3;
+    let view = null, el = null, r = null, endIn = 0;
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const chip = (step, opt) => '<span class="cf-chip">' + C.icon(step, opt) + ' ' + esc(tr(C.label(step, opt))) + '</span>';
+    function btn(act, text, cls, id) { return '<button class="cf-btn ' + (cls || '') + '" data-cf="' + act + '"' + (id ? ' data-id="' + id + '"' : '') + '>' + text + '</button>'; }
+    function ticket() {
+      return '<div class="cf-ticket"><b>' + tr('Order {0}', r.served + 1) + '</b>'
+        + C.lines(r.order).map((l) => '<div><span>' + esc(tr(l.title)) + '</span><b>' + l.icon + ' ' + esc(tr(l.text)) + '</b></div>').join('') + '</div>';
+    }
+    function made() { return '<div class="cf-made">' + r.order.steps.filter((s) => r.got[s]).map((s) => s === 'extras' ? r.got.extras.map((x) => chip('extras', x)).join('') : chip(s, r.got[s])).join('') + '</div>'; }
+    function paint() {
+      let h = '<div class="cf-top"><span>' + tr('Order {0}', r.served + 1) + '</span><span>' + tr('Drinks') + ' ' + r.served + '</span></div>';
+      if (r.state === 'order') {
+        h += ticket() + '<p class="cf-say">' + tr('Remember the order. Take as long as you like.') + '</p>' + btn('begin', tr('Got it'), 'main');
+      } else if (r.state === 'build') {
+        const st = r.current();
+        h += made() + '<p class="cf-say">' + esc(tr(st.ask)) + '</p><div class="cf-opts">'
+          + st.opts.map((o) => btn(st.multi ? 'extra' : 'pick', '<em>' + o[2] + '</em>' + esc(tr(o[1])), st.multi && r.extras.indexOf(o[0]) >= 0 ? 'on' : '', o[0])).join('') + '</div>'
+          + (st.multi ? btn('done', tr('Done'), 'main') : '');
+      } else {
+        const ok = r.state === 'served';
+        h += '<p class="cf-say big ' + (ok ? 'good' : 'bad') + '">' + (ok ? tr('Perfect! Served.') : tr('Oops, wrong drink.')) + '</p>';
+        if (!ok) {
+          const f = r.fail, step = C.byId[f.step];
+          h += '<p class="cf-say">' + esc(tr(step.title)) + ': ' + tr('they wanted') + ' ' + f.want.map((x) => chip(f.step, x)).join('') + (f.chose.length ? ' ' + tr('you chose') + ' ' + f.chose.map((x) => chip(f.step, x)).join('') : ' ' + tr('you chose nothing')) + '</p>';
+        }
+        h += ticket() + (r.finished() ? '<p class="cf-say">' + tr('{0} served', r.served) + '</p>' : btn('next', tr('Next customer'), 'main'));
+      }
+      el.innerHTML = h;
+    }
+    function result(res) {
+      if (res === 'served') { A.play('coin'); actor.gesture('happy', true); K.score(r.served); }
+      else if (res === 'wrong') { A.play('nope'); actor.gesture('sad', true); }
+      if (r.finished()) endIn = END_WAIT;       // a wrong drink: the game closes by itself and pays out
+    }
+    function act(a, id) {
+      if (!r || r.finished()) return;
+      if (a === 'begin') { A.play('tap'); r.begin(); }
+      else if (a === 'pick') { const res = r.pick(id); if (res === 'right') A.play('pop'); else result(res); }
+      else if (a === 'extra') { A.play('pop'); r.toggle(id); }
+      else if (a === 'done') result(r.confirm());
+      else if (a === 'next') { A.play('tap'); r.next(); }
+      paint();
+    }
+    function build() {
+      view = stage('#3b2416', '#8a5a34', { ground: 0x4a2f1d, hemi: 1.6, key: 1.2 });
+      view.camera.position.set(0, 0.9, 5.6);
+      el = document.createElement('div'); el.className = 'cf'; el.id = 'coffeeBoard'; el.hidden = true;
+      document.getElementById('gamehud').appendChild(el);
+      el.addEventListener('click', (e) => { const b = e.target.closest('[data-cf]'); if (b) act(b.dataset.cf, b.dataset.id); });
+    }
+    return {
+      label: 'Drinks', nocount: true, hint: '',
+      view: () => view,
+      start() {
+        if (!view) build();
+        cast(view, 0.55, true);
+        face(0);
+        r = C.run(); r.next(); endIn = 0;
+        el.hidden = false; el.innerHTML = '';
+      },
+      stop() { el.hidden = true; el.innerHTML = ''; r = null; },
+      go() { K.score(0, true); paint(); },
+      pointer() {},
+      key() {},
+      update(dt, playing) {
+        clock += dt;
+        lens(view);
+        view.camera.lookAt(0, -0.95, 0);
+        actor.update(dt, clock, null);
+        if (playing && r && endIn > 0) {
+          endIn -= dt;
+          if (endIn <= 0) { el.hidden = true; K.over(tr('{0} served', r.served)); }
+        }
+      },
+    };
+  })();
+
+  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna; G.ext.coffee = coffee;
 })(window.PN = window.PN || {});
 
 /* Seal Seat Shuffle: a roofless Three.js bus, viewed from above. */

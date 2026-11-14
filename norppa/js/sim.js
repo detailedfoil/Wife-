@@ -527,7 +527,7 @@
   const price = (state, p) => (state.dev ? 0 : p);
 
   /* Mini-games are bought once with coins. */
-  const gameOwned = (state, id) => !PN.GAMES[id] || PN.GAMES[id].price === 0 || !!state.owned['game_' + id];
+  const gameOwned = (state, id) => { const g = PN.GAMES[id]; return !g || (g.dev ? !!state.dev : g.price === 0 || !!state.owned['game_' + id]); };   // a dev game exists only in developer mode
   function unlockGame(state, id) {
     const g = PN.GAMES[id];
     if (!g) return no('none');
@@ -616,7 +616,7 @@
      Every game pays a * score^b coins (PN.GAMES[game].pay), tuned so a minute of play earns about the same in each game. */
   /* ---------- her taste in games, and muck ---------- */
   /* The games her tastes are dealt among: the ones she has, less the ones left out. */
-  const roster = (state) => PN.GAME_ORDER.filter((id) => gameOwned(state, id) && state.skip.indexOf(id) < 0);
+  const roster = (state) => PN.GAME_ORDER.filter((id) => !PN.GAMES[id].dev && gameOwned(state, id) && state.skip.indexOf(id) < 0);   // dev games stay out of her tastes, so they never change the real mix
   /* Deal a fresh mix to drift towards: evenly spread from least to most liked, in a random order, so there is always
      something she fancies and something she is off. With few games the spread is narrower. Games left out sit at 0. */
   function tasteDeal(state, now) {
@@ -643,7 +643,7 @@
       state.tasteKey = key;
       tasteDeal(state, now);
       PN.GAME_ORDER.forEach((id) => {
-        if (!gameOwned(state, id)) return;
+        if (!gameOwned(state, id) || PN.GAMES[id].dev) return;
         if (state.taste[id] == null || first) state.taste[id] = state.tasteGoal[id];          // a new game starts where the deal put it
         if (state.skip.indexOf(id) >= 0) state.taste[id] = Math.min(0, state.taste[id]);
       });

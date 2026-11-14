@@ -278,7 +278,7 @@
       const now = Date.now(), can = S.canPlay(st), dive = S.canDive(st, now);
       const off = (c) => (c.ok ? '' : ' off');
       const why = (c) => tr(WHY[c.why]);
-      const moods = S.gameMoods(st, now), owned = PN.GAME_ORDER.filter((id) => S.gameOwned(st, id));
+      const moods = S.gameMoods(st, now), owned = PN.GAME_ORDER.filter((id) => S.gameOwned(st, id) && !PN.GAMES[id].dev);
       // what she makes of each game right now: the percent more or less it pays
       // what a game does to her happiness: a face, an arrow and the points it moves it by
       const face = (j) => (j > 0 ? 'smile' : j < 0 ? 'frown' : 'meh');
@@ -291,6 +291,7 @@
       h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
+        if (gm.dev && !st.dev) return;                       // developer-mode games are not shown otherwise
         if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', S.price(st, gm.price)) });
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? mood(id) + (best ? '<small>' + tr('best {0}', gm.low ? PN.mmss(best) : best) + '</small>' : '') : why(can) });
       });
