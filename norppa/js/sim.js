@@ -737,16 +737,26 @@
     return { coins, best, fish: got, tired, taste: Math.round(taste), happy, muck: Math.round(muck * 100), joy, dirt };
   }
 
-  function buy(state, id) {
+  // Pups keep their own wardrobe, including the outfit they arrived in.
+  function wardrobe(state, target) {
+    if (target == null) return { owned: state.owned, wearing: state.wearing };
+    const p = state.pups.find((p) => p.id === target);
+    if (!p) return null;
+    if (!p.owned) { p.owned = {}; Object.values(p.wear || {}).forEach((id) => { if (id) p.owned[id] = true; }); }
+    return { owned: p.owned, wearing: p.wear || (p.wear = {}) };
+  }
+  function buy(state, id, target) {
     const it = PN.items[id];
     if (!it || it.price == null) return no('nosale');
-    if ((it.kind === 'wear' || it.kind === 'decor') && state.owned[id]) return no('owned');
+    const outfit = it.kind === 'wear' ? wardrobe(state, target) : null;
+    if (it.kind === 'wear' && !outfit) return no('none');
+    if ((it.kind === 'wear' && outfit.owned[id]) || (it.kind === 'decor' && state.owned[id])) return no('owned');
     const cost = price(state, it.price);
     if (state.coins < cost) return no('coins');
     state.coins -= cost;
     let away = null;
     if (it.kind === 'wear') {
-      state.owned[id] = true; state.wearing[it.slot] = id;
+      outfit.owned[id] = true; outfit.wearing[it.slot] = id;
       if (id.indexOf('pipo') === 0) learn(state, 'pipo');
       if (id.indexOf('scarf') === 0) learn(state, 'kaulaliina');
     } else if (it.kind === 'decor') {
@@ -759,11 +769,11 @@
     return ok({ away });
   }
 
-  function wear(state, id) {
-    const it = PN.items[id];
-    if (!it || !state.owned[id]) return no('none');
-    state.wearing[it.slot] = state.wearing[it.slot] === id ? null : id;
-    return ok({ on: state.wearing[it.slot] === id });
+  function wear(state, id, target) {
+    const it = PN.items[id], outfit = wardrobe(state, target);
+    if (!it || it.kind !== 'wear' || !outfit || !outfit.owned[id]) return no('none');
+    outfit.wearing[it.slot] = outfit.wearing[it.slot] === id ? null : id;
+    return ok({ on: outfit.wearing[it.slot] === id });
   }
 
   function place(state, id) {
