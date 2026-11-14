@@ -1410,12 +1410,16 @@
       if (out[out.length - 1].lane === out[0].lane) out[out.length - 1].lane = [0, 1, 2, 3].filter((l) => l !== out[0].lane && l !== out[out.length - 2].lane)[0];
       return { tiles: out, len: at };
     }
+    // How tall a sixteenth is on screen. A tune with faster notes (song.speed) gets shorter tiles, not a faster scroll: it moves down the screen at
+    // the same pace as Ievan polkka and just fits more, shorter tiles in view.
+    const unit = () => H / SPAN / ((song && song.speed) || 1);
     const tile = (i) => chart[i % chart.length];
     const startOf = (i) => Math.floor(i / chart.length) * total + tile(i).at;
     // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
     // (for Ievan that is exactly half a loop). song.speed scales it all so every tune earns what Ievan does.
     const REF = 83;
     const bpm = (p) => (song.speed || 1) * Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length)));
+    function songTitle(text) { const e = document.getElementById('gSong'); if (e) { e.textContent = text; e.hidden = !text; } }
     function size() {
       const r = el.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       if (!r.width) return;
@@ -1430,7 +1434,7 @@
     }
     function draw() {
       if (!W) return;
-      const lw = W / LANES, u = H / SPAN, line = H * LINE;
+      const lw = W / LANES, u = unit(), line = H * LINE;
       g2.clearRect(0, 0, W, H);
       g2.fillStyle = 'rgba(255,255,255,.07)';
       for (let l = 1; l < LANES; l++) g2.fillRect(l * lw - 1, 0, 2, H);
@@ -1459,8 +1463,8 @@
     function tap(lane) {
       if (mode !== 'ready' && mode !== 'play') return;
       const t = tile(next);
-      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); }
-      else if (lane !== t.lane || (startOf(next) - pos) * (H / SPAN) > H * LINE) {
+      if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); songTitle(''); }
+      else if (lane !== t.lane || (startOf(next) - pos) * unit() > H * LINE) {
         if (lane === lastLane && clock - lastAt < BOUNCE) return;        // the same finger landing twice
         fail(lane, -1, tr('Wrong tile!'));
         return;
@@ -1537,12 +1541,13 @@
         song = PN.SONGS[songs[Math.floor(Math.random() * songs.length)]];
         const c = read(song); chart = c.tiles; total = c.len;
         PN.Games.opts = { pay: song.pay || 1 };
+        songTitle(song.title);   // the tune's name sits at the top until the first tap
         pos = 0; next = 0; n = 0; mode = 'ready'; wait = 0; bad = -1; badTile = -1; lastLane = -1; lastAt = 0; bop = 0;
         el.hidden = false;
         size(); draw();
         A.hush(true);
       },
-      stop() { if (kantele.parent) kantele.parent.remove(kantele); actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); el.hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
+      stop() { songTitle(''); if (kantele.parent) kantele.parent.remove(kantele); actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); el.hidden = true; A.hush(false); if (view) view.rig.position.y = 0; },
       go() { K.score(0, true); },
       pointer() {},
       key() {},
@@ -1560,7 +1565,7 @@
         if (!W) size();
         if (playing && mode === 'play') {
           pos += dt * bpm(pos) / 15;
-          const t = tile(next), u = H / SPAN;
+          const t = tile(next), u = unit();
           if (H * LINE - (startOf(next) - pos) * u - t.d * u > H) fail(t.lane, next, tr('Missed one!'));
         } else if (playing && mode === 'fail') { wait -= dt; if (wait <= 0) { mode = 'done'; K.over(why); } }
         draw();

@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 01:40';
+  PN.UPDATED = '14 Nov 2026, 02:10';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -334,7 +334,8 @@
   /* Tunes for Kantele Tiles. Each note is a pitch and how long it lasts in sixteenths; a bar line (|) is only there for reading.
      bpm is the speed on the sheet; the game starts at 78 and steps up by 7.5 at every half loop to 134 (62 felt sluggish and 155 was far too fast).
      Ievan polkka is a traditional Finnish polka tune. */
-  /* speed multiplies the scroll speed and pay multiplies what each tile is worth. Both are set so that every tune earns what Ievan polkka does
+  /* speed is how much faster this tune's notes come than Ievan polkka's (the game draws its tiles that much shorter, so the scroll looks the same);
+     pay multiplies what each tile is worth. Both are set so that every tune earns what Ievan polkka does
      at every skill level (checked with the balance bot: within about 3 to 10% a minute from a new player to an expert), because the tunes differ in how
      fast their notes come and how many tiles a loop holds. The speed-up steps come every half of Ievan's 83 tiles, whichever tune it is. */
   PN.SONGS = {
