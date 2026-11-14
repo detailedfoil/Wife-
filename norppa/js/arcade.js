@@ -1589,21 +1589,22 @@
 (function (PN) {
   'use strict';
   const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit;
-  const ROWS = 8, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22;
+  const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22;
   const ray = new T.Raycaster(), pointer = new T.Vector2(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
   let view = null, bus, scenery, cushions, pickSeats, player, playerRig;
   let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1;
-  let busWidth = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0;
+  let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0;
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
   const color = new T.Color();
 
+  const rowsFor = n => FIRST_ROWS + n - 1;
   function layout(n) {
-    const side = Math.ceil(n / 2), list = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < side * 2; c++) {
+    const side = Math.ceil(n / 2), rows = rowsFor(n), list = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < side * 2; c++) {
       const x = c + (c >= side ? 0.8 : 0);
-      list.push({ x, y: r * 1.15, z: r * 1.15 - 3.725, occupied: false });
+      list.push({ x, y: r * ROW_PITCH, z: (r - (rows - 1) / 2) * ROW_PITCH + 0.3, occupied: false });
     }
     return list;
   }
@@ -1724,7 +1725,9 @@
     bus = new T.Group(); scenery = new T.Group(); view.scene.add(scenery, bus);
     const center = (seats[0].x + seats[seats.length - 1].x) / 2;
     busWidth = Math.ceil(round / 2) * 2 + 1.15;
-    const half = busWidth / 2;
+    const half = busWidth / 2, rows = rowsFor(round);
+    busExtra = (rows - FIRST_ROWS) * ROW_PITCH;
+    const front = z => z - busExtra / 2, rear = z => z + busExtra / 2;
     // A quiet snowy street. All surfaces, kerbs and lane marks are meshes.
     box(scenery, materials.snow, 130, 0.16, 160, 0, -0.16, 0);
     box(scenery, materials.road, busWidth + 3.3, 0.08, 150, 0, -0.02, 0);
@@ -1738,43 +1741,43 @@
       }
     });
     // Chassis, exposed floor, low cutaway walls and separate window panels.
-    box(bus, materials.trim, busWidth, 0.38, 11.8, 0, 0.43, -0.1);
-    box(bus, materials.floor, busWidth - 0.25, 0.14, 11.25, 0, 0.68, 0.02);
+    box(bus, materials.trim, busWidth, 0.38, 11.8 + busExtra, 0, 0.43, -0.1);
+    box(bus, materials.floor, busWidth - 0.25, 0.14, 11.25 + busExtra, 0, 0.68, 0.02);
     [-1, 1].forEach(sign => {
       const x = sign * (half - 0.10);
-      box(bus, materials.paint, 0.18, 0.53, 10.9, x, 0.86, -0.05);
-      box(bus, materials.cream, 0.20, 0.10, 10.9, x, 1.14, -0.05);
-      for (let i = 0; i < ROWS; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 2) * 2].z);
+      box(bus, materials.paint, 0.18, 0.53, 10.9 + busExtra, x, 0.86, -0.05);
+      box(bus, materials.cream, 0.20, 0.10, 10.9 + busExtra, x, 1.14, -0.05);
+      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 2) * 2].z);
       // Mirror stalks are outside the cabin, away from the selectable seats.
-      box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, -5.12);
-      box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, -5.12);
-      [-3.7, 3.9].forEach(z => {
+      box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, front(-5.12));
+      box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, front(-5.12));
+      [front(-3.7), rear(3.9)].forEach(z => {
         const wheel = new T.Group(); wheel.position.set(sign * (half - 0.03), 0.44, z);
         const tire = new T.Mesh(geometry.tire, materials.tire), hub = new T.Mesh(geometry.hub, materials.hub);
         tire.rotation.z = hub.rotation.z = Math.PI / 2;
         wheel.add(tire, hub); bus.add(wheel); wheels.push(wheel);
       });
     });
-    box(bus, materials.paint, busWidth, 0.67, 0.45, 0, 0.83, -5.63);
-    box(bus, materials.glass, busWidth - 0.42, 0.10, 0.55, 0, 1.25, -5.34);
-    box(bus, materials.trim, busWidth + 0.08, 0.17, 0.26, 0, 0.48, -5.91);
-    box(bus, materials.paint, busWidth, 0.60, 0.27, 0, 0.93, 5.52);
-    box(bus, materials.cream, busWidth, 0.08, 0.29, 0, 1.26, 5.52);
-    box(bus, materials.trim, busWidth + 0.06, 0.16, 0.24, 0, 0.48, 5.72);
+    box(bus, materials.paint, busWidth, 0.67, 0.45, 0, 0.83, front(-5.63));
+    box(bus, materials.glass, busWidth - 0.42, 0.10, 0.55, 0, 1.25, front(-5.34));
+    box(bus, materials.trim, busWidth + 0.08, 0.17, 0.26, 0, 0.48, front(-5.91));
+    box(bus, materials.paint, busWidth, 0.60, 0.27, 0, 0.93, rear(5.52));
+    box(bus, materials.cream, busWidth, 0.08, 0.29, 0, 1.26, rear(5.52));
+    box(bus, materials.trim, busWidth + 0.06, 0.16, 0.24, 0, 0.48, rear(5.72));
     [-1, 1].forEach(sign => {
-      box(bus, materials.light, 0.36, 0.22, 0.10, sign * (half - 0.40), 0.85, -5.88);
-      box(bus, materials.red, 0.20, 0.22, 0.08, sign * (half - 0.25), 0.95, 5.68);
+      box(bus, materials.light, 0.36, 0.22, 0.10, sign * (half - 0.40), 0.85, front(-5.88));
+      box(bus, materials.red, 0.20, 0.22, 0.08, sign * (half - 0.25), 0.95, rear(5.68));
     });
     // A little Finnish flag on the nose, constructed from solid geometry.
-    box(bus, materials.cream, 0.65, 0.04, 0.38, 0, 1.19, -5.65);
-    box(bus, materials.blue, 0.12, 0.015, 0.38, -0.1, 1.218, -5.65);
-    box(bus, materials.blue, 0.65, 0.015, 0.10, 0, 1.22, -5.65);
-    // Driver's cabin and steering wheel remain clear of the eight scored rows.
+    box(bus, materials.cream, 0.65, 0.04, 0.38, 0, 1.19, front(-5.65));
+    box(bus, materials.blue, 0.12, 0.015, 0.38, -0.1, 1.218, front(-5.65));
+    box(bus, materials.blue, 0.65, 0.015, 0.10, 0, 1.22, front(-5.65));
+    // Driver's cabin and steering wheel remain clear of the growing passenger cabin.
     const driverX = -half + 0.70;
-    box(bus, materials.frame, 0.67, 0.15, 0.70, driverX, 0.83, -4.94);
+    box(bus, materials.frame, 0.67, 0.15, 0.70, driverX, 0.83, front(-4.94));
     const steering = new T.Mesh(geometry.marker, materials.frame);
-    steering.position.set(driverX, 1.14, -5.38); steering.rotation.x = -Math.PI * 0.30; steering.scale.setScalar(0.50); bus.add(steering);
-    box(bus, materials.cream, 0.70, 0.035, 0.64, half - 0.65, 0.77, -4.93);
+    steering.position.set(driverX, 1.14, front(-5.38)); steering.rotation.x = -Math.PI * 0.30; steering.scale.setScalar(0.50); bus.add(steering);
+    box(bus, materials.cream, 0.70, 0.035, 0.64, half - 0.65, 0.77, front(-4.93));
     const cushionMatrices = [], backs = [], legs = [], hits = [];
     seats.forEach(s => {
       s.worldX = s.x - center;
@@ -1788,7 +1791,7 @@
     instanced(bus, geometry.round, materials.frame, legs);
     pickSeats = instanced(bus, geometry.hit, materials.seat, hits);
     pickSeats.visible = false; // Raycaster still tests the explicit hit mesh; it is never rendered.
-    passengers(seats.filter(s => s.occupied).map(s => ({ x: s.worldX, z: s.z })).concat([{ x: driverX, z: -4.94, coat: 1 }]));
+    passengers(seats.filter(s => s.occupied).map(s => ({ x: s.worldX, z: s.z })).concat([{ x: driverX, z: front(-4.94), coat: 1 }]));
     bus.add(playerRig); playerRig.visible = false;
     paintSeats(); fitCamera();
     travel = Math.max(60, view.camera.position.length() * 3);
@@ -1806,7 +1809,7 @@
     camera.setViewOffset(w, h, 0, -centerNdc * h / 2, w, h);
     const corners = [], p = new T.Vector3(), elevation = 35 * Math.PI / 180;
     for (const x of [-busWidth / 2 - 0.55, busWidth / 2 + 0.55])
-      for (const y of [0, 2.0]) for (const z of [-6.05, 5.9]) corners.push(new T.Vector3(x, y, z));
+      for (const y of [0, 2.0]) for (const z of [-6.05 - busExtra / 2, 5.9 + busExtra / 2]) corners.push(new T.Vector3(x, y, z));
     let distance = 18;
     for (let i = 0; i < 65; i++) {
       camera.position.set(0, 0.65 + Math.sin(elevation) * distance, -Math.cos(elevation) * distance);
@@ -1919,6 +1922,6 @@
       view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done';
     },
     layout, evaluate,
-    peek: () => ({ round, total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z, occupied: s.occupied, distance: s.distance })) }),
+    peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z, occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
