@@ -740,9 +740,12 @@
   // Pups keep their own wardrobe, including the outfit they arrived in.
   function wardrobe(state, target) {
     if (target == null) return { owned: state.owned, wearing: state.wearing };
-    const p = state.pups.find((p) => p.id === target);
+    const familyIndex = typeof target === 'string' && /^family:\d+$/.test(target) ? Number(target.slice(7)) : -1;
+    const p = familyIndex >= 0 ? state.family[familyIndex] : state.pups.find((p) => p.id === target);
+    if (familyIndex >= 0 && (!p || p.fate !== 'grown' || visitStatus(p, Date.now()) !== 'here')) return null;
     if (!p) return null;
-    if (!p.owned) { p.owned = {}; Object.values(p.wear || {}).forEach((id) => { if (id) p.owned[id] = true; }); }
+    if (!p.owned) p.owned = {};
+    Object.values(p.wear || {}).forEach((id) => { if (id) p.owned[id] = true; });
     return { owned: p.owned, wearing: p.wear || (p.wear = {}) };
   }
   function buy(state, id, target) {
@@ -940,7 +943,7 @@
     const p = state.pups[i];
     if (!p || !p.ready) return no('notyet');
     state.pups.splice(i, 1);
-    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', wear: p.wear || pupLook(state) });
+    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', owned: p.owned || {}, wear: p.wear || pupLook(state) });
     state.counters.pupsGrown++;
     const farewell = earn(state, T.farewellCoins / T.earnRate);   // exactly 200 coins
     state.nextPupAt = Math.max(state.nextPupAt, now + DAY);
