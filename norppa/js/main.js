@@ -1315,7 +1315,7 @@
     await UI.fade(false);
     const now = D.STAGES[state.stage];
     seal.gesture('happy', true); A.play('level'); FX.sparkle(head(), 14); FX.hearts(head(), 4);
-    await UI.modal({ title: tr('{0} has grown!', plain()), html: tr('<p>No longer a {0}. {1} is now a <b>{2}</b>, a {3}.</p>', before.fi, plain(), now.fi, now.en) + '<div class="loot">' + coinChip(50) + '</div>'
+    await UI.modal({ title: tr('{0} has grown!', plain()), html: tr('<p>No longer a {0}. {1} is now a <b>{2}</b>, a {3}.</p>', before.fi, plain(), now.fi, now.en) + '<div class="loot">' + coinChip(S.T.growCoins) + '</div>'
       + (state.stage === 2 ? tr('<p>A happy, well-fed grown seal may one day have a pup of her own.</p>') : ''), actions: [{ label: 'Onnea!', value: 1 }] });
     S.save(state); UI.refresh();
     G.busy = false;

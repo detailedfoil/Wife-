@@ -32,7 +32,7 @@
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15, pupWait: 9 * H,   // once she has the xp the pup waits for the game to be closed; next load she has met someone, and the pup arrives pupWait later   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
-    farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
+    growCoins: 50, farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
@@ -90,6 +90,7 @@
   function newState(now) {
     const s = {
       v: 1, createdAt: now, lastSeen: now, seed: (now % 2147483647) | 0,
+      angyCleared: 1, shufflePaid: 1, angyDiveOnly: 1,   // the one-time changes in migrate() are for older saves: a new one starts with them done, or it would lose Seal Seat Shuffle (and an Angy spell) the second time it is opened
       name: '', stage: 0, ageMs: 0, xp: 0, maxLevel: 1,
       stats: { food: 62, joy: 70, energy: 88, clean: 90 },
       asleep: false, sleepKind: null, wakeAt: 100,
@@ -452,9 +453,12 @@
 
   function pet(state, now) {
     const s = state.stats;
-    if (state.asleep) { s.joy = pct(s.joy + 0.2); return ok({ asleep: true }); }
-    const sulking = state.grudge > 0;
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
+    if (state.asleep) {                    // stroked in her sleep: the same little cheer, out of the same ten an hour (it used to have no limit at all)
+      if (state.petWin.n < T.petJoyPats) { s.joy = pct(s.joy + T.petJoy); state.petWin.n++; }
+      return ok({ asleep: true });
+    }
+    const sulking = state.grudge > 0;
     if (state.petWin.n < T.petJoyPats) s.joy = pct(s.joy + (sulking ? T.petJoy / 3 : T.petJoy));   // a pat is only a little cheer, and only the first few an hour: games she fancies are what lift her
     state.counters.pets++;
     const want = sulkNeeds(state);
@@ -825,7 +829,9 @@
     if (state.gift.last === today) return null;
     const kept = state.gift.last === dayKey(now - DAY);
     state.gift.last = today;
-    if (state.grudge > T.sulkBlock) { state.gift.streak = 0; return { withheld: true }; }
+    // An Angy seal keeps her gift back. The medicine mood does not: the pill is due from 5 am, so the first visit of every day found her Anxi,
+    // and the gift was withheld and the streak broken every single morning.
+    if (state.grudge > T.sulkBlock && !state.medLate) { state.gift.streak = 0; return { withheld: true }; }
     state.gift.streak = kept ? state.gift.streak + 1 : 1;
     const coins = earn(state, 15 + 5 * Math.min(state.gift.streak, 7));
     const id = pickFish(state, 2);
@@ -847,7 +853,7 @@
     if (!canEvolve(state)) return no('notyet');
     state.stage++;
     if (state.stage === 2) state.nextPupAt = now + T.firstPupDelay;
-    earn(state, 50);
+    earn(state, T.growCoins / T.earnRate);   // exactly the 50 coins the pop-up shows (it used to pay two thirds of that)
     learn(state, 'onnea');
     check(state);
     return ok({ stage: state.stage });
@@ -906,8 +912,8 @@
     const p = state.pups[i];
     if (!p) return no('none');
     p.joy = pct(p.joy + 6);
-    state.stats.joy = pct(state.stats.joy + 0.5);
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
+    if (state.petWin.n < T.petJoyPats) state.stats.joy = pct(state.stats.joy + T.petJoy);   // the pup loves every cuddle; its mother is cheered as much as by a pat, out of the same ten an hour (it used to be half a point every time, with no limit)
     if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
     return ok({});
   }
