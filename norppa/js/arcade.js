@@ -1051,6 +1051,8 @@
      Miss the tower altogether and the game is over. */
   const stack = (() => {
     const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 1, HOP = 0.28, KEEP = 46;
+    // A square spreading into an equal-area circle expands equally on both axes.
+    const CREAM_SPREAD = 2 / Math.sqrt(PI), CONE_RADIUS = S0 * CREAM_SPREAD / 2;
     const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
     let view = null, bodyGeo = null, softGeo = null, puffs = null, circleGeo = null, scoopPoints = null, baseIce = null;
     let history = [], revealT = 0;
@@ -1090,7 +1092,7 @@
     function build() {
       view = stage('#efdff3', '#fff5e5', { ground: 0xe7d5cf, hemi: 2.1, key: 1.6 });
       bodyGeo = new T.BoxGeometry(1, BH, 1); bodyGeo.translate(0, BH / 2, 0);
-      // Rounded ice cream retains the same exact footprint and height as the slab.
+      // Visual rounding spreads the cream; logical slab dimensions stay unchanged.
       softGeo = new T.SphereGeometry(1, 24, 16);
       scoopPoints = softGeo.attributes.position.array.slice();
       const points = softGeo.attributes.position, rounded = (x) => Math.sign(x) * Math.pow(Math.abs(x), 0.18);
@@ -1107,8 +1109,8 @@
         for (let x = -w; x < w * 2; x += 32) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + w, h); c.moveTo(x, 0); c.lineTo(x - w, h); c.stroke(); }
       });
       waffle.wrapS = waffle.wrapT = T.RepeatWrapping; waffle.repeat.set(3, 2);
-      const cone = U.cyl(1.45, 0.025, 4, new T.MeshStandardMaterial({ map: waffle, roughness: 0.95 }), 0, -2.1, 0, 48);
-      const rim = U.rot(U.torus(1.40, 0.075, U.mat(0xe4b884), 0, -0.10, 0, PI * 2, 48), PI / 2);
+      const cone = U.cyl(CONE_RADIUS, 0.025, 4, new T.MeshStandardMaterial({ map: waffle, roughness: 0.95 }), 0, -2.1, 0, 48);
+      const rim = U.rot(U.torus(CONE_RADIUS - 0.05, 0.075, U.mat(0xe4b884), 0, -0.10, 0, PI * 2, 48), PI / 2);
       const base = baseIce = U.mesh(softGeo.clone(), U.mat(flavours[1], { roughness: 0.95 }), 0, -BH, 0); base.scale.set(S0, 1, S0);
       const plate = U.cyl(3.0, 2.85, 0.16, U.mat(0xfff8ef), 0, -4.20, 0, 48);
       sc.add(cone, rim, base, plate);
@@ -1148,6 +1150,7 @@
       top = { x: x ? mid : top.x, z: x ? top.z : mid, w: x ? keep : top.w, d: x ? top.d : keep, y: top.y + BH };
       cur.g.scale.set(top.w, 1, top.d); cur.g.position.set(top.x, top.y - BH, top.z);
       cur.g.children[0].geometry = softGeo.clone(); cur.g.userData.settle = 0; cur.g.userData.layer = score + 1;
+      cur.g.userData.width = top.w; cur.g.userData.depth = top.d;
       cur.g.updateMatrixWorld(true); towerBounds.expandByObject(cur.g);
       blocks.push(cur.g); cur = null;
       // Retain the entire tower for the reveal, batching older layers for phones.
@@ -1211,11 +1214,13 @@
         }
         // Each scoop becomes circular/oval as four more successful layers land.
         roundScoop(baseIce, Math.min(1, score / 4), dt);
-        const baseWidth = U.lerp(S0, 2.90, baseIce.userData.round || 0);
+        const baseWidth = S0 * U.lerp(1, CREAM_SPREAD, baseIce.userData.round || 0);
         baseIce.scale.set(baseWidth, 1, baseWidth);
         // Give each landed scoop a tiny squash as its corners soften.
         blocks.forEach((g) => {
           roundScoop(g.children[0], U.clamp((score - g.userData.layer) / 4, 0, 1), dt);
+          const spread = U.lerp(1, CREAM_SPREAD, g.children[0].userData.round || 0);
+          g.scale.set(g.userData.width * spread, 1, g.userData.depth * spread);
           g.userData.settle = Math.min(1, (g.userData.settle || 0) + dt / 0.28);
           g.children[0].scale.y = 1 - 0.07 * Math.sin(g.userData.settle * PI);
         });
