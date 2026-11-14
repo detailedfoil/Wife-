@@ -1683,7 +1683,11 @@
      memory one step at a time: size, base, temperature, milk, syrup, extras. The first wrong choice ends the game: it shows what was wanted,
      closes by itself and pays coins for the drinks served. No clock. The rules live in coffee.js. */
   const coffee = (() => {
-    const C = PN.Coffee, END_WAIT = 3;
+    /* The rules come from coffee.js. A phone can briefly hold an old copy of the page that does not ask for that file yet,
+       so if the rules are missing they are fetched here, and the game reads them only when it starts. */
+    if (!PN.Coffee) { const sc = document.createElement('script'); sc.src = 'js/coffee.js'; document.head.appendChild(sc); }
+    const C = new Proxy({}, { get: (_, k) => PN.Coffee[k] });
+    const END_WAIT = 3;
     let view = null, el = null, r = null, endIn = 0;
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const chip = (step, opt) => '<span class="cf-chip">' + C.icon(step, opt) + ' ' + esc(tr(C.label(step, opt))) + '</span>';
