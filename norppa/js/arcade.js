@@ -1232,7 +1232,9 @@
           const radius = Math.hypot(revealSize.x, revealSize.y + 2, revealSize.z) / 2;
           const vertical = view.camera.fov * PI / 360;
           const distance = radius / Math.sin(Math.min(half, vertical)) * 1.10;
-          const direction = new T.Vector3(1, 0.65, 1).normalize();
+          // Orbit the finished cone for one gentle turn during the pull-back.
+          const angle = PI / 4 + U.smooth(0, 3.6, revealT) * PI * 2;
+          const direction = new T.Vector3(Math.sin(angle) * Math.SQRT2, 0.65, Math.cos(angle) * Math.SQRT2).normalize();
           const target = revealCentre.clone().addScaledVector(direction, distance);
           view.camera.position.lerp(target, progress);
           const focus = new T.Vector3(0, camY + 1.2, 0).lerp(revealCentre, progress);
