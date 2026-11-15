@@ -1024,8 +1024,8 @@
         // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
         const k = 1 + lvl * 0.12;
         hop -= dt;
-        if (hop <= 0) { hop = (0.7 + rnd() * 1.3) / Math.sqrt(k); pinT = U.clamp(pin + rs(0.30 + 0.03 * lvl), 0.06, 0.94); }
-        pinV += ((pinT - pin) * 7.5 * k - pinV * 4.8) * dt;
+        if (hop <= 0) { hop = (0.55 + rnd() * 1.15) / Math.sqrt(k); pinT = U.clamp(pin + rs(0.36 + 0.035 * lvl), 0.04, 0.96); }
+        pinV += ((pinT - pin) * 9 * k - pinV * 4.6) * dt;
         pin = U.clamp(pin + pinV * dt, 0, 1);
         const inside = pin >= band && pin <= band + size;
         calm = U.clamp(calm + (inside ? 0.16 : -0.08) * dt, 0, 1);
