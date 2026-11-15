@@ -15,7 +15,7 @@
   W.BALL = new T.Vector3(-0.95, 0, 1.35);
   /* x, z, turn. Chosen so each thing shows on a tall phone screen without hiding behind the seal. */
   const SPOTS = {
-    snowman: [-2.1, -0.9, 0.6], flag: [-3.1, -4.7, 0.3], sled: [2.5, -5.0, -0.9],
+    snowman: [-3.6, 0.0, 0.6], flag: [-3.1, -4.7, 0.3], sled: [2.5, -5.0, -0.9],
     campfire: [1.4, 1.3, 0], iceheart: [-0.75, -5.4, 0.15], feeder: [-1.75, 0.55, 0.9], xmastree: [2.3, -0.35, 0], sauna: [3.3, -11.0, -0.35],
     // the front of the shore: small things only, low enough not to hide the seal
     lumilyhty: [-0.95, 2.8, 0.2], kurpitsa: [0.25, 3.35, 0], jaalyhty: [1.35, 2.8, -0.2], lahjat: [1.75, 0.4, -0.4], matto: [0.15, 0.3, 0.5],
@@ -27,8 +27,8 @@
   };
   /* These sit on the den itself: x, y, z in the den's own space. */
   const ON_DEN = { lantern: [0, 1.0, 1.55], lights: [0, 0, 0], viirit: [0, 0, 0], ulkotulet: [0, 0.02, 2.3], ilmapallot: [0.55, 1.2, 0.2],
-    // the cosy things at the door, where she sleeps; they settle onto the ground themselves (it drops away to the ice on the right)
-    talja: [0, 0, 2.05], ryijy: [-0.3, 0, 3.75], peitto: [-1.3, 0, 2.75], tyynyt: [1.5, 0, 3.0], kynttilat: [0, 0, 0], verho: [0, 0, 0] };
+    // Cushions sit inside the doorway beneath the sleeping seal. The other cosy things sit outside; they settle onto the ground themselves (it drops away to the ice on the right)
+    talja: [0, 0, 2.05], ryijy: [-0.3, 0, 3.75], peitto: [-1.3, 0, 2.75], tyynyt: [0, 0, 1.95], kynttilat: [0, 0, 0], verho: [0, 0, 0] };
   W.SPOTS = SPOTS;
 
   /* ---------- the lie of the land ---------- */
