@@ -3,8 +3,8 @@
    Customers keep coming for as long as every drink is right. An order is shown on a receipt, then turned over, and the drink is built
    step by step from memory. The steps always come in the same order: size, base, temperature, milk, syrup, second syrup, extras, name.
    Every second drink served adds one more thing to remember: the first order is size and base, then temperature, milk and syrup come in, then
-   one extra, then the customer's name to write on the cup (the seventh thing, so before the second extra), then the other extras up to
-   all four, and last a second syrup (eleven things, and there it stays). The first wrong choice ends the game; the score is the drinks served. There is no clock. */
+   one extra, then the customer's name to write on the cup (the seventh thing, so before the second extra), then more extras up to three of
+   the four (all four would be too easy), and last a second syrup (ten things, and there it stays). The first wrong choice ends the game; the score is the drinks served. There is no clock. */
 (function (PN) {
   'use strict';
 
@@ -22,7 +22,7 @@
     { id: 'name', title: 'Name', ask: 'Write the name on the cup', text: true, opts: [] },
   ];
   const byId = {}; STEPS.forEach((s) => { byId[s.id] = s; });
-  const FIRST = 2, SINGLES = 5, MAX_EXTRAS = byId.extras.opts.length, MAX_ITEMS = SINGLES + MAX_EXTRAS + 2;
+  const FIRST = 2, SINGLES = 5, MAX_EXTRAS = byId.extras.opts.length, ASKED = MAX_EXTRAS - 1, MAX_ITEMS = SINGLES + ASKED + 2;   // an order never asks for all four extras: that would just be "everything", easy to remember
   /* Finnish names for the cup (used when the game is in Finnish). None has a letter with dots or a ring on it, so they can be typed on any keyboard. */
   const NAMES = ['Aino', 'Eero', 'Onni', 'Otso', 'Ilmari', 'Tapio', 'Veikko', 'Sanni', 'Kaisa', 'Mikko', 'Jussi', 'Tuuli', 'Helmi', 'Ilona',
     'Venla', 'Aatu', 'Eino', 'Oiva', 'Toivo', 'Kerttu', 'Sini', 'Satu', 'Pekka', 'Matti', 'Liisa', 'Anni', 'Elsa', 'Hilla', 'Lumi', 'Pyry',
@@ -36,12 +36,12 @@
   const ANIMALS = ['reindeer', 'bear', 'fox', 'hare', 'owl', 'moose', 'lynx', 'squirrel'];
 
   const label = (stepId, optId) => { const o = byId[stepId].opts.find((x) => x[0] === optId); return o ? o[1] : optId; };
-  /* How many things the next customer's order has, given the drinks served so far: two at the start, one more with every second drink, eleven at most. */
+  /* How many things the next customer's order has, given the drinks served so far: two at the start, one more with every second drink, ten at most. */
   const itemCount = (served) => Math.min(MAX_ITEMS, FIRST + Math.floor(served / 2));
   /* The name comes in as the seventh thing, so before the second extra; the extras carry on from there (one for the sixth thing, one more
-     for the eighth, ninth and tenth), and the second syrup is the eleventh. */
+     for the eighth and ninth, never all four), and the second syrup is the tenth. */
   const NAME_AT = SINGLES + 2;
-  const extraCount = (served) => { const n = itemCount(served); return n <= SINGLES ? 0 : Math.min(MAX_EXTRAS, n - SINGLES - (n >= NAME_AT ? 1 : 0)); };
+  const extraCount = (served) => { const n = itemCount(served); return n <= SINGLES ? 0 : Math.min(ASKED, n - SINGLES - (n >= NAME_AT ? 1 : 0)); };
   const hasSecond = (served) => itemCount(served) >= MAX_ITEMS;
   const hasName = (served) => itemCount(served) >= NAME_AT;
   /* The steps of that order, in the order they are made. */
