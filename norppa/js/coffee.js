@@ -23,10 +23,15 @@
   ];
   const byId = {}; STEPS.forEach((s) => { byId[s.id] = s; });
   const FIRST = 2, SINGLES = 5, MAX_EXTRAS = byId.extras.opts.length, MAX_ITEMS = SINGLES + MAX_EXTRAS + 2;
-  /* Finnish names for the cup. None has a letter with dots or a ring on it, so they can be typed on any keyboard. */
+  /* Finnish names for the cup (used when the game is in Finnish). None has a letter with dots or a ring on it, so they can be typed on any keyboard. */
   const NAMES = ['Aino', 'Eero', 'Onni', 'Otso', 'Ilmari', 'Tapio', 'Veikko', 'Sanni', 'Kaisa', 'Mikko', 'Jussi', 'Tuuli', 'Helmi', 'Ilona',
     'Venla', 'Aatu', 'Eino', 'Oiva', 'Toivo', 'Kerttu', 'Sini', 'Satu', 'Pekka', 'Matti', 'Liisa', 'Anni', 'Elsa', 'Hilla', 'Lumi', 'Pyry',
     'Taika', 'Kuura', 'Aapo', 'Niilo', 'Vilho', 'Lauri', 'Senja', 'Aava', 'Enni', 'Seela'];
+  /* The same for English: an English game gets English names. */
+  const NAMES_EN = ['Alice', 'Ben', 'Chloe', 'Daniel', 'Emma', 'Finn', 'Grace', 'Harry', 'Isla', 'Jack', 'Kate', 'Liam', 'Mia', 'Noah', 'Olivia', 'Oscar',
+    'Poppy', 'Ruby', 'Sam', 'Tom', 'Zoe', 'Ella', 'Leo', 'Lily', 'Max', 'Nina', 'Owen', 'Rosie', 'Sophie', 'Theo', 'Amy', 'Jake', 'Maya', 'Ryan',
+    'Hannah', 'George', 'Freya', 'Joe', 'Lucy', 'Adam'];
+  const namesNow = () => (PN.lang === 'fi' ? NAMES : NAMES_EN);
   /* Who comes in for a coffee: animals of the Finnish woods. */
   const ANIMALS = ['reindeer', 'bear', 'fox', 'hare', 'owl', 'moose', 'lynx', 'squirrel'];
 
@@ -63,7 +68,7 @@
     let extras = [], name = null;
     steps.forEach((id) => {
       if (id === 'extras') { const got = pickSome(ids('extras'), extraCount(served), rng); extras = ids('extras').filter((x) => got.indexOf(x) >= 0); }
-      else if (id === 'name') name = pickOne(NAMES.filter((n) => !last || n !== last.name), rng);
+      else if (id === 'name') name = pickOne(namesNow().filter((n) => !last || n !== last.name), rng);
       else if (id === 'syrup') picks.syrup = pickOne(two ? ids('syrup2') : ids('syrup'), rng);            // an order for two syrups always has a first one
       else if (id === 'syrup2') picks.syrup2 = pickOne(ids('syrup2').filter((x) => x !== picks.syrup), rng);   // and the second is a different one
       else picks[id] = pickOne(ids(id), rng);
@@ -135,7 +140,7 @@
     return r;
   }
 
-  PN.Coffee = { V: 2, STEPS, NAMES, ANIMALS, MAX_ITEMS, byId, label, itemCount, stepCount, stepIds, extraCount, makeOrder, lines, tidy, run };
+  PN.Coffee = { V: 2, STEPS, NAMES, NAMES_EN, ANIMALS, MAX_ITEMS, byId, label, itemCount, stepCount, stepIds, extraCount, makeOrder, lines, tidy, run };
 
   /* ================= the 3D cafe ================= */
   /* Everything below draws. It is skipped where there is nothing to draw on (the tests run the rules alone). The game is seen through the
