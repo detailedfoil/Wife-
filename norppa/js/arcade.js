@@ -1196,7 +1196,14 @@
       key(k) { if (k === ' ' || k === 'Enter' || k === 'ArrowDown' || k === 'ArrowUp') drop(); },
       update(dt, playing) {
         clock += dt;
-        const half = lens(view), d = (R * 0.707 + S0 * 0.75) / Math.tan(half), k = d * 0.577;
+        const half = lens(view);
+        // A wide screen has plenty of width but little height. Fit the sliding
+        // scoop and its rider vertically too, leaving room for the game HUD.
+        const vertical = view.camera.fov * PI / 360;
+        const usableHeight = Math.max(0.35, 1 - 120 / window.innerHeight);
+        const fitHalf = view.camera.aspect > 1
+          ? Math.min(half, Math.atan(Math.tan(vertical) * usableHeight)) : half;
+        const d = (R * 0.707 + S0 * 0.75) / Math.tan(fitHalf), k = d * 0.577;
         camY = U.damp(camY, top.y, 4, dt);
         view.camera.position.set(k, camY + 1.2 + k, k);
         view.camera.lookAt(0, camY + 1.2, 0);
