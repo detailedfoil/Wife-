@@ -728,7 +728,7 @@
     // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her Angy.
     const calm = T.neglectLine + T.gameCalm;
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
-    const dirt = gm && gm.muck ? clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) : 0;
+    const dirt = gm && gm.muck ? Math.max(1, Math.round(clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) * 0.75)) : 0;
     s.clean = pct(Math.max(s.clean - dirt, Math.min(s.clean, calm)));
     if (part >= 0.5) { tastePlayed(state, game); c.games++; }
     addXp(state, secs > 0 ? Math.min(8, Math.floor(secs / 3)) : 8);
