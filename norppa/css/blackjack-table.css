@@ -42,7 +42,7 @@
 .bj-potential { margin: 0 0 7px; text-align: center; font: 600 12px/1.4 var(--display); color: #d0f0e2; font-variant-numeric: tabular-nums; }
 .bj-potential:empty { display: none; }
 .bj-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.bj-slide { position: relative; flex: 1 1 100%; padding: 4px 6px 0; }
+.bj-slide { position: relative; flex: 1 1 100%; padding: 4px 6px 0; margin-top: 2px; }
 .bj-slide input { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 34px; margin: 0; background: transparent; position: relative; z-index: 2; touch-action: none; }
 .bj-slide input::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
 .bj-slide input::-moz-range-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
