@@ -893,9 +893,8 @@
       const mine = you.slice(0, shownYou), theirs = house.slice(0, shownHouse), live = mode === 'dealing' || mode === 'play' || mode === 'house';
       let btns = '';
       // With only one bet possible (5) there is nothing to slide, so no slider; otherwise it runs from the minimum to the maximum
-      if (mode === 'bet') btns = (most() > MIN ? '<div class="bj-slide"><input type="range" id="bjRange" min="0" max="100" step="1" value="' + Math.round(frac * 100) + '" aria-label="' + tr('How much to bet') + '">'
-        + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + tr('Minimum') + '</span><span>' + tr('Maximum') + '</span></span></div>' : '')
-        + btn('bet', betLabel(), 'go', stack < MIN);
+      if (mode === 'bet') btns = btn('bet', betLabel(), 'go', stack < MIN) + (most() > MIN ? '<div class="bj-slide"><input type="range" id="bjRange" min="0" max="100" step="1" value="' + Math.round(frac * 100) + '" aria-label="' + tr('How much to bet') + '">'
+        + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + tr('Minimum') + '</span><span>' + tr('Maximum') + '</span></span></div>' : '');
       else btns = btn('hit', tr('Hit'), '', mode !== 'play') + btn('stand', tr('Stand'), 'go', mode !== 'play');
       el.innerHTML = '<div class="bj-top"><div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (theirs.length ? (hide ? '?' : total(theirs)) : '') + '</b></div><div class="bj-cards">'
         + theirs.map((c, k) => card(c, hide && k === 1, flipHole && k === 1)).join('') + '</div></div>'
