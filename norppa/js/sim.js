@@ -49,12 +49,12 @@
     // out, at most skipMax) carries a taste from -tasteMax to +tasteMax, which is the percent more or less it pays. Playing a
     // game takes tasteDrop off it and shares that among the others; tastes drift tasteDrift points an hour towards a mix that is
     // dealt afresh every tasteRoll. Tastes no longer change a game's coins: they change her happiness, gameJoy plus joyPer a point
-    // of taste (so -7 to +11 a play), and her happiness sets one flat bonus on every game: happyMax percent at full happiness,
+    // of taste (so -12 to +19 a play, 1.75 times what it was), and her happiness sets one flat bonus on every game: happyMax percent at full happiness,
     // rising from nothing at happyMid, and never a penalty. From a usual 70 happiness, favourites reach the full +8% in about 4 games and hold it;
     // a random mix takes 10 to 18 games and drifts about +4%; she must be above happyMid to earn anything.
     muckLine: 50, muckFirst: 0.01, muckCut: 0.25, muckMost: 15,   // nothing above 50 clean, 1% less at 50, climbing steeply (squared) to 25% less when filthy
     tasteMax: 15, tasteDrop: 5, tasteDrift: 2.5, tasteRoll: 8 * H, skipMax: 2,
-    gameJoy: 2, joyPer: 0.6, happyMax: 8, happyMid: 55, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
+    gameJoy: 3.5, joyPer: 1.05, happyMax: 8, happyMid: 55, gameCalm: 5,   // games never take joy or cleanliness below neglectLine + gameCalm
     handoutGap: 4 * H, handoutFish: 3, handoutFill: 60, juiceGap: DAY,
     maxCatchUp: 14 * DAY,
   };
