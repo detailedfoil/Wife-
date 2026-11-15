@@ -349,26 +349,36 @@
     }
     /* ---------- the customers: animals of the Finnish woods ---------- */
     const FUR = {
-      reindeer: [0x8f6f4e, 0xe6d8bd], bear: [0x6e4a2e, 0x8f6845], fox: [0xe2772c, 0xfff3e2], hare: [0xf3f1ec, 0xffffff],
-      owl: [0x8b7a66, 0xdccfb8], moose: [0x5b4130, 0x6f533e], lynx: [0xcaa46c, 0xf1e3c8], squirrel: [0xb4542a, 0xfbe9d2],
+      reindeer: [0xb48d6d, 0xf3e4cf], bear: [0x987254, 0xe2c5a1], fox: [0xe99a62, 0xfff3e2], hare: [0xf3f1ec, 0xffffff],
+      owl: [0xae9b88, 0xf5e9d6], moose: [0x92735d, 0xd4b396], lynx: [0xdcb781, 0xffefd8], squirrel: [0xc98961, 0xffedd9],
     };
     function critter(kind) {
       const fur = mat(FUR[kind][0]), pale = mat(FUR[kind][1]), black = mat(0x1d1a1a, { roughness: 0.4 }), bone = mat(0xdccdaa), pink = mat(0xf7b8c4);
       const g = new T.Group(), head = new T.Group(), eyes = [];
       const add = (o) => { head.add(o); return o; };
       const both = (fn) => [-1, 1].forEach(fn);
-      g.add(U.ball(1, fur, 0, 0.72, 0, 0.44, 0.76, 0.38, 20));
-      g.add(U.ball(1, pale, 0, 0.8, 0.15, 0.3, 0.56, 0.27, 16));
+      g.add(U.ball(1, fur, 0, 0.72, 0, 0.49, 0.70, 0.40, 24));
+      g.add(U.ball(1, pale, 0, 0.8, 0.15, 0.34, 0.50, 0.28, 24));
       both((s) => {                                     // arms reaching for the counter, paws resting on it
-        g.add(U.rod([s * 0.34, 1.2, 0.1], [s * 0.27, 0.96, 0.5], 0.075, fur, 8));
-        g.add(U.ball(0.095, fur, s * 0.27, 0.95, 0.54, 1, 0.62, 1.15, 12));
+        g.add(U.rod([s * 0.34, 1.2, 0.1], [s * 0.27, 0.96, 0.5], 0.105, fur, 16));
+        g.add(U.ball(0.13, fur, s * 0.27, 0.95, 0.54, 1, 0.72, 1.1, 20));
       });
       head.position.set(0, 1.7, 0.06);
-      add(U.ball(0.37, fur, 0, 0, 0, 1, 0.94, 0.92, 22));
+      // Broad plush cheeks and a large forehead, with features low on the face.
+      add(U.ball(0.37, fur, 0, 0, 0, 1.12, 1.04, 0.98, 32));
       const eye = (s, y, r, z) => {
-        r = r || 0.05; y = y == null ? 0.06 : y; z = z || 0.31;
-        eyes.push(add(U.ball(r, black, s * 0.14, y, z, 1, 1, 0.6, 12)));
-        add(U.ball(r * 0.32, white, s * 0.14 + 0.016, y + 0.02, z + r * 0.55, 1, 1, 1, 8));
+        r = r || 0.076; y = y == null ? 0.035 : y; z = z || 0.325;
+        // Blink the whole eye, including its glints, so no white dots float over a closed lid.
+        const e = new T.Group(); e.position.set(s * 0.157, y, z); add(e); eyes.push(e);
+        e.add(U.ball(r, black, 0, 0, 0, 1, 1.16, 0.58, 24));
+        e.add(U.ball(r * 0.28, white, -r * 0.24, r * 0.36, r * 0.56, 1, 1, 0.4, 12));
+        e.add(U.ball(r * 0.12, white, r * 0.28, -r * 0.22, r * 0.57, 1, 1, 0.4, 10));
+      };
+      // Rounded ear tips instead of hard cone points, with inset peach centres.
+      const ear = (s, x, y, h, w) => {
+        const e = new T.Group(); e.position.set(s * x, y, -0.015); e.rotation.z = -s * 0.22;
+        e.add(U.ball(1, fur, 0, 0, 0, w, h, 0.085, 24));
+        e.add(U.ball(1, pink, 0, 0.01, 0.065, w * 0.55, h * 0.65, 0.025, 20)); add(e);
       };
       const muzzle = (r, y, z, sx, sy, sz, m) => add(U.ball(r, m || pale, 0, y, z, sx, sy, sz, 14));
       const nose = (r, y, z, m) => add(U.ball(r, m || black, 0, y, z, 1.2, 0.85, 0.8, 10));
@@ -380,41 +390,41 @@
           add(U.rod([s * 0.13, 0.3, 0], [s * 0.34, 0.74, -0.02], 0.026, bone)); add(U.rod([s * 0.23, 0.5, 0], [s * 0.44, 0.56, 0], 0.02, bone));
           add(U.rod([s * 0.3, 0.65, 0], [s * 0.2, 0.86, 0], 0.02, bone)); add(U.rod([s * 0.34, 0.74, -0.02], [s * 0.46, 0.88, -0.02], 0.02, bone)); });
       } else if (kind === 'bear') {
-        muzzle(0.15, -0.1, 0.26, 1, 0.8, 0.9, mat(0xc79f73)); nose(0.055, -0.05, 0.395);
-        both((s) => { add(U.ball(0.115, fur, s * 0.27, 0.28, 0)); add(U.ball(0.065, mat(0xc79f73), s * 0.27, 0.28, 0.07, 1, 1, 0.5)); });
+        muzzle(0.15, -0.1, 0.26, 1, 0.8, 0.9, mat(0xe2c5a1)); nose(0.055, -0.05, 0.395);
+        both((s) => { add(U.ball(0.115, fur, s * 0.27, 0.28, 0)); add(U.ball(0.065, mat(0xe2c5a1), s * 0.27, 0.28, 0.07, 1, 1, 0.5)); });
       } else if (kind === 'fox') {
         both((s) => { add(U.ball(0.19, pale, s * 0.14, -0.13, 0.19, 1, 0.7, 0.8, 12));
-          const e = add(U.cone(0.105, 0.26, fur, s * 0.22, 0.4, 0, 10)); e.rotation.z = -s * 0.25; const t = add(U.cone(0.05, 0.11, black, s * 0.246, 0.49, 0, 10)); t.rotation.z = -s * 0.25; });
+          ear(s, 0.25, 0.36, 0.20, 0.11); });
         muzzle(0.11, -0.1, 0.31, 1, 0.75, 1.2); nose(0.045, -0.065, 0.445); mz = 0.415;
       } else if (kind === 'hare') {
         both((s) => { const e = add(U.ball(1, fur, s * 0.13, 0.62, -0.03, 0.08, 0.34, 0.055, 12)); e.rotation.z = -s * 0.14; const i = add(U.ball(1, pink, s * 0.13, 0.62, 0.0, 0.045, 0.27, 0.035, 10)); i.rotation.z = -s * 0.14; });
         muzzle(0.12, -0.1, 0.28, 1.2, 0.75, 0.9); nose(0.035, -0.06, 0.39, pink); add(U.box(0.055, 0.05, 0.012, white, 0, -0.21, 0.365)); my = -0.15; mz = 0.385;
       } else if (kind === 'owl') {
-        both((s) => { add(U.ball(0.17, pale, s * 0.14, 0.05, 0.22, 1, 1, 0.45, 14)); add(U.ball(0.09, mat(0xf5c542, { roughness: 0.4 }), s * 0.14, 0.06, 0.29, 1, 1, 0.45, 12)); eye(s, 0.06, 0.052, 0.32);
-          const t = add(U.cone(0.07, 0.2, fur, s * 0.23, 0.36, 0, 8)); t.rotation.z = -s * 0.5; });
-        const b = add(U.cone(0.05, 0.12, mat(0xe8a13a), 0, -0.07, 0.36, 8)); b.rotation.x = PI * 0.62; my = -0.2; mz = 0.33;
+        both((s) => { add(U.ball(0.17, pale, s * 0.14, 0.05, 0.22, 1, 1, 0.45, 14)); add(U.ball(0.115, mat(0xe6bb71, { roughness: 0.4 }), s * 0.14, 0.06, 0.29, 1, 1, 0.45, 12)); eye(s, 0.045, 0.078, 0.335);
+          const t = add(U.ball(1, fur, s * 0.25, 0.33, 0, 0.09, 0.14, 0.08, 20)); t.rotation.z = -s * 0.4; });
+        const b = add(U.cone(0.05, 0.12, mat(0xe8a13a), 0, -0.07, 0.405, 16)); b.rotation.x = PI * 0.62; my = -0.2; mz = 0.36;
       } else if (kind === 'moose') {
-        muzzle(0.2, -0.2, 0.24, 0.95, 1.15, 1, mat(0x6f533e)); both((s) => add(U.ball(0.024, black, s * 0.07, -0.27, 0.425)));
-        add(U.ball(0.06, fur, 0, -0.44, 0.16, 1, 1.4, 1));
+        muzzle(0.2, -0.14, 0.27, 1.12, 0.85, 0.95, pale); both((s) => add(U.ball(0.024, black, s * 0.08, -0.16, 0.455)));
+
         both((s) => { const e = add(U.ball(0.08, fur, s * 0.37, 0.2, -0.02, 1.4, 0.6, 0.5, 10)); e.rotation.z = s * 0.3;
           add(U.rod([s * 0.15, 0.3, 0], [s * 0.38, 0.48, 0], 0.03, bone)); const p = add(U.ball(1, bone, s * 0.52, 0.56, -0.01, 0.2, 0.1, 0.035, 12)); p.rotation.z = s * 0.45;
           [0, 1, 2].forEach((i) => add(U.rod([s * (0.42 + i * 0.09), 0.56 + i * 0.045, 0], [s * (0.43 + i * 0.1), 0.72 + i * 0.05, 0], 0.02, bone))); });
-        my = -0.36; mz = 0.4;
+        my = -0.25; mz = 0.43;
       } else if (kind === 'lynx') {
-        both((s) => { const e = add(U.cone(0.095, 0.21, fur, s * 0.22, 0.37, 0, 10)); e.rotation.z = -s * 0.22; add(U.rod([s * 0.245, 0.46, 0], [s * 0.3, 0.62, 0], 0.012, black));
-          const r = add(U.cone(0.12, 0.24, pale, s * 0.3, -0.17, 0.1, 8)); r.rotation.z = s * 2.3; });
+        both((s) => { ear(s, 0.25, 0.35, 0.16, 0.105); add(U.rod([s * 0.245, 0.46, 0], [s * 0.3, 0.62, 0], 0.012, black));
+          add(U.ball(1, pale, s * 0.28, -0.14, 0.17, 0.13, 0.10, 0.11, 24)); });
         muzzle(0.12, -0.1, 0.28, 1.2, 0.75, 0.9); nose(0.04, -0.06, 0.39, mat(0xc98a7a));
         [[-0.1, 0.24], [0.1, 0.24], [0, 0.28], [-0.05, 0.2], [0.05, 0.2]].forEach((p) => add(U.ball(0.022, mat(0x7a5a34), p[0], p[1], 0.3 - Math.abs(p[1] - 0.2) * 0.4, 1, 1, 0.5, 8)));
         my = -0.15; mz = 0.385;
       } else {   // squirrel
-        both((s) => { add(U.ball(0.14, pale, s * 0.14, -0.12, 0.21, 1, 0.8, 0.85, 12)); const e = add(U.cone(0.075, 0.17, fur, s * 0.2, 0.37, 0, 10)); e.rotation.z = -s * 0.2; add(U.rod([s * 0.215, 0.44, 0], [s * 0.24, 0.56, 0], 0.014, fur)); });
+        both((s) => { add(U.ball(0.14, pale, s * 0.14, -0.12, 0.21, 1, 0.8, 0.85, 12)); ear(s, 0.23, 0.35, 0.13, 0.09); add(U.rod([s * 0.215, 0.44, 0], [s * 0.24, 0.56, 0], 0.014, fur)); });
         nose(0.035, -0.06, 0.345, mat(0x4a2f25)); add(U.box(0.05, 0.045, 0.012, white, 0, -0.2, 0.31)); my = -0.15; mz = 0.33;
         g.add(U.ball(0.2, fur, 0.44, 1.02, -0.26, 1, 1.5, 0.9, 12)); g.add(U.ball(0.24, fur, 0.52, 1.5, -0.3, 1, 1.3, 0.9, 12)); g.add(U.ball(0.2, fur, 0.44, 1.94, -0.26, 1.1, 1, 0.9, 12));
       }
-      if (kind !== 'owl') both((s) => add(U.ball(0.05, mat(0xf59ab5, { transparent: true, opacity: 0.75 }), s * 0.23, -0.05, 0.265, 1, 0.6, 0.3, 8)));
-      const smile = add(U.torus(0.05, 0.011, black, 0, my + 0.035, mz, PI, 12)); smile.rotation.z = PI;
-      const frown = add(U.torus(0.05, 0.011, black, 0, my - 0.03, mz, PI, 12)); frown.visible = false;
-      const brows = []; both((s) => { const b = add(U.rod([s * 0.07, 0.19, 0.33], [s * 0.2, 0.135, 0.3], 0.012, black)); b.visible = false; brows.push(b); });
+      both((s) => add(U.ball(0.065, mat(0xeeb0ac), s * 0.265, -0.065, 0.285, 1, 0.55, 0.25, 20)));
+      const smile = add(U.torus(0.046, 0.008, black, 0, my + 0.035, mz, PI, 12)); smile.rotation.z = PI;
+      const frown = add(U.torus(0.046, 0.008, black, 0, my - 0.03, mz, PI, 12)); frown.visible = false;
+      const brows = []; both((s) => { const b = add(U.rod([s * 0.10, 0.18, 0.34], [s * 0.22, 0.15, 0.32], 0.009, black)); b.visible = false; brows.push(b); });
       g.add(head);
       return { g, head, eyes, smile, frown, brows, kind, blink: 2 + Math.random() * 2, mood: 'calm', hop: 0 };
     }
