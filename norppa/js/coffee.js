@@ -2,7 +2,7 @@
    their own); the 3D cafe that plays them is the second half of this file, so the two can never be out of step with each other.
    Customers keep coming for as long as every drink is right. An order is shown on a receipt, then turned over, and the drink is built
    step by step from memory. The steps always come in the same order: size, base, temperature, milk, syrup, second syrup, extras, name.
-   Every drink served adds one more thing to remember: the first order is size and base, then temperature, milk and syrup come in, then
+   Every second drink served adds one more thing to remember: the first order is size and base, then temperature, milk and syrup come in, then
    the extras one at a time up to all four, then a second syrup, and last the customer's name to write on the cup (eleven things, and
    there it stays). The first wrong choice ends the game; the score is the drinks served. There is no clock. */
 (function (PN) {
@@ -31,8 +31,8 @@
   const ANIMALS = ['reindeer', 'bear', 'fox', 'hare', 'owl', 'moose', 'lynx', 'squirrel'];
 
   const label = (stepId, optId) => { const o = byId[stepId].opts.find((x) => x[0] === optId); return o ? o[1] : optId; };
-  /* How many things the next customer's order has, given the drinks served so far: two at the start, one more with every drink, eleven at most. */
-  const itemCount = (served) => Math.min(MAX_ITEMS, FIRST + served);
+  /* How many things the next customer's order has, given the drinks served so far: two at the start, one more with every second drink, eleven at most. */
+  const itemCount = (served) => Math.min(MAX_ITEMS, FIRST + Math.floor(served / 2));
   /* How many extras it asks for: one for the sixth thing, one more for each after, up to every extra there is. */
   const extraCount = (served) => Math.max(0, Math.min(MAX_EXTRAS, itemCount(served) - SINGLES));
   const hasSecond = (served) => itemCount(served) > SINGLES + MAX_EXTRAS;
@@ -647,7 +647,8 @@
     /* ---------- moving things ---------- */
     const EASE = { out: (t) => 1 - Math.pow(1 - t, 3), in: (t) => t * t, io: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2), back: (t) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2) };
     const tweens = [], timers = [];
-    let time = 0;
+    let time = 0, clock = 0;
+    const SPEED = 2; /* every slide, hop and wait runs at this multiple, so a drink is quick to get through */
     function tween(target, to, dur, o) {
       o = o || {}; let from = null;
       tweens.push({ key: target, t: -(o.delay || 0), dur, ease: EASE[o.ease || 'out'], done: o.done, apply(e) { if (!from) { from = {}; for (const k in to) from[k] = target[k]; } for (const k in to) target[k] = from[k] + (to[k] - from[k]) * e; } });
@@ -661,8 +662,8 @@
         if (u >= 1) { tweens.splice(tweens.indexOf(tw), 1); i--; if (tw.done) tw.done(); }
       }
     }
-    const after = (sec, fn) => timers.push({ at: time + sec, fn });
-    function runTimers() { for (let i = 0; i < timers.length; i++) if (time >= timers[i].at) { const t = timers.splice(i, 1)[0]; i--; t.fn(); } }
+    const after = (sec, fn) => timers.push({ at: clock + sec, fn });
+    function runTimers() { for (let i = 0; i < timers.length; i++) if (clock >= timers[i].at) { const t = timers.splice(i, 1)[0]; i--; t.fn(); } }
 
     /* ---------- the view, to suit the shape of the screen ---------- */
     /* On a tall screen the counter is seen from higher up and the choices stand in two rows, the back row on a step; on a wide
@@ -851,8 +852,9 @@
       update(dt) {
         time += dt;
         if (W.aspect !== aspect) { frame(); relayout(); }
-        runTimers(); runTweens(dt);
-        if (cust) animate(cust, dt);
+        clock += dt * SPEED;
+        runTimers(); runTweens(dt * SPEED);
+        if (cust) animate(cust, dt * SPEED);
         if (cup) cup.steam.forEach((p) => { const u = (time * 0.45 + p.userData.ph) % 1; p.position.set(Math.sin(u * 7 + p.userData.ph * 9) * 0.03, cup.surf + 0.06 + u * 0.3, 0); p.material.opacity = 0.42 * Math.sin(u * PI); p.scale.setScalar(0.1 + u * 0.12); });
         bulbs.forEach((b) => { b.h.material.opacity = 0.38 + 0.16 * Math.sin(time * 1.7 + b.ph); });
         if (mode === 'fail' && failReady && time - failAt > 14) finish();
