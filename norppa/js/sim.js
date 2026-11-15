@@ -675,12 +675,12 @@
   /* What a game's coins are multiplied by right now: her happiness, and muck. The game itself makes no difference. */
   const gameMult = (state) => (1 + happyBonus(state) / 100) * (1 - muckLoss(state));
   /* How much a game moves her happiness, by her taste for it. */
-  const gameJoy = (taste) => Math.round(T.gameJoy + taste * T.joyPer);
+  const gameJoy = (taste, skipped) => Math.round(skipped ? Math.min(0, taste) * T.joyPer : T.gameJoy + taste * T.joyPer);
   /* What the Play menu shows: each game's taste, whether it is left out, and the muck loss, all in whole percent. */
   function gameMoods(state, now) {
     tasteSync(state, now);
     const out = { muck: Math.round(muckLoss(state) * 100), happy: happyBonus(state), games: {}, skips: state.skip.length, skipMax: T.skipMax };
-    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: gameJoy(tasteOf(state, id)), skip: state.skip.indexOf(id) >= 0 }; });
+    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: gameJoy(tasteOf(state, id), state.skip.indexOf(id) >= 0), skip: state.skip.indexOf(id) >= 0 }; });
     return out;
   }
   /* Leave a game out of her tastes, or put it back. A game left out never pays over the odds, but still wears out if played. */
@@ -724,7 +724,7 @@
     // Friendship and happiness go by how long she played, a point of friendship per 3 seconds up to the usual 8 (losing on purpose at once
     // used to count as a full game). No seconds given (old callers) means a full game.
     const part = secs > 0 ? clamp(secs / T.gameFull, 0, 1) : 1;
-    const joy = Math.round(gameJoy(taste) * part);
+    const joy = Math.round(gameJoy(taste, state.skip.indexOf(game) >= 0) * part);
     // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her Angy.
     const calm = T.neglectLine + T.gameCalm;
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
@@ -1073,3 +1073,4 @@
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
+
