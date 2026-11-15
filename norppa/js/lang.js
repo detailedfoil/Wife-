@@ -637,6 +637,8 @@
     'New for the album: {0}.': 'Uutta albumiin: {0}.',
     'The catch goes in the larder.': 'Saalis menee ruokakomeroon.',
     'Play again': 'Uudestaan',
+    'Play again · {0} happiness': 'Uudestaan · ilo {0}',
+    'Happiness shown is for a full game.': 'Näytetty ilo on täydestä pelistä.',
     'Enough for now': 'Riittää tältä erää',
 
     // ----- shop -----

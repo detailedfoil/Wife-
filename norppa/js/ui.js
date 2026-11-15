@@ -475,6 +475,7 @@
   UI.modal = function (o) {
     const run = () => new Promise((resolve) => {
       const m = $('modal'), card = $('modalCard');
+      card.classList.toggle('game-result', o.layout === 'game-result');
       card.innerHTML = (o.art ? '<img class="art" src="' + o.art + '" alt="">' : '') + '<h3>' + o.title + '</h3>' + (o.html || '')
         + '<div class="actions">' + (o.actions || [{ label: 'OK', value: 1 }]).map((a, i) => '<button class="btn ' + (a.cls || (i ? 'ghost' : '')) + '" data-i="' + i + '">' + a.label + '</button>').join('') + '</div>';
       m.hidden = false; UI.modalOpen = true;

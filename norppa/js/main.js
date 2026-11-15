@@ -987,7 +987,7 @@
     let html = lost ? '<p>' + tr('You woke a pufferfish. No coins this time.') + '</p>'
       : '<div class="bigscore">' + (gm.low ? PN.mmss(score) : score) + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
-    // why the coins are what they are: her taste for this game, and muck
+    html = '<div class="result-body"><div class="result-summary">' + html + '</div><div class="result-details">';
     // why the coins are what they are: how happy she was, and muck; then what this game did to her happiness
     if (!lost && r.happy > 0) html += '<p class="note up">' + UI.ic('smile') + tr('Happy seal: +{0}% coins.', r.happy) + '</p>';
     if (r.joy > 0) html += '<p class="note up">' + UI.ic('up') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
@@ -997,7 +997,13 @@
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';
     else if (r.fish.length) html += '<p>' + tr('The catch goes in the larder.') + '</p>';
     const again = S.canPlay(state).ok;
-    const v = await UI.modal({ title, html, actions: (again ? [{ label: tr('Play again'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
+    html += '</div></div>';
+    const nextMood = S.gameMoods(state, Date.now()).games[id];
+    const nextJoy = nextMood ? nextMood.joy : 0;
+    const joyText = (nextJoy > 0 ? '+' : nextJoy < 0 ? '−' : '') + Math.abs(nextJoy);
+    const replay = tr('Play again · {0} happiness', joyText);
+    if (again) html += '<p class="result-estimate">' + tr('Happiness shown is for a full game.') + '</p>';
+    const v = await UI.modal({ title, layout: 'game-result', html, actions: (again ? [{ label: replay, value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
     save();
     if (v === 1) G.startGame(id);
   };
@@ -1008,7 +1014,7 @@
     let html = '<div class="bigscore">' + r.clean + '%</div><p>' + tr('Cleanliness') + '.</p>' + (r.coins > 0 ? '<div class="loot">' + coinChip(r.coins) + '</div>' : '');
     html += '<p class="note ' + (r.rounds ? 'up' : 'down') + '">' + (r.full ? tr('Ahh. Warm, clean and happy.') : r.rounds ? tr('Cleaner, but not spotless. Another go will finish the job.') : tr('The heat got away before a single round. No clean this time.')) + '</p>';
     const again = !r.full && S.canSauna(state).ok;
-    const v = await UI.modal({ title: tr('Löyly'), html, actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
+    const v = await UI.modal({ title: tr('Löyly'), layout: 'game-result', html: '<div class="result-body"><div class="result-summary">' + html + '</div></div>', actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
     save();
     if (v === 1) G.sauna();
   }
