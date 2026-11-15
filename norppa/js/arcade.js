@@ -976,9 +976,9 @@
       el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm');
     }
     function newRound() {
-      lvl = round * 4 / 7;                       // round 7 is as hard as round 4 used to be
-      size = Math.max(0.15, 0.31 - lvl * 0.022);
-      band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.6; calm = 0.35; rest = 0;
+      lvl = round * 2 / 7;                       // a gentle increase across the whole visit
+      size = Math.max(0.32, 0.42 - lvl * 0.018);
+      band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.9; calm = 0.5; rest = 0;
     }
     function paint() {
       zoneEl.style.height = (size * 100) + '%'; zoneEl.style.bottom = (band * 100) + '%';
@@ -1015,20 +1015,20 @@
         if (rest > 0) { rest -= dt; if (rest <= 0) newRound(); paint(); return; }
         const pressing = hold || K.keys() !== 0;
         // the green band: water lifts it, and it sinks back on its own, with a small bounce off the bottom
-        bandV += (pressing ? 2.6 : -2.1) * dt;
-        bandV = U.clamp(bandV, -1.3, 1.3);
+        bandV += (pressing ? 1.9 : -1.6) * dt;
+        bandV = U.clamp(bandV, -0.85, 0.85);
         band += bandV * dt;
-        if (band < 0) { band = 0; bandV = Math.abs(bandV) * 0.35; }
+        if (band < 0) { band = 0; bandV = Math.abs(bandV) * 0.15; }
         if (band > 1 - size) { band = 1 - size; bandV = 0; }
         if (pressing) { splash -= dt; if (splash <= 0) { splash = 0.16; steam.emit(0.62, 0.2, 1.0, 2, 0.5, 0.16, 1.3, -1.6); if (rnd() < 0.25) A.play('bubble', 0.25); } }
         // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
-        const k = 1 + lvl * 0.22;
+        const k = 1 + lvl * 0.12;
         hop -= dt;
-        if (hop <= 0) { hop = (0.5 + rnd() * 1.5) / Math.sqrt(k); pinT = rnd() < 0.3 ? rnd() : U.clamp(pin + rs(0.3 + 0.04 * lvl), 0.03, 0.97); }
-        pinV += ((pinT - pin) * 9 * k - pinV * 4.5) * dt;
+        if (hop <= 0) { hop = (0.9 + rnd() * 1.6) / Math.sqrt(k); pinT = U.clamp(pin + rs(0.22 + 0.025 * lvl), 0.08, 0.92); }
+        pinV += ((pinT - pin) * 6 * k - pinV * 5) * dt;
         pin = U.clamp(pin + pinV * dt, 0, 1);
         const inside = pin >= band && pin <= band + size;
-        calm = U.clamp(calm + (inside ? 0.125 : -0.15) * dt, 0, 1);
+        calm = U.clamp(calm + (inside ? 0.16 : -0.08) * dt, 0, 1);
         paint();
         if (calm >= 1) {
           round++; K.score(round, true); document.getElementById('gScore').textContent = round + '/' + goal;
