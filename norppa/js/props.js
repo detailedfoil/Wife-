@@ -292,6 +292,17 @@
   };
 
   /* ---------- shop food ---------- */
+  /* A drinks can: the label wrapped round a metal body, a dark rim and a ring pull. r is the radius and h the height,
+     so a slim can and a big one share one build. */
+  function can(tex, r, h) {
+    const body = U.mesh(new T.CylinderGeometry(r, r, h, 28), new T.MeshStandardMaterial({ map: tex, roughness: 0.35, metalness: 0.25 }), 0, h / 2, 0);
+    body.rotation.y = Math.PI + 0.35;
+    const metal = U.mat(0xb9bfc7, { roughness: 0.25, metalness: 0.7 });
+    const g = U.group(body, U.cyl(r * 0.94, r, 0.03, U.mat(0x1d1f24, { roughness: 0.4, metalness: 0.5 }), 0, h + 0.015, 0, 28),
+      U.cyl(r * 0.8, r * 0.8, 0.014, metal, 0, h + 0.035, 0, 24));
+    g.add(U.rot(U.torus(0.03, 0.007, metal, 0, h + 0.06, 0, TAU, 14), Math.PI / 2, 0, 0));
+    return g;
+  }
   const food = {
     katkarapu() {
       const pink = U.mat(0xff8f7a, { roughness: 0.5 });
@@ -342,7 +353,7 @@
         c.beginPath(); c.arc(cx, 132, 46, -0.3 * Math.PI, 1.6 * Math.PI, true); c.stroke();
         c.fillStyle = '#2a2d33';
         [0, 14, 28].forEach((d) => { c.beginPath(); c.arc(cx + 10 + d, 136, 4.2, 0, 7); c.fill(); });
-        c.fillStyle = '#16181c'; c.font = '800 40px sans-serif'; c.fillText('SEALSIUS', cx, 250);
+        c.fillStyle = '#16181c'; c.font = '800 40px sans-serif'; c.fillText('SEALCIUS', cx, 250);
         c.fillStyle = '#ef5a3c'; c.font = '700 20px sans-serif'; c.fillText('LIVE FLIPPER', cx, 282);
         c.fillStyle = '#f08a1c'; c.beginPath(); c.arc(cx - 52, 330, 24, 0, 7); c.fill();
         c.fillStyle = '#3f8f3a'; c.beginPath(); c.ellipse(cx - 40, 304, 12, 6, -0.6, 0, 7); c.fill();
@@ -358,13 +369,95 @@
         c.fillStyle = base; c.fillRect(0, 466, w, h - 466);
         c.textAlign = 'center'; c.fillStyle = '#16181c'; c.font = '700 14px sans-serif'; c.fillText('VERY HIGH SQUEAK CONTENT', cx, 494);
       });
-      const can = U.mesh(new T.CylinderGeometry(0.115, 0.115, 0.44, 28), new T.MeshStandardMaterial({ map: tex, roughness: 0.35, metalness: 0.25 }), 0, 0.22, 0);
-      can.rotation.y = Math.PI + 0.35;
-      const metal = U.mat(0xb9bfc7, { roughness: 0.25, metalness: 0.7 });
-      const g = U.group(can, U.cyl(0.108, 0.115, 0.03, U.mat(0x1d1f24, { roughness: 0.4, metalness: 0.5 }), 0, 0.455, 0, 28),
-        U.cyl(0.092, 0.092, 0.014, metal, 0, 0.475, 0, 24));
-      g.add(U.rot(U.torus(0.03, 0.007, metal, 0, 0.5, 0, TAU, 14), Math.PI / 2, 0, 0));
-      return g;
+      return can(tex, 0.115, 0.44);
+    },
+    /* A slim red can with its own seal badge and a band of waves. The joke is in the name and the slogan, not the artwork. */
+    redseal() {
+      const tex = U.tex(900, 512, (c, w, h) => {
+        const cx = w / 2, r = U.rng(31), navy = '#16346f';
+        const bg = c.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, '#a30f1e'); bg.addColorStop(0.55, '#e0303c'); bg.addColorStop(1, '#8a0c1a');
+        c.fillStyle = bg; c.fillRect(0, 0, w, h);
+        const sheen = c.createLinearGradient(0, 0, w, 0);
+        sheen.addColorStop(0, 'rgba(0,0,0,.3)'); sheen.addColorStop(0.28, 'rgba(255,255,255,.26)'); sheen.addColorStop(0.5, 'rgba(255,255,255,.1)'); sheen.addColorStop(0.8, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(0,0,0,.32)');
+        c.fillStyle = sheen; c.fillRect(0, 0, w, h);
+        for (let i = 0; i < 46; i++) {              // bubbles rising up the can
+          c.fillStyle = 'rgba(255,220,224,' + (0.12 + r() * 0.18) + ')';
+          c.beginPath(); c.arc(r() * w, 20 + r() * 330, 3 + r() * 8, 0, 7); c.fill();
+        }
+        // a white badge with a seal's face on it
+        const by = 112;
+        c.fillStyle = '#ffffff'; c.beginPath(); c.arc(cx, by, 62, 0, 7); c.fill();
+        c.strokeStyle = '#e0303c'; c.lineWidth = 5; c.beginPath(); c.arc(cx, by, 54, 0, 7); c.stroke();
+        c.fillStyle = navy; c.beginPath(); c.ellipse(cx, by + 8, 37, 32, 0, 0, 7); c.fill();
+        c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(cx, by + 20, 18, 13, 0, 0, 7); c.fill();
+        c.fillStyle = navy; c.beginPath(); c.ellipse(cx, by + 14, 7, 4.6, 0, 0, 7); c.fill();
+        [-15, 15].forEach((d) => {
+          c.fillStyle = '#ffffff'; c.beginPath(); c.arc(cx + d, by - 3, 7, 0, 7); c.fill();
+          c.fillStyle = navy; c.beginPath(); c.arc(cx + d * 0.88, by - 2, 3.5, 0, 7); c.fill();
+        });
+        c.fillStyle = navy; [[-8, by + 23], [-4, by + 28], [8, by + 23], [4, by + 28]].forEach((p) => { c.beginPath(); c.arc(cx + p[0], p[1], 1.6, 0, 7); c.fill(); });
+        // the name goes on two lines so it fits the slim can
+        c.textAlign = 'center'; c.font = '800 64px sans-serif';
+        c.fillStyle = 'rgba(70,0,10,.65)'; c.fillText('RED', cx + 2, 244); c.fillText('SEAL', cx + 2, 304);
+        c.fillStyle = '#fff6e6'; c.fillText('RED', cx, 240); c.fillText('SEAL', cx, 300);
+        c.fillStyle = '#ffd0d4'; c.font = '700 17px sans-serif'; c.fillText('ENERGY DRINK', cx, 332);
+        // a navy band with a wavy top and a cream wave through it
+        c.fillStyle = navy; c.beginPath(); c.moveTo(0, 466);
+        for (let x = 0; x <= w; x += 6) c.lineTo(x, 366 + Math.sin(x / 22) * 7);
+        c.lineTo(w, 466); c.closePath(); c.fill();
+        c.strokeStyle = '#fff1dc'; c.lineWidth = 4; c.beginPath();
+        for (let x = 0; x <= w; x += 6) { const y = 382 + Math.sin(x / 22 + 1) * 7; if (x) c.lineTo(x, y); else c.moveTo(x, y); }
+        c.stroke();
+        c.fillStyle = '#ffffff'; c.font = '700 17px sans-serif'; c.fillText('GIVES YOU FLIPPERS', cx, 420);
+        c.fillStyle = '#9fb4e6'; c.font = '600 13px sans-serif'; c.fillText('SMALL CAN, BIG SPLASH', cx, 446);
+        const base = c.createLinearGradient(0, 466, 0, h);
+        base.addColorStop(0, '#d5d9df'); base.addColorStop(1, '#8b929c');
+        c.fillStyle = base; c.fillRect(0, 466, w, h - 466);
+      });
+      return can(tex, 0.094, 0.46);
+    },
+    /* A big black can with a tentacle curling round it, in purple and pink rather than any known green. */
+    kraken() {
+      const tex = U.tex(900, 512, (c, w, h) => {
+        const cx = w / 2;
+        c.fillStyle = '#101117'; c.fillRect(0, 0, w, h);
+        const sheen = c.createLinearGradient(0, 0, w, 0);
+        sheen.addColorStop(0, 'rgba(0,0,0,.35)'); sheen.addColorStop(0.28, 'rgba(255,255,255,.17)'); sheen.addColorStop(0.5, 'rgba(255,255,255,.06)'); sheen.addColorStop(0.8, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(0,0,0,.4)');
+        c.fillStyle = sheen; c.fillRect(0, 0, w, h);
+        // the tentacle: a fat curve that tapers to a curl, with a row of suckers along it
+        const P0 = [cx - 100, 262], P1 = [cx - 130, 190], P2 = [cx + 30, 200], P3 = [cx - 8, 124];
+        const P4 = [cx - 40, 62], P5 = [cx + 70, 34], P6 = [cx + 84, 96];
+        const bez = (a, b, d, e, t) => { const u = 1 - t; return [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * d[0] + t * t * t * e[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * d[1] + t * t * t * e[1]]; };
+        const spine = [];
+        for (let i = 0; i <= 24; i++) spine.push(bez(P0, P1, P2, P3, i / 24));
+        for (let i = 1; i <= 16; i++) spine.push(bez(P3, P4, P5, P6, i / 16));
+        const tg = c.createLinearGradient(cx - 100, 40, cx + 100, 262);
+        tg.addColorStop(0, '#a45cff'); tg.addColorStop(1, '#ff4fa3');
+        c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = tg;
+        for (let i = 1; i < spine.length; i++) {
+          c.lineWidth = 36 - 28 * (i / (spine.length - 1));
+          c.beginPath(); c.moveTo(spine[i - 1][0], spine[i - 1][1]); c.lineTo(spine[i][0], spine[i][1]); c.stroke();
+        }
+        c.fillStyle = 'rgba(255,214,236,.88)';
+        for (let i = 2; i < spine.length - 2; i += 2) {
+          const k = i / (spine.length - 1), a = spine[i], b = spine[i + 1];
+          const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1, off = (36 - 28 * k) * 0.22;
+          c.beginPath(); c.arc(a[0] - dy / len * off, a[1] + dx / len * off, 7.5 - 5 * k, 0, 7); c.fill();
+        }
+        c.textAlign = 'center';
+        const tt = c.createLinearGradient(cx - 120, 0, cx + 120, 0);
+        tt.addColorStop(0, '#b97dff'); tt.addColorStop(1, '#ff69b4');
+        c.fillStyle = tt; c.font = '800 50px sans-serif'; c.fillText('KRAKEN', cx, 322);
+        c.fillStyle = '#ffffff'; c.font = '800 28px sans-serif'; c.fillText('ENERGY', cx, 358);
+        c.fillStyle = '#ff69b4'; c.fillRect(cx - 90, 374, 180, 4); c.fillStyle = '#a45cff'; c.fillRect(cx - 90, 382, 180, 4);
+        c.fillStyle = '#d9c2ff'; c.font = '700 16px sans-serif'; c.fillText('WAKE THE DEEP', cx, 416);
+        c.fillStyle = '#8f88a6'; c.font = '600 13px sans-serif'; c.fillText('BIG CAN · BIGGER SQUEAK', cx, 440);
+        const base = c.createLinearGradient(0, 466, 0, h);
+        base.addColorStop(0, '#9aa0aa'); base.addColorStop(1, '#5d636d');
+        c.fillStyle = base; c.fillRect(0, 466, w, h - 466);
+      });
+      return can(tex, 0.122, 0.5);
     },
     /* A big enamel mug of coffee, steam and all. */
     kahvi() {

@@ -20,10 +20,10 @@
     // the front of the shore: small things only, low enough not to hide the seal
     lumilyhty: [-0.95, 2.8, 0.2], kurpitsa: [0.25, 3.35, 0], jaalyhty: [1.35, 2.8, -0.2], lahjat: [1.75, 0.4, -0.4], matto: [0.15, 0.3, 0.5],
     // out on the lake
-    luminorppa: [0.9, -4.9, 0.5], lumilinna: [-1.9, -6.9, 0.3], pilkki: [0.5, -6.9, 0.2], teltta: [2.6, -7.1, -0.5],
+    luminorppa: [0.9, -4.9, 0.5], lumilinna: [-0.2, -7.5, 0.1], pilkki: [1.3, -5.9, 0.2], teltta: [2.6, -7.1, -0.5],
     vene: [-3.0, -9.0, 0.9], joutsen: [-0.9, -8.9, 0.6], poro: [1.2, -8.8, -0.6],
     // by the den, and over on the sauna island
-    tahti: [-3.3, -5.9, 0.4], palju: [1.9, -10.3, 0.2], laituri: [3.05, -9.25, 0.25],
+    tahti: [-3.3, -5.9, 0.4], palju: [0.7, -10.9, 0.2], laituri: [3.05, -9.25, 0.25],
   };
   /* These sit on the den itself: x, y, z in the den's own space. */
   const ON_DEN = { lantern: [0, 1.0, 1.55], lights: [0, 0, 0], viirit: [0, 0, 0], ulkotulet: [0, 0.02, 2.3], ilmapallot: [0.55, 1.2, 0.2],
@@ -576,7 +576,11 @@
   function updateCamera(dt, snap) {
     const portrait = W.aspect < 0.8;
     if (cam.mode === 'game') {
-      cam.az = 0; cam.el = 0.03; cam.dist = portrait ? 13.5 : 12.5; cam.tx = 0; cam.ty = portrait ? 5.0 : 2.7; cam.tz = 0.6;
+      cam.az = 0; cam.el = 0.03; cam.dist = portrait ? 13.5 : 12.5; cam.tx = 0; cam.tz = 0.6;
+      // The lane the seal runs along sits about four fifths of the way down, whatever the shape of the screen. On a short
+      // screen (a small phone with its browser bars showing, a tablet held upright) it used to be cut off at the bottom,
+      // or hidden behind the hint.
+      cam.ty = Math.min(portrait ? 5.0 : 2.7, cam.dist * 0.6 * Math.tan(W.camera.fov * RAD / 2));
     } else if (cam.mode === 'intro') {
       cam.az = 0.3; cam.el = 0.2; cam.dist = 15; cam.tx = -0.6; cam.ty = 2.2; cam.tz = -1;
     } else {

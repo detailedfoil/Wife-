@@ -113,7 +113,7 @@
       taste: {}, tasteGoal: {}, tasteAt: now, tasteRollAt: 0, tasteKey: '', skip: [],
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
-      settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true },
+      settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true, medicine: false },   // medicine: the daily pill routine is off until it is switched on in Settings
       tut: 0,
     };
     s.fav = ['muikku', 'kuore', 'ahven', 'sarki', 'siika'][Math.floor(rnd(s) * 5)];
@@ -370,7 +370,7 @@
   function medInfo(state, now) {
     const today = medDayKey(now), m = state.med;
     const taken = m.day === today;
-    return { taken, photo: m.photoDay === today, late: !taken && today > m.since && localHour(now) >= T.medHour };
+    return { taken, photo: m.photoDay === today, late: !!state.settings.medicine && !taken && today > m.since && localHour(now) >= T.medHour };
   }
   function medSync(state, now) {
     const late = medInfo(state, now).late;
@@ -378,6 +378,13 @@
     if (!late && state.medLate) { state.grudge = 0; state.sulkWant = null; }   // a new day wipes yesterday's slate
     state.medLate = late;
     if (late) state.grudge = 100;
+  }
+  /* The daily medicine is off for everyone until it is switched on in Settings. Switching it on starts the routine tomorrow
+     (not the moment it is switched on), and switching it off ends any Anxi she is in. */
+  function setMedicine(state, on, now) {
+    state.settings.medicine = !!on;
+    if (on) state.med.since = medDayKey(now);
+    medSync(state, now);
   }
   function takeMed(state, now, photo) {
     const today = medDayKey(now), m = state.med, first = m.day !== today;
@@ -1071,6 +1078,6 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
-    sulkNeeds, medInfo, medSync, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
+    sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
 

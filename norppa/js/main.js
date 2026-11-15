@@ -346,7 +346,7 @@
     const c = state.counters, hint = (text, icon) => { tutT = -6; UI.toast(text, icon, '', 5600); };
     if (state.tut === 1 && c.pets >= 4) { state.tut = 2; hint(tr('When the tummy bar runs low, tap <b>Feed</b>.'), 'fish'); }
     else if (state.tut === 2 && c.feeds >= 1) { state.tut = 3; hint(tr('Tap the hole in the ice to send {0} diving for finds.', nm()), 'dive'); }
-    else if (state.tut === 3 && c.dives >= 1) { state.tut = 4; hint(tr('Games in <b>Play</b> earn coins for the shop.'), 'ball'); }
+    else if (state.tut === 3 && c.dives >= 1) { state.tut = 4; hint(tr('Games in <b>Play</b> earn coins for the shop.'), 'heart'); }
     else if (state.tut === 4 && c.games >= 1) { state.tut = 5; hint(tr('Drag the sky to look around. It shows the real daylight and weather in Lapland right now.'), 'sun'); }
     else if (state.tut === 5 && state.poops.length) { state.tut = 6; hint(tr('Tap a poo to clear it away.'), 'poo'); }
   }
@@ -863,7 +863,21 @@
   };
 
   /* The sauna is how she gets clean: the Löyly game, free, for as many rounds as it takes to finish the job. */
-  G.sauna = function () {
+  /* What Löyly is, shown before the first few goes: people tried to swipe the stones, so it says what to press and what to watch. */
+  function saunaHowTo(rounds) {
+    const gauge = '<svg class="how-gauge" viewBox="0 0 64 130" aria-hidden="true"><defs><linearGradient id="howHeat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2503a"/><stop offset=".32" stop-color="#f3a13c"/><stop offset=".55" stop-color="#f4dc8a"/><stop offset=".8" stop-color="#8fc7f2"/><stop offset="1" stop-color="#4f8fe0"/></linearGradient></defs>'
+      + '<rect x="3" y="3" width="36" height="124" rx="18" fill="url(#howHeat)" stroke="#fff" stroke-width="3"/>'
+      + '<rect x="7" y="42" width="28" height="46" rx="11" fill="rgba(62,200,120,.9)" stroke="#1f9a5a" stroke-width="3"/>'
+      + '<rect x="3" y="60" width="36" height="8" rx="4" fill="#17264d" stroke="#fff" stroke-width="2"/>'
+      + '<rect x="47" y="3" width="12" height="124" rx="6" fill="#fff" stroke="#cfd8ec" stroke-width="2"/><rect x="47" y="68" width="12" height="59" rx="6" fill="#2fbf71"/></svg>';
+    return '<div class="how"><div class="how-hold"><span class="how-pad">' + tr('Hold') + '</span><p><b>' + tr('Press and hold anywhere') + '</b> ' + tr('on the screen to throw water on the stones. No swiping needed.') + '</p></div>'
+      + '<div class="how-gauge-row">' + gauge + '<ul class="how-legend">'
+      + '<li>' + tr('The <b>green bar</b> rises while you hold and sinks when you let go.') + '</li>'
+      + '<li>' + tr('The dark <b>needle</b> drifts about on its own. Keep it inside the green.') + '</li>'
+      + '<li>' + tr('The thin <b>calm bar</b> fills while it is, and drains while it is not.') + '</li></ul></div>'
+      + '<p class="how-end">' + tr('Fill the calm bar to finish a round. {0} rounds make her squeaky clean. If it runs dry the go ends, and what she managed still counts.', rounds) + '</p></div>';
+  }
+  G.sauna = async function (again) {   // again: straight after a go, so there is no need to explain it once more
     if (blocked() || bedBusy || PN.Games.active) return;
     const c = S.canSauna(state);
     if (!c.ok) {
@@ -872,6 +886,12 @@
       return;
     }
     seal.halt();
+    if (!again && state.counters.saunas < 8) {
+      G.busy = true;
+      const v = await UI.modal({ title: tr('How Löyly works'), html: saunaHowTo(S.saunaNeed(state)), actions: [{ label: tr("Let's go"), value: 1 }, { label: tr('Not now'), value: 0 }] });
+      G.busy = false;
+      if (v !== 1 || blocked() || bedBusy || PN.Games.active) return;
+    }
     PN.Games.opts = { need: S.saunaNeed(state) };
     PN.Games.start('sauna');
   };
@@ -989,9 +1009,9 @@
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';
     html = '<div class="result-body"><div class="result-summary">' + html + '</div><div class="result-details">';
     // why the coins are what they are: how happy she was, and muck; then what this game did to her happiness
-    if (!lost && r.happy > 0) html += '<p class="note up">' + UI.ic('smile') + tr('Happy seal: +{0}% coins.', r.happy) + '</p>';
-    if (r.joy > 0) html += '<p class="note up">' + UI.ic('up') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
-    else if (r.joy < 0) html += '<p class="note down">' + UI.ic('down') + tr('{0} is tired of this one: happiness −{1}.', UI.esc(state.name), -r.joy) + '</p>';
+    if (!lost && r.happy > 0) html += '<p class="note up">' + UI.ic('heartfull') + tr('Happy seal: +{0}% coins.', r.happy) + '</p>';
+    if (r.joy > 0) html += '<p class="note up">' + UI.ic('heartup') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
+    else if (r.joy < 0) html += '<p class="note down">' + UI.ic('heartdown') + tr('{0} is tired of this one: happiness −{1}.', UI.esc(state.name), -r.joy) + '</p>';
     if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';
@@ -1016,7 +1036,7 @@
     const again = !r.full && S.canSauna(state).ok;
     const v = await UI.modal({ title: tr('Löyly'), layout: 'game-result', html: '<div class="result-body"><div class="result-summary">' + html + '</div></div>', actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
     save();
-    if (v === 1) G.sauna();
+    if (v === 1) G.sauna(true);
   }
 
   /* ---------- shop ---------- */
@@ -1096,7 +1116,8 @@
 
   /* ---------- settings ---------- */
   G.setSetting = function (k, val) {
-    state.settings[k] = val;
+    if (k === 'medicine') { S.setMedicine(state, val, Date.now()); UI.refresh(); }
+    else state.settings[k] = val;
     if (k === 'lang') UI.setLang(val);
     applySettings();
     A.play('tap');
@@ -1534,7 +1555,7 @@
       else if (state.grudge > 0) b = 'grump';
       else if (s.food < 25) b = 'fish';
       else if (s.energy < 20) b = 'zzz';
-      else if (s.clean < 25) b = 'drop';
+      else if (s.clean < 25) b = 'steam';
       else if (s.joy < 30) b = 'heart';
       else if (S.isNight(Date.now()) && s.energy < 60) b = 'moon';
     }
