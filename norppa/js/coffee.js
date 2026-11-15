@@ -26,7 +26,7 @@
   /* Finnish names for the cup (used when the game is in Finnish). None has a letter with dots or a ring on it, so they can be typed on any keyboard. */
   const NAMES = ['Aino', 'Eero', 'Onni', 'Otso', 'Ilmari', 'Tapio', 'Veikko', 'Sanni', 'Kaisa', 'Mikko', 'Jussi', 'Tuuli', 'Helmi', 'Ilona',
     'Venla', 'Aatu', 'Eino', 'Oiva', 'Toivo', 'Kerttu', 'Sini', 'Satu', 'Pekka', 'Matti', 'Liisa', 'Anni', 'Elsa', 'Hilla', 'Lumi', 'Pyry',
-    'Taika', 'Kuura', 'Aapo', 'Niilo', 'Vilho', 'Lauri', 'Senja', 'Aava', 'Enni', 'Seela', 'Stephen', 'Alex'];
+    'Taika', 'Kuura', 'Aapo', 'Niilo', 'Vilho', 'Lauri', 'Senja', 'Aava', 'Enni', 'Seela', 'Alex'];
   /* The same for English: an English game gets English names. */
   const NAMES_EN = ['Alice', 'Ben', 'Chloe', 'Daniel', 'Emma', 'Finn', 'Grace', 'Harry', 'Isla', 'Jack', 'Kate', 'Liam', 'Mia', 'Noah', 'Olivia', 'Oscar',
     'Poppy', 'Ruby', 'Sam', 'Tom', 'Zoe', 'Ella', 'Leo', 'Lily', 'Max', 'Nina', 'Owen', 'Rosie', 'Sophie', 'Theo', 'Amy', 'Jake', 'Maya', 'Ryan',
