@@ -1688,7 +1688,7 @@
 /* Seal Seat Shuffle: a roofless Three.js bus, viewed from above. */
 (function (PN) {
   'use strict';
-  const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit;
+  const T = THREE, U = PN.U, W = PN.World, K = PN.Games.kit, tr = PN.L;
   const FIRST_ROWS = 8, ROW_PITCH = 1.15, ARRIVE = 0.24, REVEAL = 0.65, DEPART = 0.22, CRAWL = 0.80, CRAWL_START = 0.70;
   const tapPosition = new T.Vector3(), matrix = new T.Matrix4();
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
