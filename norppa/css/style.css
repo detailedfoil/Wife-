@@ -164,6 +164,11 @@ h1, h2, h3, p { margin: 0; }
 .cell.locked img { filter: brightness(0) opacity(.16); }
 .cell.locked b, .cell.locked small { color: #a9b4cf; }
 .cell.fav::before { content: ''; position: absolute; inset: 0; border-radius: 18px; box-shadow: inset 0 0 0 2.5px var(--joy); pointer-events: none; }
+/* shop and larder tiles: orange for food, yellow for energy drinks, coffee brown for the coffee */
+.cell.k-food { background: #ffe3c6; } .cell.k-food img { background: radial-gradient(circle at 50% 54%, #ffa94d 0 44%, rgba(255, 169, 77, 0) 46%); }
+.cell.k-drink { background: #fff3b3; } .cell.k-drink img { background: radial-gradient(circle at 50% 54%, #ffe033 0 44%, rgba(255, 224, 51, 0) 46%); }
+.cell.k-coffee { background: #ead7c3; } .cell.k-coffee img { background: radial-gradient(circle at 50% 54%, #b98458 0 44%, rgba(185, 132, 88, 0) 46%); }
+.cell.k-food .tag, .cell.k-drink .tag, .cell.k-coffee .tag { background: rgba(255, 255, 255, .82); }
 .rows { display: grid; gap: 8px; }
 .row { background: #fff; border-radius: 18px; padding: 11px 12px; display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; box-shadow: 0 1px 0 rgba(23, 38, 77, .07), 0 3px 10px rgba(23, 38, 77, .08); }
 .row .ic-wrap { width: 44px; height: 44px; border-radius: 14px; background: var(--ice); display: grid; place-items: center; flex: none; color: var(--ink); }
@@ -179,7 +184,7 @@ h1, h2, h3, p { margin: 0; }
 .row.off { opacity: .55; }
 .row .side .mood { display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex-wrap: wrap; font: 600 15px var(--display); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .row .side .mood.up { color: #14784f; } .row .side .mood.down { color: #b02358; }
-.row .side .mood .ic { width: 18px; height: 18px; } .row .side .mood small { flex-basis: 100%; text-align: right; }
+.row .side .mood .ic { width: 18px; height: 18px; } .row .side .mood .ic.hrt { width: 34px; height: 34px; margin-right: 0; } .row .side .mood small { flex-basis: 100%; text-align: right; }
 .happy-card { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 10px; padding: 11px 13px; border-radius: 16px; background: #eef3fb; font: 500 14px/1.4 var(--body, inherit); }
 .happy-card .ic { width: 30px; height: 30px; flex: none; } .happy-card b { display: block; font-family: var(--display); }
 .happy-card.up { background: #e3f5ec; } .happy-card.up .ic, .happy-card.up b { color: #14784f; }
@@ -242,6 +247,7 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .g-top .round.back { width: auto; padding: 0 15px 0 9px; border-radius: 19px; gap: 3px; grid-auto-flow: column; font: 800 13px var(--body, inherit); color: var(--ink-soft); }
 .g-big { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font: 600 76px/1 var(--display); color: #fff; text-shadow: 0 4px 0 rgba(13, 24, 60, .5), 0 0 30px rgba(13, 24, 60, .5); }
 .g-big.pop { animation: pop .5s cubic-bezier(.2, .9, .3, 1.4); }
+.g-big.too-slow { top: 38%; font-size: min(68px, 17vw); color: #ffd3d3; }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } }
 .sg { position: absolute; right: calc(14px + var(--sr)); top: 50%; transform: translateY(-50%); height: min(62vh, 440px); display: flex; gap: 8px; }
 .sg-heat { position: relative; width: 46px; border-radius: 23px; background: linear-gradient(#e2503a, #f3a13c 32%, #f4dc8a 55%, #8fc7f2 80%, #4f8fe0); box-shadow: inset 0 0 0 4px #fff, 0 6px 18px rgba(20, 10, 0, .4); overflow: hidden; }
@@ -250,6 +256,20 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .sg-heat b { position: absolute; left: 0; right: 0; height: 8px; margin-top: -4px; border-radius: 4px; background: #17264d; box-shadow: 0 0 0 2px #fff; }
 .sg-calm { position: relative; width: 14px; border-radius: 7px; background: rgba(255, 255, 255, .85); overflow: hidden; box-shadow: 0 6px 18px rgba(20, 10, 0, .4); }
 .sg-calm i { position: absolute; left: 0; right: 0; bottom: 0; background: #2fbf71; border-radius: 7px; }
+.sg-pad { position: absolute; left: calc(16px + var(--sl)); bottom: calc(112px + var(--sb)); width: 84px; height: 84px; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 1px; background: rgba(255, 255, 255, .16); border: 3px dashed rgba(255, 255, 255, .9); color: #fff; font: 600 15px var(--display); text-shadow: 0 2px 0 rgba(13, 24, 60, .5); animation: sgpad 1.3s ease-in-out infinite; pointer-events: none; }
+.sg-pad .ic { width: 30px; height: 30px; filter: drop-shadow(0 2px 0 rgba(13, 24, 60, .45)); }
+.sg-pad.on { background: rgba(90, 170, 255, .8); border-style: solid; animation: none; transform: scale(1.08); }
+@keyframes sgpad { 50% { transform: scale(1.1); background: rgba(255, 255, 255, .3); } }
+/* the how-to card shown before Löyly */
+.how { text-align: left; margin-top: 12px; display: grid; gap: 14px; }
+.how p { margin: 0; font-size: 14.5px; line-height: 1.4; color: var(--ink-soft); }
+.how p b, .how li b { color: var(--ink); font-weight: 800; }
+.how-hold { display: flex; gap: 12px; align-items: center; }
+.how-pad { flex: none; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; font: 600 15px var(--display); color: #2a62b7; background: #dbe9fb; border: 3px dashed #4f8fe0; }
+.how-gauge-row { display: flex; gap: 12px; align-items: center; }
+.how-gauge { flex: none; width: 58px; height: auto; }
+.how-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 14.5px; line-height: 1.35; color: var(--ink-soft); }
+.how .how-end { padding-top: 2px; }
 /* Ice Piano: four lanes of dark water with ice tiles sliding down them, drawn on a canvas. */
 .pt { position: absolute; left: 50%; top: 36%; bottom: 0; transform: translateX(-50%); width: min(100vw, 480px); pointer-events: auto; overflow: hidden; border-radius: 22px 22px 0 0;
   background: #173a73; box-shadow: inset 0 0 0 3px #2a579f, 0 -6px 24px rgba(8, 20, 40, .35); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
@@ -305,32 +325,7 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 
 @keyframes pfopen { from { transform: scale(.6); opacity: .2; } }
 @keyframes pfpuff { from { transform: scale(.3); } }
-.bj { position: absolute; left: 10px; right: 10px; bottom: calc(12px + var(--sb)); max-width: 460px; margin: 0 auto; pointer-events: auto; background: #14553f; border-radius: 26px; padding: 14px 14px 16px; box-shadow: inset 0 0 0 3px #1f7558, 0 10px 30px rgba(8, 20, 40, .45); color: #fff; }
-.bj-row { display: flex; align-items: center; gap: 10px; min-height: 84px; }
-.bj-who { width: 62px; flex: none; font: 600 13px var(--display); color: #bfe8d6; }
-.bj-who b { display: block; font: 600 24px/1.1 var(--display); color: #fff; font-variant-numeric: tabular-nums; }
-.bj-cards { display: flex; flex: 1; min-width: 0; }
-.bj-card { width: 50px; height: 72px; flex: none; border-radius: 9px; background: #fff; color: #17264d; font: 600 22px/1 var(--display); display: grid; place-items: center; text-align: center; box-shadow: 0 2px 0 rgba(0, 0, 0, .25), -2px 0 6px rgba(0, 0, 0, .18); margin-right: -16px; animation: bjdeal .22s ease-out; }
-.bj-card i { display: block; font-style: normal; font-size: 20px; margin-top: 3px; }
-.bj-card.red { color: #c8283c; }
-.bj-card.down { background: repeating-linear-gradient(45deg, #2a5fb8 0 6px, #3f78d6 6px 12px); box-shadow: inset 0 0 0 4px #fff, 0 2px 0 rgba(0, 0, 0, .25); }
-@keyframes bjdeal { from { transform: translateY(-18px) rotate(-8deg); opacity: 0; } }
-.bj-msg { min-height: 24px; margin: 8px 0 10px; text-align: center; font: 600 17px var(--display); color: #ffe9a8; }
-.bj-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.bj-slide { position: relative; flex: 1 1 100%; padding: 4px 6px 0; }
-.bj-slide input { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 34px; margin: 0; background: transparent; position: relative; z-index: 2; touch-action: none; }
-.bj-slide input::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
-.bj-slide input::-moz-range-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
-.bj-slide input::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -9px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 #b9d6c9, 0 0 0 3px #17264d; }
-.bj-slide input::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 3px 0 #b9d6c9, 0 0 0 3px #17264d; }
-.bj-ticks { position: absolute; left: 21px; right: 21px; top: 10px; height: 20px; z-index: 1; pointer-events: none; }
-.bj-ticks i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, .7); border-radius: 1px; }
-.bj-ticks i:nth-child(1) { left: 25%; } .bj-ticks i:nth-child(2) { left: 50%; } .bj-ticks i:nth-child(3) { left: 75%; }
-.bj-ends { display: flex; justify-content: space-between; margin: -2px 3px 8px; font: 800 12px var(--body, inherit); color: #bfe8d6; }
-.bj-btns button { flex: 1; height: 52px; border-radius: 26px; background: #fff; color: #17264d; font: 600 17px var(--display); box-shadow: 0 4px 0 #b9d6c9; }
-.bj-btns button:active { transform: translateY(2px); box-shadow: 0 2px 0 #b9d6c9; }
-.bj-btns button.go { background: #ffcf4a; box-shadow: 0 4px 0 #c79412; }
-.bj-btns button:disabled { opacity: .4; }
+/* Blackjack lives in blackjack-table.css */
 .g-song { position: absolute; left: 0; right: 0; top: calc(64px + var(--st)); text-align: center; padding: 0 16px; font: 700 18px var(--display); color: #fff; text-shadow: 0 2px 0 rgba(13, 24, 60, .55), 0 0 12px rgba(13, 24, 60, .6); pointer-events: none; }
 .g-hint { position: absolute; left: 0; right: 0; bottom: calc(26px + var(--sb)); text-align: center; font: 600 16px var(--display); color: #fff; text-shadow: 0 2px 0 rgba(13, 24, 60, .55), 0 0 12px rgba(13, 24, 60, .5); padding: 0 20px; }
 
@@ -355,7 +350,7 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .modal, .modal-card, .bar i, .plate-xp i { transition: none; }
-  .meter.low, .dock button.need::after, .toast, .g-big.pop, .bj-card, .pf-c.fresh, .pf-c.puff svg { animation: none; }
+  .meter.low, .dock button.need::after, .toast, .g-big.pop, .bj-card.deal, .bj-card.flip, .pf-c.fresh, .pf-c.puff svg { animation: none; }
 }
 
 .note a { color: inherit; text-decoration: underline; }
@@ -377,6 +372,17 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .tg-card svg text { font: 700 17px var(--display); }
 .tg-card p { margin: 6px 0 14px; font-size: 14.5px; line-height: 1.35; color: #d7e4f7; }
 .tg-card .btn { width: 100%; justify-content: center; padding: 14px 10px; }
+/* Snowball Toss: the wind, big, right above the snowball */
+.tw { position: absolute; transform: translate(-50%, calc(-100% - 20px)); display: grid; justify-items: center; gap: 1px; pointer-events: none; color: var(--tw, #fff); text-shadow: 0 3px 0 rgba(13, 24, 60, .55), 0 0 18px rgba(13, 24, 60, .5); }
+.tw[hidden] { display: none; }
+.tw small { font: 700 10.5px var(--display); letter-spacing: .1em; text-transform: uppercase; color: #fff; opacity: .92; }
+.tw b { font: 600 min(34px, 9vw)/1 var(--display); font-variant-numeric: tabular-nums; }
+.tw-arrow { display: flex; align-items: center; filter: drop-shadow(0 3px 0 rgba(13, 24, 60, .5)); }
+.tw-arrow i { height: 6px; border-radius: 3px; background: var(--tw); }
+.tw-arrow em { width: 0; height: 0; border: 9px solid transparent; }
+.tw-arrow.r em { border-left: 14px solid var(--tw); border-right: 0; margin-left: -3px; }
+.tw-arrow.l { flex-direction: row-reverse; }
+.tw-arrow.l em { border-right: 14px solid var(--tw); border-left: 0; margin-right: -3px; }
 
 /* Comfortable instrument choices even on narrow phone screens. */
 .music-choices { display: grid; gap: 7px; margin-top: 10px; }

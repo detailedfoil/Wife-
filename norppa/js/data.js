@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '15 Nov 2026, 08:05';
+  PN.UPDATED = '15 Nov 2026, 23:50';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -60,9 +60,13 @@
       note: 'Fish baked inside a rye loaf. Very filling.' },
     { id: 'lohikeitto', fi: 'Lohikeitto', en: 'Salmon soup', food: 48, joy: 14, price: 24,
       note: 'Creamy, warm, with plenty of dill.' },
-    { id: 'sealsius', fi: 'Norpsius', en: 'Sealsius energy drink', food: 4, joy: 6, energy: 35, price: 20,
-     
+    /* The energy drinks, three sizes of can. Their names are the same in Finnish and English. The id stays 'sealsius' so saves keep their cans. */
+    { id: 'redseal', fi: 'Red Seal', en: 'Red Seal energy drink', food: 2, joy: 4, energy: 22, price: 12,
+      note: 'The slim red can that promises to give you flippers. A small lift of energy, hardly any dinner.' },
+    { id: 'sealsius', fi: 'Sealcius', en: 'Sealcius energy drink', food: 4, joy: 6, energy: 35, price: 20,
       note: 'Zero sugar, seven vitamins and a very high squeak content. A burst of energy, but only a sip of dinner.' },
+    { id: 'kraken', fi: 'Kraken Energy', en: 'Kraken Energy drink', food: 6, joy: 8, energy: 60, price: 34,
+      note: 'A huge black can with a tentacle on it. A big lift of energy, but not much of a dinner.' },
     /* full: fills tummy, happiness and energy at once (not cleanliness). Dear on purpose: it is for a visit with no time to play. */
     { id: 'kahvi', fi: 'Kahvi', en: 'Coffee', full: true, food: 0, price: 160,
       note: 'A big mug of strong coffee. Fills her tummy, happiness and energy in one go. She still needs her sauna.' },
@@ -315,11 +319,11 @@
   /* Economy dial. Shop prices are doubled and earnings cut to two thirds. Cosmetics (wear and decor)
      cost 12x their base price at the top end, but are then spread on a curve so the cheapest sits near
      cosmeticFloor coins and the dearest stays put. Every fish fills a quarter less. Change these to retune. */
-  /* Mini-games and what they cost to unlock. Nose Ball is free; the rest are bought with coins. */
+  /* Mini-games and what they cost to unlock. Nose Ball, Seal Seat Shuffle and Fish Rain are free from the start (with the dive, that is four things to do straight away); the rest are bought with coins. */
   const GAMES = {
-    shuffle: { price: 100, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Sit as far away from the other seals as you can. Be quick!', best: 'best_shuffle', pay: [0.181, 0.7], unit: 'points out of 2,000' },
+    shuffle: { price: 0, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Choose an empty seat as far away from others as possible, be quick.', best: 'best_shuffle', pay: [0.181, 0.7], unit: 'points out of 2,000' },
     ball: { price: 0, muck: 7, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', pay: [0.56, 1.1] },
-    catch: { price: 200, muck: 6, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
+    catch: { price: 0, muck: 6, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
     swim: { price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the best one counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum' },
     stack: { price: 575, muck: 6, title: 'Ice Cream Stack', icon: 'stack', tint: 'sea', text: 'Build a delicious ice cream tower! Tap to stack each scoop neatly. Overhanging bits tumble off', best: 'best_stack', pay: [0.78, 0.96], unit: 'scoops stacked' },
     puff: { price: 650, muck: 5, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [60.5, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
@@ -329,7 +333,7 @@
     curl: { price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
     sled: { price: 1250, muck: 12, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
     coffee: { ext: true, price: 850, muck: 3, title: 'Coffee Memory', icon: 'steam', tint: 'warm', text: 'Remember each customer\'s order and make the drink from memory. Every two drinks add one more thing to remember, and one wrong drink ends it.', best: 'best_coffee', pay: [0.77, 1.85], unit: 'drinks served' },   // ext: its rules live in coffee.js; 850 coins, between Puffer Sweeper and Curling Seal; tuned for a player who reaches 11 drinks fairly often in about two minutes (65 coins, 31 a minute with the boost): 4 drinks pay 10, 6 pay 21, 9 pay 46, 12 pay 76, 14 pay 100, and the 150 cap is reached around 18 drinks, just after the orders stop growing at ten things
-    bj: { price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'sardines won' },
+    bj: { price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'tokens won' },
   };
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
      skill levels so a new player earns about 16 coins a minute, a casual one 24, a good one 31 and an expert 37, whichever game

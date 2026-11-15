@@ -1,100 +1,87 @@
-/* Blackjack table layout: cards sit on the felt, controls stay at the bottom. */
-.gamehud:has(.bj:not([hidden])) .bj {
-  background: rgba(20, 85, 63, .96);
-  border-radius: 24px;
-  padding: 8px 14px 13px;
-  bottom: calc(12px + var(--sb));
-  box-shadow: inset 0 0 0 3px #1f7558, 0 10px 30px rgba(8, 20, 40, .45);
-}
-.gamehud:has(.bj:not([hidden])) .bj-row {
-  position: fixed;
-  left: max(22px, calc((100vw - 430px) / 2));
-  right: max(22px, calc((100vw - 430px) / 2));
-  min-height: 0;
-  height: 78px;
-  gap: 10px;
-  pointer-events: none;
-}
-.gamehud:has(.bj:not([hidden])) .bj-row:first-child { top: 49%; }
-.gamehud:has(.bj:not([hidden])) .bj-row:nth-child(2) { top: 62%; }
-.gamehud:has(.bj:not([hidden])) .bj-who {
-  width: 58px;
-  font-size: 13px;
-  color: #d0f0e2;
-  text-shadow: 0 2px 5px rgba(0,0,0,.45);
-}
-.gamehud:has(.bj:not([hidden])) .bj-who b {
-  font-size: 22px;
-  color: #fff;
-}
-.gamehud:has(.bj:not([hidden])) .bj-cards {
-  align-items: center;
-  overflow: visible;
-}
-.gamehud:has(.bj:not([hidden])) .bj-card {
-  width: 58px;
-  height: 82px;
-  margin-right: -13px;
-  border-radius: 10px;
-  font-size: 25px;
-  box-shadow: 0 5px 12px rgba(0,0,0,.3);
-}
-.gamehud:has(.bj:not([hidden])) .bj-card i { font-size: 23px; }
-.gamehud:has(.bj:not([hidden])) .bj-msg {
-  min-height: 20px;
-  margin: 0 0 7px;
-  font-size: 14px;
-}
-.gamehud:has(.bj:not([hidden])) .bj-btns button { height: 48px; }
-@media (max-height: 700px) {
-  .gamehud:has(.bj:not([hidden])) .bj-row:first-child { top: 45%; }
-  .gamehud:has(.bj:not([hidden])) .bj-row:nth-child(2) { top: 59%; }
-  .gamehud:has(.bj:not([hidden])) .bj-card { width: 50px; height: 70px; }
-}
-@media (orientation: landscape) {
-  .gamehud:has(.bj:not([hidden])) .bj-row:first-child { top: 38%; }
-  .gamehud:has(.bj:not([hidden])) .bj-row:nth-child(2) { top: 58%; }
-  .gamehud:has(.bj:not([hidden])) .bj { max-width: 380px; }
-}
+/* Blackjack table. The cards sit high on the felt; below them, on the same panel as the buttons, are the tokens
+   (a little tower of chips and the number), so what you have is always in view. Portrait first, then short screens
+   and landscape, where the cards go on the left and the panel on the right. */
+.bj { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; pointer-events: none; color: #fff; }
+.bj[hidden] { display: none; }
+/* the token count is at the bottom now, so the little counter at the top is not needed */
+.gamehud:has(.bj:not([hidden])) .g-top .g-pill { display: none; }
 
-/* Soft finish: card stock, a little embossed pattern on the backs, and glossy controls. */
-.gamehud:has(.bj:not([hidden])) .bj-card:not(.down) {
-  background: linear-gradient(145deg, #ffffff 0%, #fbfcff 72%, #edf2fa 100%);
-  border: 1px solid rgba(222, 231, 244, .95);
-}
-.gamehud:has(.bj:not([hidden])) .bj-card.down {
-  position: relative;
-  overflow: hidden;
-  border: 3px solid #f7fbff;
-  background:
-    radial-gradient(circle at 50% 48%, rgba(232,245,255,.42) 0 2px, transparent 3px),
-    repeating-linear-gradient(45deg, #2b60b7 0 6px, #3975d0 6px 12px);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.34), 0 5px 12px rgba(0,0,0,.3);
-}
-.gamehud:has(.bj:not([hidden])) .bj-card.down::after {
-  content: "✦";
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: rgba(235,246,255,.72);
-  font: 600 27px/1 var(--display);
-  text-shadow: 0 1px 2px rgba(12,42,100,.35);
-}
-.gamehud:has(.bj:not([hidden])) .bj {
+.bj-top { width: min(calc(100% - 28px), 430px); margin-top: calc(var(--st, 0px) + 36vh); display: grid; gap: 8px; }
+.bj-row { display: flex; align-items: center; gap: 10px; height: 82px; }
+.bj-who { width: 62px; flex: none; font: 600 13px var(--display); color: #d0f0e2; text-shadow: 0 2px 5px rgba(0, 0, 0, .45); }
+.bj-who b { display: block; font: 600 22px/1.1 var(--display); color: #fff; font-variant-numeric: tabular-nums; }
+.bj-cards { display: flex; flex: 1; min-width: 0; align-items: center; }
+.bj-card { width: 58px; height: 82px; flex: none; margin-right: -13px; border-radius: 10px; font: 600 25px/1 var(--display); color: #17264d; display: grid; place-items: center; text-align: center;
+  background: linear-gradient(145deg, #ffffff 0%, #fbfcff 72%, #edf2fa 100%); border: 1px solid rgba(222, 231, 244, .95); box-shadow: 0 5px 12px rgba(0, 0, 0, .3); }
+.bj-card i { display: block; font-style: normal; font-size: 23px; margin-top: 3px; }
+.bj-card.red { color: #c8283c; }
+.bj-card.down { position: relative; overflow: hidden; border: 3px solid #f7fbff;
+  background: radial-gradient(circle at 50% 48%, rgba(232, 245, 255, .42) 0 2px, transparent 3px), repeating-linear-gradient(45deg, #2b60b7 0 6px, #3975d0 6px 12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .34), 0 5px 12px rgba(0, 0, 0, .3); }
+.bj-card.down::after { content: "✦"; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(235, 246, 255, .72); font: 600 27px/1 var(--display); text-shadow: 0 1px 2px rgba(12, 42, 100, .35); }
+/* only a card that has just arrived moves; the dealer's hidden card turns over when it is shown */
+.bj-card.deal { animation: bjdeal .5s cubic-bezier(.2, .8, .3, 1) both; }
+.bj-card.flip { animation: bjflip .55s ease-out both; }
+@keyframes bjdeal { from { transform: translate(70px, -110px) rotate(14deg) scale(.7); opacity: 0; } }
+@keyframes bjflip { from { transform: perspective(320px) rotateY(90deg) scale(1.08); } }
+
+.bj-panel { margin-top: auto; width: min(calc(100% - 20px), 460px); margin-bottom: calc(12px + var(--sb)); pointer-events: auto; padding: 10px 14px 13px; border-radius: 24px;
   background: linear-gradient(145deg, #176248, #104b39);
-  box-shadow: inset 0 0 0 2px rgba(105,190,151,.42), inset 0 2px 8px rgba(255,255,255,.08), 0 10px 30px rgba(8,20,40,.45);
-}
-.gamehud:has(.bj:not([hidden])) .bj-btns button {
-  background: linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%);
-  border: 1px solid rgba(255,255,255,.9);
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.95), 0 4px 0 #b9d6c9, 0 5px 10px rgba(0,0,0,.12);
-}
-.gamehud:has(.bj:not([hidden])) .bj-btns button.go {
-  background: linear-gradient(180deg, #ffdc68 0%, #ffc83c 100%);
-  border-color: #ffe58a;
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.55), 0 4px 0 #c79412, 0 5px 10px rgba(0,0,0,.12);
-}
-
+  box-shadow: inset 0 0 0 2px rgba(105, 190, 151, .42), inset 0 2px 8px rgba(255, 255, 255, .08), 0 10px 30px rgba(8, 20, 40, .45); }
+/* what you have: a tower of chips, the number, and the bet that is on the table */
+.bj-bank { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; min-height: 58px; }
+.bj-stack { flex: none; width: 50px; height: 58px; display: flex; flex-direction: column-reverse; align-items: center; }
+.bj-stack i { width: 46px; height: 15px; margin-top: -9px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .88), inset 0 -3px 0 rgba(0, 0, 0, .18), 0 2px 0 rgba(0, 0, 0, .35); }
+.bj-have { display: grid; line-height: 1.05; }
+.bj-have b { font: 600 36px/1 var(--display); font-variant-numeric: tabular-nums; }
+.bj-have span { font: 700 12px var(--display); letter-spacing: .1em; text-transform: uppercase; color: #bfe8d6; }
+.bj-bet { margin-left: auto; display: grid; justify-items: center; gap: 3px; }
+.bj-bet span { font: 700 11px var(--display); letter-spacing: .08em; text-transform: uppercase; color: #bfe8d6; }
+.bj-bet b { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #e5484d; border: 3px dashed rgba(255, 255, 255, .92); box-shadow: 0 3px 0 #8d1f1f; font: 600 19px var(--display); font-variant-numeric: tabular-nums; }
+.bj-msg { min-height: 22px; margin: 2px 0 4px; text-align: center; font: 600 16px var(--display); color: #ffe9a8; }
 .bj-potential { margin: 0 0 7px; text-align: center; font: 600 12px/1.4 var(--display); color: #d0f0e2; font-variant-numeric: tabular-nums; }
 .bj-potential:empty { display: none; }
+.bj-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.bj-slide { position: relative; flex: 1 1 100%; padding: 4px 6px 0; }
+.bj-slide input { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 34px; margin: 0; background: transparent; position: relative; z-index: 2; touch-action: none; }
+.bj-slide input::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
+.bj-slide input::-moz-range-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #ffcf4a, #e8873a); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
+.bj-slide input::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -9px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 #b9d6c9, 0 0 0 3px #17264d; }
+.bj-slide input::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 3px 0 #b9d6c9, 0 0 0 3px #17264d; }
+.bj-ticks { position: absolute; left: 21px; right: 21px; top: 10px; height: 20px; z-index: 1; pointer-events: none; }
+.bj-ticks i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, .7); border-radius: 1px; }
+.bj-ticks i:nth-child(1) { left: 25%; } .bj-ticks i:nth-child(2) { left: 50%; } .bj-ticks i:nth-child(3) { left: 75%; }
+.bj-ends { display: flex; justify-content: space-between; margin: -2px 3px 8px; font: 800 12px var(--body, inherit); color: #bfe8d6; }
+.bj-btns button { flex: 1; height: 48px; border-radius: 26px; color: #17264d; font: 600 17px var(--display);
+  background: linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%); border: 1px solid rgba(255, 255, 255, .9); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), 0 4px 0 #b9d6c9, 0 5px 10px rgba(0, 0, 0, .12); }
+.bj-btns button:active { transform: translateY(2px); }
+.bj-btns button.go { background: linear-gradient(180deg, #ffdc68 0%, #ffc83c 100%); border-color: #ffe58a; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .55), 0 4px 0 #c79412, 0 5px 10px rgba(0, 0, 0, .12); }
+.bj-btns button:disabled { opacity: .4; }
+
+/* shorter screens (an iPhone SE, say): smaller cards, and the cards start higher */
+@media (max-height: 759px) {
+  .bj-top { margin-top: calc(var(--st, 0px) + 29vh); gap: 6px; }
+  .bj-row { height: 74px; }
+  .bj-card { width: 52px; height: 74px; margin-right: -12px; font-size: 22px; }
+  .bj-card i { font-size: 20px; }
+  .bj-bank { min-height: 52px; } .bj-stack { height: 52px; } .bj-have b { font-size: 30px; }
+}
+@media (max-height: 640px) {
+  .bj-top { margin-top: calc(var(--st, 0px) + 60px); gap: 4px; }
+  .bj-row { height: 64px; }
+  .bj-card { width: 45px; height: 64px; margin-right: -10px; font-size: 19px; border-radius: 8px; }
+  .bj-card i { font-size: 17px; margin-top: 2px; }
+  .bj-who { width: 56px; font-size: 12px; } .bj-who b { font-size: 19px; }
+  .bj-panel { padding: 8px 12px 10px; margin-bottom: calc(8px + var(--sb)); }
+  .bj-bank { min-height: 44px; margin-bottom: 2px; } .bj-stack { height: 44px; width: 44px; } .bj-stack i { width: 40px; height: 13px; margin-top: -8px; }
+  .bj-have b { font-size: 26px; } .bj-bet b { width: 36px; height: 36px; font-size: 16px; }
+  .bj-msg { min-height: 18px; font-size: 14px; margin: 0 0 2px; } .bj-potential { margin-bottom: 4px; font-size: 11px; }
+  .bj-slide input { height: 28px; } .bj-ends { margin-bottom: 4px; }
+  .bj-btns button { height: 42px; font-size: 16px; }
+}
+/* landscape phones: the cards on the left, the panel on the right */
+@media (orientation: landscape) and (max-height: 560px) {
+  .bj { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 12px; padding: calc(var(--st, 0px) + 54px) calc(14px + var(--sr, 0px)) calc(8px + var(--sb)) calc(14px + var(--sl, 0px)); }
+  .bj-top { width: auto; flex: 1; max-width: 330px; margin-top: 0; align-self: flex-start; padding-top: 6px; }
+  .bj-panel { margin: 0; width: min(46vw, 340px); flex: none; }
+}

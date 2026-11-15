@@ -17,11 +17,12 @@
   let g = null;                // the game in play
   let bound = false;
 
-  function big(text) {
+  function big(text, hold, cls) {   // hold: seconds it stays up (0.8 if not given); cls: an extra style, such as 'too-slow'
     const el = $('gBig');
-    if (g) g.bigAt = g.clock;
+    if (g) { g.bigAt = g.clock; g.bigHold = hold || 0.8; }
+    el.className = 'g-big' + (cls ? ' ' + cls : '');
     el.textContent = text;
-    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    void el.offsetWidth; el.classList.add('pop');
   }
   function setScore(n) {
     const el = $('gScore');
@@ -171,7 +172,7 @@
         else { big(tr('Go!')); A.play('go'); g.phase = 'play'; g.clock = 0; g.ext.go(); }
       }
     }
-    if (g.bigAt != null && g.phase === 'play' && g.clock - g.bigAt > 0.8) { $('gBig').textContent = ''; g.bigAt = null; }
+    if (g.bigAt != null && g.phase === 'play' && g.clock - g.bigAt > (g.bigHold || 0.8)) { $('gBig').textContent = ''; g.bigAt = null; }
     g.ext.update(dt, g.phase === 'play');
     if (g.phase === 'over' && g.clock > 1.4) finish(false);
   }

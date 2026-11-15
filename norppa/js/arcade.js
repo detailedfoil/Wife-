@@ -3,7 +3,7 @@
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
-   Blackjack: beat the dealer for sardines. Löyly: keep the sauna heat just right.
+   Blackjack: beat the dealer for tokens. Löyly: keep the sauna heat just right.
    Ice Stack: set sliding floes down on a tower; the overhang breaks off.
    Puffer Sweeper: minesweeper with pufferfish, one board against the clock.
    Ice Piano: piano tiles; tap the tiles of a tune in order as it speeds up.
@@ -128,8 +128,10 @@
 
   /* ================= Swimmy Seal ================= */
   const swim = (() => {
-    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 5, GOES = 3;   // three goes; the best one is what pays
-    let view = null, obs = [], bubbles = null, rays = [], drift = [];
+    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 12, GOES = 3;   // three goes; the best one is what pays
+    let view = null, obs = [], bubbles = null, rays = [], drift = [], used = 5;
+    /* Gaps are set far enough ahead to start off the right edge, however wide the screen: a wide landscape one needs more of them. */
+    const need = () => U.clamp(Math.ceil((2 * halfW + 3.2 + 5) / 3.55) + 1, 5, N);
     let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, best = 0, wait = 0;
 
     function frond(mat, ph) {
@@ -219,7 +221,8 @@
       y = 0.3; vy = 0; dead = false; live = false; score = 0; lastGapY = 0;
       bubbles.clear();
       halfW = H * W.aspect;
-      obs.forEach((o, i) => place(o, halfW + 3.2 + i * 3.5));
+      used = need();
+      obs.forEach((o, i) => { o.g.visible = i < used; if (i < used) place(o, halfW + 3.2 + i * 3.5); });
     }
     function nextGo() {
       go++; reset();
@@ -269,8 +272,9 @@
         view.rig.rotation.z = U.damp(view.rig.rotation.z, live ? U.clamp(vy * 0.11, -0.75, 0.5) : 0, 10, dt);
         // ice above, kelp below
         let far = -99;
-        obs.forEach((o) => { if (o.x > far) far = o.x; });
-        obs.forEach((o) => {
+        for (let i = 0; i < used; i++) if (obs[i].x > far) far = obs[i].x;
+        for (const want = need(); used < want; used++) { const o = obs[used]; o.g.visible = true; place(o, far + 3.3 + rnd() * 0.5); far = o.x; }   // the screen got wider
+        obs.slice(0, used).forEach((o) => {
           if (live) o.x -= dx;
           if (o.x < -halfW - 1.6) { place(o, far + 3.3 + rnd() * 0.5); far = o.x; }
           o.g.position.x = o.x;
@@ -299,7 +303,8 @@
      New wind every throw; the bucket stays where it is. Keep throwing until the third miss. Every basket counts. */
   const toss = (() => {
     const GRAV = 12, ELEV = 50 * PI / 180, SY = 0.8, SZ = 3.2, ZB = 0.4, RANGE = 5.253, BR = 0.14, RIM = 0.65, HIT = 0.85, RIM_Y = 0.62, WINDK = 0.855;   // HIT: the scoring circle is 30% wider than the bucket looks
-    let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null;
+    let view = null, ball = null, bucket = null, flag = null, cloth = null, puffs = null, sealSpot = null, windEl = null;
+    const restPos = new T.Vector3(0, SY, SZ + ZB), onScreen = new T.Vector3(), edgePos = new T.Vector3(), upDir = new T.Vector3();   // where the snowball waits: the big wind sign hangs right above it
     let wind = 0, score = 0, top = 0, tries = 0, mode = 'ready', wait = 0, drag = null, dist = 5, prevY = 0, rimHit = false, spin = 0;
     const bv = new T.Vector3(), bk = new T.Vector3();
 
@@ -351,10 +356,30 @@
       bucket.position.copy(bk);
       flag.position.set(0.95, 0, bk.z - 0.2);
       view.rig.position.set(-1.05, 0, bk.z + 0.15);
-      K.time(wind ? Math.abs(wind).toFixed(1) + (wind > 0 ? ' →' : ' ←') : '0.0');
+      paintWind();
       ball.position.set(0, SY, SZ + ZB); ball.visible = true; ball.scale.setScalar(1);
       mode = 'ready'; rimHit = false;
       K.hint(throwsLeft());
+    }
+    /* The wind, big, right above the snowball: how strong it is, and an arrow that grows with it and points the way it blows.
+       The colours are the ones on the throwing guide. */
+    function paintWind() {
+      if (!windEl) { windEl = document.createElement('div'); windEl.className = 'tw'; windEl.setAttribute('aria-hidden', 'true'); document.getElementById('gamehud').appendChild(windEl); }
+      const w = Math.abs(wind), col = ['#ffffff', '#bfe3ff', '#ffe08a', '#ffb066', '#ff7a6b'][Math.min(4, Math.round(w / 2.5))];
+      windEl.style.setProperty('--tw', col);
+      windEl.innerHTML = '<small>' + tr('Wind') + '</small><b>' + w.toFixed(1) + '</b>'
+        + (w ? '<span class="tw-arrow ' + (wind > 0 ? 'r' : 'l') + '"><i style="width:' + Math.round(14 + w * 6.5) + 'px"></i><em></em></span>' : '');
+    }
+    function placeWind() {
+      if (!windEl) return;
+      windEl.hidden = mode === 'guide' || mode === 'done';
+      view.camera.updateMatrixWorld(true);
+      onScreen.copy(restPos).project(view.camera);
+      // The sign hangs from the very top of the snowball as it looks on this screen, so it never touches the ball, big or small
+      edgePos.copy(restPos).addScaledVector(upDir.setFromMatrixColumn(view.camera.matrixWorld, 1), BR).project(view.camera);
+      const rect = W.renderer.domElement.getBoundingClientRect();
+      windEl.style.left = (rect.left + (onScreen.x * 0.5 + 0.5) * rect.width) + 'px';
+      windEl.style.top = (rect.top + (-edgePos.y * 0.5 + 0.5) * rect.height) + 'px';
     }
     /* The throwing guide: shown each time the game opens, with the lean each wind strength needs. */
     let guideEl = null;
@@ -405,7 +430,7 @@
       K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
-      label: 'Baskets', label2: 'Wind', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Three misses and it is over.',
+      label: 'Baskets', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Three misses and it is over.',
       view: () => view,
       start() {
         if (!view) build();
@@ -415,7 +440,7 @@
         setUp();
         guide();
       },
-      stop() { if (guideEl) { guideEl.remove(); guideEl = null; } },
+      stop() { if (guideEl) { guideEl.remove(); guideEl = null; } if (windEl) { windEl.remove(); windEl = null; } },
       go() {},
       pointer(type, x, y) {
         if (mode !== 'ready') return;
@@ -432,7 +457,13 @@
       update(dt, playing) {
         clock += dt;
         lens(view);
-        view.camera.position.set(0, 2.1, SZ + 2.6); view.camera.lookAt(0, 0.55, SZ - Math.min(dist, 8.5));
+        view.camera.position.set(0, 2.1, SZ + 2.6);
+        // On a short or wide screen the view is shallow and the snowball slips down behind the hint, or off the bottom. Tip the
+        // camera down until the ball sits no lower than about four fifths of the way down, with room under it for the hint.
+        // (A tall phone keeps the tip it always had, 11.5 degrees.)
+        const tip = Math.max(11.5, 30.6 - 0.62 * view.camera.fov / 2) * PI / 180;
+        view.camera.lookAt(0, 2.1 - 10 * Math.sin(tip), SZ + 2.6 - 10 * Math.cos(tip));
+        placeWind();
         // the flag streams out with the wind
         const w = Math.abs(wind) / 10;
         cloth.rotation.y = wind >= 0 ? 0 : PI;
@@ -631,6 +662,16 @@
     let view = null, gtex = null, board = null, puffs = null, piste = null, banks = [];
     const pool = { tree: [], rock: [], fish: [], ramp: [] };
     let live = [], track = 2.1, x = 0, tx = 0, vx = 0, dist = 0, bonus = 0, rowAt = 0, free = 2, air = 0, dead = false, going = false, shown = -1, rows = 0, spray = 0;
+    let wide = false, perPx = 0.012, lastPx = null;
+    /* The lane and the finger, sized from the screen. Upright, the lane fills most of the width and the finger picks a spot on it.
+       On a wide screen that same lane would be far too wide for the seal to keep up, so there it stays about as wide as it is upright
+       and the seal slides exactly as far as the finger does (perPx is one screen pixel, in world units, at the seal). */
+    const DEPTH = 9.86;                                  // how far in front of the camera the seal sits
+    function fit(hh) {
+      wide = W.aspect > 1.05;
+      track = U.clamp(Math.tan(hh) * 10 * 0.78, 1.5, 2.1);
+      perPx = Math.tan(hh) * DEPTH / (window.innerWidth / 2);
+    }
 
     function build() {
       view = stage('#84bcf0', '#f7fbff', { ground: 0xdde8ff, hemi: 2.2, key: 1.5 });
@@ -736,21 +777,23 @@
         live.forEach((it) => { it.live = false; it.m.visible = false; });
         live = [];
         puffs.clear();
-        x = tx = vx = 0; dist = 0; bonus = 0; free = 2; air = 0; dead = false; going = false; shown = -1; rows = 0;
-        track = U.clamp(Math.tan(lens(view)) * 10 * 0.78, 1.5, 3.0);
+        x = tx = vx = 0; dist = 0; bonus = 0; free = 2; air = 0; dead = false; going = false; shown = -1; rows = 0; lastPx = null;
+        fit(lens(view));
         for (let z = -6; z > SPAWN; z -= 6) row(z);
         rowAt = 0;
       },
       go() { going = true; A.play('whoosh'); },
       pointer(type, px) {
-        if (type === 'up') return;
-        tx = U.clamp((px / window.innerWidth * 2 - 1) * track * 1.15, -track, track);
+        if (type === 'up') { lastPx = null; return; }
+        if (!wide) { tx = U.clamp((px / window.innerWidth * 2 - 1) * track * 1.15, -track, track); return; }
+        if (type === 'down' || lastPx === null) { lastPx = px; return; }     // touching down only picks the finger up
+        tx = U.clamp(tx + (px - lastPx) * perPx, -track, track);
+        lastPx = px;
       },
       update(dt, playing) {
         clock += dt;
-        const hh = lens(view);
+        fit(lens(view));
         view.camera.position.set(0, 4.6, 9); view.camera.lookAt(0, 0.5, -7);
-        track = U.clamp(Math.tan(hh) * 10 * 0.78, 1.5, 3.0);
         const speed = dead ? 0 : going ? 9 + Math.min(9, dist / 60) : 3;
         const dz = speed * dt;
         gtex.offset.y += dz * REP / LEN;
@@ -760,7 +803,9 @@
           dist += dz;
           const key = K.keys();
           if (key) tx = U.clamp(tx + key * 8 * dt, -track, track);
-          const want = U.damp(x, tx, 12, dt), step = U.clamp(want - x, -9 * dt, 9 * dt);
+          tx = U.clamp(tx, -track, track);
+          const maxV = wide ? 16 : 9;                                      // how fast the seal may slide sideways
+          const want = U.damp(x, tx, wide ? 22 : 12, dt), step = U.clamp(want - x, -maxV * dt, maxV * dt);
           x += step; vx = step / dt;
           if (air > 0) air -= dt;
           rowAt -= dz;
@@ -792,7 +837,7 @@
         }
         const y = air > 0 ? Math.sin((1 - air / 0.9) * PI) * 1.3 : 0;
         view.rig.position.set(x, y + 0.08, 0);
-        view.rig.rotation.z = U.damp(view.rig.rotation.z, -vx * 0.045, 10, dt);
+        view.rig.rotation.z = U.damp(view.rig.rotation.z, U.clamp(-vx * 0.045, -0.5, 0.5), 10, dt);
         face(PI - U.clamp(vx * 0.04, -0.4, 0.4));
         board.position.set(x, y, 0); board.rotation.z = view.rig.rotation.z; board.rotation.y = -U.clamp(vx * 0.04, -0.4, 0.4);
         puffs.update(dt, 0, dz);
@@ -802,18 +847,23 @@
   })();
 
   /* ---------- Blackjack ----------
-     Bet from 5 sardines up to all in, hit or stand, beat the dealer without going over 21. A win pays back 3.5 times the bet
-     (your bet plus 2.5 times more). You sit down with ten sardines and play until you cash out, they are all gone, or the house
-     runs out at 50 sardines of winnings. Only the winnings turn into coins, 0.7 a sardine (data.js), so at most 35 a visit.
+     Bet from 5 tokens up to all in, hit or stand, beat the dealer without going over 21. A win pays back 3.5 times the bet
+     (your bet plus 2.5 times more). You sit down with ten tokens and play until you cash out, they are all gone, or the house
+     runs out at 50 tokens of winnings. Only the winnings turn into coins, 0.7 a token (data.js), so at most 35 a visit.
      Tuned by simulating thousands of visits with the hit-under-16, stand-on-16 rule: small, steady bets make about 27 coins
      a minute, like the other games, and bolder betting pays about the same on average but far more often ends with nothing.
      The dealer is quick and the next bet is ready the moment a hand is over, so a hand takes about four seconds. */
   const bj = (() => {
-    const START = 10, MIN = 5, PAY = 3.5, CAP = 50;    // the house can pay out 50 sardines of winnings (25 coins), then the table closes
+    const START = 10, MIN = 5, PAY = 3.5, CAP = 50;    // the house can pay out 50 tokens of winnings (25 coins), then the table closes
     // The most she can bet is a third of her pile (5 at least). All in, over and over, paid twice what any other game does for no skill at all.
     const most = () => Math.min(stack, Math.max(MIN, Math.floor(stack / 3)));
     const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let view = null, el = null, deck = [], you = [], house = [], stack = START, bet = 0, frac = 0, mode = 'bet', wait = 0, msg = '', hide = true, lock = 0;
+    /* The pace of a hand, in seconds. The dealer used to be done before anyone could follow what happened, so now each card gets time to sink in:
+       the deal goes one card at a time, then a pause on Stand, the hidden card turns over, and every card the dealer draws gets its own beat. */
+    const DEAL_STEP = 0.5, PAUSE = { stand: 0.8, bust: 0.9, reveal: 1.1, draw: 1.1 };
+    let shownYou = 0, shownHouse = 0, dealt = 0, flipHole = false;   // how many cards of each hand are face up on the table so far
+    const fresh = new Set();   // cards that have just arrived: only these slide in, so a repaint does not replay every card
     const total = (h) => {
       let t = 0, aces = 0;
       h.forEach((c) => { const r = c % 13; if (r === 0) { aces++; t += 11; } else t += Math.min(10, r + 1); });
@@ -826,18 +876,34 @@
       for (let i = 0; i < 52; i++) deck.push(i);
       for (let i = 51; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const x = deck[i]; deck[i] = deck[j]; deck[j] = x; }
     }
-    const card = (c, down) => down ? '<span class="bj-card down"></span>'
-      : '<span class="bj-card' + (Math.floor(c / 13) === 1 || Math.floor(c / 13) === 2 ? ' red' : '') + '"><span>' + RANKS[c % 13] + '<i>' + SUITS[Math.floor(c / 13)] + '</i></span></span>';
+    const card = (c, down, flip) => {
+      const cls = (fresh.has(c) ? ' deal' : '') + (flip ? ' flip' : '');
+      return down ? '<span class="bj-card down' + cls + '"></span>'
+        : '<span class="bj-card' + (Math.floor(c / 13) === 1 || Math.floor(c / 13) === 2 ? ' red' : '') + cls + '"><span>' + RANKS[c % 13] + '<i>' + SUITS[Math.floor(c / 13)] + '</i></span></span>';
+    };
+    /* a tower of chips that grows with the tokens she has */
+    function chips() {
+      const n = Math.min(7, Math.ceil(stack / 3)), colours = ['#e5484d', '#f4f7ff', '#3b82f6', '#f2a71b'];
+      let s = '';
+      for (let k = 0; k < n; k++) s += '<i style="--c:' + colours[k % colours.length] + '"></i>';
+      return s;
+    }
     function paint() {
       const btn = (act, label, cls, off) => '<button data-bj="' + act + '" class="' + (cls || '') + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
+      const mine = you.slice(0, shownYou), theirs = house.slice(0, shownHouse), live = mode === 'dealing' || mode === 'play' || mode === 'house';
       let btns = '';
-      if (mode === 'bet') btns = '<div class="bj-slide"><input type="range" id="bjRange" min="0" max="100" step="1" value="' + Math.round(frac * 100) + '" aria-label="' + tr('How much to bet') + '">'
-        + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + MIN + '</span><span>' + tr('A third') + '</span></span></div>' + btn('bet', betLabel(), 'go', stack < MIN);
+      // With only one bet possible (5) there is nothing to slide, so no slider; otherwise it runs from the minimum to the maximum
+      if (mode === 'bet') btns = (most() > MIN ? '<div class="bj-slide"><input type="range" id="bjRange" min="0" max="100" step="1" value="' + Math.round(frac * 100) + '" aria-label="' + tr('How much to bet') + '">'
+        + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + tr('Minimum') + '</span><span>' + tr('Maximum') + '</span></span></div>' : '')
+        + btn('bet', betLabel(), 'go', stack < MIN);
       else btns = btn('hit', tr('Hit'), '', mode !== 'play') + btn('stand', tr('Stand'), 'go', mode !== 'play');
-      el.innerHTML = '<div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (house.length ? (hide ? '?' : total(house)) : '') + '</b></div><div class="bj-cards">'
-        + house.map((c, i) => card(c, hide && i === 1)).join('') + '</div></div>'
-        + '<div class="bj-row"><div class="bj-who">' + tr('You') + '<b>' + (you.length ? total(you) : '') + '</b></div><div class="bj-cards">' + you.map((c) => card(c)).join('') + '</div></div>'
-        + '<div class="bj-msg">' + msg + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div>';
+      el.innerHTML = '<div class="bj-top"><div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (theirs.length ? (hide ? '?' : total(theirs)) : '') + '</b></div><div class="bj-cards">'
+        + theirs.map((c, k) => card(c, hide && k === 1, flipHole && k === 1)).join('') + '</div></div>'
+        + '<div class="bj-row"><div class="bj-who">' + tr('You') + '<b>' + (mine.length ? total(mine) : '') + '</b></div><div class="bj-cards">' + mine.map((c) => card(c)).join('') + '</div></div></div>'
+        + '<div class="bj-panel"><div class="bj-bank"><div class="bj-stack" aria-hidden="true">' + chips() + '</div><div class="bj-have"><b>' + stack + '</b><span>' + tr(stack === 1 ? 'token' : 'tokens') + '</span></div>'
+        + (live ? '<div class="bj-bet"><span>' + tr('On the table') + '</span><b>' + bet + '</b></div>' : '') + '</div>'
+        + '<div class="bj-msg">' + msg + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div></div>';
+      fresh.clear(); flipHole = false;
     }
     // How much the bar says: nothing is 5, the top is everything, and in between is that share of what you have now.
     const betNow = () => Math.min(most(), Math.max(MIN, Math.round(MIN + frac * (most() - MIN))));
@@ -845,15 +911,15 @@
     const potentialLabel = () => {
       if (mode === 'done' || (mode === 'bet' && stack < MIN)) return '';
       const stake = mode === 'bet' ? betNow() : bet, back = Math.round(stake * PAY);
-      return tr('Potential win: +{0} sardines · Total return: {1}', back - stake, back);
+      return tr('Potential win: +{0} tokens', back - stake);
     };
     function money() { K.shown(stack); K.result(Math.min(CAP, Math.max(0, stack - START))); }
     function deal(b) {
       if (mode !== 'bet' || stack < MIN || b < 1) return;
       bet = b; stack -= b; money();
       shuffle(); you = [draw(), draw()]; house = [draw(), draw()]; hide = true; msg = '';
-      A.play('pop');
-      if (total(you) === 21) { mode = 'house'; wait = 0.5; } else mode = 'play';
+      shownYou = shownHouse = dealt = 0; fresh.clear();
+      mode = 'dealing'; wait = 0.25;   // the cards go down one at a time (see update): you, the dealer, you, the dealer, whose second card stays face down
       paint();
     }
     function settle() {
@@ -865,18 +931,18 @@
       money();
       // The next bet is ready straight away, with this hand left on the table until the next deal. A short lock stops a quick
       // double tap on Hit dealing a hand by mistake. Only the end of the table (all gone, or the house beaten) waits a moment.
-      if (stack < MIN || stack - START >= CAP) { mode = 'done'; wait = 1.1; } else { mode = 'bet'; lock = 0.35; }
+      if (stack < MIN || stack - START >= CAP) { mode = 'done'; wait = 1.8; } else { mode = 'bet'; lock = 0.35; }
       paint();
     }
     function act(a) {
       if (a === 'bet') { if (lock <= 0) deal(betNow()); return; }
       if (mode !== 'play') return;
       if (a === 'hit') {
-        you.push(draw()); A.play('pop');
-        if (total(you) > 21) { hide = false; settle(); }
-        else if (total(you) === 21) { mode = 'house'; wait = 0.4; paint(); }
+        you.push(draw()); shownYou++; fresh.add(you[you.length - 1]); A.play('pop');
+        if (total(you) > 21) { mode = 'house'; wait = PAUSE.bust; paint(); }        // the dealer turns the hidden card over, then it is settled
+        else if (total(you) === 21) { mode = 'house'; wait = PAUSE.stand; paint(); }
         else paint();
-      } else if (a === 'stand') { A.play('tap'); mode = 'house'; wait = 0.3; paint(); }
+      } else if (a === 'stand') { A.play('tap'); mode = 'house'; wait = PAUSE.stand; paint(); }
     }
     function build() {
       view = stage('#0d2b3a', '#1c6a55', { ground: 0x224a40, hemi: 1.9, key: 1.6 });
@@ -915,14 +981,15 @@
       });
     }
     return {
-      label: 'Sardines', back: true, backLabel: 'Cash out', nocount: true, hint: '',
+      label: 'Tokens', back: true, backLabel: 'Cash out', nocount: true, hint: '',
       view: () => view,
       start() {
         if (!view) build();
         cast(view, 0.62, true);
         face(0);
-        stack = START; bet = 0; frac = 0; you = []; house = []; mode = 'bet'; hide = true; lock = 0;
-        msg = tr('You have {0} sardines. Place a bet.', START);
+        stack = START; bet = 0; frac = 0; you = []; house = []; mode = 'bet'; hide = true; lock = 0; wait = 0;
+        shownYou = shownHouse = dealt = 0; flipHole = false; fresh.clear();
+        msg = tr('You have {0} tokens. Place a bet.', START);
         el.hidden = false;
         paint();
       },
@@ -933,15 +1000,24 @@
       update(dt, playing) {
         clock += dt;
         lens(view);
+        // Held sideways the lens is narrow and crops the seal's head, so step back until the same height shows as on an upright phone
+        const back = U.clamp(2.1 / Math.tan(view.camera.fov * PI / 360) / 4.77, 1, 1.5);
+        view.camera.position.set(0, -0.75 + 1.25 * back, 4.6 * back);
         view.camera.lookAt(0, -0.75, 0);
         actor.update(dt, clock, null);
         if (lock > 0) lock -= dt;
         if (!playing || wait <= 0) return;
         wait -= dt;
         if (wait > 0) return;
-        if (mode === 'house') {
-          if (hide) { hide = false; A.play('pop'); wait = 0.4; paint(); }
-          else if (total(house) < 17) { house.push(draw()); A.play('pop'); wait = 0.4; paint(); }
+        if (mode === 'dealing') {
+          if (dealt < 4) {
+            if (dealt % 2 === 0) { shownYou++; fresh.add(you[shownYou - 1]); } else { shownHouse++; fresh.add(house[shownHouse - 1]); }
+            dealt++; A.play('pop'); wait = dealt < 4 ? DEAL_STEP : 0.55; paint();
+          } else if (total(you) === 21) { mode = 'house'; wait = PAUSE.stand; paint(); }
+          else { mode = 'play'; paint(); }
+        } else if (mode === 'house') {
+          if (hide) { hide = false; flipHole = true; A.play('pop'); wait = PAUSE.reveal; paint(); }
+          else if (total(you) <= 21 && total(house) < 17) { house.push(draw()); shownHouse++; fresh.add(house[house.length - 1]); A.play('pop'); wait = PAUSE.draw; paint(); }
           else settle();
         } else if (mode === 'done') {
           if (stack < MIN) { el.hidden = true; K.over(tr('All gone!')); return; }
@@ -956,7 +1032,7 @@
      Hold to throw water on the stones and the green band rises; let go and it sinks. Keep the needle in the green
      to fill the calm meter. Fill it and the round is won, then the next one is harder. Let it run dry and it is over. */
   const sauna = (() => {
-    let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null;
+    let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null, padEl = null;
     let goal = 7, lvl = 0, band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
     function build() {
       view = stage('#3a2114', '#6b4023', { ground: 0x5a3a22, hemi: 1.7, key: 1.3 });
@@ -973,7 +1049,7 @@
       const lamp = new T.PointLight(0xffa85a, 6, 9); lamp.position.set(0.62, 0.5, 1.7); sc.add(lamp);
       steam = Puffs(sc, 50, 0xffffff, 0.5);
       view.camera.position.set(0, 0.9, 5.6);
-      el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm');
+      el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm'); padEl = document.getElementById('saunaPad');
     }
     function newRound() {
       lvl = round * 2 / 7;                       // a gentle increase across the whole visit
@@ -987,7 +1063,7 @@
       zoneEl.classList.toggle('out', !(pin >= band && pin <= band + size));
     }
     return {
-      label: 'Rounds', hint: 'Hold to throw water. Keep the needle in the green. Each round gets her cleaner.',
+      label: 'Rounds', hint: 'Hold anywhere to throw water. Keep the needle in the green.',
       view: () => view,
       start() {
         if (!view) build();
@@ -997,10 +1073,10 @@
         goal = (PN.Games.opts && PN.Games.opts.need) || 7;
         round = 0; live = false; hold = false; steam.clear();
         newRound();
-        el.hidden = false; paint();
+        el.hidden = false; padEl.hidden = false; padEl.classList.remove('on'); paint();
         document.getElementById('gScore').textContent = '0/' + goal;
       },
-      stop() { el.hidden = true; },
+      stop() { el.hidden = true; padEl.hidden = true; },
       go() { live = true; },
       pointer(type) { if (type === 'down') hold = true; else if (type === 'up') hold = false; },
       key() {},
@@ -1014,6 +1090,7 @@
         if (!playing || !live) return;
         if (rest > 0) { rest -= dt; if (rest <= 0) newRound(); paint(); return; }
         const pressing = hold || K.keys() !== 0;
+        padEl.classList.toggle('on', pressing);
         // the green band: water lifts it, and it sinks back on its own, with a small bounce off the bottom
         bandV += (pressing ? 1.9 : -1.6) * dt;
         bandV = U.clamp(bandV, -0.85, 0.85);
@@ -1034,12 +1111,12 @@
           round++; K.score(round, true); document.getElementById('gScore').textContent = round + '/' + goal;
           A.play(round >= goal ? 'award' : 'match'); actor.gesture('happy', true);
           steam.emit(0.62, 0.25, 1.0, 14, 1.1, 0.2, 1.6, -1.4);
-          if (round >= goal) { el.hidden = true; K.over(tr('Squeaky clean!')); return; }
+          if (round >= goal) { el.hidden = true; padEl.hidden = true; K.over(tr('Squeaky clean!')); return; }
           K.big(tr('Lovely!'));
           rest = 1.3;
         } else if (calm <= 0) {
           A.play('nope'); actor.gesture(pin > band ? 'shake' : 'no', true);
-          el.hidden = true;
+          el.hidden = true; padEl.hidden = true;
           K.over(tr(pin > band + size ? 'Too hot!' : 'Too cold!'));
         }
       },
@@ -1991,7 +2068,8 @@
       if (revealing && !s.occupied) {
         const quality = best - worst < 1e-7 ? 1 : (s.distance - worst) / (best - worst);
         color.setHSL(quality / 3, 0.82, 0.48);
-      } else color.setHex(s.occupied ? 0x507bb5 : 0x6b9bdd);
+      } else if (revealing) color.setHSL(0, 0.82, 0.48);   // a seat with a seal on it is as bad as a seat can be: red
+      else color.setHex(s.occupied ? 0x507bb5 : 0x6b9bdd);
       cushions.setColorAt(i, color); seatBacks.setColorAt(i, color);
     });
     cushions.instanceColor.needsUpdate = seatBacks.instanceColor.needsUpdate = true;
@@ -2029,10 +2107,11 @@
     // Points run from the worst free seat (0) to the best (100). Measured from nothing, a seat tapped without looking still scored about 56.
     const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
     const points = i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
-    hold = Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter
+    hold = i < 0 ? 0.55 : Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter; a missed bus lingers a beat so the message can be read
     total += points; K.score(total); phase = 'reveal'; elapsed = 0;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
+    if (i < 0) K.big(tr('Too slow!'), 1.3, 'too-slow');
     K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }

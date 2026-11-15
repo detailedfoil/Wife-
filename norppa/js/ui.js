@@ -46,6 +46,10 @@
     puff: '<circle cx="11" cy="12" r="5.6"/><path d="M11 3.2v1.9M11 18.9v1.9M2.2 12h1.9M4.8 5.8l1.3 1.3M4.8 18.2l1.3-1.3M15.6 6.6l1-1M15.6 17.4l1 1M16.6 12l4.6-2.6v5.2z"/><circle class="f" cx="9" cy="10.8" r="1"/>',
     stack: '<rect x="7" y="4" width="9" height="4.5" rx="1.5"/><rect x="5" y="9.75" width="12" height="4.5" rx="1.5"/><rect x="4" y="15.5" width="16" height="4.5" rx="1.5"/>',
     up: '<path d="M12 19V6M6 11l6-6 6 6"/>',
+    heartfull: '<path class="f" d="M12 21s-8.5-5.2-8.5-11.4A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.5 3C20.5 15.8 12 21 12 21z"/>',
+    heartup: '<path class="f" d="M12 21s-8.5-5.2-8.5-11.4A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.5 3C20.5 15.8 12 21 12 21z"/><path d="M12 17v-6.5M8.9 13.2L12 10l3.1 3.2" stroke="#fff" stroke-width="2.6"/>',
+    heartdown: '<path class="f" d="M12 21s-8.5-5.2-8.5-11.4A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.5 3C20.5 15.8 12 21 12 21z"/><path d="M12 9.5V16M8.9 13.2L12 16.4l3.1-3.2" stroke="#fff" stroke-width="2.7"/>',
+    heartflat: '<path class="f" d="M12 21s-8.5-5.2-8.5-11.4A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.5 3C20.5 15.8 12 21 12 21z"/><path d="M8.6 13h6.8" stroke="#fff" stroke-width="2.7"/>',
     down: '<path d="M12 5v13M6 13l6 6 6-6"/>',
     smile: '<circle cx="12" cy="12" r="9"/><circle class="f" cx="9" cy="10" r="1.2"/><circle class="f" cx="15" cy="10" r="1.2"/><path d="M8.2 14.2q3.8 3.6 7.6 0"/>',
     frown: '<circle cx="12" cy="12" r="9"/><circle class="f" cx="9" cy="10" r="1.2"/><circle class="f" cx="15" cy="10" r="1.2"/><path d="M8.2 16.6q3.8-3.4 7.6 0"/>',
@@ -79,7 +83,7 @@
     $('meters').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
       const st = G().state, k = b.dataset.stat, v = Math.round(st.stats[k]);
-      const words = { food: ['Tummy', 'fish'], joy: ['Happiness', 'heart'], energy: ['Energy', 'bolt'], clean: ['Cleanliness', 'drop'] }[k];
+      const words = { food: ['Tummy', 'fish'], joy: ['Happiness', 'heart'], energy: ['Energy', 'bolt'], clean: ['Cleanliness', 'steam'] }[k];
       const tip = { food: 'Feed to fill it.', joy: 'Games she fancies lift it. A few strokes help a little.', energy: 'Sleep brings it back.', clean: 'A sauna or a dive sorts it.' }[k];
       UI.toast('<b>' + tr(words[0]) + ' ' + v + pc() + '</b> ' + tr(v < 60 ? tip : 'Doing fine.'), words[1]);
     });
@@ -238,6 +242,8 @@
   };
 
   const cell = (id, inner, cls, act) => '<button class="cell ' + (cls || '') + '" data-do="' + act + '" data-id="' + id + '">' + inner + '</button>';
+  /* The colour of a tile in the shop and the larder: orange for food, yellow for energy drinks, and coffee brown for the coffee, which is a special thing of its own. */
+  const tint = (raw) => { const it = PN.items[raw.id] || raw; return it.full ? 'k-coffee' : it.energy ? 'k-drink' : it.kind === 'fish' || it.kind === 'food' || it.kind === 'med' ? 'k-food' : ''; };
   /* What a thing to eat or drink does, shown under its Finnish name in the shop and the pantry. */
   const effect = (it) => it.full ? tr('Fills tummy, happiness and energy') : it.kind === 'med' || it.med ? tr('Cures a poorly seal') : it.energy ? tr('Energy +{0}, tummy +{1}', it.energy, it.food) : tr('Tummy +{0}', it.food);
   const eats = (it) => '<b>' + esc(it.fi) + '</b><small>' + effect(it) + '</small>';
@@ -271,7 +277,7 @@
       }
       return sulkBanner + '<p class="lead">' + tr('Tummy {0}%. ', Math.round(st.stats.food)) + fav + '</p>' + juice + '<div class="grid">' + ids.map((id) => {
         const it = PN.items[id];
-        return cell(id, thumb(id) + eats(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), st.favKnown && id === st.fav ? 'fav' : '', 'feed');
+        return cell(id, thumb(id) + eats(it) + '<span class="count">' + st.pantry[id] + '</span>' + (it.kind === 'med' ? '<span class="tag">' + tr('medicine') + '</span>' : ''), (tint(it) + (st.favKnown && id === st.fav ? ' fav' : '')).trim(), 'feed');
       }).join('') + '</div>';
     },
     play(st) {
@@ -280,15 +286,14 @@
       const why = (c) => tr(WHY[c.why]);
       const moods = S.gameMoods(st, now), owned = PN.GAME_ORDER.filter((id) => S.gameOwned(st, id) && !PN.GAMES[id].dev);
       // what she makes of each game right now: the percent more or less it pays
-      // what a game does to her happiness: a face, an arrow and the points it moves it by
-      const face = (j) => (j > 0 ? 'smile' : j < 0 ? 'frown' : 'meh');
-      const mood = (id) => { const m = moods.games[id], j = m.joy, cls = j > 0 ? 'up' : j < 0 ? 'down' : ''; return '<span class="mood ' + cls + '" aria-label="' + tr('Happiness {0}', (j > 0 ? '+' : '') + j) + '">' + ic(face(j)) + (j ? ic(j > 0 ? 'up' : 'down') : '') + (j > 0 ? '+' : j < 0 ? '\u2212' : '') + (m.skip && !j ? '' : Math.abs(j)) + '</span>'; };
-      const hb = moods.happy, happyCard = '<div class="happy-card ' + (hb > 0 ? 'up' : '') + '">' + ic(hb > 0 ? 'smile' : 'meh') + '<div><b>' + (hb > 0 ? tr('{0} is happy: +{1}% on every game.', esc(st.name), hb) : tr('{0} is content: no bonus yet.', esc(st.name))) + '</b> ' + tr('Happiness {0}%. Games with a smile lift it and the bonus with it, up to +{1}%. A frown brings it down.', Math.round(st.stats.joy), S.T.happyMax) + '</div></div>';
+      // what a game does to her happiness: a heart with an arrow up (green) or down (red), and the points it moves it by
+      const heart = (j) => (j > 0 ? 'heartup' : j < 0 ? 'heartdown' : 'heartflat');
+      const mood = (id) => { const m = moods.games[id], j = m.joy, cls = j > 0 ? 'up' : j < 0 ? 'down' : ''; return '<span class="mood ' + cls + '" aria-label="' + tr('Happiness {0}', (j > 0 ? '+' : '') + j) + '">' + ic(heart(j)).replace('class="ic"', 'class="ic hrt"') + (j > 0 ? '+' : j < 0 ? '\u2212' : '') + (m.skip && !j ? '' : Math.abs(j)) + '</span>'; };
+      const hb = moods.happy, happyCard = '<div class="happy-card ' + (hb > 0 ? 'up' : '') + '">' + ic(hb > 0 ? 'heartfull' : 'heartflat') + '<div><b>' + (hb > 0 ? tr('{0} is happy: +{1}% on every game.', esc(st.name), hb) : tr('{0} is content: no bonus yet.', esc(st.name))) + '</b> ' + tr('Happiness {0}%. A heart with an arrow up lifts it, and the bonus with it, up to +{1}%. A heart with an arrow down brings it down.', Math.round(st.stats.joy), S.T.happyMax) + '</div></div>';
       let h = (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a sauna.', moods.muck) + '</div>' : '')
-        + happyCard + '<p class="lead">' + tr('The number by a game is how much it moves her happiness. Each play wears a game out a little and makes the others more fun.') + '</p>';
+        + happyCard + '<p class="lead">' + tr('The heart by a game shows whether it lifts her happiness (arrow up) or lowers it (arrow down), and by how much. Each play wears a game out a little and makes the others more fun.') + '</p>';
       h += '<div class="rows">';
       h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back Angy.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
-      h += row({ icon: 'ball', tint: 'rose', title: tr('Ball'), text: tr('A quick bounce on the nose, right here.'), act: 'ball', cls: st.asleep ? 'off' : '', side: st.asleep ? tr('asleep') : '' });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (gm.dev && !st.dev) return;                       // developer-mode games are not shown otherwise
@@ -296,7 +301,7 @@
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? mood(id) + (best ? '<small>' + tr('best {0}', gm.low ? PN.mmss(best) : best) + '</small>' : '') : why(can) });
       });
       h += '</div>';
-      if (owned.length >= 3) {
+      if (owned.length >= 4) {   // with only the three free games there is nothing worth leaving out yet
         h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is never one of her favourites, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
           + owned.map((id) => '<button class="chip-btn' + (moods.games[id].skip ? ' on' : '') + '" data-do="skip" data-id="' + id + '" aria-pressed="' + moods.games[id].skip + '">' + tr(PN.GAMES[id].title) + '</button>').join('') + '</div>';
       }
@@ -307,7 +312,7 @@
       const price = (it) => coinTag(S.price(st, it.price), st.coins >= S.price(st, it.price) ? 'buy' : 'cant');
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
-        h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + eats(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), '', 'buy')).join('') + '</div>';
+        h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + eats(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), tint(it), 'buy')).join('') + '</div>';
       } else {
         // one shelf for each kind of thing, with a row of shortcuts at the top
         const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = (wear ? D.WEAR : D.DECOR).filter((it) => !it.hidden);
@@ -400,6 +405,7 @@
       return '<div class="rows">' + tog('sound', 'Sound', 'sound', 'Squeaks, splashes and chimes.') + tog('music', 'Music', 'music', 'Gentle little melodies, with room for quiet.')
         + '<div class="row"><span class="ic-wrap">' + ic('music') + '</span><span class="txt"><b>' + tr('Background instrument') + '</b><span class="d">' + tr('A random instrument each time you open the game. Change it here anytime.') + '</span><span class="music-choices">' + PN.Audio.instruments.map((i) => '<button class="music-choice' + (PN.Audio.instrument === i.id ? ' on' : '') + '" data-do="instrument" data-id="' + i.id + '" aria-pressed="' + (PN.Audio.instrument === i.id) + '"><b>' + tr(i.name) + '</b><span class="d">' + tr(i.description) + '</span></button>').join('') + '</span></span></div>'
         + (navigator.vibrate ? tog('haptics', 'Buzz', 'bolt', 'A little buzz under your finger when you stroke and tap.') : '')
+        + tog('medicine', 'Daily medicine', 'med', 'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting tomorrow, or she gets Anxi until she has had it.')
         + '<div class="row"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Language') + '</b><span class="d">' + tr('Play in English or in Finnish.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + lang + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight and the weather over Inari in Lapland as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>' + tr('Move to another device') + '</b><span class="d">' + tr('Your seal is saved on this device only. A save code lets you carry it to another one.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="export">' + tr('Get save code') + '</button><button class="btn small ghost" data-do="import">' + tr('Use a save code') + '</button></span></span></div>'
@@ -407,7 +413,7 @@
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
         + '<button class="row" data-do="update"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Check for updates') + '</b><span class="d">' + tr('Look for a newer version of the game and load it. Your seal stays as she is.') + '</span></span></button>'
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
-        + (st.dev ? '<button class="row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
+        + (st.dev && st.settings.medicine ? '<button class="row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
         + (st.dev ? [
           ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
@@ -434,7 +440,6 @@
     else if (act === 'jump') { const el = document.getElementById(id); if (el) { PN.Audio.play('tap'); const box = $('sheetBody'); box.scrollTo({ top: el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 4, behavior: 'smooth' }); } }
     else if (act === 'goto') UI.openSheet(id);
     else if (act === 'borrow') game.borrow();
-    else if (act === 'ball') { UI.closeSheet(); game.playBall(); }
     else if (act === 'game') game.startGame(id);
     else if (act === 'unlock') game.unlockGame(id);
     else if (act === 'skip') game.skipGame(id);
