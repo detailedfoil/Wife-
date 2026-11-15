@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '14 Nov 2026, 20:50';
+  PN.UPDATED = '15 Nov 2026, 00:55';
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -328,7 +328,7 @@
     sauna: { price: 0, muck: 0, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right.', unit: 'rounds' },   // not a game to play for coins: it is how she gets clean (see Sim.saunaDone), so it is not in GAME_ORDER
     curl: { price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
     sled: { price: 1250, muck: 12, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
-    coffee: { dev: true, price: 0, muck: 1, title: 'Coffee Memory', icon: 'steam', tint: 'warm', text: 'Remember each customer\'s order and make the drink from memory. Every two drinks add one more thing to remember, and one wrong drink ends it. Developer mode only for now.', best: 'best_coffee', pay: [0.35, 1.6], unit: 'drinks served' },   // dev: shown and playable only in developer mode, and kept out of her tastes; the pay climbs steeply (little for a short run, a lot for a long one) and is not tuned yet
+    coffee: { dev: true, price: 0, muck: 1, title: 'Coffee Memory', icon: 'steam', tint: 'warm', text: 'Remember each customer\'s order and make the drink from memory. Every two drinks add one more thing to remember, and one wrong drink ends it. Developer mode only for now.', best: 'best_coffee', pay: [1.07, 1.9], unit: 'drinks served' },   // dev: shown and playable only in developer mode, and kept out of her tastes; tuned to detailedfoil's runs of 4, 6, 9 and 11 to 12 drinks (about 15, 33, 70 and 105 to 120 coins, 16/24/31/37 a minute at roughly 1, 1.4, 2.2 and 3 minutes); the 150 cap bites at about 14 drinks
     bj: { price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'sardines won' },
   };
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
