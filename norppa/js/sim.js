@@ -32,7 +32,7 @@
     pupFood: 9, pupJoy: 6,
     pupStarveToSick: 18 * H, pupStarveToLost: 42 * H,
     pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15, pupWait: 9 * H,   // once she has the xp the pup waits for the game to be closed; next load she has met someone, and the pup arrives pupWait later   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
-    tuckSettle: 30 * 60e3, visitPresents: 2, gameFull: 24,   // a tuck pays once she has slept this long; this many pup visits a day bring presents; a game this many seconds long gives full friendship and happiness
+    tuckSettle: 30 * 60e3, visitPresents: 2, gameFull: 24, joyRef: 45, joyLongMax: 2.5, joyLongPow: 0.85,   // a tuck pays once she has slept this long; this many pup visits a day bring presents; a game this many seconds long gives full friendship and happiness
     growCoins: 50, farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
@@ -686,12 +686,16 @@
   /* What a game's coins are multiplied by right now: her happiness, and muck. The game itself makes no difference. */
   const gameMult = (state) => (1 + happyBonus(state) / 100) * (1 - muckLoss(state));
   /* How much a game moves her happiness, by her taste for it. */
+  /* How much of that a play of this many seconds gives. A usual 45 second game gives the plain amount; a longer one more, as (seconds / 45)
+     to the power 0.85 up to two and a half times (reached at about two and a half minutes), so a game that takes minutes lifts her mood
+     (or sours it) in proportion; a very short go gives a small share. No seconds given (old callers) means the plain amount. */
+  const joyScale = (secs) => (secs > 0 ? Math.min(T.joyLongMax, Math.pow(secs / T.joyRef, T.joyLongPow)) : 1);
   const gameJoy = (taste, skipped) => Math.round(skipped ? Math.min(0, taste) * T.joyPer : T.gameJoy + taste * T.joyPer);
   /* What the Play menu shows: each game's taste, whether it is left out, and the muck loss, all in whole percent. */
   function gameMoods(state, now) {
     tasteSync(state, now);
     const out = { muck: Math.round(muckLoss(state) * 100), happy: happyBonus(state), games: {}, skips: state.skip.length, skipMax: T.skipMax };
-    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: gameJoy(tasteOf(state, id), state.skip.indexOf(id) >= 0), skip: state.skip.indexOf(id) >= 0 }; });
+    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: Math.round(gameJoy(tasteOf(state, id), state.skip.indexOf(id) >= 0) * joyScale(PN.GAMES[id].len)), skip: state.skip.indexOf(id) >= 0 }; });
     return out;
   }
   /* Leave a game out of her tastes, or put it back. A game left out never pays over the odds, but still wears out if played. */
@@ -735,7 +739,7 @@
     // Friendship and happiness go by how long she played, a point of friendship per 3 seconds up to the usual 8 (losing on purpose at once
     // used to count as a full game). No seconds given (old callers) means a full game.
     const part = secs > 0 ? clamp(secs / T.gameFull, 0, 1) : 1;
-    const joy = Math.round(gameJoy(taste, state.skip.indexOf(game) >= 0) * part);
+    const joy = Math.round(gameJoy(taste, state.skip.indexOf(game) >= 0) * joyScale(secs));
     // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her Angy.
     const calm = T.neglectLine + T.gameCalm;
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
@@ -1080,7 +1084,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, gameMoods, setSkip, tasteSync,
+    feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
     sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
