@@ -1063,47 +1063,70 @@
   }
   const decor = {
 
+
     cookie() {
       const g = new T.Group(), head = new T.Group(), tail = new T.Group();
-      const golden = U.mat(0xc99150), cream = U.mat(0xf0ddbb), earFur = U.mat(0xb37a40);
-      const dark = U.mat(0x292a31), noseMat = U.mat(0x564239), eyeMat = U.mat(0x211c19);
-      // Seated body, cream bib, bent hindquarters and two straight front legs.
-      g.add(U.ball(0.29, golden, 0, 0.43, -0.05, 1, 1.35, 1.15, 20),
-        U.ball(0.2, cream, 0, 0.49, 0.2, 0.8, 1.28, 0.35, 18));
-      [-1,1].forEach(s => {
-        g.add(U.ball(0.17,golden,s*0.22,0.18,-0.12,0.85,0.95,1.2,16),
-          U.cyl(0.065,0.075,0.38,golden,s*0.14,0.26,0.22,12),
-          U.ball(0.085,golden,s*0.14,0.075,0.27,0.9,0.65,1.35,14),
-          U.ball(0.06,cream,s*0.14,0.065,0.345,0.95,0.55,0.65,12));
+      const coat = U.mat(0xd9a365), ears = U.mat(0xc38a50), cream = U.mat(0xffedcf);
+      const chocolate = U.mat(0x30241f, { roughness: 0.45 });
+      const navy = U.mat(0x243e66), gold = U.mat(0xd3ad60, { roughness: 0.45, metalness: 0.25 });
+      // A compact seated silhouette: plump chest, short soft legs and broad puppy paws.
+      g.add(U.ball(0.29, coat, 0, 0.36, -0.04, 1.02, 1.15, 1.08, 24),
+        U.ball(0.2, cream, 0, 0.4, 0.19, 0.82, 1.13, 0.42, 24));
+      [-1, 1].forEach((s) => {
+        g.add(U.ball(0.17, coat, s*0.22, 0.16, -0.1, 0.86, 0.86, 1.14, 20),
+          U.ball(0.095, coat, s*0.135, 0.22, 0.2, 0.83, 1.65, 0.88, 20),
+          U.ball(0.105, coat, s*0.14, 0.075, 0.28, 1.02, 0.7, 1.22, 22),
+          U.ball(0.068, cream, s*0.14, 0.064, 0.36, 1.03, 0.6, 0.6, 18));
       });
-      head.position.set(0,0.85,0.18);
-      head.add(U.ball(0.235,golden,0,0,0,1.08,1,0.95,24),
-        U.ball(0.13,cream,0,-0.1,0.18,1.05,0.7,0.7,18),
-        U.ball(0.09,golden,0,-0.035,0.2,1,0.75,0.85,16),
-        U.ball(0.062,noseMat,0,-0.035,0.275,1,0.72,0.6,16),
-        U.ball(0.025,dark,0,-0.125,0.25,1.6,0.25,0.3,10));
-      // The narrow pale forehead streak, dark eye rims and soft feathered ears.
-      head.add(U.ball(0.07,cream,0,0.18,0.11,0.35,0.9,0.3,14));
-      [-1,1].forEach(s => {
-        head.add(U.ball(0.068,earFur,s*0.125,0.018,0.182,1,1.08,0.42,18),
-          U.ball(0.052,eyeMat,s*0.125,0.018,0.203,1,1.05,0.5,20),
-          U.ball(0.015,U.mat(0xffffff),s*0.125-0.013,0.035,0.226,1,1,0.4,12));
-        const ear=U.ball(0.12,earFur,s*0.25,-0.055,-0.01,0.8,1.65,0.5,18);
-        ear.rotation.z=s*0.28;head.add(ear);
-        for(let i=0;i<4;i++) head.add(U.ball(0.045,golden,s*(0.24+i*0.012),-0.14+i*0.065,0.025,0.7,1.4,0.5,10));
+      // One broad rounded head, with a short cream muzzle and expressive forward-facing eyes.
+      head.position.set(0, 0.79, 0.16);
+      head.add(U.ball(0.31, coat, 0, 0, 0, 1.1, 0.96, 0.88, 32));
+      const eyeGroups = [], earGroups = [];
+      [-1, 1].forEach((s) => {
+        const ear = new T.Group(); ear.position.set(s*0.285, 0.095, -0.035);
+        ear.add(U.ball(0.145, ears, s*0.035, -0.12, 0, 0.94, 1.42, 0.62, 24),
+          U.ball(0.1, coat, s*0.04, -0.235, 0.005, 1.06, 0.7, 0.78, 22));
+        ear.rotation.z=s*0.16; head.add(ear); earGroups.push(ear);
+        const eye = new T.Group(); eye.position.set(s*0.143, 0.036, 0.235); eye.rotation.y=s*0.25;
+        eye.add(U.ball(0.077, chocolate, 0, 0, 0, 1, 1.12, 0.48, 28),
+          U.ball(0.060, U.mat(0x563721,{roughness:0.25}), 0, -0.006, 0.026, 1, 1.08, 0.3, 24),
+          U.ball(0.044, U.mat(0x17191e,{roughness:0.18}), 0, 0.002, 0.041, 1, 1.1, 0.28, 24),
+          U.ball(0.021, U.mat(0xffffff), -0.021, 0.026, 0.054, 1, 1.1, 0.3, 16),
+          U.ball(0.008, cream, 0.023, -0.025, 0.054, 1, 1, 0.3, 12));
+        head.add(eye); eyeGroups.push(eye);
+        head.add(U.ball(0.11, cream, s*0.065, -0.105, 0.23, 1.02, 0.73, 0.72, 24));
       });
-      const collar=U.torus(0.16,0.028,U.mat(0x253348),0,0.665,0.16);
+      // Small forehead blaze; no heavy eye rings or protruding snout.
+      head.add(U.ball(0.085, cream, 0, 0.21, 0.17, 0.28, 0.8, 0.26, 20),
+        U.ball(0.064, chocolate, 0, -0.067, 0.311, 1.08, 0.73, 0.6, 24),
+        U.ball(0.018, U.mat(0x8e7563), -0.018, -0.049, 0.344, 1, 0.4, 0.3, 14));
+      const smile = new T.CatmullRomCurve3([
+        new T.Vector3(-0.057,-0.14,0.291), new T.Vector3(-0.027,-0.151,0.3),
+        new T.Vector3(0,-0.138,0.31), new T.Vector3(0.027,-0.151,0.3), new T.Vector3(0.057,-0.14,0.291)
+      ]);
+      head.add(U.mesh(new T.TubeGeometry(smile,20,0.005,6,false),chocolate));
+      const collar=U.torus(0.183,0.027,navy,0,0.565,0.12,Math.PI*2,32);
       collar.rotation.x=Math.PI/2;g.add(collar);
-      g.add(U.torus(0.035,0.008,U.mat(0xc4b79a),0,0.615,0.33),
-        U.ball(0.047,U.mat(0xc0a365,{metalness:0.35,roughness:0.5}),0,0.55,0.335,1,1,0.2,16));
-      tail.position.set(0,0.15,-0.26);
-      tail.add(U.ball(0.14,golden,0.22,0.04,-0.1,2,0.7,0.8,20),
-        U.ball(0.09,cream,0.43,0.04,-0.1,1.25,0.75,0.7,14));
+      g.add(U.torus(0.027,0.006,gold,0,0.531,0.312),
+        U.ball(0.045,gold,0,0.476,0.32,1,1.08,0.22,22));
+      // A single tapered plume curves up beside the body, with overlapping soft tufts.
+      tail.position.set(0,0.15,-0.23);
+      const path=new T.CatmullRomCurve3([
+        new T.Vector3(0,0,0),new T.Vector3(0.24,0.03,-0.13),
+        new T.Vector3(0.4,0.17,-0.1),new T.Vector3(0.42,0.31,-0.03)
+      ]);
+      const geo=new T.TubeGeometry(path,24,0.1,12,false);
+      tail.add(U.mesh(geo,coat),
+        U.ball(0.12,coat,0.34,0.14,-0.11,1.05,1.32,0.9,24),
+        U.ball(0.11,cream,0.42,0.3,-0.035,0.8,1.05,0.8,24));
       g.add(head,tail);
       return { g, tick(t) {
-        head.rotation.y=Math.sin(t*0.45)*0.18;
-        head.rotation.z=Math.sin(t*0.35)*0.09;
-        tail.rotation.y=Math.sin(t*5)*0.24;
+        head.rotation.y=Math.sin(t*0.42)*0.12;
+        head.rotation.z=0.065+Math.sin(t*0.6)*0.055;
+        tail.rotation.y=Math.sin(t*4.6)*0.2;
+        earGroups.forEach((ear,i)=>{ear.rotation.z=(i?1:-1)*0.16+Math.sin(t*1.2+i)*0.025;});
+        const blink=t%5.7, openness=blink<0.16?Math.max(0.08,Math.abs(blink-0.08)/0.08):1;
+        eyeGroups.forEach(eye=>{eye.scale.y=openness;});
       } };
     },
 
