@@ -81,6 +81,10 @@
     <div class="card bars" id="cpm"></div>
     <p class="sub" style="margin-top:8px">Shaded band is the design aim: about 16 (beginner) to 37 (expert) coins a minute. Only finished plays count.</p>
 
+    <h2>Minutes of play, empty to full happiness</h2>
+    <div class="card bars" id="fill"></div>
+    <p class="sub" style="margin-top:8px">Playing that one game non-stop from zero happiness to 100. Counts only what the games give, minus her usual drain while awake (27 a hour, more if hungry or dirty). "Mix" is the games players actually play, in the proportions they play them. Shorter means happiness fills faster.</p>
+
     <h2>Balance, game by game</h2>
     <div id="cards"></div>
 
@@ -115,6 +119,25 @@
   var dur = function (s) { s = Math.round(+s || 0); if (s < 60) return s + 's'; var m = Math.floor(s / 60); if (m < 60) return m + 'm' + (s % 60 ? ' ' + (s % 60) + 's' : ''); return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; };
   var name = function (id) { return NAMES[id] || id; };
   var last = null;
+  var DRAIN = 27 / 60;                      // happiness lost a minute while awake (T.joyAwake in sim.js is 27 an hour)
+  /* Minutes of play to go from 0 to 100 happiness at a given rate, and the energy that takes. null minutes = it never gets there. */
+  function fillOf(joyPerMin, energyPerMin) {
+    if (joyPerMin == null) return null;
+    var net = joyPerMin - DRAIN;
+    if (net <= 0) return { mins: null, net: net };
+    var m = 100 / net;
+    return { mins: m, net: net, energy: energyPerMin == null ? null : m * energyPerMin };
+  }
+  /* Everything players play, weighted by the time spent on each game. */
+  function mixRates(pg) {
+    var secs = 0, joy = 0, en = 0;
+    pg.forEach(function (x) {
+      if (x.game === 'sauna' || !x.completed || x.avg_secs == null || x.joy_per_min == null) return;
+      var t = x.completed * x.avg_secs; secs += t; joy += x.joy_per_min * t; if (x.energy_per_min != null) en += x.energy_per_min * t;
+    });
+    return secs ? { joy: joy / secs, energy: en / secs } : null;
+  }
+  var minsText = function (f) { return !f ? '-' : f.mins == null ? 'never' : (f.mins < 10 ? f.mins.toFixed(1) : Math.round(f.mins)) + ' min'; };
 
   /* One block of text to paste into a chat: the headline numbers, a line per game, and the raw per-game numbers. */
   function summary(d) {
@@ -128,6 +151,8 @@
     (d.per_game || []).forEach(function (x) {
       L.push('- ' + name(x.game) + ': ' + x.plays + ' plays (' + x.completed + ' finished, ' + x.quits + ' gave up with nothing), ' + x.players + ' players | length median ' + v(x.median_secs, 's') + ' (10-90%: ' + v(x.p10_secs, 's') + ' to ' + v(x.p90_secs, 's') + ', avg ' + v(x.avg_secs, 's') + ') | ' + v(x.coins_per_min) + ' coins/min, ' + v(x.avg_coins) + ' coins/play | happiness ' + sg(x.avg_joy) + '/play (' + sg(x.joy_per_min) + '/min) | energy ' + v(x.avg_energy) + '/play (' + v(x.energy_per_min) + '/min) | score avg ' + v(x.avg_score) + ', best ' + v(x.best_score) + ' | taste avg ' + sg(x.avg_taste) + ' | happy bonus ' + v(x.avg_bonus, '%') + ', muck ' + v(x.avg_muck, '%'));
     });
+    var mx = mixRates(d.per_game || []), mfl = mx ? fillOf(mx.joy, mx.energy) : null;
+    L.splice(4, 0, 'Minutes of play from empty to full happiness (games only, minus 27/hour awake drain): players\' actual mix ' + (mfl ? minsText(mfl) + (mfl.energy ? ' (about ' + Math.round(mfl.energy) + ' energy)' : '') : '-') + '. Per game: ' + (d.per_game || []).filter(function (x) { return x.game !== 'sauna' && x.joy_per_min != null; }).map(function (x) { var f = fillOf(x.joy_per_min, x.energy_per_min); return name(x.game) + ' ' + minsText(f) + (f && f.energy ? ' (' + Math.round(f.energy) + ' energy)' : ''); }).join(', ') + '.');
     L.push('', 'RAW per_game JSON:', JSON.stringify(d.per_game || []));
     return L.join('\n');
   }
@@ -177,6 +202,16 @@
       return '<div class="row"><span class="name">' + esc(name(x.game)) + '</span><span class="track"><span class="band" style="left:' + (100 * 16 / cmax) + '%;width:' + (100 * 21 / cmax) + '%"></span><span class="fill cpm" style="display:block;width:' + w + '%"></span></span><span class="num">' + x.coins_per_min + '</span></div>';
     }).join('') + (d.coins_per_min_all != null ? '<div class="row"><span class="name"><b>All games</b></span><span></span><span class="num"><b>' + d.coins_per_min_all + '</b></span></div>' : '') : '<span class="sub">No finished games yet.</span>';
 
+    var mix = mixRates(g), rows = g.filter(function (x) { return x.game !== 'sauna' && x.joy_per_min != null; }).map(function (x) { return { label: name(x.game), f: fillOf(x.joy_per_min, x.energy_per_min) }; });
+    rows.sort(function (a, b) { return (a.f.mins == null ? 1e9 : a.f.mins) - (b.f.mins == null ? 1e9 : b.f.mins); });
+    var mf = mix ? fillOf(mix.joy, mix.energy) : null;
+    var fmax = Math.max.apply(null, rows.concat(mf ? [{ f: mf }] : []).map(function (r) { return r.f && r.f.mins ? r.f.mins : 0; }).concat(10));
+    var frow = function (label, f, bold) {
+      var w = f && f.mins ? 100 * f.mins / fmax : 0, t = minsText(f) + (f && f.energy ? ' (' + Math.round(f.energy) + ' energy)' : '');
+      return '<div class="row" style="grid-template-columns:112px 1fr auto"><span class="name">' + (bold ? '<b>' + esc(label) + '</b>' : esc(label)) + '</span><span class="track"><span class="fill" style="display:block;width:' + w + '%' + (f && f.mins == null ? ';background:#ff9aa8;width:2px' : '') + '"></span></span><span class="num" style="min-width:96px">' + t + '</span></div>';
+    };
+    $('fill').innerHTML = rows.length ? (mf ? frow('Mix', mf, true) : '') + rows.map(function (r) { return frow(r.label, r.f); }).join('') : '<span class="sub">No finished games yet.</span>';
+
     var sgn = function (v) { return v == null ? '-' : (v > 0 ? '+' : '') + v; };
     var cell = function (v, label, neg) { return '<div' + (neg ? ' class="neg"' : '') + '><b>' + v + '</b><span>' + label + '</span></div>'; };
     $('cards').innerHTML = g.length ? g.map(function (x) {
@@ -185,6 +220,7 @@
         cell(x.median_secs != null ? dur(x.median_secs) : '-', 'median length (avg ' + (x.avg_secs != null ? dur(x.avg_secs) : '-') + ')') +
         cell(range, 'usual range (10% to 90%)') +
         cell(x.coins_per_min == null ? '-' : x.coins_per_min, 'coins a minute') +
+        cell(minsText(fillOf(x.joy_per_min, x.energy_per_min)), 'of play, empty to full happiness') +
         cell(x.avg_coins == null ? '-' : x.avg_coins, 'coins a play') +
         cell(sgn(x.avg_joy), 'happiness a play (' + sgn(x.joy_per_min) + ' a minute)', x.avg_joy < 0) +
         cell(x.avg_energy == null ? '-' : x.avg_energy, 'energy a play (' + (x.energy_per_min == null ? '-' : x.energy_per_min) + ' a minute)') +
