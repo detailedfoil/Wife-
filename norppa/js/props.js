@@ -522,6 +522,34 @@
     return U.rot(U.group(dome, brim, pom), -0.1, 0, 0.1);
   }
   const wear = {
+
+    knalli() {
+      const felt=U.mat(0x30313b,{roughness:0.9}), ribbon=U.mat(0x294c75);
+      const dome=U.mesh(new T.SphereGeometry(0.30,28,18,0,TAU,0,Math.PI/2),felt,0,0.12,0);
+      dome.scale.y=0.92;
+      const g=U.group(U.cyl(0.4,0.4,0.035,felt,0,0.025,0,32),
+        U.cyl(0.30,0.30,0.1,felt,0,0.085,0,28),dome,
+        U.cyl(0.304,0.304,0.055,ribbon,0,0.09,0,28));
+      g.position.set(0.035,0.49,0);g.rotation.set(-0.08,0,-0.1);
+      return U.group(g);
+    },
+    taskukello() {
+      const metal=gold(), face=U.mat(0xfff0cf), ink=U.mat(0x433727);
+      const pendant=new T.Group();
+      const rim=U.torus(0.125,0.018,metal,0,-0.16,0.02,TAU,32);
+      const dial=U.cyl(0.119,0.119,0.022,face,0,-0.16,0.018,32);dial.rotation.x=Math.PI/2;
+      pendant.add(rim,dial,U.torus(0.028,0.009,metal,0,0.006,0.015,TAU,16));
+      for(let i=0;i<12;i++){
+        const a=i/12*TAU;
+        pendant.add(U.ball(0.007,ink,Math.sin(a)*0.094,-0.16+Math.cos(a)*0.094,0.035,1,1,0.5,8));
+      }
+      pendant.add(U.rod([0,-0.16,0.04],[-0.04,-0.12,0.04],0.007,ink,6),
+        U.rod([0,-0.16,0.04],[0.052,-0.11,0.04],0.005,ink,6),
+        U.ball(0.012,metal,0,-0.16,0.045));
+      pendant.position.set(0.5,-0.36,0.18);pendant.rotation.set(0.1,0,0.22);
+      return U.group(U.torus(0.62,0.018,metal,0,0,0,TAU,48),pendant);
+    },
+
     pipo_red: () => pipo(C.red, C.cream),
     pipo_blue: () => pipo(C.blue, C.cream),
     pipo_yellow: () => pipo(C.yellow, 0x2f4a8a),

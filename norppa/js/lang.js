@@ -701,6 +701,8 @@
 
   /* What each thing is, told in Finnish. */
   const NOTES = {
+    knalli: 'Pieni pyöreä hattu ja tummansininen nauha. Valmiina tärkeälle tepastelulle.',
+    taskukello: 'Kultainen kello ohuessa ketjussa. Aina on aikaa vielä yhdelle kalalle.',
     cookie: 'hölmö',
 "naali":"Pörröinen vieras, lumivalkoinen turkki ja utelias kuono.",
 "janis":"Pitkät korvat, pehmeät tassut ja pieni töpöhäntä.",
