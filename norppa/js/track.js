@@ -1,6 +1,6 @@
 /* Pikku Norppa: anonymous play stats.
-   Sends small events (a game ended, a visit started or ended) to a Supabase table so the owner can see which games are played, for how long
-   and what they pay. Each device gets a random id; there is no name, email or anything personal. It can be switched off in Settings
+   Sends small events (a game ended, a visit started or ended, a game unlocked, something bought, a play that was blocked, an error) to a
+   Supabase table so the owner can see which games are played, for how long, what they pay, and how the game is paced. Each device gets a random id; there is no name, email or anything personal. It can be switched off in Settings
    (state.settings.stats), never runs in developer mode or on localhost, and if the phone is offline the events wait and go later. */
 (function (PN) {
   'use strict';
@@ -32,6 +32,11 @@
   const writeQueue = (q) => store.set(QUEUE, JSON.stringify(q.slice(-MAXQ)));
   const int = (n) => (isFinite(n) ? Math.max(0, Math.round(n)) : null);
 
+  const S = () => PN.Sim;
+  const state = () => (getState ? getState() : null);
+  const levelOf = () => { try { const st = state(); return st ? S().level(st).level : null; } catch (e) { return null; } };
+  const ageDays = () => { try { const st = state(); return st && st.createdAt ? Math.floor((Date.now() - st.createdAt) / 864e5) : null; } catch (e) { return null; } };
+
   function add(event, extra) {
     if (!on()) return;
     const row = Object.assign({ player_id: player, session_id: session, event, lang: PN.lang === 'fi' ? 'fi' : 'en' }, extra || {});
@@ -59,7 +64,7 @@
     if (visibleSince == null) return;
     const secs = (Date.now() - visibleSince) / 1000;
     visibleSince = null;
-    if (secs >= 1) add('session_end', { duration_sec: int(Math.min(secs, 6 * 3600)), coins: int(getState().coins) });
+    if (secs >= 1) add('session_end', { duration_sec: int(Math.min(secs, 6 * 3600)), coins: int(getState().coins), level: levelOf() });
   }
 
   PN.Track = {
@@ -67,7 +72,11 @@
     start(getter) {
       getState = getter;
       visibleSince = document.visibilityState === 'hidden' ? null : Date.now();
-      add('session_start', { coins: int(getState().coins) });
+      const st = getState(), sx = st.stats || {};
+      let installed = 0, screen = null;
+      try { installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone ? 1 : 0; } catch (e) { /* unknown */ }
+      try { screen = (Math.round(innerWidth / 10) * 10) + 'x' + (Math.round(innerHeight / 10) * 10); } catch (e) { /* unknown */ }
+      add('session_start', { coins: int(st.coins), level: levelOf(), age_days: ageDays(), n_food: int(sx.food), n_joy: int(sx.joy), n_energy: int(sx.energy), n_clean: int(sx.clean), installed, screen });
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') seen();
         else if (visibleSince == null) { visibleSince = Date.now(); flush(); }
@@ -77,14 +86,27 @@
     },
     /* A game finished (or was given up): how long it was played, the score, and what it did: coins paid, happiness change, energy used,
        her taste for the game, the happy bonus and the muck penalty (percent). Those last ones are for balancing the games. */
-    game(id, gaveUp, secs, score, r) {
+    game(id, gaveUp, secs, score, r, fps, info) {
       if (gaveUp && !(secs >= 1)) return;
       r = r || {};
       const whole = (n) => (isFinite(n) ? Math.round(n) : null);
       add(gaveUp ? 'game_quit' : 'game_end', {
         game: String(id).slice(0, 32), duration_sec: int(secs), score: int(score), coins: int(r.coins),
         joy: whole(r.joy), energy: int(r.tired), taste: whole(r.taste), bonus: int(r.happy), muck: int(r.muck),
+        level: levelOf(), fps: int(fps), info: info ? String(info).slice(0, 32) : null,
       });
     },
+    /* A game was bought. */
+    unlock(id, cost) { add('unlock', { game: String(id).slice(0, 32), coins: int(cost), level: levelOf(), age_days: ageDays() }); },
+    /* Something was bought in the shop: what, what kind (wear, decor, food...) and the price. */
+    buy(id, kind, cost) { add('purchase', { info: String(id).slice(0, 32), game: String(kind || '').slice(0, 32), coins: int(cost), level: levelOf(), age_days: ageDays() }); },
+    /* She could not play (asleep, poorly, sulking, too tired). */
+    blocked(id, why) { add('blocked', { game: String(id).slice(0, 32), info: String(why || '').slice(0, 32), level: levelOf() }); },
+    /* A script error, at most a few a visit. */
+    error(msg) { if (errors++ < 5) add('error', { info: String(msg || '').slice(0, 64) }); },
   };
+  let errors = 0;
+  const where = (f) => String(f || '').split('/').pop().split('?')[0];
+  window.addEventListener('error', (e) => PN.Track.error((e.message || 'error') + ' ' + where(e.filename) + ':' + (e.lineno || 0)));
+  window.addEventListener('unhandledrejection', (e) => PN.Track.error('promise ' + String((e.reason && e.reason.message) || e.reason || '')));
 })(window.PN = window.PN || {});

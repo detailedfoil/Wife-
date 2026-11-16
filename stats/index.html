@@ -47,6 +47,8 @@
   .grid div b { display: block; font-size: 19px; color: var(--gold); line-height: 1.2; font-variant-numeric: tabular-nums; }
   .grid div span { color: var(--dim); font-size: 12px; }
   .grid .neg b { color: #ff9aa8; }
+  .list p { margin: 6px 0; font-size: 14px; }
+  .list small { color: var(--dim); }
   .chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; }
   .chart .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; position: relative; }
   .chart .a { background: var(--sea); border-radius: 3px 3px 0 0; min-height: 0; }
@@ -87,6 +89,31 @@
 
     <h2>Balance, game by game</h2>
     <div id="cards"></div>
+
+    <h2>Progress</h2>
+    <div class="tiles" id="prog"></div>
+    <div class="card bars" id="levels" style="margin-top:10px"></div>
+    <p class="sub" style="margin-top:8px">Days to reach a level count new players only (people whose seal was under two days old when first seen). Level spread is each player's highest level.</p>
+
+    <h2>Money</h2>
+    <div class="tiles" id="money"></div>
+    <div class="card" id="unlocks" style="margin-top:10px"></div>
+    <div class="card bars" id="buys" style="margin-top:10px"></div>
+    <p class="sub" style="margin-top:8px">Earned counts game payouts only (not dives or gifts). Spent is games unlocked plus shop buys.</p>
+
+    <h2>How she is when people open the game</h2>
+    <div class="card bars" id="needs"></div>
+    <p class="sub" style="margin-top:8px" id="needsnote"></p>
+    <p class="sub" style="margin:10px 0 6px">Times she could not play when asked, and why (share of all attempts).</p>
+    <div class="card bars" id="blocked"></div>
+
+    <h2>Coffee Memory: where drinks go wrong</h2>
+    <div class="card bars" id="coffee"></div>
+
+    <h2>Devices and health</h2>
+    <div class="tiles" id="dev"></div>
+    <div class="card bars" id="screens" style="margin-top:10px"></div>
+    <div class="card" id="errors" style="margin-top:10px"></div>
 
     <h2>Players, last 30 days</h2>
     <div class="card">
@@ -153,6 +180,12 @@
     });
     var mx = mixRates(d.per_game || []), mfl = mx ? fillOf(mx.joy, mx.energy) : null;
     L.splice(4, 0, 'Minutes of play from empty to full happiness (games only, minus 27/hour awake drain): players\' actual mix ' + (mfl ? minsText(mfl) + (mfl.energy ? ' (about ' + Math.round(mfl.energy) + ' energy)' : '') : '-') + '. Per game: ' + (d.per_game || []).filter(function (x) { return x.game !== 'sauna' && x.joy_per_min != null; }).map(function (x) { var f = fillOf(x.joy_per_min, x.energy_per_min); return name(x.game) + ' ' + minsText(f) + (f && f.energy ? ' (' + Math.round(f.energy) + ' energy)' : ''); }).join(', ') + '.');
+    var R = d.retention || {}, N = d.needs || {}, D = d.devices || {}, E = d.errors || {};
+    L.push('', 'PROGRESS: back next day ' + v(R.d1) + '/' + v(R.d1_eligible) + ', within a week ' + v(R.d7) + '/' + v(R.d7_eligible) + ' (new players). Visits per active day ' + v(d.visits_per_active_day) + ' (aim 5-6). Levels reached (players, median seal-age in days for new players): ' + (d.levels || []).map(function (x) { return 'L' + x.level + ' ' + x.reached + ' (day ' + v(x.median_age_days) + ')'; }).join(', ') + '. Highest level per player: ' + (d.levels_now || []).map(function (x) { return 'L' + x.level + 'x' + x.players; }).join(', ') + '.');
+    L.push('MONEY: games paid out ' + v(d.coins_earned_games) + ' coins in total, ' + v(d.coins_spent) + ' spent. Unlocks: ' + ((d.unlocks || []).map(function (x) { return name(x.game) + ' (' + x.price + ') ' + x.players + ' players, median day ' + v(x.median_age_days); }).join('; ') || 'none') + '. Top shop buys (item, kind, count, coins): ' + ((d.purchases || []).slice(0, 8).map(function (x) { return x.item + '/' + x.kind + ' x' + x.n + ' (' + x.total + ')'; }).join(', ') || 'none') + '.');
+    L.push('OPENING THE GAME (' + v(N.visits) + ' visits): average tummy ' + v(N.avg_food, '%') + ', happiness ' + v(N.avg_joy, '%') + ', energy ' + v(N.avg_energy, '%') + ', clean ' + v(N.avg_clean, '%') + '. Started hungry ' + v(N.pct_hungry, '%') + ', glum ' + v(N.pct_sad, '%') + ', mucky ' + v(N.pct_dirty, '%') + ', low energy ' + v(N.pct_low_energy, '%') + ', full happiness ' + v(N.pct_full_joy, '%') + '. Plays blocked: ' + v(d.blocked_total) + ' (' + ((d.blocked || []).map(function (x) { return x.why + ' ' + x.n; }).join(', ') || 'none') + ').');
+    L.push('COFFEE MEMORY failures by step: ' + ((d.coffee_fails || []).map(function (x) { return x.step + ' ' + x.n + ' (~' + v(x.avg_served) + ' drinks served)'; }).join(', ') || 'none') + '.');
+    L.push('DEVICES: installed as app ' + v(D.installed_pct, '%') + ', fps average ' + v(D.fps_avg) + ' (slowest 10% ' + v(D.fps_p10) + '). Screen widths (<360,360-399,400-479,480-767,768+): ' + [1, 2, 3, 4, 5].map(function (b) { var f = (D.screens || []).filter(function (x) { return x.bucket === b; })[0]; return f ? f.players : 0; }).join('/') + '. Errors: ' + v(E.total) + ' (' + v(E.per_100_visits) + ' per 100 visits)' + ((E.top || []).length ? ', top: ' + E.top.slice(0, 3).map(function (x) { return x.msg + ' x' + x.n; }).join(' | ') : '') + '.');
     L.push('', 'RAW per_game JSON:', JSON.stringify(d.per_game || []));
     return L.join('\n');
   }
@@ -224,7 +257,10 @@
         cell(x.avg_coins == null ? '-' : x.avg_coins, 'coins a play') +
         cell(sgn(x.avg_joy), 'happiness a play (' + sgn(x.joy_per_min) + ' a minute)', x.avg_joy < 0) +
         cell(x.avg_energy == null ? '-' : x.avg_energy, 'energy a play (' + (x.energy_per_min == null ? '-' : x.energy_per_min) + ' a minute)') +
-        cell(x.avg_score == null ? '-' : x.avg_score, 'average score (best ' + (x.best_score == null ? '-' : x.best_score) + ')') +
+        cell(x.cpm_p10 == null ? '-' : x.cpm_p10 + ' to ' + x.cpm_p90, 'coins a minute, weaker to stronger plays (middle ' + (x.cpm_p50 == null ? '-' : x.cpm_p50) + ')') +
+        cell(x.score_p10 == null ? '-' : x.score_p10 + ' / ' + x.score_p50 + ' / ' + x.score_p90, 'score: weaker / middle / stronger (best ' + (x.best_score == null ? '-' : x.best_score) + ')') +
+        cell(x.avg_score == null ? '-' : x.avg_score, 'average score') +
+        cell(x.avg_fps == null ? '-' : x.avg_fps, 'frames a second') +
         cell(x.plays ? Math.round(100 * x.quits / x.plays) + '%' : '0%', 'gave up with nothing') +
         cell(sgn(x.avg_taste), 'her taste for it (average)', x.avg_taste < 0) +
         cell((x.avg_bonus == null ? '-' : '+' + x.avg_bonus + '%') + ' / ' + (x.avg_muck == null ? '-' : '-' + x.avg_muck + '%'), 'happy bonus / muck penalty') +
@@ -248,9 +284,56 @@
     }).join('') || '<span class="sub">No data yet.</span>';
 
     last = d;
+    renderMore(d);
     var t = new Date(d.generated);
     $('gen').textContent = 'Updated ' + t.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
     $('when').textContent = 'Anonymous play stats from the seal game.';
+  }
+
+  var WHY = { asleep: 'Asleep', tired: 'Too tired', sulk: 'Sulking', sick: 'Poorly' };
+  var SCREEN = { 1: 'Under 360px wide', 2: '360 to 399px', 3: '400 to 479px', 4: '480 to 767px', 5: '768px and wider' };
+  var pct = function (a, b) { return b ? Math.round(100 * a / b) + '%' : '-'; };
+  function barRows(el, items, maxv, empty) {
+    var m = maxv || items.reduce(function (t, x) { return Math.max(t, x.v); }, 1) || 1;
+    $(el).innerHTML = items.length ? items.map(function (x) {
+      return '<div class="row" style="grid-template-columns:112px 1fr auto"><span class="name">' + esc(x.label) + '</span><span class="track"><span class="fill" style="display:block;width:' + Math.min(100, 100 * x.v / m) + '%"></span></span><span class="num" style="min-width:48px">' + x.text + '</span></div>';
+    }).join('') : '<span class="sub">' + (empty || 'No data yet.') + '</span>';
+  }
+  function renderMore(d) {
+    var R = d.retention || {}, ps = d.players || 0;
+    $('prog').innerHTML =
+      tile(pct(R.d1, R.d1_eligible), 'new players back the next day (' + num(R.d1) + ' of ' + num(R.d1_eligible) + ')') +
+      tile(pct(R.d7, R.d7_eligible), 'new players back within a week (' + num(R.d7) + ' of ' + num(R.d7_eligible) + ')') +
+      tile(d.visits_per_active_day == null ? '-' : d.visits_per_active_day, 'visits on a day they play (aim: 5 to 6)') +
+      tile(num((d.levels_now || []).length ? Math.max.apply(null, d.levels_now.map(function (x) { return x.level; })) : 0), 'highest level reached');
+    var lv = (d.levels || []).map(function (x) { return { label: 'Level ' + x.level, v: x.reached, text: num(x.reached) + ' (' + pct(x.reached, ps) + ')' + (x.median_age_days == null ? '' : ', day ' + x.median_age_days) }; });
+    barRows('levels', lv.concat((d.levels_now || []).map(function (x) { return { label: 'Now level ' + x.level, v: x.players, text: num(x.players) }; })), ps || 1, 'No level data yet.');
+
+    var earned = d.coins_earned_games || 0, spent = d.coins_spent || 0;
+    $('money').innerHTML = tile(num(earned), 'coins earned in games') + tile(num(spent), 'coins spent (' + (earned ? Math.round(100 * spent / earned) + '% of earned' : 'none earned') + ')');
+    $('unlocks').className = 'card list';
+    $('unlocks').innerHTML = '<b>Games unlocked</b>' + ((d.unlocks || []).length ? d.unlocks.map(function (x) {
+      return '<p>' + esc(name(x.game)) + ' (' + num(x.price) + ' coins): <b>' + num(x.players) + '</b> of ' + num(ps) + ' players (' + pct(x.players, ps) + '), median day <b>' + (x.median_age_days == null ? '-' : x.median_age_days) + '</b> of the seal</p>';
+    }).join('') : '<p><small>Nobody has bought a game yet.</small></p>');
+    barRows('buys', (d.purchases || []).map(function (x) { return { label: x.item, v: x.n, text: num(x.n) + ' (' + num(x.total) + ')' }; }), 0, 'No shop buys yet.');
+
+    var N = d.needs || {};
+    barRows('needs', N.visits ? [
+      { label: 'Tummy', v: N.avg_food, text: N.avg_food + '%' }, { label: 'Happiness', v: N.avg_joy, text: N.avg_joy + '%' },
+      { label: 'Energy', v: N.avg_energy, text: N.avg_energy + '%' }, { label: 'Clean', v: N.avg_clean, text: N.avg_clean + '%' }] : [], 100);
+    $('needsnote').textContent = N.visits ? 'Average when a visit starts (' + num(N.visits) + ' visits). Started hungry: ' + N.pct_hungry + '%, glum: ' + N.pct_sad + '%, mucky: ' + N.pct_dirty + '%, low on energy: ' + N.pct_low_energy + '%, already full of happiness: ' + N.pct_full_joy + '%.' : '';
+    var tries = (d.blocked_total || 0) + (d.games_played || 0);
+    barRows('blocked', (d.blocked || []).map(function (x) { return { label: WHY[x.why] || x.why, v: x.n, text: num(x.n) + ' (' + pct(x.n, tries) + ')' }; }), 0, 'Nobody has been stopped from playing yet.');
+
+    barRows('coffee', (d.coffee_fails || []).map(function (x) { return { label: x.step, v: x.n, text: num(x.n) + (x.avg_served == null ? '' : ', ~' + x.avg_served + ' drinks') }; }), 0, 'No Coffee Memory games yet.');
+
+    var D = d.devices || {}, E = d.errors || {};
+    $('dev').innerHTML = tile(D.installed_pct == null ? '-' : D.installed_pct + '%', 'play it installed as an app') + tile(D.fps_avg == null ? '-' : D.fps_avg, 'average frames a second in games' + (D.fps_p10 == null ? '' : ' (slowest 10%: ' + D.fps_p10 + ')')) +
+      tile(E.total == null ? '0' : num(E.total), 'script errors') + tile(E.per_100_visits == null ? '0' : E.per_100_visits, 'errors per 100 visits');
+    var st = (D.screens || []).reduce(function (t, x) { return t + x.players; }, 0);
+    barRows('screens', (D.screens || []).map(function (x) { return { label: SCREEN[x.bucket], v: x.players, text: pct(x.players, st) }; }), st || 1);
+    $('errors').className = 'card list';
+    $('errors').innerHTML = '<b>Most common errors</b>' + (((E.top || []).length) ? E.top.map(function (x) { return '<p>' + num(x.n) + 'x (' + num(x.players) + ' players): <small>' + esc(x.msg) + '</small></p>'; }).join('') : '<p><small>None so far.</small></p>');
   }
 
   function open(pass, remember) {

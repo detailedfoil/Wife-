@@ -838,6 +838,7 @@
     }
     /* The drink is wrong: the customer is not pleased, and the receipt comes back up marked with where it went wrong. */
     function wrong() {
+      try { const st = r.current(); PN.Games.lastInfo = st ? st.id : 'unknown'; } catch (e) { /* the stats are not worth a crash */ }   // which step it went wrong at, for the play stats
       mode = 'fail'; failAt = time; failReady = false; K.hint(''); A.play('nope'); K.big(tr('Wrong drink!'));
       if (box) { box.hidden = true; input.blur(); }
       if (cust) mood(cust, 'sad');

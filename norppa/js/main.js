@@ -972,6 +972,7 @@
     if (v !== 1) return;
     const r = S.unlockGame(state, id);
     if (!r.ok) { A.play('nope'); return; }
+    if (PN.Track) PN.Track.unlock(id, cost);
     A.play('award'); FX.sparkle(head(), 10); save();
     W.setDecor(state.placed);
     UI.toast(tr('{0} unlocked!', title), 'coin');
@@ -988,7 +989,7 @@
     if (!S.gameOwned(state, id)) return;
     if (PN.GAMES[id].ext && !PN.Games.ext[id]) { A.play('nope'); UI.toast(tr('This game is still loading. Close the game and open it again.'), 'steam'); return; }   // its file has not arrived yet (an old copy of the page)
     const c = S.canPlay(state);
-    if (!c.ok) { refuse(c.why); return; }
+    if (!c.ok) { if (PN.Track) PN.Track.blocked(id, c.why); refuse(c.why); return; }
     seal.halt();
     PN.Games.start(id);
   };
@@ -1075,7 +1076,8 @@
   };
   G.buy = function (id, target) {
     if (PN.items[id] && PN.items[id].kind === 'wear' && target === undefined && (state.pups.length || cosmeticVisitors().length)) return G.cosmetic(id);
-    const r = S.buy(state, id, target), it = PN.items[id];
+    const cost = PN.items[id] && PN.items[id].price != null ? S.price(state, PN.items[id].price) : null, r = S.buy(state, id, target), it = PN.items[id];
+    if (r.ok && PN.Track) PN.Track.buy(id, it.kind, cost);
     if (!r.ok) {
       A.play('nope');
       UI.toast(tr(r.why === 'coins' ? 'Not enough coins yet. Games and dives earn more.' : 'That one is already yours.'), 'coin', 'bad');

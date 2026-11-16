@@ -128,7 +128,7 @@
   Games.update = function (dt) {
     if (!g) return;
     const s = g.seal;
-    g.clock += dt; g.secs += dt;          // how long the game has lasted: what it costs in energy
+    g.clock += dt; g.secs += dt; g.frames = (g.frames || 0) + 1;          // how long the game has lasted: what it costs in energy (frames: for the stats, a measure of how smoothly it ran)
     if (g.ext) { updateExt(dt); return; }
     if (g.phase === 'count') {
       const n = Math.floor(g.clock / 0.75);
@@ -332,7 +332,8 @@
 
   /* ---------- the end of any game ---------- */
   function finish(quit) {
-    const id = g.id, score = g.score, caught = g.caught, secs = g.secs;
+    const id = g.id, score = g.score, caught = g.caught, secs = g.secs, frames = g.frames || 0, info = Games.lastInfo || null;
+    Games.lastInfo = null;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
     if (g.ext && g.ext.stop) g.ext.stop();
     g = null;
@@ -343,7 +344,7 @@
     if (id === 'sauna') { if (!(quit && score === 0)) reward = S.saunaDone(PN.Game.state, score, (Games.opts && Games.opts.need) || 7); Games.opts = null; }
     else if (!(quit && score === 0)) { reward = S.gameReward(PN.Game.state, id, score, caught, null, secs, Date.now(), id === 'piano' && Games.opts ? Games.opts.pay : 1); Games.opts = null; }
     else Games.opts = null;
-    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
+    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
     PN.Game.endGame(id, score, reward);
   }
 })(window.PN = window.PN || {});

@@ -243,7 +243,7 @@
     'A little buzz under your finger when you stroke and tap.': 'Pieni värähdys sormen alla, kun silität ja napautat.',
     'Daily medicine': 'Päivittäinen lääke',
     'Share play stats': 'Jaa pelitilastot',
-    'Sends anonymous numbers (which games, how long, coins) to the maker. No name or personal details.': 'Lähettää tekijälle nimettömiä lukuja (mitkä pelit, kuinka kauan, kolikot). Ei nimeä eikä henkilötietoja.',
+    'Sends anonymous numbers (which games, how long, coins, progress, how the game runs) to the maker. No name or personal details.': 'Lähettää tekijälle nimettömiä lukuja (mitkä pelit, kuinka kauan, kolikot, eteneminen, miten peli toimii). Ei nimeä eikä henkilötietoja.',
     'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets Anxi until she has had it.': 'Aluksi pois päältä. Kun kytket sen päälle, hän tarvitsee lääkkeensä joka päivä klo 5 alkaen, tästä päivästä lähtien, tai hän on ahdistunut, kunnes on saanut sen.',
     'Sky': 'Taivas',
     'Real time shows the daylight and the weather over Inari in Lapland as they are right now.': 'Oikea aika näyttää Inarin päivänvalon ja sään sellaisina kuin ne juuri nyt ovat.',
