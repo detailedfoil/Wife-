@@ -70,6 +70,8 @@
   <p class="err" id="err" hidden></p>
 
   <div id="out" hidden>
+    <button id="copy" style="width:100%;margin-bottom:12px">Copy stats for Claude</button>
+    <textarea id="copybox" readonly hidden style="width:100%;height:160px;margin:0 0 12px;font:12px/1.3 ui-monospace,monospace;background:#0b1632;color:#fff;border:1px solid var(--line);border-radius:10px;padding:10px"></textarea>
     <div class="tiles" id="tiles"></div>
 
     <h2>Favourite games</h2>
@@ -112,6 +114,33 @@
   var num = function (n) { return n == null ? '0' : Number(n).toLocaleString('en-GB'); };
   var dur = function (s) { s = Math.round(+s || 0); if (s < 60) return s + 's'; var m = Math.floor(s / 60); if (m < 60) return m + 'm' + (s % 60 ? ' ' + (s % 60) + 's' : ''); return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; };
   var name = function (id) { return NAMES[id] || id; };
+  var last = null;
+
+  /* One block of text to paste into a chat: the headline numbers, a line per game, and the raw per-game numbers. */
+  function summary(d) {
+    var v = function (x, suf) { return x == null ? '-' : x + (suf || ''); };
+    var sg = function (x) { return x == null ? '-' : (x > 0 ? '+' : '') + x; };
+    var L = ['PIKKU NORPPA PLAY STATS (' + d.generated + ')',
+      'Players: ' + d.players + ' total, ' + d.players_24h + ' in 24h, ' + d.players_7d + ' in 7 days, ' + d.returning_players + ' came back on another day. Visits: ' + d.sessions + '. Average visit ' + v(d.avg_session_secs, 's') + '. Game time per player ' + v(d.avg_play_secs_per_player, 's') + '.',
+      'Coins: ' + v(d.avg_earned_per_player) + ' earned in games per player on average. Purse now: average ' + v(d.coins && d.coins.avg) + ', median ' + v(d.coins && d.coins.median) + ', top ' + v(d.coins && d.coins.max) + '. All games together: ' + v(d.coins_per_min_all) + ' coins a minute.',
+      'Design aim: about 16 (beginner) to 37 (expert) coins a minute. Rates use finished plays only; coins include the happy bonus and muck penalty.',
+      '', 'PER GAME (most played first):'];
+    (d.per_game || []).forEach(function (x) {
+      L.push('- ' + name(x.game) + ': ' + x.plays + ' plays (' + x.completed + ' finished, ' + x.quits + ' gave up with nothing), ' + x.players + ' players | length median ' + v(x.median_secs, 's') + ' (10-90%: ' + v(x.p10_secs, 's') + ' to ' + v(x.p90_secs, 's') + ', avg ' + v(x.avg_secs, 's') + ') | ' + v(x.coins_per_min) + ' coins/min, ' + v(x.avg_coins) + ' coins/play | happiness ' + sg(x.avg_joy) + '/play (' + sg(x.joy_per_min) + '/min) | energy ' + v(x.avg_energy) + '/play (' + v(x.energy_per_min) + '/min) | score avg ' + v(x.avg_score) + ', best ' + v(x.best_score) + ' | taste avg ' + sg(x.avg_taste) + ' | happy bonus ' + v(x.avg_bonus, '%') + ', muck ' + v(x.avg_muck, '%'));
+    });
+    L.push('', 'RAW per_game JSON:', JSON.stringify(d.per_game || []));
+    return L.join('\n');
+  }
+  function copyText(text) {
+    var box = $('copybox');
+    function show() { box.value = text; box.hidden = false; box.focus(); box.select(); $('copy').textContent = 'Select all and copy from the box below'; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        box.hidden = true; $('copy').textContent = 'Copied! Paste it into the chat';
+        setTimeout(function () { $('copy').textContent = 'Copy stats for Claude'; }, 3000);
+      }, show);
+    } else show();
+  }
 
   function load(pass) {
     $('err').hidden = true;
@@ -182,6 +211,7 @@
       return '<div class="row"><span class="name">' + (x.lang === 'fi' ? 'Finnish' : 'English') + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * x.players / lt) + '%"></span></span><span class="num">' + num(x.players) + '</span></div>';
     }).join('') || '<span class="sub">No data yet.</span>';
 
+    last = d;
     var t = new Date(d.generated);
     $('gen').textContent = 'Updated ' + t.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
     $('when').textContent = 'Anonymous play stats from the seal game.';
@@ -200,6 +230,7 @@
   }
 
   $('login').addEventListener('submit', function (e) { e.preventDefault(); var p = $('pass').value.trim(); if (p) open(p, true); });
+  $('copy').addEventListener('click', function () { if (last) copyText(summary(last)); });
   $('refresh').addEventListener('click', function () { var p; try { p = localStorage.getItem('norppa.statspass'); } catch (e) {} if (p) open(p, false); });
   $('logout').addEventListener('click', function () { try { localStorage.removeItem('norppa.statspass'); } catch (e) {} location.reload(); });
   var saved; try { saved = localStorage.getItem('norppa.statspass'); } catch (e) {}
