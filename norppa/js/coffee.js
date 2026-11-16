@@ -33,7 +33,7 @@
     'Hannah', 'George', 'Freya', 'Joe', 'Lucy', 'Adam', 'Stephen', 'Alex'];
   const namesNow = () => (PN.lang === 'fi' ? NAMES : NAMES_EN);
   /* Who comes in for a coffee: animals of the Finnish woods. */
-  const ANIMALS = ['reindeer', 'bear', 'arcticfox', 'hare', 'owl', 'moose', 'lynx', 'squirrel'];
+  const ANIMALS = ['reindeer', 'bear', 'arcticfox', 'hare', 'moose', 'lynx', 'squirrel'];
 
   const label = (stepId, optId) => { const o = byId[stepId].opts.find((x) => x[0] === optId); return o ? o[1] : optId; };
   /* How many things the next customer's order has, given the drinks served so far: two at the start, one more with every second drink, ten at most. */
