@@ -89,6 +89,7 @@
           p.m.position.set(x + rs(r), y + rs(r), z + rs(r));
           p.vx = rs(speed); p.vy = rs(speed) * 0.6 + speed * 0.5; p.vz = rs(speed);
           p.r = r * (0.6 + rnd() * 0.8); p.life = p.max = life * (0.7 + rnd() * 0.6); p.g = grav;
+          p.m.scale.setScalar(p.r);   // a new ball starts at its own size (it used to show at full size, a radius-1 sphere, until the next update)
           p.m.visible = true;
         }
       },
