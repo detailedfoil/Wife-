@@ -1096,9 +1096,8 @@
         head.add(eye); eyeGroups.push(eye);
         head.add(U.ball(0.11, cream, s*0.065, -0.105, 0.23, 1.02, 0.73, 0.72, 24));
       });
-      // Small forehead blaze; no heavy eye rings or protruding snout.
-      head.add(U.ball(0.085, cream, 0, 0.21, 0.17, 0.28, 0.8, 0.26, 20),
-        U.ball(0.064, chocolate, 0, -0.067, 0.311, 1.08, 0.73, 0.6, 24),
+      // Small nose and highlight; the forehead stays smooth.
+      head.add(U.ball(0.064, chocolate, 0, -0.067, 0.311, 1.08, 0.73, 0.6, 24),
         U.ball(0.018, U.mat(0x8e7563), -0.018, -0.049, 0.344, 1, 0.4, 0.3, 14));
       const smile = new T.CatmullRomCurve3([
         new T.Vector3(-0.057,-0.14,0.291), new T.Vector3(-0.027,-0.151,0.3),
