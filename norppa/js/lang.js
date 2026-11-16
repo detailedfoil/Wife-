@@ -701,6 +701,13 @@
 
   /* What each thing is, told in Finnish. */
   const NOTES = {
+"naali":"Pörröinen vieras, lumivalkoinen turkki ja utelias kuono.",
+"janis":"Pitkät korvat, pehmeät tassut ja pieni töpöhäntä.",
+"orava":"Pieni pähkinänkerääjä ja komea häntä.",
+"siili":"Pyöreä pikku ystävä, piikkejä ja lempeä kuono.",
+"saukko":"Viiksekäs naapuri lepäilee järven rannalla.",
+"sorsa":"Vihreäpäinen ystävä tepastelee rauhassa rannalla.",
+"ankanpoikaset":"Kolme pientä auringonkeltaista untuvikkoa, aina yhdessä.",
     rahi: 'Pieni puinen rahi ja pehmeä sininen tyyny. Juuri sopiva paikka väsyneille räpylöille.',
     piknikkori: 'Punottu kori, ruutuliina ja termospullo. Jokainen rantaretki ansaitsee evästauon.',
     muikku: 'Pieni ja hopeinen, norpan lempinaposteltava.',

@@ -1018,7 +1018,64 @@
   }
   P.spruce = spruce;
 
+
+  /* Small shore companions; each has its own silhouette and gentle head motion. */
+  function shoreFriend(kind) {
+    const g = new T.Group(), head = new T.Group();
+    const bird = kind === 'sorsa' || kind === 'chick';
+    const col = { naali:0xf3f2e9, janis:0xdcd9cf, orava:0xb86435, siili:0x79604c, saukko:0x80634e, sorsa:0x9b8c76, chick:0xf4cf63 }[kind];
+    const fur = U.mat(col), cream = U.mat(0xf5e4c9), black = U.mat(0x252934), pink = U.mat(0xdca6a2);
+    const body = U.ball(0.27, fur, 0, 0.3, 0, 1, 0.9, kind === 'saukko' ? 1.65 : 1.25, 18);
+    g.add(body);
+    head.position.set(0, kind === 'siili' ? 0.29 : 0.58, 0.28);
+    head.add(U.ball(0.19, kind === 'sorsa' ? U.mat(0x397b63) : fur, 0, 0, 0, 1, 1, 1, 18));
+    if (bird) {
+      head.add(U.ball(0.095, U.mat(0xe8a23b), 0, -0.03, 0.18, 1, 0.35, 1.15, 12));
+      [-1,1].forEach(s => {
+        g.add(U.ball(0.15, fur, s*0.23, 0.32, -0.03, 0.32, 0.8, 1.3, 14));
+        g.add(U.ball(0.09, U.mat(0xe8a23b), s*0.13, 0.055, 0.07, 1, 0.3, 1.35, 12));
+      });
+      if(kind === 'sorsa') g.add(U.ball(0.14, U.mat(0xf3ead7),0,0.45,0.2,1,0.3,1));
+    } else {
+      head.add(U.ball(0.105, cream, 0, -0.065, 0.135, 1.2, 0.65, 1), U.ball(0.035, black, 0, -0.035, 0.225));
+      [-1,1].forEach(s => {
+        g.add(U.ball(0.095, fur, s*0.18, 0.085, 0.17, 0.75, 0.65, 1.4));
+        const long = kind === 'janis', pointed = kind === 'naali';
+        const ear = pointed ? U.cone(0.09,0.22,fur,s*0.13,0.19,-0.01,10) : U.ball(0.075,fur,s*0.13,long?0.28:0.16,-0.015,0.8,long?2.5:1,0.55);
+        head.add(ear,U.ball(0.04,pink,s*0.13,long?0.29:0.17,0.025,0.7,long?3:1,0.3));
+      });
+      if(kind === 'orava') g.add(U.ball(0.21,fur,0,0.53,-0.36,0.85,1.8,0.85,18));
+      else if(kind === 'naali') g.add(U.ball(0.2,fur,0.22,0.2,-0.3,1.65,0.7,0.75),U.ball(0.11,cream,0.45,0.2,-0.3));
+      else if(kind === 'janis') g.add(U.ball(0.1,cream,0,0.27,-0.34));
+      else if(kind === 'saukko') {
+        g.add(U.ball(0.15,fur,0,0.13,-0.48,0.7,0.5,2));
+        [-1,1].forEach(s=>[0,1,2].forEach(i=>head.add(U.rod([s*0.06,-0.06,0.21],[s*0.23,-0.08+i*0.025,0.18],0.006,cream,5))));
+      } else if(kind === 'siili') {
+        for(let i=0;i<32;i++){const a=i*2.39996,y=0.15+0.72*(i/31),r=Math.sqrt(1-y*y)*0.27;
+          const spike=U.cone(0.035,0.13,U.mat(i%2?0xbda183:0x594635),Math.cos(a)*r,0.3+y*0.23,Math.sin(a)*r*1.2,5);
+          spike.rotation.set(Math.sin(a)*0.65,0,-Math.cos(a)*0.65);g.add(spike);
+        }
+      }
+    }
+    [-1,1].forEach(s => head.add(U.ball(0.027,black,s*0.105,0.035,0.155),U.ball(0.009,U.mat(0xffffff),s*0.105-0.005,0.043,0.178)));
+    g.add(head);
+    return { g, tick(t) { head.rotation.y=Math.sin(t*0.65)*0.16; head.rotation.x=Math.sin(t*0.9)*0.04; } };
+  }
   const decor = {
+    naali() { return shoreFriend('naali'); },
+    janis() { return shoreFriend('janis'); },
+    orava() { return shoreFriend('orava'); },
+    siili() { return shoreFriend('siili'); },
+    saukko() { return shoreFriend('saukko'); },
+    sorsa() { return shoreFriend('sorsa'); },
+    ankanpoikaset() {
+      const g = new T.Group(), chicks = [0,1,2].map(i => {
+        const c = shoreFriend('chick'); c.g.scale.setScalar(0.52);
+        c.g.position.set((i-1)*0.33,0,i%2*0.22); g.add(c.g); return c;
+      });
+      return { g, tick(t) { chicks.forEach((c,i)=>c.tick(t+i*1.7)); } };
+    },
+
     rahi() {
       const wood = U.mat(0xb88151), trim = U.mat(0xe8cd9d), blue = U.mat(0x78adb9);
       const g = new T.Group();

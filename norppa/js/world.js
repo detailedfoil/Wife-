@@ -15,6 +15,8 @@
   W.BALL = new T.Vector3(-0.95, 0, 1.35);
   /* x, z, turn. Chosen so each thing shows on a tall phone screen without hiding behind the seal. */
   const SPOTS = {
+    naali: [-4.5, -2.8, 0.5], janis: [-5.7, -4.2, 0.7], orava: [-3.9, -6.6, -0.3],
+    siili: [3.0, 2.1, -0.6], saukko: [4.9, -9.9, -0.8], sorsa: [4.7, -12.1, -0.4], ankanpoikaset: [3.6, -12.7, 0.3],
     piknikkori: [-2.0, 1.9, 0.2],
     snowman: [-3.6, 0.0, 0.6], flag: [-3.1, -4.7, 0.3], sled: [2.5, -5.0, -0.9],
     campfire: [1.4, 1.3, 0], iceheart: [-0.75, -5.4, 0.15], feeder: [-1.75, 0.55, 0.9], xmastree: [2.3, -0.35, 0], sauna: [3.3, -11.0, -0.35],
