@@ -246,8 +246,8 @@
   const tint = (raw) => { const it = PN.items[raw.id] || raw; return it.full ? 'k-coffee' : it.energy ? 'k-drink' : it.kind === 'fish' || it.kind === 'food' || it.kind === 'med' ? 'k-food' : ''; };
   /* What a thing to eat or drink does, shown under its Finnish name in the shop and the pantry. */
   const effect = (it) => it.full ? tr('Fills tummy, happiness and energy') : it.kind === 'med' || it.med ? tr('Cures a poorly seal') : it.energy ? tr('Energy +{0}, tummy +{1}', it.energy, it.food) : tr('Tummy +{0}', it.food);
-  const eats = (it) => '<b>' + esc(it.fi) + '</b><small>' + effect(it) + '</small>';
-  const names = (it) => '<b>' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
+  const eats = (it) => '<b lang="fi">' + esc(it.fi) + '</b><small>' + effect(it) + '</small>';
+  const names = (it) => '<b lang="fi">' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
   const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + (o.img ? ' pic' : '') + '">' + (o.img ? '<img src="' + o.img + '" alt="">' : ic(o.icon)) + '</span><span class="txt"><b>'
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
