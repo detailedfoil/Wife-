@@ -249,7 +249,9 @@
   const gain = (icon, n, tip) => '<span class="gain" title="' + esc(tip) + '">' + ic(icon) + '+' + n + '</span>';
   const effect = (it) => it.full ? tr('Fills tummy, happiness and energy') : it.kind === 'med' || it.med ? tr('Cures a poorly seal') : it.energy ? gain('bolt', it.energy, tr('Energy')) + gain('fish', it.food, tr('Tummy')) : gain('fish', it.food, tr('Tummy'));
   const eats = (it) => '<b lang="fi">' + esc(it.fi) + '</b><small>' + effect(it) + '</small>';
-  const names = (it) => '<b lang="fi">' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
+  const names = (it) => it.id === 'cookie'
+    ? '<b>Cookie</b><small>' + (PN.isFi() ? 'hölmö' : 'stupid') + '</small>'
+    : '<b lang="fi">' + esc(it.fi) + '</b>' + (PN.isFi() ? '' : '<small>' + esc(it.en) + '</small>');
   const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row ' + (o.cls || '') + '"' + (o.act ? ' data-do="' + o.act + '" data-id="' + (o.id || '') + '"' : '') + '><span class="ic-wrap ' + (o.tint || '') + (o.img ? ' pic' : '') + '">' + (o.img ? '<img src="' + o.img + '" alt="">' : ic(o.icon)) + '</span><span class="txt"><b>'
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
