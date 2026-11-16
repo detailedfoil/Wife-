@@ -33,7 +33,7 @@
     'Hannah', 'George', 'Freya', 'Joe', 'Lucy', 'Adam', 'Stephen', 'Alex'];
   const namesNow = () => (PN.lang === 'fi' ? NAMES : NAMES_EN);
   /* Who comes in for a coffee: animals of the Finnish woods. */
-  const ANIMALS = ['reindeer', 'bear', 'fox', 'hare', 'owl', 'moose', 'lynx', 'squirrel'];
+  const ANIMALS = ['reindeer', 'bear', 'arcticfox', 'hare', 'owl', 'moose', 'lynx', 'squirrel'];
 
   const label = (stepId, optId) => { const o = byId[stepId].opts.find((x) => x[0] === optId); return o ? o[1] : optId; };
   /* How many things the next customer's order has, given the drinks served so far: two at the start, one more with every second drink, ten at most. */
@@ -356,7 +356,7 @@
     }
     /* ---------- the customers: animals of the Finnish woods ---------- */
     const FUR = {
-      reindeer: [0xb48d6d, 0xf3e4cf], bear: [0x987254, 0xe2c5a1], fox: [0xe99a62, 0xfff3e2], hare: [0xf3f1ec, 0xffffff],
+      reindeer: [0xb48d6d, 0xf3e4cf], bear: [0x987254, 0xe2c5a1], arcticfox: [0xe6edf4, 0xffffff], hare: [0xf3f1ec, 0xffffff],
       owl: [0xae9b88, 0xf5e9d6], moose: [0x92735d, 0xd4b396], lynx: [0xdcb781, 0xffefd8], squirrel: [0xc98961, 0xffedd9],
     };
     function critter(kind) {
@@ -364,13 +364,14 @@
       const g = new T.Group(), head = new T.Group(), eyes = [];
       const add = (o) => { head.add(o); return o; };
       const both = (fn) => [-1, 1].forEach(fn);
-      g.add(U.ball(1, fur, 0, 0.72, 0, 0.49, 0.70, 0.40, 24));
-      g.add(U.ball(1, pale, 0, 0.8, 0.15, 0.34, 0.50, 0.28, 24));
-      both((s) => {                                     // arms reaching for the counter, paws resting on it
+      g.add(U.ball(1, fur, 0, 0.72, 0, 0.48, 0.62, 0.40, 32));
+      g.add(U.ball(1, pale, 0, 0.85, 0.30, 0.29, 0.39, 0.16, 32));
+      if (kind !== 'owl') both((s) => {                  // arms reaching for the counter, paws resting on it
         g.add(U.rod([s * 0.34, 1.2, 0.1], [s * 0.27, 0.96, 0.5], 0.105, fur, 16));
         g.add(U.ball(0.13, fur, s * 0.27, 0.95, 0.54, 1, 0.72, 1.1, 20));
       });
       head.position.set(0, 1.7, 0.06);
+      head.scale.setScalar(1.10);
       // Broad plush cheeks and a large forehead, with features low on the face.
       add(U.ball(0.37, fur, 0, 0, 0, 1.12, 1.04, 0.98, 32));
       const eye = (s, y, r, z) => {
@@ -399,17 +400,32 @@
       } else if (kind === 'bear') {
         muzzle(0.15, -0.1, 0.26, 1, 0.8, 0.9, mat(0xe2c5a1)); nose(0.055, -0.05, 0.395);
         both((s) => { add(U.ball(0.115, fur, s * 0.27, 0.28, 0)); add(U.ball(0.065, mat(0xe2c5a1), s * 0.27, 0.28, 0.07, 1, 1, 0.5)); });
-      } else if (kind === 'fox') {
+      } else if (kind === 'arcticfox') {
         both((s) => { add(U.ball(0.19, pale, s * 0.14, -0.13, 0.19, 1, 0.7, 0.8, 12));
-          ear(s, 0.25, 0.36, 0.20, 0.11); });
+          ear(s, 0.25, 0.32, 0.135, 0.105);
+          add(U.ball(1, pale, s * 0.27, -0.12, 0.18, 0.17, 0.13, 0.15, 24)); });
+        g.add(U.ball(1, fur, 0.40, 0.84, -0.15, 0.25, 0.38, 0.25, 28));
+        g.add(U.ball(1, pale, 0.48, 1.10, -0.11, 0.20, 0.22, 0.20, 28));
         muzzle(0.11, -0.1, 0.31, 1, 0.75, 1.2); nose(0.045, -0.065, 0.445); mz = 0.415;
       } else if (kind === 'hare') {
         both((s) => { const e = add(U.ball(1, fur, s * 0.13, 0.62, -0.03, 0.08, 0.34, 0.055, 12)); e.rotation.z = -s * 0.14; const i = add(U.ball(1, pink, s * 0.13, 0.62, 0.0, 0.045, 0.27, 0.035, 10)); i.rotation.z = -s * 0.14; });
         muzzle(0.12, -0.1, 0.28, 1.2, 0.75, 0.9); nose(0.035, -0.06, 0.39, pink); add(U.box(0.055, 0.05, 0.012, white, 0, -0.21, 0.365)); my = -0.15; mz = 0.385;
       } else if (kind === 'owl') {
-        both((s) => { add(U.ball(0.17, pale, s * 0.14, 0.05, 0.22, 1, 1, 0.45, 14)); add(U.ball(0.115, mat(0xe6bb71, { roughness: 0.4 }), s * 0.14, 0.06, 0.29, 1, 1, 0.45, 12)); eye(s, 0.045, 0.078, 0.335);
-          const t = add(U.ball(1, fur, s * 0.25, 0.33, 0, 0.09, 0.14, 0.08, 20)); t.rotation.z = -s * 0.4; });
-        const b = add(U.cone(0.05, 0.12, mat(0xe8a13a), 0, -0.07, 0.405, 16)); b.rotation.x = PI * 0.62; my = -0.2; mz = 0.36;
+        // A broad facial disc sits in front of the head, so its cream lobes stay visible.
+        both((s) => {
+          add(U.ball(1, pale, s * 0.145, 0.015, 0.31, 0.215, 0.255, 0.11, 32));
+          add(U.ball(0.105, mat(0xd6ad68), s * 0.157, 0.045, 0.405, 1, 1.12, 0.32, 24));
+          eye(s, 0.045, 0.082, 0.435);
+          const wing = U.ball(1, fur, s * 0.40, 1.03, 0.25, 0.18, 0.38, 0.19, 28);
+          wing.rotation.z = s * 0.22; g.add(wing);
+          for (let i = 0; i < 3; i++) {
+            const feather = U.ball(1, pale, s * (0.39 + i * 0.035), 0.90 + i * 0.07, 0.414, 0.025, 0.075, 0.014, 16);
+            feather.rotation.z = s * 0.35; g.add(feather);
+          }
+        });
+        add(U.ball(1, pale, 0, -0.18, 0.30, 0.16, 0.13, 0.09, 24));
+        const beak = add(U.ball(1, mat(0xe8ad51), 0, -0.075, 0.455, 0.045, 0.065, 0.055, 24));
+        beak.rotation.x = -0.25; my = -0.21; mz = 0.39;
       } else if (kind === 'moose') {
         muzzle(0.2, -0.14, 0.27, 1.12, 0.85, 0.95, pale); both((s) => add(U.ball(0.024, black, s * 0.08, -0.16, 0.455)));
 
@@ -425,10 +441,10 @@
         my = -0.15; mz = 0.385;
       } else {   // squirrel
         both((s) => { add(U.ball(0.14, pale, s * 0.14, -0.12, 0.21, 1, 0.8, 0.85, 12)); ear(s, 0.23, 0.35, 0.13, 0.09); add(U.rod([s * 0.215, 0.44, 0], [s * 0.24, 0.56, 0], 0.014, fur)); });
-        nose(0.035, -0.06, 0.345, mat(0x4a2f25)); add(U.box(0.05, 0.045, 0.012, white, 0, -0.2, 0.31)); my = -0.15; mz = 0.33;
-        g.add(U.ball(0.2, fur, 0.44, 1.02, -0.26, 1, 1.5, 0.9, 12)); g.add(U.ball(0.24, fur, 0.52, 1.5, -0.3, 1, 1.3, 0.9, 12)); g.add(U.ball(0.2, fur, 0.44, 1.94, -0.26, 1.1, 1, 0.9, 12));
+        nose(0.035, -0.06, 0.345, mat(0x4a2f25)); add(U.box(0.05, 0.045, 0.012, white, 0, -0.2, 0.35)); my = -0.15; mz = 0.33;
+        g.add(U.ball(1, fur, 0.47, 1.25, -0.28, 0.27, 0.63, 0.24, 32)); g.add(U.ball(1, fur, 0.39, 1.77, -0.22, 0.28, 0.25, 0.24, 28));
       }
-      both((s) => add(U.ball(0.065, mat(0xeeb0ac), s * 0.265, -0.065, 0.285, 1, 0.55, 0.25, 20)));
+      both((s) => add(U.ball(0.065, mat(0xeeb0ac), s * 0.265, -0.065, kind === 'owl' ? 0.403 : 0.285, 1, 0.55, 0.25, 20)));
       const smile = add(U.torus(0.046, 0.008, black, 0, my + 0.035, mz, PI, 12)); smile.rotation.z = PI;
       const frown = add(U.torus(0.046, 0.008, black, 0, my - 0.03, mz, PI, 12)); frown.visible = false;
       const brows = []; both((s) => { const b = add(U.rod([s * 0.10, 0.18, 0.34], [s * 0.22, 0.15, 0.32], 0.009, black)); b.visible = false; brows.push(b); });
