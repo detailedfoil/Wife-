@@ -382,8 +382,11 @@
   /* The daily medicine is off for everyone until it is switched on in Settings. Switching it on starts the routine tomorrow
      (not the moment it is switched on), and switching it off ends any Anxi she is in. */
   function setMedicine(state, on, now) {
+    const was = !!state.settings.medicine;
     state.settings.medicine = !!on;
-    if (on) state.med.since = medDayKey(now);
+    // Switching it on counts as a dose not yet taken: today is already due. Today's dose and photo bonus are kept as they are,
+    // so flicking it off and on again cannot earn the bonus twice.
+    if (on && !was) state.med.since = medDayKey(now - 864e5);
     medSync(state, now);
   }
   function takeMed(state, now, photo) {
@@ -392,8 +395,9 @@
     if (first) { m.day = today; m.n = (m.n || 0) + 1; }
     if (photo && first && m.photoDay !== today) {   // the bonus is for the photo that takes the pill; tapping I took it first forfeits it
       m.photoDay = today; coins = T.medBonus; state.coins += coins; }
+    const wasLate = state.medLate;
     if (state.medLate) { state.medLate = false; state.grudge = 0; state.sulkWant = null; emit('forgiven'); }
-    return { ok: first || coins > 0, first, coins };
+    return { ok: first || coins > 0 || wasLate, first, coins };
   }
   function advance(state, now, opts) {
     const away = !!(opts && opts.away);

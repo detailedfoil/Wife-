@@ -242,7 +242,7 @@
     'Buzz': 'Värinä',
     'A little buzz under your finger when you stroke and tap.': 'Pieni värähdys sormen alla, kun silität ja napautat.',
     'Daily medicine': 'Päivittäinen lääke',
-    'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting tomorrow, or she gets Anxi until she has had it.': 'Aluksi pois päältä. Kun kytket sen päälle, hän tarvitsee lääkkeensä joka päivä klo 5 alkaen, huomisesta lähtien, tai hän on ahdistunut, kunnes on saanut sen.',
+    'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets Anxi until she has had it.': 'Aluksi pois päältä. Kun kytket sen päälle, hän tarvitsee lääkkeensä joka päivä klo 5 alkaen, tästä päivästä lähtien, tai hän on ahdistunut, kunnes on saanut sen.',
     'Sky': 'Taivas',
     'Real time shows the daylight and the weather over Inari in Lapland as they are right now.': 'Oikea aika näyttää Inarin päivänvalon ja sään sellaisina kuin ne juuri nyt ovat.',
     'Live from Inari in Lapland, where it is {0}.': 'Suoraan Inarista, jossa kello on {0}.',
