@@ -523,6 +523,24 @@
   }
   const wear = {
 
+    saunahattu() {
+      const felt=U.mat(0xeee8d9,{roughness:1}), trim=U.mat(0x426b94,{roughness:0.95});
+      // A soft bell-shaped felt hat with a rounded crown and a gently flared hem.
+      const profile=[[0,0.5],[0.10,0.49],[0.18,0.45],[0.23,0.38],[0.26,0.29],[0.30,0.18],[0.36,0.08],[0.4,0.025]];
+      const g=U.group(U.mesh(new T.LatheGeometry(profile.map(p=>new T.Vector2(p[0],p[1])),32),felt));
+      // Lathe runs crown-to-hem: use both sides for its open underside.
+      g.children[0].material=U.mat(0xeee8d9,{roughness:1,side:T.DoubleSide});
+      const hem=U.torus(0.396,0.018,trim,0,0.028,0,TAU,32);hem.rotation.x=Math.PI/2;g.add(hem);
+      const loop=U.torus(0.035,0.012,trim,0,0.515,0,Math.PI,16);g.add(loop);
+      for(const angle of [-0.65,0.65]){
+        const points=profile.slice(1).map(p=>new T.Vector3(Math.sin(angle)*(p[0]+0.003),p[1],Math.cos(angle)*(p[0]+0.003)));
+        g.add(U.mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points),20,0.005,5,false),trim));
+      }
+      g.position.set(0,0.43,0);g.rotation.z=-0.055;
+      return U.group(g);
+    },
+
+
     knalli() {
       const felt=U.mat(0x30313b,{roughness:0.9}), ribbon=U.mat(0x294c75);
       const dome=U.mesh(new T.SphereGeometry(0.30,28,18,0,TAU,0,Math.PI/2),felt,0,0.12,0);

@@ -701,6 +701,7 @@
 
   /* What each thing is, told in Finnish. */
   const NOTES = {
+    saunahattu: 'Pehmeä huopahattu leppoisaan saunahetkeen.',
     knalli: 'Pieni pyöreä hattu ja tummansininen nauha. Valmiina tärkeälle tepastelulle.',
     taskukello: 'Kultainen kello ohuessa ketjussa. Aina on aikaa vielä yhdelle kalalle.',
     cookie: 'hölmö',
