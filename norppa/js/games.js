@@ -343,7 +343,7 @@
     if (id === 'sauna') { if (!(quit && score === 0)) reward = S.saunaDone(PN.Game.state, score, (Games.opts && Games.opts.need) || 7); Games.opts = null; }
     else if (!(quit && score === 0)) { reward = S.gameReward(PN.Game.state, id, score, caught, null, secs, Date.now(), id === 'piano' && Games.opts ? Games.opts.pay : 1); Games.opts = null; }
     else Games.opts = null;
-    if (PN.Track) PN.Track.game(id, !!quit, secs, score, reward && reward.coins);
+    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
     PN.Game.endGame(id, score, reward);
   }
 })(window.PN = window.PN || {});

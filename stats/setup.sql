@@ -1,11 +1,19 @@
--- Database setup for the play stats (run once in the Supabase SQL editor).
--- 1. The events table, run first:
+-- Database setup for the play stats (run once in the Supabase SQL editor; safe to run again).
+-- First make the events table:
 --    create table events (id bigint generated always as identity primary key, created_at timestamptz default now(), player_id text not null, session_id text, event text not null, game text, duration_sec int, coins int, score int, lang text);
 --    alter table events enable row level security;
 --    create policy "anyone can add events" on events for insert to anon with check (true);
--- 2. Then this file, after replacing CHANGE-ME with your own passcode.
+-- Then run this file, after replacing CHANGE-ME with your own passcode.
+
+-- New columns used for balancing the games
+alter table events add column if not exists joy int;
+alter table events add column if not exists energy int;
+alter table events add column if not exists taste int;
+alter table events add column if not exists bonus int;
+alter table events add column if not exists muck int;
 
 -- Limits on what the game can add (stops junk being sent in)
+alter table events drop constraint if exists events_sane;
 alter table events add constraint events_sane check (
   event in ('session_start','session_end','game_end','game_quit')
   and length(player_id) <= 64
@@ -15,11 +23,17 @@ alter table events add constraint events_sane check (
   and (duration_sec is null or duration_sec between 0 and 86400)
   and (coins is null or coins between 0 and 1000000000)
   and (score is null or score between 0 and 1000000000)
+  and (joy is null or joy between -1000 and 1000)
+  and (energy is null or energy between 0 and 1000)
+  and (taste is null or taste between -1000 and 1000)
+  and (bonus is null or bonus between 0 and 1000)
+  and (muck is null or muck between 0 and 1000)
 );
 
 -- The passcode for the stats page (stored scrambled, nobody can read it back)
-create table stats_key (hash text not null);
+create table if not exists stats_key (hash text not null);
 alter table stats_key enable row level security;
+delete from stats_key;
 insert into stats_key values (encode(sha256(convert_to('CHANGE-ME', 'UTF8')), 'hex'));
 
 -- The stats page asks this question; it only answers if the passcode is right
@@ -47,17 +61,28 @@ begin
     'avg_earned_per_player', (select round(avg(t)) from (select sum(coins) t from events where event in ('game_end','game_quit') group by player_id) x),
     'coins', (select json_build_object('avg', round(avg(coins)), 'median', round((percentile_cont(0.5) within group (order by coins))::numeric), 'max', max(coins))
               from (select distinct on (player_id) coins from events where event = 'session_end' and coins is not null order by player_id, created_at desc) x),
+    'coins_per_min_all', (select round(sum(coins)::numeric / nullif(sum(duration_sec), 0) * 60, 1) from events where event = 'game_end' and game is not null and game <> 'sauna'),
     'per_game', coalesce((select json_agg(g order by g.plays desc) from (
         select game,
                count(*) as plays,
+               count(*) filter (where event = 'game_end') as completed,
                count(*) filter (where event = 'game_quit') as quits,
                count(distinct player_id) as players,
-               round(avg(duration_sec)) as avg_secs,
-               coalesce(sum(duration_sec), 0) as total_secs,
-               round(avg(coins), 1) as avg_coins,
-               coalesce(sum(coins), 0) as total_coins,
-               round(avg(score), 1) as avg_score,
-               max(score) as best_score
+               round(avg(duration_sec) filter (where event = 'game_end')) as avg_secs,
+               round((percentile_cont(0.5) within group (order by duration_sec) filter (where event = 'game_end'))::numeric) as median_secs,
+               round((percentile_cont(0.1) within group (order by duration_sec) filter (where event = 'game_end'))::numeric) as p10_secs,
+               round((percentile_cont(0.9) within group (order by duration_sec) filter (where event = 'game_end'))::numeric) as p90_secs,
+               round(sum(coins) filter (where event = 'game_end')::numeric / nullif(sum(duration_sec) filter (where event = 'game_end'), 0) * 60, 1) as coins_per_min,
+               round(avg(coins) filter (where event = 'game_end'), 1) as avg_coins,
+               round(avg(joy) filter (where event = 'game_end'), 1) as avg_joy,
+               round(sum(joy) filter (where event = 'game_end')::numeric / nullif(sum(duration_sec) filter (where event = 'game_end'), 0) * 60, 1) as joy_per_min,
+               round(avg(energy) filter (where event = 'game_end'), 1) as avg_energy,
+               round(sum(energy) filter (where event = 'game_end')::numeric / nullif(sum(duration_sec) filter (where event = 'game_end'), 0) * 60, 1) as energy_per_min,
+               round(avg(score) filter (where event = 'game_end'), 1) as avg_score,
+               max(score) as best_score,
+               round(avg(taste) filter (where event = 'game_end'), 1) as avg_taste,
+               round(avg(bonus) filter (where event = 'game_end'), 1) as avg_bonus,
+               round(avg(muck) filter (where event = 'game_end'), 1) as avg_muck
         from events where event in ('game_end','game_quit') and game is not null group by game) g), '[]'::json),
     'daily', coalesce((select json_agg(d order by d.day) from (
         select day::text as day,

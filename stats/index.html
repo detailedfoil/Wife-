@@ -37,6 +37,16 @@
   th { color: var(--dim); font-weight: 700; font-size: 11px; white-space: normal; line-height: 1.15; }
   tr:last-child td { border-bottom: 0; }
   .scroll { overflow-x: auto; }
+  .bars .track { position: relative; }
+  .bars .band { position: absolute; top: 0; bottom: 0; background: rgba(255,255,255,.14); }
+  .bars .fill.cpm { position: relative; }
+  .gcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+  .gcard h3 { margin: 0 0 8px; font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .gcard h3 small { color: var(--dim); font-weight: 500; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .grid div b { display: block; font-size: 19px; color: var(--gold); line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .grid div span { color: var(--dim); font-size: 12px; }
+  .grid .neg b { color: #ff9aa8; }
   .chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; }
   .chart .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; position: relative; }
   .chart .a { background: var(--sea); border-radius: 3px 3px 0 0; min-height: 0; }
@@ -65,8 +75,12 @@
     <h2>Favourite games</h2>
     <div class="card bars" id="favs"></div>
 
-    <h2>Each game</h2>
-    <div class="card scroll"><table id="games"></table></div>
+    <h2>Coins per minute</h2>
+    <div class="card bars" id="cpm"></div>
+    <p class="sub" style="margin-top:8px">Shaded band is the design aim: about 16 (beginner) to 37 (expert) coins a minute. Only finished plays count.</p>
+
+    <h2>Balance, game by game</h2>
+    <div id="cards"></div>
 
     <h2>Players, last 30 days</h2>
     <div class="card">
@@ -127,11 +141,30 @@
       return '<div class="row"><span class="name">' + esc(name(x.game)) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * x.plays / max) + '%"></span></span><span class="num">' + num(x.plays) + '</span></div>';
     }).join('') : '<span class="sub">No games played yet.</span>';
 
-    $('games').innerHTML = '<tr><th>Game</th><th>Avg time</th><th>Avg coins</th><th>Coins /min</th><th>Plays</th><th>Avg score</th><th>Quit</th></tr>' +
-      g.map(function (x) {
-        var cpm = x.total_secs > 0 ? (60 * x.total_coins / x.total_secs).toFixed(1) : '0';
-        return '<tr><td>' + esc(name(x.game)) + '</td><td>' + dur(x.avg_secs) + '</td><td>' + (x.avg_coins == null ? 0 : x.avg_coins) + '</td><td>' + cpm + '</td><td>' + num(x.plays) + '</td><td>' + (x.avg_score == null ? 0 : x.avg_score) + '</td><td>' + Math.round(100 * x.quits / x.plays) + '%</td></tr>';
-      }).join('');
+    var cp = g.filter(function (x) { return x.coins_per_min != null; }).sort(function (a, b) { return b.coins_per_min - a.coins_per_min; });
+    var cmax = Math.max(45, cp.reduce(function (m, x) { return Math.max(m, x.coins_per_min); }, 0) * 1.05);
+    $('cpm').innerHTML = cp.length ? cp.map(function (x) {
+      var w = 100 * x.coins_per_min / cmax;
+      return '<div class="row"><span class="name">' + esc(name(x.game)) + '</span><span class="track"><span class="band" style="left:' + (100 * 16 / cmax) + '%;width:' + (100 * 21 / cmax) + '%"></span><span class="fill cpm" style="display:block;width:' + w + '%"></span></span><span class="num">' + x.coins_per_min + '</span></div>';
+    }).join('') + (d.coins_per_min_all != null ? '<div class="row"><span class="name"><b>All games</b></span><span></span><span class="num"><b>' + d.coins_per_min_all + '</b></span></div>' : '') : '<span class="sub">No finished games yet.</span>';
+
+    var sgn = function (v) { return v == null ? '-' : (v > 0 ? '+' : '') + v; };
+    var cell = function (v, label, neg) { return '<div' + (neg ? ' class="neg"' : '') + '><b>' + v + '</b><span>' + label + '</span></div>'; };
+    $('cards').innerHTML = g.length ? g.map(function (x) {
+      var range = x.p10_secs != null && x.p90_secs != null ? dur(x.p10_secs) + ' to ' + dur(x.p90_secs) : '-';
+      return '<div class="gcard"><h3>' + esc(name(x.game)) + '<small>' + num(x.plays) + (x.plays === 1 ? ' play, ' : ' plays, ') + num(x.players) + (x.players === 1 ? ' player' : ' players') + '</small></h3><div class="grid">' +
+        cell(x.median_secs != null ? dur(x.median_secs) : '-', 'median length (avg ' + (x.avg_secs != null ? dur(x.avg_secs) : '-') + ')') +
+        cell(range, 'usual range (10% to 90%)') +
+        cell(x.coins_per_min == null ? '-' : x.coins_per_min, 'coins a minute') +
+        cell(x.avg_coins == null ? '-' : x.avg_coins, 'coins a play') +
+        cell(sgn(x.avg_joy), 'happiness a play (' + sgn(x.joy_per_min) + ' a minute)', x.avg_joy < 0) +
+        cell(x.avg_energy == null ? '-' : x.avg_energy, 'energy a play (' + (x.energy_per_min == null ? '-' : x.energy_per_min) + ' a minute)') +
+        cell(x.avg_score == null ? '-' : x.avg_score, 'average score (best ' + (x.best_score == null ? '-' : x.best_score) + ')') +
+        cell(x.plays ? Math.round(100 * x.quits / x.plays) + '%' : '0%', 'gave up with nothing') +
+        cell(sgn(x.avg_taste), 'her taste for it (average)', x.avg_taste < 0) +
+        cell((x.avg_bonus == null ? '-' : '+' + x.avg_bonus + '%') + ' / ' + (x.avg_muck == null ? '-' : '-' + x.avg_muck + '%'), 'happy bonus / muck penalty') +
+        '</div></div>';
+    }).join('') : '<span class="sub">No games played yet.</span>';
 
     var days = d.daily || [], dmax = days.reduce(function (m, x) { return Math.max(m, x.players); }, 1);
     $('daily').innerHTML = days.map(function (x) {

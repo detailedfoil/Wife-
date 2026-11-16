@@ -75,10 +75,16 @@
       window.addEventListener('pagehide', seen);
       window.addEventListener('online', flush);
     },
-    /* A game finished (or was stopped): how long it was played, the score and the coins it paid. */
-    game(id, quit, secs, score, coins) {
-      if (quit && !(secs >= 1)) return;
-      add(quit ? 'game_quit' : 'game_end', { game: String(id).slice(0, 32), duration_sec: int(secs), score: int(score), coins: int(coins) });
+    /* A game finished (or was given up): how long it was played, the score, and what it did: coins paid, happiness change, energy used,
+       her taste for the game, the happy bonus and the muck penalty (percent). Those last ones are for balancing the games. */
+    game(id, gaveUp, secs, score, r) {
+      if (gaveUp && !(secs >= 1)) return;
+      r = r || {};
+      const whole = (n) => (isFinite(n) ? Math.round(n) : null);
+      add(gaveUp ? 'game_quit' : 'game_end', {
+        game: String(id).slice(0, 32), duration_sec: int(secs), score: int(score), coins: int(r.coins),
+        joy: whole(r.joy), energy: int(r.tired), taste: whole(r.taste), bonus: int(r.happy), muck: int(r.muck),
+      });
     },
   };
 })(window.PN = window.PN || {});
