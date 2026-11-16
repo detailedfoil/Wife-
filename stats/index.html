@@ -41,8 +41,18 @@
   .bars .band { position: absolute; top: 0; bottom: 0; background: rgba(255,255,255,.14); }
   .bars .fill.cpm { position: relative; }
   .gcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
-  .gcard h3 { margin: 0 0 8px; font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .gcard h3 small { color: var(--dim); font-weight: 500; font-size: 12px; }
+  .gcard { padding: 0; overflow: hidden; }
+  .gcard summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; align-items: center; gap: 10px; -webkit-tap-highlight-color: transparent; }
+  .gcard summary::-webkit-details-marker { display: none; }
+  .gcard summary::after { content: ""; flex: none; width: 9px; height: 9px; margin-left: 4px; border-right: 2px solid var(--dim); border-bottom: 2px solid var(--dim); transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s; }
+  .gcard[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+  .gcard .t { flex: 1; min-width: 0; }
+  .gcard .t b { display: block; font-size: 17px; }
+  .gcard .t small { color: var(--dim); font-size: 12px; font-weight: 500; }
+  .gcard .k { text-align: right; font-size: 13px; color: var(--gold); font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .gcard .k span { display: block; color: var(--dim); font-weight: 500; font-size: 11px; }
+  .gcard .grid { padding: 4px 14px 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .alltoggle { display: flex; justify-content: flex-end; margin: -2px 0 8px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
   .grid div b { display: block; font-size: 19px; color: var(--gold); line-height: 1.2; font-variant-numeric: tabular-nums; }
   .grid div span { color: var(--dim); font-size: 12px; }
@@ -88,6 +98,7 @@
     <p class="sub" style="margin-top:8px">Playing that one game non-stop from zero happiness to 100. Counts only what the games give, minus her usual drain while awake (27 a hour, more if hungry or dirty). "Mix" is the games players actually play, in the proportions they play them. Shorter means happiness fills faster.</p>
 
     <h2>Balance, game by game</h2>
+    <div class="alltoggle"><button class="ghost" id="openall">Open all</button>&nbsp;<button class="ghost" id="closeall">Close all</button></div>
     <div id="cards"></div>
 
     <h2>Progress</h2>
@@ -145,7 +156,7 @@
   var num = function (n) { return n == null ? '0' : Number(n).toLocaleString('en-GB'); };
   var dur = function (s) { s = Math.round(+s || 0); if (s < 60) return s + 's'; var m = Math.floor(s / 60); if (m < 60) return m + 'm' + (s % 60 ? ' ' + (s % 60) + 's' : ''); return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; };
   var name = function (id) { return NAMES[id] || id; };
-  var last = null;
+  var last = null, OPEN = {};                // which game cards are open (kept when the page refreshes)
   var DRAIN = 27 / 60;                      // happiness lost a minute while awake (T.joyAwake in sim.js is 27 an hour)
   /* Minutes of play to go from 0 to 100 happiness at a given rate, and the energy that takes. null minutes = it never gets there. */
   function fillOf(joyPerMin, energyPerMin) {
@@ -249,7 +260,7 @@
     var cell = function (v, label, neg) { return '<div' + (neg ? ' class="neg"' : '') + '><b>' + v + '</b><span>' + label + '</span></div>'; };
     $('cards').innerHTML = g.length ? g.map(function (x) {
       var range = x.p10_secs != null && x.p90_secs != null ? dur(x.p10_secs) + ' to ' + dur(x.p90_secs) : '-';
-      return '<div class="gcard"><h3>' + esc(name(x.game)) + '<small>' + num(x.plays) + (x.plays === 1 ? ' play, ' : ' plays, ') + num(x.players) + (x.players === 1 ? ' player' : ' players') + '</small></h3><div class="grid">' +
+      return '<details class="gcard" data-game="' + esc(x.game) + '"' + (OPEN[x.game] ? ' open' : '') + '><summary><span class="t"><b>' + esc(name(x.game)) + '</b><small>' + num(x.plays) + (x.plays === 1 ? ' play, ' : ' plays, ') + num(x.players) + (x.players === 1 ? ' player' : ' players') + '</small></span><span class="k">' + (x.coins_per_min == null ? '-' : x.coins_per_min) + ' coins/min<span>' + (x.median_secs != null ? dur(x.median_secs) : '-') + ' median</span></span></summary><div class="grid">' +
         cell(x.median_secs != null ? dur(x.median_secs) : '-', 'median length (avg ' + (x.avg_secs != null ? dur(x.avg_secs) : '-') + ')') +
         cell(range, 'usual range (10% to 90%)') +
         cell(x.coins_per_min == null ? '-' : x.coins_per_min, 'coins a minute') +
@@ -264,8 +275,9 @@
         cell(x.plays ? Math.round(100 * x.quits / x.plays) + '%' : '0%', 'gave up with nothing') +
         cell(sgn(x.avg_taste), 'her taste for it (average)', x.avg_taste < 0) +
         cell((x.avg_bonus == null ? '-' : '+' + x.avg_bonus + '%') + ' / ' + (x.avg_muck == null ? '-' : '-' + x.avg_muck + '%'), 'happy bonus / muck penalty') +
-        '</div></div>';
+        '</div></details>';
     }).join('') : '<span class="sub">No games played yet.</span>';
+    Array.prototype.forEach.call(document.querySelectorAll('#cards details'), function (el) { el.addEventListener('toggle', function () { OPEN[el.getAttribute('data-game')] = el.open; }); });
 
     var days = d.daily || [], dmax = days.reduce(function (m, x) { return Math.max(m, x.players); }, 1);
     $('daily').innerHTML = days.map(function (x) {
@@ -349,6 +361,9 @@
   }
 
   $('login').addEventListener('submit', function (e) { e.preventDefault(); var p = $('pass').value.trim(); if (p) open(p, true); });
+  function setAll(on) { Array.prototype.forEach.call(document.querySelectorAll('#cards details'), function (el) { el.open = on; }); }
+  $('openall').addEventListener('click', function () { setAll(true); });
+  $('closeall').addEventListener('click', function () { setAll(false); });
   $('copy').addEventListener('click', function () { if (last) copyText(summary(last)); });
   $('refresh').addEventListener('click', function () { var p; try { p = localStorage.getItem('norppa.statspass'); } catch (e) {} if (p) open(p, false); });
   $('logout').addEventListener('click', function () { try { localStorage.removeItem('norppa.statspass'); } catch (e) {} location.reload(); });
