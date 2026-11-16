@@ -6,6 +6,14 @@
   'use strict';
 
   const FI = {
+"Shops":"Kaupat",
+"Wardrobe":"Vaatekaappi",
+"Little shops for your seal and shore. New doors open as your friendship grows.":"Pieniä puoteja norpallesi ja rannalle. Uudet ovet avautuvat ystävyytenne kasvaessa.",
+"Opens at level {0}":"Avautuu tasolla {0}",
+"Coming soon":"Tulossa pian",
+"Open for browsing":"Tervetuloa ostoksille",
+"Back to shops":"Takaisin kauppoihin",
+"A fresh look for your seal. Coming soon.":"Uusi ilme norpallesi. Tulossa pian.",
     "Choose an empty seat as far away from others as possible, be quick.": "Valitse tyhjä penkki mahdollisimman kaukaa muista, ole nopea.",
     // Game instructions and bus messages.
     "Seal Seat Shuffle": "Norpan paikkapulma",

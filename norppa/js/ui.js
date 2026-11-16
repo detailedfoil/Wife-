@@ -74,7 +74,8 @@
       const b = e.target.closest('button'); if (!b) return;
       PN.Audio.play('tap');
       const act = b.dataset.act;
-      if (act === 'feed') UI.openSheet('feed');
+      if (act === 'shopfront') { UI.shopId = id || null; UI.renderSheet(); $('sheetBody').scrollTop = 0; }
+    else if (act === 'feed') UI.openSheet('feed');
       else if (act === 'play') UI.openSheet('play');
       else if (act === 'shop') UI.openSheet('shop');
       else if (act === 'sauna') G().sauna();
@@ -210,7 +211,7 @@
   UI.openSheet = function (name, tab) {
     const sh = $('sheet');
     UI.sheetName = name;
-    UI.tab = tab || { shop: 'food', album: 'fish' }[name] || null;
+    UI.tab = tab || { shop: 'shops', album: 'fish' }[name] || null;
     sh.hidden = false;
     UI.renderSheet();
     $('sheetBody').scrollTop = 0;
@@ -226,7 +227,7 @@
     PN.Audio.play('close');
   };
   const TITLES = { play: 'sheet|Play', shop: 'Shop', album: 'Album', settings: 'Settings' };
-  const TABS = { shop: [['food', 'Food'], ['wear', 'tab|Wear'], ['home', 'For the shore']], album: [['fish', 'tab|Fish'], ['finds', 'Finds'], ['words', 'Words'], ['awards', 'Awards'], ['family', 'Family']] };
+  const TABS = { shop: [['food', 'Food'], ['shops', 'Shops'], ['wear', 'Wardrobe'], ['home', 'For the shore']], album: [['fish', 'tab|Fish'], ['finds', 'Finds'], ['words', 'Words'], ['awards', 'Awards'], ['family', 'Family']] };
   UI.renderSheet = function (soft) {
     const name = UI.sheetName, st = G().state;
     if (!name) return;
@@ -315,11 +316,28 @@
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
         h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + eats(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), tint(it), 'buy')).join('') + '</div>';
+      } else if (UI.tab === 'shops') {
+        const level = Math.max(st.maxLevel || 1, S.level(st).level), shop = PN.SHOPS.find((x) => x.id === UI.shopId);
+        const title = (x) => esc(PN.isFi() ? x.fi : x.en);
+        if (!shop) {
+          h = '<p class="lead">' + tr('Little shops for your seal and shore. New doors open as your friendship grows.') + '</p><div class="shop-fronts">'
+            + PN.SHOPS.map((x) => '<button class="shop-front' + (level < x.level ? ' locked' : '') + '" data-do="shopfront" data-id="' + x.id + '"><span class="shop-art" aria-hidden="true">' + x.icon + '</span><b>' + title(x) + '</b><span>' + (level < x.level ? tr('Opens at level {0}', x.level) : x.id === 'sturgeon' ? tr('Coming soon') : tr('Open for browsing')) + '</span></button>').join('') + '</div>';
+        } else {
+          const locked = level < shop.level;
+          h = '<button class="chip-btn" data-do="shopfront">' + tr('Back to shops') + '</button><h3 class="shelf">' + shop.icon + ' ' + title(shop) + '</h3>';
+          if (shop.id === 'sturgeon') h += '<p class="lead">' + tr('A fresh look for your seal. Coming soon.') + '</p>';
+          if (locked) h += '<p class="lead">' + tr('Opens at level {0}', shop.level) + '</p>';
+          h += '<div class="grid">' + shop.items.map((id) => {
+            const it = PN.items[id], wear = it.kind === 'wear', own = st.owned[id];
+            const on = wear ? st.wearing[it.slot] === id : st.placed[id];
+            return cell(id, thumb(id) + names(it) + (own ? '<span class="tag">' + tr(wear ? 'Choose seal' : on ? 'Out' : 'Put out') + '</span>' : locked ? '<span class="tag">' + tr('Opens at level {0}', shop.level) + '</span>' : price(it)), locked && !own ? 'locked' : '', own ? wear ? 'wear' : 'place' : locked ? 'none' : 'buy');
+          }).join('') + '</div>';
+        }
       } else {
         // one shelf for each kind of thing, with a row of shortcuts at the top
-        const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = (wear ? D.WEAR : D.DECOR).filter((it) => !it.hidden);
+        const wear = UI.tab === 'wear', cats = wear ? D.WEAR_CATS : D.DECOR_CATS, list = (wear ? D.WEAR : D.DECOR).filter((it) => !it.hidden && (st.owned[it.id] || (wear && st.pups.concat(st.family.filter((f) => S.visitStatus(f, Date.now()) === 'here')).some((p) => (p.owned && p.owned[it.id]) || Object.values(p.wear || {}).includes(it.id)))));
         const one = (it) => {
-          const own = st.owned[it.id], on = wear ? st.wearing[it.slot] === it.id : st.placed[it.id];
+          const own = true, on = wear ? st.wearing[it.slot] === it.id : st.placed[it.id];
           return cell(it.id, thumb(it.id) + names(it) + (own ? '<span class="tag' + (on ? ' on' : '') + '">' + tr(wear ? ((st.pups.length || st.family.some((f) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here')) ? 'Choose seal' : on ? 'Wearing' : 'tag|Wear') : (on ? 'Out' : 'Put out')) + '</span>' : price(it)), '', own ? (wear ? 'wear' : 'place') : 'buy');
         };
         h = '<p class="lead">' + tr(wear ? 'Tap something you own to put it on or take it off.' : 'Things for the shore. Tap one you own to put it out or tidy it away.') + '</p>'

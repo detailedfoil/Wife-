@@ -1080,7 +1080,7 @@
     if (r.ok && PN.Track) PN.Track.buy(id, it.kind, cost);
     if (!r.ok) {
       A.play('nope');
-      UI.toast(tr(r.why === 'coins' ? 'Not enough coins yet. Games and dives earn more.' : 'That one is already yours.'), 'coin', 'bad');
+      UI.toast((r.why === 'locked' ? tr('Opens at level {0}', PN.shopFor(id).level) : tr(r.why === 'coins' ? 'Not enough coins yet. Games and dives earn more.' : 'That one is already yours.')), 'coin', 'bad');
       return;
     }
     A.play('coin');
