@@ -701,6 +701,8 @@
 
   /* What each thing is, told in Finnish. */
   const NOTES = {
+    rahi: 'Pieni puinen rahi ja pehmeä sininen tyyny. Juuri sopiva paikka väsyneille räpylöille.',
+    piknikkori: 'Punottu kori, ruutuliina ja termospullo. Jokainen rantaretki ansaitsee evästauon.',
     muikku: 'Pieni ja hopeinen, norpan lempinaposteltava.',
     kuore: 'Tuoreena se tuoksuu kurkulta. Ihan oikeasti.',
     ahven: 'Suomen kansalliskala, raidallinen kuin pieni tiikeri.',

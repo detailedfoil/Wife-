@@ -1019,6 +1019,31 @@
   P.spruce = spruce;
 
   const decor = {
+    rahi() {
+      const wood = U.mat(0xb88151), trim = U.mat(0xe8cd9d), blue = U.mat(0x78adb9);
+      const g = new T.Group();
+      [-0.22, 0.22].forEach((x) => [-0.18, 0.18].forEach((z) => g.add(U.cyl(0.045, 0.055, 0.27, wood, x, 0.135, z, 10))));
+      g.add(U.box(0.6, 0.07, 0.5, trim, 0, 0.29, 0));
+      g.add(U.mesh(cushionGeo(0.64, 0.19, 0.54), blue, 0, 0.4, 0));
+      [-0.13, 0.13].forEach((x) => g.add(U.ball(0.022, U.mat(0xf7edda), x, 0.495, 0, 1, 0.4, 1, 8)));
+      return { g: U.group(g), conform(yAt) { g.position.y = Math.max(...[-0.22, 0.22].flatMap((x) => [-0.18, 0.18].map((z) => yAt(x, z)))); } };
+    },
+    piknikkori() {
+      const g = new T.Group(), wicker = U.mat(0xc58c50), rim = U.mat(0x996337);
+      g.add(U.box(0.65, 0.32, 0.44, wicker, 0, 0.18, 0));
+      [0.07, 0.15, 0.23, 0.31].forEach((y) => {
+        [-0.226, 0.226].forEach((z) => g.add(U.box(0.67, 0.018, 0.016, rim, 0, y, z)));
+        [-0.334, 0.334].forEach((x) => g.add(U.box(0.016, 0.018, 0.44, rim, x, y, 0)));
+      });
+      const handle = U.torus(0.28, 0.026, rim, 0, 0.34, 0, Math.PI, 20);
+      g.add(handle);
+      g.add(U.box(0.4, 0.025, 0.31, U.mat(0xf7edda), -0.07, 0.355, 0.06));
+      [-0.19, -0.06, 0.07].forEach((x) => g.add(U.box(0.035, 0.004, 0.31, U.mat(0xd77171), x, 0.371, 0.06)));
+      [-0.04, 0.07, 0.18].forEach((z) => g.add(U.box(0.4, 0.004, 0.025, U.mat(0xd77171), -0.07, 0.374, z)));
+      g.add(U.cyl(0.065, 0.065, 0.26, U.mat(0x699c9c), 0.2, 0.39, -0.05, 12));
+      g.add(U.cyl(0.06, 0.06, 0.05, U.mat(0xf3ead6), 0.2, 0.545, -0.05, 12));
+      return { g };
+    },
     lantern() {
       const iron = U.mat(0x2b2f36, { roughness: 0.5 });
       const glass = new T.MeshBasicMaterial({ color: 0xffd27a, toneMapped: false });
