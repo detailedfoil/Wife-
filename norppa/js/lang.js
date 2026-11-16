@@ -701,6 +701,7 @@
 
   /* What each thing is, told in Finnish. */
   const NOTES = {
+    cookie: 'stupid',
 "naali":"Pörröinen vieras, lumivalkoinen turkki ja utelias kuono.",
 "janis":"Pitkät korvat, pehmeät tassut ja pieni töpöhäntä.",
 "orava":"Pieni pähkinänkerääjä ja komea häntä.",

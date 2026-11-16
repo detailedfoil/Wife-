@@ -1062,6 +1062,51 @@
     return { g, tick(t) { head.rotation.y=Math.sin(t*0.65)*0.16; head.rotation.x=Math.sin(t*0.9)*0.04; } };
   }
   const decor = {
+
+    cookie() {
+      const g = new T.Group(), head = new T.Group(), tail = new T.Group();
+      const golden = U.mat(0xc99150), cream = U.mat(0xf0ddbb), earFur = U.mat(0xb37a40);
+      const dark = U.mat(0x292a31), noseMat = U.mat(0x564239), eyeMat = U.mat(0x211c19);
+      // Seated body, cream bib, bent hindquarters and two straight front legs.
+      g.add(U.ball(0.29, golden, 0, 0.43, -0.05, 1, 1.35, 1.15, 20),
+        U.ball(0.2, cream, 0, 0.49, 0.2, 0.8, 1.28, 0.35, 18));
+      [-1,1].forEach(s => {
+        g.add(U.ball(0.17,golden,s*0.22,0.18,-0.12,0.85,0.95,1.2,16),
+          U.cyl(0.065,0.075,0.38,golden,s*0.14,0.26,0.22,12),
+          U.ball(0.085,golden,s*0.14,0.075,0.27,0.9,0.65,1.35,14),
+          U.ball(0.06,cream,s*0.14,0.065,0.345,0.95,0.55,0.65,12));
+      });
+      head.position.set(0,0.85,0.18);
+      head.add(U.ball(0.235,golden,0,0,0,1.08,1,0.95,24),
+        U.ball(0.13,cream,0,-0.1,0.18,1.05,0.7,0.7,18),
+        U.ball(0.09,golden,0,-0.035,0.2,1,0.75,0.85,16),
+        U.ball(0.062,noseMat,0,-0.035,0.275,1,0.72,0.6,16),
+        U.ball(0.025,dark,0,-0.125,0.25,1.6,0.25,0.3,10));
+      // The narrow pale forehead streak, dark eye rims and soft feathered ears.
+      head.add(U.ball(0.07,cream,0,0.18,0.11,0.35,0.9,0.3,14));
+      [-1,1].forEach(s => {
+        head.add(U.ball(0.068,earFur,s*0.125,0.018,0.182,1,1.08,0.42,18),
+          U.ball(0.052,eyeMat,s*0.125,0.018,0.203,1,1.05,0.5,20),
+          U.ball(0.015,U.mat(0xffffff),s*0.125-0.013,0.035,0.226,1,1,0.4,12));
+        const ear=U.ball(0.12,earFur,s*0.25,-0.055,-0.01,0.8,1.65,0.5,18);
+        ear.rotation.z=s*0.28;head.add(ear);
+        for(let i=0;i<4;i++) head.add(U.ball(0.045,golden,s*(0.24+i*0.012),-0.14+i*0.065,0.025,0.7,1.4,0.5,10));
+      });
+      const collar=U.torus(0.16,0.028,U.mat(0x253348),0,0.665,0.16);
+      collar.rotation.x=Math.PI/2;g.add(collar);
+      g.add(U.torus(0.035,0.008,U.mat(0xc4b79a),0,0.615,0.33),
+        U.ball(0.047,U.mat(0xc0a365,{metalness:0.35,roughness:0.5}),0,0.55,0.335,1,1,0.2,16));
+      tail.position.set(0,0.15,-0.26);
+      tail.add(U.ball(0.14,golden,0.22,0.04,-0.1,2,0.7,0.8,20),
+        U.ball(0.09,cream,0.43,0.04,-0.1,1.25,0.75,0.7,14));
+      g.add(head,tail);
+      return { g, tick(t) {
+        head.rotation.y=Math.sin(t*0.45)*0.18;
+        head.rotation.z=Math.sin(t*0.35)*0.09;
+        tail.rotation.y=Math.sin(t*5)*0.24;
+      } };
+    },
+
     naali() { return shoreFriend('naali'); },
     janis() { return shoreFriend('janis'); },
     orava() { return shoreFriend('orava'); },
