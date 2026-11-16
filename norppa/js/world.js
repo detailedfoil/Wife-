@@ -13,21 +13,24 @@
   W.HOLE = new T.Vector3(2.0, 0, -2.9);
   W.DEN = { x: -2.45, z: -3.2, heading: 0.62 };
   W.BALL = new T.Vector3(-0.95, 0, 1.35);
-  /* x, z, turn. Chosen so each thing shows on a tall phone screen without hiding behind the seal. */
+  /* x, z, turn. The shore is laid out so every thing has a place of its own and they can all be out at once:
+     small, low things along the front where the seal lives; the left shore and the den's wooded point behind;
+     a camp on the headland to the right; snow and ice things out on the lake; the sauna island at the back.
+     The camera steps back by itself as more things come out (see the camera below). */
   const SPOTS = {
-    cookie: [-2.8, 3.1, 0.25],
-    naali: [-4.5, -2.8, 0.5], janis: [-5.7, -4.2, 0.7], orava: [-3.9, -6.6, -0.3],
-    siili: [3.0, 2.1, -0.6], saukko: [4.9, -9.9, -0.8], sorsa: [4.7, -12.1, -0.4], ankanpoikaset: [3.6, -12.7, 0.3],
-    piknikkori: [-2.0, 1.9, 0.2],
-    snowman: [-3.6, 0.0, 0.6], flag: [-3.1, -4.7, 0.3], sled: [2.5, -5.0, -0.9],
-    campfire: [1.4, 1.3, 0], iceheart: [-0.75, -5.4, 0.15], feeder: [-1.75, 0.55, 0.9], xmastree: [2.3, -0.35, 0], sauna: [3.3, -11.0, -0.35],
     // the front of the shore: small things only, low enough not to hide the seal
-    lumilyhty: [-0.95, 2.8, 0.2], kurpitsa: [0.25, 3.35, 0], jaalyhty: [1.35, 2.8, -0.2], lahjat: [1.75, 0.4, -0.4], matto: [0.15, 0.3, 0.5],
-    // out on the lake
-    luminorppa: [0.9, -4.9, 0.5], lumilinna: [-0.2, -7.5, 0.1], pilkki: [1.3, -5.9, 0.2], teltta: [2.6, -7.1, -0.5],
-    vene: [-3.0, -9.0, 0.9], joutsen: [-0.9, -8.9, 0.6], poro: [1.2, -8.8, -0.6],
-    // by the den, and over on the sauna island
-    tahti: [-3.3, -5.9, 0.4], palju: [0.7, -10.9, 0.2], laituri: [3.05, -9.25, 0.25],
+    matto: [0.15, 0.3, 0.5], kurpitsa: [0.3, 3.9, 0], lumilyhty: [-1.6, 3.4, 0.2], jaalyhty: [2.1, 3.4, -0.2],
+    cookie: [-1.3, 4.8, 0.15], siili: [1.7, 4.8, -0.4], piknikkori: [-2.3, 2.1, 0.2], lahjat: [2.4, 1.7, -0.4],
+    naali: [-3.3, 3.2, 0.5], orava: [-4.4, 1.6, -0.3], snowman: [-3, 0.6, 0.6], feeder: [-4, -0.8, 0.9],
+    sorsa: [3.3, 0.6, -0.4], ankanpoikaset: [3.4, 2.7, 0.3],
+    // the den's wooded point, behind it on the left
+    janis: [-5.3, -4.9, 0.7], flag: [-1.8, -7.2, 0], xmastree: [-4.4, -6.4, 0.1], tahti: [-3.8, -8, 0.4], poro: [-5.4, -8.6, 0.3],
+    // a camp on the little headland to the right
+    campfire: [5, -2.8, 1.45], teltta: [5.3, -5.8, -0.3],
+    // out on the lake: low things, so they do not hide what is behind them
+    iceheart: [-0.3, -5.7, 0.15], luminorppa: [1.7, -5.6, 0.5], sled: [3.6, -7, 1.2], joutsen: [0.8, -8.2, 0.6], pilkki: [4.4, -9.3, 0.2], vene: [-2.6, -10.5, 1.4],
+    // the sauna island at the back, with its jetty reaching out toward the shore (the tall things are back here)
+    sauna: [5.4, -13, -0.15], palju: [1.9, -13, 0.3], lumilinna: [-0.5, -13.3, 0.1], laituri: [2.6, -11.2, 0], saukko: [0.6, -10.7, -0.5],
   };
   /* These sit on the den itself: x, y, z in the den's own space. */
   const ON_DEN = { rahi: [1.25, 0, 2.8], lantern: [0, 1.0, 1.55], lights: [0, 0, 0], viirit: [0, 0, 0], ulkotulet: [0, 0.02, 2.3], ilmapallot: [0.55, 1.2, 0.2],
@@ -46,9 +49,10 @@
   /* More than zero means dry land; less means lake. */
   function landD(x, z) {
     const d1 = (z - (-1.5 + 0.42 * x)) / 1.085;
-    const d2 = (1 - Math.hypot((x + 4.6) / 3.3, (z + 4.2) / 3.6)) * 3.3;
-    const d3 = (1 - Math.hypot((x - 3.5) / 2.9, (z + 11.2) / 2.4)) * 2.4;
-    return Math.max(d1, d2, d3, farShore(x, z));
+    const d2 = (1 - Math.hypot((x + 5) / 3.8, (z + 5.6) / 4.3)) * 3.8;     // the den's wooded point
+    const d3 = (1 - Math.hypot((x - 2.2) / 5.5, (z + 12.8) / 3)) * 3;    // the sauna island
+    const d4 = (1 - Math.hypot((x - 5.5) / 2.2, (z + 4.6) / 3.6)) * 2.2;     // the headland on the right, where the camp is
+    return Math.max(d1, d2, d3, d4, farShore(x, z));
   }
   function terrainY(x, z) {
     const d = landD(x, z);
@@ -342,8 +346,8 @@
       }
       if (!far) put(white, new T.SphereGeometry(0.16, 8, 6), hgt * 1.02, cSnow);
     }
-    [[-4.3, -5.0, 1.2], [-5.6, -3.4, 1.45], [-3.5, -6.5, 1.05], [-5.1, -6.9, 1.5], [-6.8, -5.2, 1.3], [-6.3, -1.6, 1.6], [-7.7, -3.2, 1.4], [-4.4, -0.4, 1.1],
-      [-5.2, 1.6, 1.5], [-6.6, 3.4, 1.8], [4.7, 1.3, 1.5], [6.3, 2.6, 1.4], [5.4, 4.6, 1.6], [5.5, -11.8, 1.25], [1.5, -12.1, 1.0], [4.4, -12.9, 1.4],
+    [[-6.8, -8.4, 1.2], [-7, -5.6, 1.45], [-6.6, -10.6, 1.1], [-8.4, -3, 1.4], [-7.8, -0.4, 1.6], [-8.6, 3.6, 1.8], [8.8, 2.8, 1.5], [9.6, 5.6, 1.6],
+      [8.6, -2.4, 1.4], [8.4, -6.6, 1.3], [8.6, -9.6, 1.2], [7.6, -10.6, 1.25], [-1.6, -15.2, 1], [8, -12.4, 1.4], [2.2, -15.4, 1.3],
       [-9.5, 7, 1.9], [9.5, 8, 1.8], [12, 5.5, 1.6], [-10.5, 2.5, 1.8], [-9.2, -6.2, 1.5], [-11, -1.8, 1.9], [-8.6, -8.4, 1.3]]
       .forEach((p) => tree(p[0], p[1], p[2], false));
     for (let i = 0; i < 26; i++) {                         // down the left shore and round behind
@@ -356,7 +360,7 @@
       tree(x, z, 1.3 + r() * 1.3, true);
     }
     // a few boulders with snow hats
-    [[3.3, 1.1, 0.5], [-3.3, 1.8, 0.55], [1.05, -1.3, 0.22], [3.5, -0.6, 0.34]].forEach((p) => {
+    [[4.6, 0.9, 0.5], [-6, 3, 0.55], [1.05, -1.3, 0.22], [-3.6, 0, 0.3]].forEach((p) => {
       const y = W.groundY(p[0], p[1]);
       M.compose(tmpV.set(p[0], y + p[2] * 0.35, p[1]), Q.setFromEuler(E.set(0.2, p[0], 0.1)), new T.Vector3(p[2] * 1.3, p[2] * 0.85, p[2]));
       green.push({ geo: new T.SphereGeometry(1, 10, 8), m: M.clone(), c: cRock });
@@ -543,7 +547,8 @@
   /* ---------- poo ---------- */
   const AVOID = [[SPOTS.campfire[0], SPOTS.campfire[1], 0.85], [SPOTS.feeder[0], SPOTS.feeder[1], 0.6], [SPOTS.snowman[0], SPOTS.snowman[1], 0.7],
     [SPOTS.xmastree[0], SPOTS.xmastree[1], 0.8], [SPOTS.lahjat[0], SPOTS.lahjat[1], 0.6], [SPOTS.lumilyhty[0], SPOTS.lumilyhty[1], 0.5], [SPOTS.jaalyhty[0], SPOTS.jaalyhty[1], 0.5],
-    [SPOTS.kurpitsa[0], SPOTS.kurpitsa[1], 0.5], [W.BALL.x, W.BALL.z, 0.55], [W.HOME.x, W.HOME.z, 1.3]];
+    [SPOTS.kurpitsa[0], SPOTS.kurpitsa[1], 0.5], [SPOTS.piknikkori[0], SPOTS.piknikkori[1], 0.45], [SPOTS.cookie[0], SPOTS.cookie[1], 0.6], [SPOTS.siili[0], SPOTS.siili[1], 0.5],
+    [W.BALL.x, W.BALL.z, 0.55], [W.HOME.x, W.HOME.z, 1.3]];
   W.poopSpot = function (p, out) {
     const ang = (-30 + p.a * 240) * RAD, rad = 1.45 + p.r * 0.85;
     let x = W.HOME.x + Math.cos(ang) * rad, z = W.HOME.z + Math.sin(ang) * rad * 0.8;
@@ -572,11 +577,75 @@
     mode: 'home', size: 1, userAz: 0.05, userEl: 0.115, zoom: 1, focus: new T.Vector3(0.15, 0, 0.25), sheet: 0, cSheet: 0 };
   W.setCamMode = (mode) => { cam.mode = mode; };
   W.orbit = function (dx, dy) {
-    cam.userAz = U.clamp(cam.userAz - dx * 0.006, -1.05, 1.05);
+    cam.userAz = U.clamp(cam.userAz - dx * 0.006, -1.35, 1.35);
     cam.userEl = U.clamp(cam.userEl + dy * 0.004, 0.035, 0.5);
   };
-  W.zoomBy = (k) => { cam.zoom = U.clamp(cam.zoom * k, 0.6, 1.6); };
+  /* Zoom is a share of the wide view (1 = the whole shore in frame). Pinching in goes all the way to the
+     old close-up on the seal, however much is out. */
+  W.zoomBy = (k) => { cam.zoom = U.clamp(cam.zoom * k, cam.zoomMin || 0.6, 1.6); };
   W.resetView = () => { cam.userAz = 0.05; cam.userEl = 0.115; cam.zoom = 1; };
+
+  /* ---------- framing the whole shore ----------
+     The more that is out, the further the camera steps back, so that everything out is in frame at the
+     default angle. It also rises a little as it backs off, so the shore reads like a little model rather
+     than a row of things one behind the other. The sauna is always there and does not count. Worked out
+     only when something changes: what is out, what can be seen, the screen's shape or the seal's size. */
+  const fitBox = new T.Box3(), fitP = [], fitV = new T.Vector3(), fitCam = new T.PerspectiveCamera();
+  let fitKey = '', fit = null;
+  function framePoints() {
+    fitP.length = 0;
+    Object.keys(decor).forEach((id) => {
+      const d = decor[id];
+      if (id === 'sauna' || !d.g.visible) return;
+      d.g.updateMatrixWorld(true);
+      fitBox.setFromObject(d.g);
+      if (!isFinite(fitBox.min.x)) return;
+      const top = fitBox.min.y + (fitBox.max.y - fitBox.min.y) * 0.75;   // the very tip of a flag may slip under the top bar
+      for (let i = 0; i < 8; i++) fitP.push(new T.Vector3(i & 1 ? fitBox.max.x : fitBox.min.x, i & 2 ? top : fitBox.min.y, i & 4 ? fitBox.max.z : fitBox.min.z));
+    });
+    const f = cam.focus;                                   // the seal herself, from nose to tail
+    fitP.push(new T.Vector3(f.x - 1, f.y, f.z - 1), new T.Vector3(f.x + 1, f.y + 1.3, f.z + 1));
+    return fitP;
+  }
+  function solveFit(base, portrait) {
+    const pts = framePoints();
+    const c = fitCam; c.fov = W.camera.fov; c.aspect = W.aspect; c.near = 0.3; c.far = 700; c.updateProjectionMatrix();
+    // the parts of the screen not under the top bar and the buttons
+    const lim = portrait ? { l: -0.9, r: 0.9, b: -0.7, t: 0.56 } : { l: -0.88, r: 0.88, b: -0.62, t: 0.5 };
+    const box = new T.Box3().setFromPoints(pts), mid = box.getCenter(new T.Vector3());
+    const tgt = new T.Vector3(mid.x, 0.6, mid.z);
+    const place = (dist, el) => {
+      const ce = Math.cos(el), az = 0.05;
+      c.position.set(tgt.x + Math.sin(az) * ce * dist, tgt.y + Math.sin(el) * dist, tgt.z + Math.cos(az) * ce * dist);
+      c.lookAt(tgt); c.updateMatrixWorld(true);
+    };
+    const bounds = () => {
+      let l = 9, r = -9, b = 9, t = -9;
+      for (let i = 0; i < pts.length; i++) {
+        fitV.copy(pts[i]).project(c);
+        if (fitV.z > 1) { l = -9; r = 9; b = -9; t = 9; break; }   // behind the camera: certainly too close
+        l = Math.min(l, fitV.x); r = Math.max(r, fitV.x); b = Math.min(b, fitV.y); t = Math.max(t, fitV.y);
+      }
+      return { l, r, b, t };
+    };
+    const fits = (q) => q.l >= lim.l && q.r <= lim.r && q.b >= lim.b && q.t <= lim.t;
+    let dist = base, el = 0.115;
+    for (let pass = 0; pass < 3; pass++) {
+      let lo = base * 0.5, hi = 70;
+      for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; place(m, el); if (fits(bounds())) hi = m; else lo = m; }
+      dist = Math.max(base, hi);
+      // centre what is out in the free part of the screen, then try again from there
+      place(dist, el);
+      const q = bounds(), w = c.position.distanceTo(tgt) * Math.tan(c.fov * RAD / 2);
+      const right = new T.Vector3().setFromMatrixColumn(c.matrixWorld, 0), up = new T.Vector3().setFromMatrixColumn(c.matrixWorld, 1);
+      const sx = ((q.l + q.r) - (lim.l + lim.r)) / 2 * w * c.aspect, sy = ((q.b + q.t) - (lim.b + lim.t)) / 2 * w;
+      tgt.addScaledVector(right, sx).addScaledVector(up, sy); tgt.y = U.clamp(tgt.y, 0.3, 3);
+      el = 0.115 + (portrait ? 0.45 : 0.2) * U.clamp((dist / base - 1) / 1.3, 0, 1);
+    }
+    return { dist, el: el - 0.115, tx: tgt.x, ty: tgt.y, tz: tgt.z };
+  }
+  W.frameDirty = () => { fitKey = ''; };
+
   function updateCamera(dt, snap) {
     const portrait = W.aspect < 0.8;
     if (cam.mode === 'game') {
@@ -588,13 +657,22 @@
     } else if (cam.mode === 'intro') {
       cam.az = 0.3; cam.el = 0.2; cam.dist = 15; cam.tx = -0.6; cam.ty = 2.2; cam.tz = -1;
     } else {
-      cam.az = cam.userAz; cam.el = cam.userEl;
-      cam.dist = (5.0 + 3.6 * cam.size) * cam.zoom * (portrait ? 1 : 0.95);
-      cam.tx = cam.focus.x * 0.75; cam.tz = cam.focus.z * 0.6;
-      cam.ty = cam.focus.y + 0.55 + 0.65 * cam.size + (portrait ? 0.1 : -0.1);
+      const base = (5.0 + 3.6 * cam.size) * (portrait ? 1 : 0.95);
+      const key = Object.keys(decor).filter((id) => decor[id].g.visible).join() + '|' + W.aspect.toFixed(3) + '|' + cam.size.toFixed(2);
+      if (key !== fitKey) { fitKey = key; fit = solveFit(base, portrait); }
+      const wide = Math.max(base, fit.dist);
+      cam.zoomMin = Math.min(0.6, base * 0.6 / wide);
+      cam.zoom = U.clamp(cam.zoom, cam.zoomMin, 1.6);
+      cam.dist = wide * cam.zoom;
+      // how far toward the wide view we are: 0 is the old close-up on the seal, 1 the whole shore
+      const t = wide > base + 0.05 ? U.smooth(0, 1, (cam.dist - base) / (wide - base)) : 0;
+      cam.t = t;
+      cam.az = cam.userAz; cam.el = cam.userEl + fit.el * t;
+      const sx = cam.focus.x * 0.75, sz = cam.focus.z * 0.6, sy = cam.focus.y + 0.55 + 0.65 * cam.size + (portrait ? 0.1 : -0.1);
+      cam.tx = U.lerp(sx, fit.tx, t); cam.tz = U.lerp(sz, fit.tz, t); cam.ty = U.lerp(sy, fit.ty, t);
       // a menu covers the bottom of the screen: step back a little and aim lower, so the seal sits above it
       cam.cSheet += (cam.sheet - cam.cSheet) * (snap ? 1 : 1 - Math.exp(-6 * dt));
-      cam.dist *= 1 + 0.5 * cam.cSheet;
+      cam.dist *= 1 + 0.5 * cam.cSheet * (1 - 0.6 * t);
       cam.ty -= cam.cSheet * Math.tan(W.camera.fov * RAD / 2) * cam.dist * 0.92;
     }
     const k = snap ? 1 : 1 - Math.exp(-3.2 * dt);
@@ -683,7 +761,7 @@
     tmpC.copy(P.hor).lerp(P.zen, 0.3);
     if (precip > 0.02) tmpC.lerp(tmpC2.copy(P.hs).multiplyScalar(0.6), U.clamp(precip * 0.8, 0, 0.6));
     W.scene.fog.color.copy(tmpC);
-    W.scene.fog.density = 0.0105 + 0.03 * precip + 0.004 * cloud;
+    W.scene.fog.density = (0.0105 + 0.03 * precip + 0.004 * cloud) * U.clamp(13 / Math.max(cam.cDist, 1), 0.5, 1);   // thinner when the camera stands back, so the far side of the shore is not lost in it
     un.uGround.value.copy(tmpC);
     // clouds: bright and warm by day, slate at night
     un.uCloudLit.value.setRGB(1, 1, 1).lerp(P.glow, 0.55 * (1 - U.smooth(4, 20, sun.el))).multiplyScalar(U.lerp(0.11, 1, 1 - night)).lerp(tmpC2.set(0x2b3a66), night * 0.5);
@@ -700,6 +778,11 @@
     } else {
       skyDir(62, 58, keyV); key.color.set(0x8ea6e8); key.intensity = 0.5 * night;
     }
+    // the shadows cover the whole shore once the camera has stepped back to show it
+    const wideT = cam.mode === 'home' ? (cam.t || 0) : 0, half = U.lerp(9, 13, wideT);
+    key.target.position.set(0, 0, U.lerp(-1, -4.5, wideT));
+    const ksc = key.shadow.camera;
+    if (Math.abs(ksc.right - half) > 0.01) { ksc.left = -half; ksc.right = half; ksc.top = half; ksc.bottom = -half; ksc.updateProjectionMatrix(); }
     key.position.copy(key.target.position).addScaledVector(keyV, 34);
     fill.position.copy(W.camera.position); fill.position.y += 3;
     fill.color.copy(P.hs); fill.intensity = U.lerp(0.35, 0.75, night);
