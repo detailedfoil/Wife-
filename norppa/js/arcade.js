@@ -43,6 +43,15 @@
     return Math.atan(Math.tan(c.fov * PI / 360) * c.aspect);
   }
 
+  /* Point a pool stage's camera down at the water, but never so low that her head is pushed off the top: on a wide screen the lens
+     is narrow, and the fixed downward look used to crop her at the top. top is how high her head is above the ice. */
+  function lookAtPool(view, top) {
+    const c = view.camera, p = c.position, half = Math.tan(c.fov * PI / 360);
+    const level = Math.atan2(p.y - top, p.z - 0.3);                       // how far below level her head is
+    const pitch = Math.min(Math.atan2(p.y + 2, p.z), level + Math.atan(0.9 * half));
+    c.lookAt(0, p.y - Math.tan(pitch) * p.z, 0);
+  }
+
   /* The seal that plays the arcade games: a stand-in dressed like the real one. */
   let actor = null;
   function cast(view, norm, shadow) {
@@ -611,7 +620,11 @@
       update(dt, playing) {
         clock += dt;
         lens(view);
-        view.camera.position.set(0, 6.4, 9.8); view.camera.lookAt(0, 0, -5.2);
+        // Back the camera off along its line of sight until her start spot clears the hint line: on a short or wide screen the narrow lens
+        // used to leave her below the bottom edge. A tall phone needs hardly any (k is about 1).
+        const half = Math.tan(view.camera.fov * PI / 360), tk = Math.tan(Math.atan2(6.4, 15) + Math.atan(0.62 * half));
+        const back = Math.max(1, 8.2 * tk / (15 * tk - 6.4));
+        view.camera.position.set(0, 6.4 * back, -5.2 + 15 * back); view.camera.lookAt(0, 0, -5.2);
         blocks.forEach((b) => {
           if (!b.on) return;
           b.x = Math.sin(clock * b.sp + b.ph) * 2.2;
@@ -1528,7 +1541,7 @@
       update(dt, playing) {
         clock += dt;
         lens(view);
-        view.camera.lookAt(0, -2.0, 0);
+        lookAtPool(view, 1.2);
         fish.forEach((f) => {
           f.g.position.y = f.y + Math.sin(clock * 1.4 + f.ph) * 0.045;
           f.g.rotation.z = Math.sin(clock * 0.9 + f.ph) * 0.12;
@@ -1742,7 +1755,7 @@
       update(dt, playing) {
         clock += dt;
         lens(view);
-        view.camera.lookAt(0, -2.0, 0);
+        lookAtPool(view, 1.2);
         bop = Math.max(0, bop - dt * 7);
         view.rig.position.y = Math.sin(bop * PI) * 0.07;
         actor.update(dt, clock, null);
