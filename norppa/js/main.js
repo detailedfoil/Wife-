@@ -120,6 +120,7 @@
     await dailyGift();
     G.ready = true;
     S.save(state);
+    if (PN.Track) PN.Track.start(() => state);
   }
 
   /* The very first minute: a pup wriggles out of the den and gets a name. */

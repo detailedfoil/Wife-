@@ -26,7 +26,11 @@ On a phone, open the link and choose "Add to Home Screen" to get it as an app wi
 
 ## Saving
 
-The seal is kept in the browser's own storage on the device, so there is no account and nothing is sent anywhere. Clearing the browser's site data clears the seal. Settings has a save code for moving a seal to another phone or browser.
+The seal is kept in the browser's own storage on the device, so there is no account. Clearing the browser's site data clears the seal.
+
+## Play stats
+
+The game sends anonymous play stats (a random device id, which game, how long it was played, the score, the coins it paid, the language and the coin balance when you leave) to a Supabase table, so the maker can see which games are liked. No name, email or anything personal is sent, nothing is sent in developer mode, and **Share play stats** in Settings turns it off. Events wait on the phone when there is no signal and go later. The code is `norppa/js/track.js`; the private stats page is at `stats/` (it needs a passcode), and `stats/setup.sql` is the database setup. Settings has a save code for moving a seal to another phone or browser.
 
 ## How it is built
 
@@ -50,7 +54,11 @@ norppa/
   js/ui.js              bars, menus, messages
   js/games.js           Fish Rain, Nose Ball and the shared game screen
   js/main.js            ties it all together
+  js/track.js           anonymous play stats sent to Supabase
   sw.js                 offline support
+stats/
+  index.html            private stats page (passcode)
+  setup.sql             database tables, limits and the passcode check
   vendor/three.min.js   three.js r160 (MIT licence)
   fonts/                DynaPuff and Nunito (SIL Open Font Licence)
 ```

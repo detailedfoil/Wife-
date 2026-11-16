@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f1c40">
+<title>Pikku Norppa stats</title>
+<style>
+  :root { --bg: #0f1c40; --card: #182b5e; --line: #2a4180; --ink: #fff; --dim: #a9b7e0; --gold: #ffd45c; --sea: #5cc8ff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 500 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 18px 14px 60px; }
+  h1 { font-size: 24px; margin: 4px 0 2px; }
+  h2 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); margin: 28px 0 10px; font-weight: 700; }
+  .sub { color: var(--dim); font-size: 13px; margin: 0 0 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .tile.big { grid-column: 1 / -1; }
+  .tile b { display: block; font-size: 30px; line-height: 1.1; color: var(--gold); }
+  .tile.big b { font-size: 46px; }
+  .tile span { color: var(--dim); font-size: 13px; }
+  form { display: flex; gap: 8px; margin: 10px 0; }
+  input { flex: 1; min-width: 0; font: inherit; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #0b1632; color: var(--ink); }
+  button { font: inherit; font-weight: 700; padding: 12px 16px; border-radius: 10px; border: 0; background: var(--gold); color: #1b2250; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--dim); border: 1px solid var(--line); padding: 8px 12px; font-size: 14px; }
+  .err { color: #ff9aa8; margin: 6px 0; }
+  .bars .row { display: grid; grid-template-columns: 112px 1fr 44px; gap: 8px; align-items: center; margin: 7px 0; font-size: 14px; }
+  .bars .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bars .track { background: #0b1632; border-radius: 6px; height: 14px; overflow: hidden; }
+  .bars .fill { height: 100%; background: var(--gold); border-radius: 6px; min-width: 2px; }
+  .bars .num { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 8px 3px; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 76px; }
+  th { color: var(--dim); font-weight: 700; font-size: 11px; white-space: normal; line-height: 1.15; }
+  tr:last-child td { border-bottom: 0; }
+  .scroll { overflow-x: auto; }
+  .chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; }
+  .chart .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; position: relative; }
+  .chart .a { background: var(--sea); border-radius: 3px 3px 0 0; min-height: 0; }
+  .chart .n { background: var(--gold); border-radius: 3px 3px 0 0; }
+  .axis { display: flex; justify-content: space-between; color: var(--dim); font-size: 12px; margin-top: 6px; }
+  .key { display: flex; gap: 14px; font-size: 13px; color: var(--dim); margin-bottom: 8px; }
+  .key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+  .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 26px; color: var(--dim); font-size: 13px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pikku Norppa stats</h1>
+  <p class="sub" id="when">Private page. Needs the passcode.</p>
+
+  <form id="login" autocomplete="off">
+    <input id="pass" type="password" placeholder="Passcode" aria-label="Passcode" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button type="submit">Open</button>
+  </form>
+  <p class="err" id="err" hidden></p>
+
+  <div id="out" hidden>
+    <div class="tiles" id="tiles"></div>
+
+    <h2>Favourite games</h2>
+    <div class="card bars" id="favs"></div>
+
+    <h2>Each game</h2>
+    <div class="card scroll"><table id="games"></table></div>
+
+    <h2>Players, last 30 days</h2>
+    <div class="card">
+      <div class="key"><span><i style="background:var(--sea)"></i>Active</span><span><i style="background:var(--gold)"></i>New</span></div>
+      <div class="chart" id="daily"></div>
+      <div class="axis"><span id="d0"></span><span id="d1"></span></div>
+    </div>
+
+    <h2>When games are played (UK time)</h2>
+    <div class="card">
+      <div class="chart" id="hours"></div>
+      <div class="axis"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div>
+    </div>
+
+    <h2>Language</h2>
+    <div class="card bars" id="langs"></div>
+
+    <div class="foot"><span id="gen"></span><span><button class="ghost" id="refresh">Refresh</button> <button class="ghost" id="logout">Lock</button></span></div>
+  </div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var URL = 'https://kmkmtkjjlebqdmhsfewx.supabase.co';
+  var KEY = 'sb_publishable_55XiQN6TSodc2KOTab49Yg_g96sKZeC';
+  var NAMES = { ball: 'Nose Ball', shuffle: 'Seal Seat Shuffle', catch: 'Fish Rain', swim: 'Swimmy Seal', stack: 'Ice Cream Stack', puff: 'Puffer Sweeper', toss: 'Snowball Toss', piano: 'Kantele Tiles', coffee: 'Coffee Memory', curl: 'Curling Seal', sled: 'Sled Run', bj: 'Blackjack', sauna: 'Sauna (Löyly)' };
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var num = function (n) { return n == null ? '0' : Number(n).toLocaleString('en-GB'); };
+  var dur = function (s) { s = Math.round(+s || 0); if (s < 60) return s + 's'; var m = Math.floor(s / 60); if (m < 60) return m + 'm' + (s % 60 ? ' ' + (s % 60) + 's' : ''); return Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; };
+  var name = function (id) { return NAMES[id] || id; };
+
+  function load(pass) {
+    $('err').hidden = true;
+    return fetch(URL + '/rest/v1/rpc/get_stats', {
+      method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ pass: pass })
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) { var e = new Error(j && j.message || 'failed'); e.bad = /passcode/i.test(e.message); throw e; }
+        return j;
+      });
+    });
+  }
+
+  function tile(v, label, big) { return '<div class="tile' + (big ? ' big' : '') + '"><b>' + v + '</b><span>' + label + '</span></div>'; }
+
+  function render(d) {
+    var ret = d.players ? Math.round(100 * d.returning_players / d.players) : 0;
+    $('tiles').innerHTML =
+      tile(num(d.players), 'players so far', true) +
+      tile(num(d.players_24h), 'in the last 24 hours') + tile(num(d.players_7d), 'in the last 7 days') +
+      tile(ret + '%', 'came back on another day (' + num(d.returning_players) + ')') + tile(num(d.sessions), 'visits') +
+      tile(dur(d.avg_session_secs), 'average visit length') + tile(dur(d.avg_play_secs_per_player), 'playing games per player') +
+      tile(num(d.avg_earned_per_player), 'coins earned in games per player') + tile(d.coins && d.coins.avg != null ? num(d.coins.avg) : '0', 'average coins in the purse' + (d.coins && d.coins.max ? ' (top ' + num(d.coins.max) + ')' : ''));
+
+    var g = d.per_game || [], max = g.reduce(function (m, x) { return Math.max(m, x.plays); }, 1);
+    $('favs').innerHTML = g.length ? g.map(function (x) {
+      return '<div class="row"><span class="name">' + esc(name(x.game)) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * x.plays / max) + '%"></span></span><span class="num">' + num(x.plays) + '</span></div>';
+    }).join('') : '<span class="sub">No games played yet.</span>';
+
+    $('games').innerHTML = '<tr><th>Game</th><th>Avg time</th><th>Avg coins</th><th>Coins /min</th><th>Plays</th><th>Avg score</th><th>Quit</th></tr>' +
+      g.map(function (x) {
+        var cpm = x.total_secs > 0 ? (60 * x.total_coins / x.total_secs).toFixed(1) : '0';
+        return '<tr><td>' + esc(name(x.game)) + '</td><td>' + dur(x.avg_secs) + '</td><td>' + (x.avg_coins == null ? 0 : x.avg_coins) + '</td><td>' + cpm + '</td><td>' + num(x.plays) + '</td><td>' + (x.avg_score == null ? 0 : x.avg_score) + '</td><td>' + Math.round(100 * x.quits / x.plays) + '%</td></tr>';
+      }).join('');
+
+    var days = d.daily || [], dmax = days.reduce(function (m, x) { return Math.max(m, x.players); }, 1);
+    $('daily').innerHTML = days.map(function (x) {
+      return '<div class="col" title="' + esc(x.day) + ': ' + x.players + ' active, ' + x.new_players + ' new"><div class="n" style="height:' + (100 * x.new_players / dmax) + '%"></div><div class="a" style="height:' + (100 * Math.max(0, x.players - x.new_players) / dmax) + '%"></div></div>';
+    }).join('');
+    if (days.length) { $('d0').textContent = days[0].day.slice(5); $('d1').textContent = days[days.length - 1].day.slice(5); }
+
+    var hrs = []; for (var h = 0; h < 24; h++) hrs.push(0);
+    (d.hours || []).forEach(function (x) { hrs[x.hour] = x.plays; });
+    var hmax = Math.max.apply(null, hrs.concat(1));
+    $('hours').innerHTML = hrs.map(function (c, i) { return '<div class="col" title="' + i + ':00 ' + c + ' plays"><div class="a" style="height:' + (100 * c / hmax) + '%"></div></div>'; }).join('');
+
+    var L = d.langs || [], lt = L.reduce(function (s, x) { return s + x.players; }, 0) || 1;
+    $('langs').innerHTML = L.map(function (x) {
+      return '<div class="row"><span class="name">' + (x.lang === 'fi' ? 'Finnish' : 'English') + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * x.players / lt) + '%"></span></span><span class="num">' + num(x.players) + '</span></div>';
+    }).join('') || '<span class="sub">No data yet.</span>';
+
+    var t = new Date(d.generated);
+    $('gen').textContent = 'Updated ' + t.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+    $('when').textContent = 'Anonymous play stats from the seal game.';
+  }
+
+  function open(pass, remember) {
+    return load(pass).then(function (d) {
+      if (remember) { try { localStorage.setItem('norppa.statspass', pass); } catch (e) {} }
+      $('login').hidden = true; $('out').hidden = false; render(d);
+    }).catch(function (e) {
+      $('out').hidden = true; $('login').hidden = false;
+      var bad = e.bad; if (bad) { try { localStorage.removeItem('norppa.statspass'); } catch (x) {} }
+      $('err').textContent = bad ? 'Wrong passcode.' : 'Could not load the stats (' + e.message + '). Check the connection and try again.';
+      $('err').hidden = false;
+    });
+  }
+
+  $('login').addEventListener('submit', function (e) { e.preventDefault(); var p = $('pass').value.trim(); if (p) open(p, true); });
+  $('refresh').addEventListener('click', function () { var p; try { p = localStorage.getItem('norppa.statspass'); } catch (e) {} if (p) open(p, false); });
+  $('logout').addEventListener('click', function () { try { localStorage.removeItem('norppa.statspass'); } catch (e) {} location.reload(); });
+  var saved; try { saved = localStorage.getItem('norppa.statspass'); } catch (e) {}
+  if (saved) open(saved, false);
+})();
+</script>
+</body>
+</html>
