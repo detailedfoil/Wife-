@@ -453,7 +453,13 @@
   function onSheetClick(e) {
     const b = e.target.closest('[data-do]'); if (!b) return;
     const act = b.dataset.do, id = b.dataset.id, game = G();
-    if (act === 'feed') game.feed(id);
+    if (act === 'shopfront') {
+      PN.Audio.play('tap');
+      UI.shopId = id || null;
+      UI.renderSheet();
+      $('sheetBody').scrollTop = 0;
+    }
+    else if (act === 'feed') game.feed(id);
     else if (act === 'buy') game.buy(id);
     else if (act === 'wear') game.wear(id);
     else if (act === 'place') game.place(id);
