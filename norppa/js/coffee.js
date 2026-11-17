@@ -142,7 +142,7 @@
     return r;
   }
 
-  PN.Coffee = { V: 2, STEPS, NAMES, NAMES_EN, ANIMALS, MAX_ITEMS, byId, label, itemCount, stepCount, stepIds, extraCount, makeOrder, lines, tidy, run };
+  PN.Coffee = { V: 3, STEPS, NAMES, NAMES_EN, ANIMALS, MAX_ITEMS, byId, label, itemCount, stepCount, stepIds, extraCount, makeOrder, lines, tidy, run };
 
   /* ================= the 3D cafe ================= */
   /* Everything below draws. It is skipped where there is nothing to draw on (the tests run the rules alone). The game is seen through the
@@ -777,14 +777,16 @@
     /* A new customer walks up and puts their receipt on the counter; it is picked up to be read. */
     function nextCustomer() {
       mode = 'enter'; r.next(); K.hint('');
+      if (r.served === 1 && K.beat) K.beat('served');
       dropCup(); bring(r.order.customer);
       slip.n = r.served + 1; printSlip(r.order, null); slip.g.visible = false;
-      after(0.7, () => { slip.g.visible = true; slipSet('drop'); A.play('pop'); slipTo('read', 0.55, () => { mode = 'read'; readAt = time; K.hint(tr('Remember the order, then tap the receipt')); }); });
+      after(0.7, () => { slip.g.visible = true; slipSet('drop'); A.play('pop'); slipTo('read', 0.55, () => { mode = 'read'; readAt = time; K.hint(tr('Remember the order, then tap the receipt')); if (K.beat) K.beat('read'); }); });
     }
     function beginDrink() { A.play('tap'); r.begin(); mode = 'busy'; slipTo('rest', 0.45); showStep(); }
     /* The things for this step slide along the counter from the right. */
     function showStep() {
       const st = r.current(); K.hint(tr(st.ask));
+      if (K.beat) K.beat('step');
       active = sets[st.id].slice();
       const at = slots(active.length, st.id);
       active.forEach((o, i) => { o.slot = at[i]; o.on = false; o.obj.visible = true; stopTweens(o.obj.position); o.obj.position.set(at[i].x + 4.2, at[i].y, at[i].z); o.obj.rotation.set(0, 0, 0); tween(o.obj.position, { x: at[i].x }, 0.5, { delay: i * 0.05, ease: 'out' }); });

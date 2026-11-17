@@ -18,6 +18,95 @@
     },
   };
 
+  /* What each game says the first time it is played. A beat is a card that pauses the game until it is dismissed.
+     'start' is shown before anything moves; the others when the game calls K.beat(name) at that moment (the first fish caught, and so on).
+     demo: a little animated finger (swipe, tap, drag, flick); at: where the card sits so it does not cover the action (top or bottom).
+     Seal Seat Shuffle has its own two-bus tutorial in arcade.js, and Löyly has its how-to sheet. */
+  const GOT = 'Got it', ON = 'Keep going';
+  const TUTORIALS = {
+    ball: {
+      start: { demo: 'swipe', at: 'top', lines: ['Slide your finger left and right to move the seal.', 'Keep the ball bouncing on her nose!'], button: GOT },
+      bounce: { at: 'top', lines: ["Nice bounce! That's a point.", 'Hit the ball off-centre to send it sideways. It falls faster the longer you go.'], button: ON },
+    },
+    catch: {
+      start: { demo: 'swipe', at: 'top', lines: ['Slide to move the seal under the falling fish.', 'Every fish is a point. Gold ones are worth 3!'], button: GOT },
+      caught: { at: 'top', lines: ['Got one! Now and then a catch is yours to keep.'], button: ON },
+      snowball: { at: 'top', lines: ['Snowball coming! Dodge it.', 'A hit knocks off a point and stuns you for a second.'], button: ON },
+    },
+    swim: {
+      start: { demo: 'tap', at: 'bottom', lines: ['Tap to swim up. Let go and you sink.', 'Slip through the gaps between the ice and the kelp.'], button: GOT },
+      fish: { at: 'bottom', lines: ['Yum! A fish in a gap is a bonus point.'], button: ON },
+      die: { at: 'bottom', lines: ['Bonk! You get three goes, and your best one counts.', 'Tap to start the next go.'], button: GOT },
+    },
+    stack: {
+      start: { demo: 'tap', at: 'bottom', lines: ['A scoop slides across the top of the tower.', 'Tap to drop it, and line it up neatly.'], button: GOT },
+      cut: { at: 'bottom', lines: ['Anything hanging over the edge breaks off, so the tower gets narrower.', 'Line the scoops up perfectly to keep your width.'], button: ON },
+      perfect: { at: 'bottom', lines: ['Perfect! Nothing breaks off.', 'Three perfect scoops in a row even win some width back.'], button: ON },
+    },
+    puff: {
+      start: { demo: 'tap', at: 'bottom', lines: ['Tap a tile to open it. The first tap is always safe.', 'Open every tile without waking a pufferfish. The quicker you clear it, the more coins.'], button: GOT },
+      open: { at: 'bottom', lines: ['A number counts the pufferfish touching that tile.', 'Hold a tile, or switch to Flag, to mark one you have found.'], button: ON },
+    },
+    piano: {
+      start: { demo: 'tap', at: 'top', lines: ['Tap the Start tile, then every tile in order as they slide down.', 'Miss one, or tap the wrong lane, and it is over.'], button: GOT },
+      go: { at: 'top', lines: ['The tune has started! Keep tapping each tile as it slides down.', 'It gets faster as the tune goes on.'], button: ON },
+    },
+    toss: {
+      result: { demo: 'flick', at: 'top', lines: ['The wind changes every throw, so check the flag and the number first.', 'Lean your flick into the wind. Three misses and it is over.'], button: ON },
+    },
+    curl: {
+      start: { demo: 'drag', at: 'top', lines: ['Drag down and let go to slide the seal.', 'The further you drag, the faster she goes. Drag a little sideways to aim the other way.'], button: GOT },
+      stopped: { at: 'top', lines: ['Closer to the middle scores more. A bullseye is 5 points, and you get 8 slides.'], button: ON },
+      blocks: { at: 'top', lines: ['Watch out! Blocks now slide across the ice. Hit one and you score nothing.'], button: GOT },
+    },
+    sled: {
+      start: { demo: 'swipe', at: 'top', lines: ['Slide your finger left and right to steer down the hill.', 'Dodge the trees and rocks. One crash ends the run.'], button: GOT },
+      fish: { at: 'top', lines: ['Grabbed a fish! That is +10 metres.'], button: ON },
+      ramp: { at: 'top', lines: ['A ramp! You jump for +20 metres, and nothing can hit you while you are in the air.'], button: ON },
+    },
+    bj: {
+      start: { demo: 'swipe', at: 'top', lines: ['Slide to choose how much to bet, then tap the bet button.', 'Beat the dealer by getting closer to 21 without going over.'], button: GOT },
+      play: { at: 'bottom', lines: ['Your turn! Hit takes another card. Stand keeps what you have.', 'Face cards count 10, and an Ace is 1 or 11.'], button: GOT },
+      settled: { at: 'bottom', lines: ['Win and you get your bet back and more. Lose and it is gone.', 'Tap Cash out whenever you like to take your tokens home.'], button: ON },
+    },
+    coffee: {
+      start: { at: 'top', lines: ['Customers leave their order on a receipt.', 'Remember it, then make the drink from memory.'], button: GOT },
+      read: { demo: 'tap', at: 'top', lines: ['Take your time reading. Once you tap, the receipt goes away.'], button: GOT },
+      step: { at: 'top', lines: ['Now pick the right option for each step.', 'Size first, then base, temperature, milk, syrups and extras.'], button: GOT },
+      served: { at: 'top', lines: ['Perfect! Every two drinks add one more thing to remember.', 'One wrong drink ends the game.'], button: ON },
+    },
+  };
+  let tutBlock = null, tutCard = null;
+  function tutDom() {
+    if (tutCard) return;
+    tutBlock = document.createElement('div'); tutBlock.className = 'g-tut-block'; tutBlock.hidden = true;
+    tutCard = document.createElement('div'); tutCard.className = 'g-tut'; tutCard.hidden = true; tutCard.setAttribute('role', 'dialog');
+    $('gamehud').appendChild(tutBlock); $('gamehud').appendChild(tutCard);
+  }
+  function tutHide() { if (tutCard) { tutCard.hidden = true; tutBlock.hidden = true; tutCard.textContent = ''; } }
+  function tutResume() { if (!g) return; g.paused = false; tutHide(); }
+  function tutShow(b) {
+    tutDom();
+    tutCard.textContent = '';
+    tutCard.className = 'g-tut ' + (b.at === 'bottom' ? 'at-bottom' : 'at-top');
+    if (b.demo) { const d = document.createElement('div'); d.className = 'tut-demo ' + b.demo; d.setAttribute('aria-hidden', 'true'); d.appendChild(document.createElement('i')); tutCard.appendChild(d); }
+    b.lines.forEach((line) => { const p = document.createElement('p'); p.textContent = tr(line); tutCard.appendChild(p); });
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn small'; btn.textContent = tr(b.button || GOT);
+    btn.addEventListener('click', () => { A.play('tap'); tutResume(); });
+    tutCard.appendChild(btn);
+    tutBlock.hidden = false; tutCard.hidden = false;
+  }
+  /* A game calls this when something worth explaining has just happened. It pauses the game and shows the card, once per game per beat, and only while the tutorial is on. */
+  function beat(key) {
+    if (!g || !g.tut || g.paused || g.phase === 'over') return false;
+    const b = (TUTORIALS[g.id] || {})[key];
+    if (!b || g.tut.shown[key]) return false;
+    g.tut.shown[key] = 1; g.tut.count++;
+    g.paused = true; g.drawn = false;
+    tutShow(b);
+    return true;
+  }
+
   const LANE_Z = 0.6;          // the seal slides along this line, facing the camera
   const HALF = 2.5;            // how far it can go either way
   const GAME_LEN = 40;         // seconds of Fish Rain
@@ -50,6 +139,7 @@
     keys: () => (g ? g.keyR - g.keyL : 0),
     shown(n) { setScore(n); },                       // change the number on screen, not the result
     result(n) { if (g) g.score = n; },              // what the game will pay out for
+    beat,                                            // the first-time tutorial: pause with a card, once
   };
 
   /* One model of each fish is built once, then copied for every fish that falls. */
@@ -79,7 +169,7 @@
     bound = true;
     $('gQuit').addEventListener('click', () => { A.play('tap'); if (g) finish(true); });
     window.addEventListener('keydown', (e) => {
-      if (!g) return;
+      if (!g || g.paused) return;
       if (g.ext && g.ext.key && g.phase === 'play' && !e.repeat) g.ext.key(e.key);
       if (e.key === 'ArrowLeft' || e.key === 'a') g.keyL = 1;
       else if (e.key === 'ArrowRight' || e.key === 'd') g.keyR = 1;
@@ -112,8 +202,10 @@
     $('gHint').textContent = ext ? tr(ext.hint) : tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');
     if (ext) {
       g = { id, ext, seal, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0, secs: 0 };
+      if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
       ext.start();
       W.override = ext.view();
+      beat('start');
       return;
     }
     W.setCamMode('game');
@@ -123,11 +215,13 @@
     seal.moveTo(0, LANE_Z, { speed: 3.2, face: 0 });
     g = { id, seal, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
       keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null, secs: 0 };
+    if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
+    beat('start');
   };
 
   /* A finger on the screen says where the seal should go. */
   Games.pointer = function (type, x, y) {
-    if (!g) return;
+    if (!g || g.paused) return;
     if (g.ext) { if (g.phase === 'play') g.ext.pointer(type, x, y); return; }
     if (type === 'up') return;
     const ray = W.rayAt(x, y);
@@ -138,6 +232,10 @@
   Games.update = function (dt) {
     if (!g) return;
     const s = g.seal;
+    if (g.paused) {   // a tutorial card is up: nothing moves and no time passes (what is on screen is redrawn once, and again if the screen is turned)
+      if (g.ext && (!g.drawn || g.pw !== window.innerWidth || g.ph !== window.innerHeight)) { g.drawn = true; g.pw = window.innerWidth; g.ph = window.innerHeight; g.ext.update(0.001, false); }
+      return;
+    }
     g.clock += dt; g.secs += dt; g.frames = (g.frames || 0) + 1;          // how long the game has lasted: what it costs in energy (frames: for the stats, a measure of how smoothly it ran)
     if (g.ext) { updateExt(dt); return; }
     if (g.phase === 'count') {
@@ -249,6 +347,7 @@
       const it = g.items[i], p = it.m.position;
       p.y -= it.v * dt;
       if (it.sway) p.x = U.clamp(it.x0 + Math.sin(g.clock * it.swayF + it.swayP) * it.sway, -HALF - 0.2, HALF + 0.2);
+      if (it.ball && !quiet && !g.sawBall && p.y < skyTop() - 1.2) { g.sawBall = true; beat('snowball'); }   // the first snowball to come into view
       if (it.inner) it.inner.rotation.x += it.spin * dt;
       const reach = it.ball ? 0.44 * size + 0.32 : 0.38 * size + 0.25;
       if (!quiet && g.stun <= 0 && p.y < my + 0.5 && p.y > my - 0.45 * size - 0.25 && Math.abs(p.x - mx) < reach) {
@@ -267,6 +366,7 @@
           s.gesture('gulp', true);
           A.play(it.gold ? 'sparkle' : 'gulp'); A.play('squeak', 0.5);
           FX.sparkle(p, it.gold ? 14 : 4, it.gold ? 0xffd45c : undefined);
+          beat('caught');
         }
         drop(i);
         continue;
@@ -321,6 +421,7 @@
       b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
       b.vx = U.clamp((b.x - nx) * 5.2 + g.vx * 0.4 + rs(2.2 + Math.min(4.4, g.score * 0.2)), -8.5, 8.5);   // it can fly off sideways, fast
       s.gesture('boop', true);
+      beat('bounce');
       A.play('boing');
       FX.sparkle(v1.set(b.x, b.y - R, nz), 3);
       if (g.score % 10 === 0) { A.play('chirp'); big(String(g.score) + '!'); g.bigAt = g.clock; }
@@ -343,6 +444,8 @@
   /* ---------- the end of any game ---------- */
   function finish(quit) {
     const id = g.id, score = g.score, caught = g.caught, secs = g.secs, frames = g.frames || 0, info = Games.lastInfo || null;
+    if (g.tut && (!quit || g.tut.count > 1)) Games.tutorial.mark(id);   // leaving straight away from the first card does not count as having seen it
+    tutHide();
     Games.lastInfo = null;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
     if (g.ext && g.ext.stop) g.ext.stop();

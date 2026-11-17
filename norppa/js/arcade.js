@@ -223,7 +223,7 @@
       A.play('thud');
       actor.gesture('surprise', true);
       bubbles.emit(sx, y, 0.3, 12, 1.6, 0.09, 1.1, -2.6);
-      if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; }
+      if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; K.beat('die'); }
       else K.over(tr(best >= 10 ? 'Wow!' : 'Bonk!'));
     }
     /* a fresh stretch of water for the next go */
@@ -295,7 +295,7 @@
           if (ax < 0.44 + R * 0.8 && (y + R > o.top || y - R < o.bot)) { die(); return; }
           if (o.hasFish && ax < 0.55 && Math.abs(o.fish.position.y - y) < 0.6) {
             o.hasFish = false; o.fish.visible = false;
-            point(); A.play('gulp');
+            point(); A.play('gulp'); K.beat('fish');
             bubbles.emit(o.x, o.mid, 0.2, 5, 0.9, 0.06, 0.7, -2);
           }
           if (!o.passed && o.x + 0.5 < sx - R) { o.passed = true; point(); A.play('pop'); K.hint(''); }
@@ -428,7 +428,7 @@
       if (mode === 'out') return;
       mode = 'out'; wait = 0.9;
       A.play('nope'); actor.gesture('no', true);
-      K.big(text);
+      K.big(text); K.beat('result');
     }
     function basket() {
       mode = 'in'; wait = 0.9;
@@ -437,7 +437,7 @@
       A.play('match'); A.play('thud', 0.1);
       puffs.emit(bk.x, RIM_Y + 0.1, bk.z, 10, 1.4, 0.09, 0.5, 4);
       actor.gesture(score % 5 === 0 ? 'clap' : 'happy', true);
-      K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
+      K.big(score % 5 === 0 ? String(score) + '!' : tr('In!')); K.beat('result');
     }
     return {
       label: 'Baskets', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Three misses and it is over.',
@@ -581,6 +581,7 @@
         b.z = U.lerp(START_Z, target.z, i ? 0.72 : 0.42); b.ph = rnd() * 6; b.sp = 1.3 + rnd() * 0.9;
       });
       face(PI);
+      if (count) K.beat('blocks');
     }
     function stop(text, pts, sad) {
       mode = 'rest'; rest = 1.15; vel.x = vel.z = 0;
@@ -590,6 +591,7 @@
       if (sad) { A.play('thud'); actor.gesture('shake', true); puffs.emit(pos.x, 0.3, pos.z, 8, 1.6, 0.12, 0.5, 5); }
       else if (pts) { A.play(pts === 5 ? 'award' : 'match'); actor.gesture('happy', true); }
       else { A.play('nope'); actor.gesture('sad', true); }
+      K.beat('stopped');
     }
     return {
       label: 'Points', label2: 'Slides', hint: 'Pull back and let go to slide.',
@@ -840,11 +842,11 @@
           if (Math.abs(it.z + 0.2) < 0.55 && Math.abs(it.x - x) < it.r + 0.3) {
             if (it.kind === 'fish') {
               it.live = false; it.m.visible = false; live.splice(i, 1);
-              bonus += 10; K.big('+10'); A.play('gulp');
+              bonus += 10; K.big('+10'); A.play('gulp'); K.beat('fish');
               K.score(Math.floor(dist) + bonus);
             } else if (it.kind === 'ramp') {
               it.r = 0; air = 0.9; bonus += 20;
-              K.big(tr('Jump!')); A.play('boing');
+              K.big(tr('Jump!')); A.play('boing'); K.beat('ramp');
               K.score(Math.floor(dist) + bonus);
             } else crash();
           }
@@ -945,7 +947,7 @@
       // The next bet is ready straight away, with this hand left on the table until the next deal. A short lock stops a quick
       // double tap on Hit dealing a hand by mistake. Only the end of the table (all gone, or the house beaten) waits a moment.
       if (stack < MIN || stack - START >= CAP) { mode = 'done'; wait = 1.8; } else { mode = 'bet'; lock = 0.35; }
-      paint();
+      paint(); K.beat('settled');
     }
     function act(a) {
       if (a === 'bet') { if (lock <= 0) deal(betNow()); return; }
@@ -1027,7 +1029,7 @@
             if (dealt % 2 === 0) { shownYou++; fresh.add(you[shownYou - 1]); } else { shownHouse++; fresh.add(house[shownHouse - 1]); }
             dealt++; A.play('pop'); wait = dealt < 4 ? DEAL_STEP : 0.55; paint();
           } else if (total(you) === 21) { mode = 'house'; wait = PAUSE.stand; paint(); }
-          else { mode = 'play'; paint(); }
+          else { mode = 'play'; paint(); K.beat('play'); }
         } else if (mode === 'house') {
           if (hide) { hide = false; flipHole = true; A.play('pop'); wait = PAUSE.reveal; paint(); }
           else if (total(you) <= 21 && total(house) < 17) { house.push(draw()); shownHouse++; fresh.add(house[house.length - 1]); A.play('pop'); wait = PAUSE.draw; paint(); }
@@ -1256,14 +1258,14 @@
       if (ad <= TOL) {                                         // spot on: nothing breaks, and a run of them wins some width back
         streak++;
         if (streak >= 3 && size < S0) keep = Math.min(S0, size + GROW);
-        K.big(tr('Perfect!')); A.play('match');
+        K.big(tr('Perfect!')); A.play('match'); K.beat('perfect');
         puffs.emit(top.x, top.y + 0.1, top.z, 10, 1.6, 0.1, 0.5, 4);
       } else {
         streak = 0; keep = size - ad; mid = c + delta / 2;
         const off = floe(x ? ad : top.w, x ? top.d : ad, score + 1), oc = c + delta + sgn * (size - ad) / 2;
         off.position.set(x ? oc : top.x, top.y, x ? top.z : oc);
         fall(off, x ? sgn : 0, x ? 0 : sgn);
-        A.play('pop');
+        A.play('pop'); K.beat('cut');
       }
       top = { x: x ? mid : top.x, z: x ? top.z : mid, w: x ? keep : top.w, d: x ? top.d : keep, y: top.y + BH };
       cur.g.scale.set(top.w, 1, top.d); cur.g.position.set(top.x, top.y - BH, top.z);
@@ -1526,6 +1528,7 @@
         A.play(before - left > 2 ? 'pop' : 'tap');
       }
       K.shown(N - flags);
+      if (first) K.beat('open');
       if (left === 0) win();
     }
     function win() {
@@ -1703,6 +1706,7 @@
       A.note(t.f, Math.max(0.2, t.d * 15 / bpm(pos) * 1.15));
       lastLane = lane; lastAt = clock; bop = 1;
       next++; n++; K.score(n);
+      if (n === 1) K.beat('go');
     }
     function build() {
       view = stage('#86bdf0', '#eef7ff', { ground: 0xbfdcff, hemi: 2.0, key: 1.7 });
@@ -1805,7 +1809,7 @@
 
   /* Coffee Memory is all in coffee.js (its rules and its 3D cafe), which puts itself in G.ext. A phone can briefly hold an old copy of the
      page that does not ask for that file, or an old copy of the file itself; either way the new one is fetched here. */
-  if (!(PN.Coffee && PN.Coffee.V >= 2)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=2'; document.head.appendChild(sc); }
+  if (!(PN.Coffee && PN.Coffee.V >= 3)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=3'; document.head.appendChild(sc); }
 
   G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
