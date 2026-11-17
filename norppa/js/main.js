@@ -1284,6 +1284,11 @@
     state.medLate = false; S.medSync(state, new Date().setHours(12, 30));
     A.play('tap'); UI.closeSheet(); UI.refresh(); save();
   };
+  G.devTutorials = function () {
+    if (!state.dev) return;
+    PN.Games.tutorial.reset();
+    A.play('sparkle'); UI.toast(tr('Tutorials reset. They will show again the next time you play.'), 'check', '', 3200);
+  };
   G.devEnergy = function () {
     if (!state.dev) return;
     state.stats.energy = 100;

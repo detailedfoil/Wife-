@@ -1820,6 +1820,8 @@
   let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
   let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1, hold = 0;
   let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0, departFrom = 0;
+  /* First-time tutorial: tutStep 1 is a bus that shows where to tap, 2 is a bus with no help, 0 is the real game. These two buses stand still, have no time limit and score nothing. */
+  let tutStep = 0, guide = null;
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
   const color = new T.Color();
@@ -1974,6 +1976,7 @@
       hub: geo(new T.CylinderGeometry(0.24, 0.24, 0.30, 16)),
       hit: geo(new T.BoxGeometry(0.96, 0.10, 1.10)),
       marker: geo(new T.TorusGeometry(0.38, 0.035, 8, 28)),
+      arrow: geo(new T.ConeGeometry(0.30, 0.55, 16)),
     };
     materials = {
       paint: mat(0xf3bc42), trim: mat(0x28568a), cream: mat(0xf4eee0), floor: mat(0xe9d7b5),
@@ -1994,7 +1997,7 @@
     if (bus) view.scene.remove(bus);
     if (scenery) view.scene.remove(scenery);
     if (playerRig.parent) playerRig.parent.remove(playerRig);
-    batches.forEach(mesh => mesh.dispose()); batches = []; wheels = [];
+    batches.forEach(mesh => mesh.dispose()); batches = []; wheels = []; guide = null;
   }
   function makeBus() {
     clearBus();
@@ -2115,12 +2118,44 @@
     });
     cushions.instanceColor.needsUpdate = seatBacks.instanceColor.needsUpdate = true;
   }
+  /* The bottom hint turns into a card while the tutorial runs; it keeps one height so the bus is framed the same on both tutorial buses. */
+  function say(lines, button) {
+    const el = document.getElementById('gHint');
+    if (!lines) { el.classList.remove('tut'); el.textContent = ''; return; }
+    el.classList.add('tut'); el.textContent = '';
+    [].concat(lines).forEach(line => { const d = document.createElement('div'); d.textContent = tr(line); el.appendChild(d); });
+    if (button) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn small'; b.textContent = tr(button);
+      b.addEventListener('click', () => { PN.Audio.play('tap'); advance(); });
+      el.appendChild(b);
+    }
+  }
+  function advance() {
+    if (!tutStep || phase !== 'reveal') return;
+    if (++tutStep > 2) { tutStep = 0; PN.Games.tutorial.mark('shuffle'); round = 0; say(null); }
+    phase = 'depart'; departFrom = bus.position.z; elapsed = 0;
+  }
+  function addGuide() {
+    guide = new T.Group();
+    seats.forEach(s => {
+      if (s.occupied || s.distance < best - 1e-7) return;
+      const ring = new T.Mesh(geometry.marker, materials.gold), arrow = new T.Mesh(geometry.arrow, materials.gold);
+      ring.rotation.x = -Math.PI / 2; ring.position.set(s.worldX, 1.0, s.z); ring.scale.set(1.2, 1.3, 1);
+      arrow.rotation.x = Math.PI; arrow.position.set(s.worldX, 2.0, s.z); arrow.userData.base = 2.0;
+      guide.add(ring, arrow);
+    });
+    bus.add(guide);
+  }
   function next() {
-    round++; seats = layout(round);
+    round = tutStep ? 1 : round + 1; seats = layout(round);
     populateSeats(seats, round);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
-    K.hint(tr('Bus {0} / {1} · Find your personal space', round, 20));
+    if (tutStep === 1) say('Tap the seat furthest from any other seal. Try the one with the arrow!');
+    else if (tutStep === 2) say('Your turn! Tap the seat furthest from the seals.');
+    else { say(null); K.hint(tr('Bus {0} / {1} · Find your personal space', round, 20)); }
     makeBus();
+    if (tutStep === 1) addGuide();
   }
   function seatPlayer(s) {
     playerRig.visible = true; playerRig.position.set(s.worldX, 0.92, s.z); playerRig.scale.setScalar(1);
@@ -2144,16 +2179,23 @@
     if (phase !== 'choose') return;
     if (performance.now() >= deadline) i = -1;
     if (i >= 0 && seats[i].occupied) return;
+    if (tutStep === 1 && i >= 0 && seats[i].distance < best - 1e-7) return;   // the first bus only takes the best seat
     chosen = i;
     // Points run from the worst free seat (0) to the best (100). Measured from nothing, a seat tapped without looking still scored about 56.
     const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
     const points = i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
-    hold = i < 0 ? 0.55 : Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter; a missed bus lingers a beat so the message can be read
-    total += points; K.score(total); phase = 'reveal'; elapsed = 0;
+    hold = tutStep ? Infinity : i < 0 ? 0.55 : Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter; a missed bus lingers a beat so the message can be read
+    if (!tutStep) { total += points; K.score(total); }
+    phase = 'reveal'; elapsed = 0;
+    if (guide) guide.visible = false;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
-    if (i < 0) K.big(tr('Too slow!'), 1.3, 'too-slow');
-    K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
+    if (tutStep === 1) say('The further from other seals, the more points. Green seats score most, red seats least.', 'Next bus');
+    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', "That's the tutorial done. From now on the bus won't wait, so be quick!"], 'Start game');
+    else {
+      if (i < 0) K.big(tr('Too slow!'), 1.3, 'too-slow');
+      K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
+    }
     PN.Audio.play(i < 0 ? 'tick' : points === 100 ? 'sparkle' : 'tap');
   }
   PN.Games.ext.shuffle = {
@@ -2164,7 +2206,7 @@
       const st = PN.Game.state;
       player.setStage(st.stage); player.grow = PN.Game.seal.grow; player.applyScale();
       ['head', 'neck', 'face', 'back'].forEach(slot => player.setWear(slot, st.wearing[slot]));
-      round = 0; total = 0; clock = 0; next();
+      round = 0; total = 0; clock = 0; tutStep = PN.Games.tutorial.seen('shuffle') ? 0 : 1; next();
     },
     go() { K.score(0, true); },
     pointer(type, x, y) {
@@ -2197,12 +2239,12 @@
         // Ease from a fast arrival to the same nonzero speed as the crawl.
         bus.position.z = CRAWL_START + CRAWL * (ARRIVE - t)
           + (travel - CRAWL_START - CRAWL * ARRIVE) * Math.pow(1 - u, 3);
-        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = performance.now() + 1100; elapsed = 0; }
+        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = tutStep ? Infinity : performance.now() + 1100; elapsed = 0; }
       } else if (phase === 'choose') {
-        bus.position.z -= CRAWL * dt;
+        if (!tutStep) bus.position.z -= CRAWL * dt;   // the tutorial buses wait where they stopped
         if (performance.now() >= deadline) choose(-1);
       } else if (phase === 'reveal') {
-        bus.position.z -= CRAWL * dt;
+        if (!tutStep) bus.position.z -= CRAWL * dt;
         if (elapsed >= REVEAL + hold) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
       } else if (phase === 'depart') {
         const t = Math.min(elapsed, DEPART);
@@ -2213,6 +2255,10 @@
           else next();
         }
       }
+      if (guide && guide.visible) guide.children.forEach(m => {
+        if (m.userData.base) m.position.y = m.userData.base + Math.abs(Math.sin(clock * 4)) * 0.35;
+        else m.scale.set(1.2 + Math.sin(clock * 5) * 0.12, 1.3 + Math.sin(clock * 5) * 0.12, 1);
+      });
       wheels.forEach(wheel => { wheel.rotation.x = bus.position.z / 0.60; });
       if (playerRig.visible) player.update(dt, clock, null);
     },
@@ -2222,7 +2268,7 @@
       ownedGeometries.clear(); ownedMaterials.clear();
       // Native seal geometry/materials are shared with the home scene. Keep
       // these four rigs for replay, as the other arcade games do with their actor.
-      view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done';
+      view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done'; tutStep = 0; say(null);
     },
     layout, evaluate, populateSeats,
     peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),

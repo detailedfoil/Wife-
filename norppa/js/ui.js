@@ -438,6 +438,7 @@
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
         + (st.dev && st.settings.medicine ? '<button class="row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
+        + (st.dev ? '<button class="row" data-do="devtut"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset tutorials') + '</b><span class="d">' + tr('Show the first-time game tutorials again, for testing.') + '</span></span></button>' : '')
         + (st.dev ? [
           ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
           ['visit', 'Call a pup home now', 'Call the first grown-up pup back and skip the hour of waiting, to see the visit and the 100 coins. Dev mode also ignores the 12 hour wait between calls.', 'seal'],
@@ -483,6 +484,7 @@
     else if (act === 'devtoggle') game.devToggle();
     else if (act === 'devreset') game.devReset();
     else if (act === 'devenergy') game.devEnergy();
+    else if (act === 'devtut') game.devTutorials();
     else if (act === 'devmed') game.devMed();
     else if (act === 'devpup') game.devPup(id);
     else if (act === 'callpup') game.callPup(+id);

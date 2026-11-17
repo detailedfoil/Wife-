@@ -8,6 +8,16 @@
   const $ = (id) => document.getElementById(id);
   const Games = PN.Games = { active: null, ext: {} };
 
+  /* First-time tutorials: each game remembers on this device that its tutorial has been seen. Developer mode can clear them all. */
+  const TUT = 'pikkunorppa.tut.';
+  Games.tutorial = {
+    seen(id) { try { return !!localStorage.getItem(TUT + id); } catch (e) { return false; } },
+    mark(id) { try { localStorage.setItem(TUT + id, '1'); } catch (e) { /* private browsing: it simply shows again next time */ } },
+    reset() {
+      try { Object.keys(localStorage).filter((k) => k.indexOf(TUT) === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) { /* nothing to do */ }
+    },
+  };
+
   const LANE_Z = 0.6;          // the seal slides along this line, facing the camera
   const HALF = 2.5;            // how far it can go either way
   const GAME_LEN = 40;         // seconds of Fish Rain
