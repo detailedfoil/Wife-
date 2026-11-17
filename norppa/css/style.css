@@ -338,31 +338,52 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 @keyframes pfpuff { from { transform: scale(.3); } }
 /* Blackjack lives in blackjack-table.css */
 .g-song { position: absolute; left: 0; right: 0; top: calc(64px + var(--st)); text-align: center; padding: 0 16px; font: 700 18px var(--display); color: #fff; text-shadow: 0 2px 0 rgba(13, 24, 60, .55), 0 0 12px rgba(13, 24, 60, .6); pointer-events: none; }
-/* First-time tutorial cards: the game is paused, the card sits at the top or bottom so the action stays visible, and a clear sheet under it stops stray taps reaching the game. */
-.g-tut-block { position: absolute; left: 0; right: 0; bottom: 0; top: calc(58px + var(--st)); pointer-events: auto; z-index: 3; touch-action: none; }
-.g-tut { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 28px)); max-height: calc(100% - 140px); overflow-y: auto; box-sizing: border-box; pointer-events: auto; text-align: center; padding: 14px 18px 16px; border-radius: 24px; background: #f6f9ff; color: var(--ink); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), 0 8px 24px rgba(13, 24, 60, .35); animation: tutIn .28s cubic-bezier(.2, .9, .3, 1.2); }
+/* First-time tutorial cards. A step card stays up until the player makes the move it asks for; a tip card fades on its own. Neither takes taps: they go to the game. */
+.g-tut { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 28px)); max-height: calc(100% - 140px); overflow-y: auto; box-sizing: border-box; pointer-events: none; text-align: center; padding: 14px 18px 16px; border-radius: 24px; background: #f6f9ff; color: var(--ink); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), 0 8px 24px rgba(13, 24, 60, .35); animation: tutIn .28s cubic-bezier(.2, .9, .3, 1.2); }
 .g-tut.at-top { top: calc(64px + var(--st)); }
 .g-tut.at-bottom { bottom: calc(14px + var(--sb)); }
 .g-tut p { margin: 0 0 7px; font: 600 16px/1.3 var(--display); text-wrap: balance; }
 .g-tut p + p { font-size: 15px; color: var(--ink-soft); }
-.g-tut .btn { margin-top: 4px; }
+.g-tut p:last-child { margin-bottom: 0; }
+.g-tut.ask { box-shadow: inset 0 0 0 3px rgba(216, 51, 79, .45), 0 8px 24px rgba(13, 24, 60, .35); }
+.g-tut.tip { animation: tutIn .28s cubic-bezier(.2, .9, .3, 1.2), tutOut .4s ease-in forwards; animation-delay: 0s, var(--tip-out, 999s); }
+@keyframes tutOut { to { opacity: 0; } }
+.tut-demo.tut-spot { position: fixed; z-index: 4; margin: calc(-20px * var(--k)) 0 0 calc(-75px * var(--k)); pointer-events: none; }
+.tut-glow { animation: tutGlow 1s ease-in-out infinite alternate !important; }
+@keyframes tutGlow { from { box-shadow: 0 0 0 2px rgba(255, 212, 92, .9), 0 0 10px 2px rgba(255, 212, 92, .5); } to { box-shadow: 0 0 0 5px #ffd45c, 0 0 26px 8px rgba(255, 212, 92, .85); } }
 @keyframes tutIn { from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.96); } }
-.tut-demo { position: relative; width: 150px; height: 42px; margin: 0 auto 9px; border-radius: 21px; background: rgba(23, 38, 77, .08); }
-.tut-demo i { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: var(--berry); box-shadow: 0 0 0 0 rgba(216, 51, 79, .45); }
-.tut-demo.swipe i { animation: tutSwipe 1.6s ease-in-out infinite; }
-.tut-demo.tap i { animation: tutTap 1.2s ease-out infinite; }
-.tut-demo.drag, .tut-demo.flick { width: 52px; height: 74px; border-radius: 26px; }
-.tut-demo.drag i { animation: tutDrag 1.6s ease-in-out infinite; }
-.tut-demo.flick i { animation: tutFlick 1.3s ease-in infinite; }
-@keyframes tutSwipe { 0%, 100% { transform: translateX(-48px); } 50% { transform: translateX(48px); } }
-@keyframes tutTap { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(216, 51, 79, .5); } 40% { transform: scale(.82); } 100% { transform: scale(1); box-shadow: 0 0 0 20px rgba(216, 51, 79, 0); } }
-@keyframes tutDrag { 0% { transform: translateY(-22px); } 70%, 100% { transform: translateY(22px); } }
-@keyframes tutFlick { 0% { transform: translateY(22px); opacity: 1; } 80% { transform: translateY(-22px); opacity: 1; } 100% { transform: translateY(-26px); opacity: 0; } }
+.tut-demo { --k: 1; position: relative; width: calc(150px * var(--k)); height: calc(70px * var(--k)); margin: 0 auto 8px; }
+.tut-demo svg { position: absolute; left: 50%; top: calc(18px * var(--k)); width: calc(31px * var(--k)); height: calc(43px * var(--k)); margin-left: calc(-15.5px * var(--k)); overflow: visible; filter: drop-shadow(0 3px 3px rgba(13, 24, 60, .28)); }
+.tut-demo .rip { position: absolute; left: 50%; top: calc(20px * var(--k)); width: calc(16px * var(--k)); height: calc(16px * var(--k)); margin: calc(-8px * var(--k)) 0 0 calc(-8px * var(--k)); box-sizing: border-box; border-radius: 50%; border: 3px solid var(--berry); background: rgba(216, 51, 79, .18); opacity: 0; }
+.tut-demo .arr { position: absolute; width: calc(11px * var(--k)); height: calc(11px * var(--k)); box-sizing: border-box; border-top: 3px solid var(--berry); border-right: 3px solid var(--berry); opacity: .7; }
+.tut-demo.tap svg { animation: tutPress 1.4s ease-in-out infinite; }
+.tut-demo.tap .rip { animation: tutRip 1.4s ease-out infinite; }
+.tut-demo.swipe svg { animation: tutSwipe 1.7s ease-in-out infinite; }
+.tut-demo.swipe .arr { top: calc(36px * var(--k)); }
+.tut-demo.swipe .a1 { left: calc(10px * var(--k)); transform: rotate(-135deg); }
+.tut-demo.swipe .a2 { right: calc(10px * var(--k)); transform: rotate(45deg); }
+.tut-demo.drag, .tut-demo.flick { width: calc(70px * var(--k)); height: calc(104px * var(--k)); }
+.tut-demo.drag svg { top: calc(8px * var(--k)); animation: tutDrag 1.7s ease-in-out infinite; }
+.tut-demo.drag .a1 { left: 50%; bottom: calc(2px * var(--k)); margin-left: calc(-5.5px * var(--k)); transform: rotate(135deg); }
+.tut-demo.flick svg { top: calc(24px * var(--k)); animation: tutFlick 1.5s ease-in infinite; }
+.tut-demo.flick .a1 { left: 50%; top: calc(2px * var(--k)); margin-left: calc(-5.5px * var(--k)); transform: rotate(-45deg); }
+@keyframes tutPress { 0%, 78%, 100% { transform: translateY(calc(-10px * var(--k))); } 28%, 52% { transform: translateY(0); } }
+@keyframes tutRip { 0%, 28% { opacity: 0; transform: scale(.4); } 30% { opacity: .95; transform: scale(.6); } 85%, 100% { opacity: 0; transform: scale(3.4); } }
+@keyframes tutSwipe { 0%, 100% { transform: translateX(calc(-46px * var(--k))); } 50% { transform: translateX(calc(46px * var(--k))); } }
+@keyframes tutDrag { 0%, 10% { transform: translateY(0); } 70%, 100% { transform: translateY(calc(26px * var(--k))); } }
+@keyframes tutFlick { 0% { transform: translateY(calc(36px * var(--k))); opacity: 1; } 75% { transform: translateY(calc(-4px * var(--k))); opacity: 1; } 100% { transform: translateY(calc(-14px * var(--k))); opacity: 0; } }
+/* Snowball Toss's aim line for the first three throws: drawn full screen over the game, under the wind sign. */
+.tl { position: fixed; inset: 0; pointer-events: none; }
+.tl svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.tl .glow { stroke: rgba(255, 255, 255, .8); stroke-width: 16; stroke-linecap: round; }
+.tl .dash { stroke: var(--berry); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1 13; animation: tlMarch .9s linear infinite; }
+.tl polygon { fill: var(--berry); stroke: #fff; stroke-width: 3; stroke-linejoin: round; }
+.tl circle { fill: rgba(216, 51, 79, .16); stroke: var(--berry); stroke-width: 4; }
+.tl .fing { filter: drop-shadow(0 3px 3px rgba(13, 24, 60, .35)); }
+.tl text { font: 700 17px var(--display); fill: var(--berry); text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 5px; stroke-linejoin: round; }
+@keyframes tlMarch { to { stroke-dashoffset: -14; } }
 @media (min-width: 700px) and (min-height: 600px) { .g-tut { width: min(520px, calc(100% - 40px)); padding: 18px 24px 20px; } .g-tut p { font-size: 19px; } .g-tut p + p { font-size: 17px; } }
-@media (max-height: 520px) { .g-tut { width: min(560px, calc(100% - 28px)); padding: 9px 16px 11px; max-height: calc(100% - 96px); } .g-tut p { font-size: 14px; margin-bottom: 4px; } .g-tut p + p { font-size: 13px; } .g-tut.at-top { top: calc(56px + var(--st)); } .tut-demo { height: 30px; width: 112px; margin-bottom: 5px; } .tut-demo.drag, .tut-demo.flick { width: 34px; height: 46px; } .tut-demo i { width: 18px; height: 18px; margin: -9px 0 0 -9px; } .tut-demo.swipe i { animation-name: tutSwipeS; } .tut-demo.drag i { animation-name: tutDragS; } .tut-demo.flick i { animation-name: tutFlickS; } .g-tut .btn { padding: 8px 18px; font-size: 14px; } }
-@keyframes tutSwipeS { 0%, 100% { transform: translateX(-34px); } 50% { transform: translateX(34px); } }
-@keyframes tutDragS { 0% { transform: translateY(-12px); } 70%, 100% { transform: translateY(12px); } }
-@keyframes tutFlickS { 0% { transform: translateY(12px); opacity: 1; } 80% { transform: translateY(-12px); opacity: 1; } 100% { transform: translateY(-15px); opacity: 0; } }
+@media (max-height: 520px) { .g-tut { width: min(560px, calc(100% - 28px)); padding: 9px 16px 11px; max-height: calc(100% - 96px); } .g-tut p { font-size: 14px; margin-bottom: 4px; } .g-tut p + p { font-size: 13px; } .g-tut.at-top { top: calc(56px + var(--st)); } .tut-demo { --k: .62; margin-bottom: 5px; } }
 @media (max-width: 340px) { .g-tut { padding: 12px 14px 14px; } .g-tut p { font-size: 15px; } }
 .g-hint.tut { pointer-events: auto; left: 14px; right: 14px; bottom: calc(14px + var(--sb)); min-height: 128px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 18px; border-radius: 24px; background: rgba(246, 249, 255, .96); color: var(--ink); text-shadow: none; font: 600 16px/1.3 var(--display); text-wrap: balance; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), 0 8px 24px rgba(13, 24, 60, .35); }
 .g-hint.tut .btn { margin-top: 2px; }
@@ -399,7 +420,8 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 @media (prefers-reduced-motion: reduce) {
   .sheet, .modal, .modal-card, .bar i, .plate-xp i { transition: none; }
   .meter.low, .dock button.need::after, .toast, .g-big.pop, .bj-card.deal, .bj-card.flip, .pf-c.fresh, .pf-c.puff svg { animation: none; }
-  .g-tut, .tut-demo i { animation: none !important; }
+  .g-tut, .tut-demo svg, .tut-demo .rip, .tl .dash, .tut-glow { animation: none !important; }
+  .tut-glow { box-shadow: 0 0 0 4px #ffd45c !important; }
 }
 
 .note a { color: inherit; text-decoration: underline; }
@@ -414,13 +436,6 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .chips + .shelf { margin-top: 4px; }
 
 /* the toss game's throwing guide */
-.tg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; background: rgba(13, 24, 48, .55); padding: calc(60px + var(--st, 0px)) 14px calc(20px + var(--sb)); }
-.tg-card { width: min(100%, 400px); max-height: 100%; overflow: hidden; background: #1f3358; border-radius: 26px; padding: 16px 16px 18px; text-align: center; color: #fff; box-shadow: 0 10px 30px rgba(8, 20, 40, .5); display: flex; flex-direction: column; }
-.tg-card b { font: 600 22px var(--display); }
-.tg-card svg { display: block; width: 100%; max-height: 46vh; margin: 8px auto 4px; }
-.tg-card svg text { font: 700 17px var(--display); }
-.tg-card p { margin: 6px 0 14px; font-size: 14.5px; line-height: 1.35; color: #d7e4f7; }
-.tg-card .btn { width: 100%; justify-content: center; padding: 14px 10px; }
 /* Snowball Toss: the wind, big, right above the snowball */
 .tw { position: absolute; transform: translate(-50%, calc(-100% - 20px)); display: grid; justify-items: center; gap: 1px; pointer-events: none; color: var(--tw, #fff); text-shadow: 0 3px 0 rgba(13, 24, 60, .55), 0 0 18px rgba(13, 24, 60, .5); }
 .tw[hidden] { display: none; }

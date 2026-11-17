@@ -223,7 +223,7 @@
       A.play('thud');
       actor.gesture('surprise', true);
       bubbles.emit(sx, y, 0.3, 12, 1.6, 0.09, 1.1, -2.6);
-      if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; K.beat('die'); }
+      if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; }
       else K.over(tr(best >= 10 ? 'Wow!' : 'Bonk!'));
     }
     /* a fresh stretch of water for the next go */
@@ -302,7 +302,7 @@
         });
         bubbles.update(dt, -dx, 0);
         if (live && !dead && rnd() < dt * 2) bubbles.emit(sx + 0.5, y + 0.1, 0.2, 1, 0.2, 0.05, 1, -2.2);
-        if (dead && go < GOES && wait > 0 && playing) { wait -= dt; if (wait <= 0) K.hint(tr('Best so far: {0}. Tap for go {1} of {2}.', best, go + 1, GOES)); }
+        if (dead && go < GOES && wait > 0 && playing) { wait -= dt; if (wait <= 0) { K.hint(tr('Best so far: {0}. Tap for go {1} of {2}.', best, go + 1, GOES)); K.beat('again'); } }
         actor.update(dt, clock, null);
       },
     };
@@ -370,6 +370,7 @@
       ball.position.set(0, SY, SZ + ZB); ball.visible = true; ball.scale.setScalar(1);
       mode = 'ready'; rimHit = false;
       K.hint(throwsLeft());
+      if (K.tutoring()) { aimYaw = solveYaw(); if (throws === 3) K.beat('solo'); }
     }
     /* The wind, big, right above the snowball: how strong it is, and an arrow that grows with it and points the way it blows.
        The colours are the ones on the throwing guide. */
@@ -382,7 +383,7 @@
     }
     function placeWind() {
       if (!windEl) return;
-      windEl.hidden = mode === 'guide' || mode === 'done';
+      windEl.hidden = mode === 'done';
       view.camera.updateMatrixWorld(true);
       onScreen.copy(restPos).project(view.camera);
       // The sign hangs from the very top of the snowball as it looks on this screen, so it never touches the ball, big or small
@@ -391,36 +392,57 @@
       windEl.style.left = (rect.left + (onScreen.x * 0.5 + 0.5) * rect.width) + 'px';
       windEl.style.top = (rect.top + (-edgePos.y * 0.5 + 0.5) * rect.height) + 'px';
     }
-    /* The throwing guide: shown each time the game opens, with the lean each wind strength needs. */
-    let guideEl = null;
-    function guide() {
-      if (guideEl) guideEl.remove();
-      const rows = [[0, 0], [2.5, 16], [5, 28], [7.5, 37], [10, 45]];
-      const OX = 150, OY = 262, LEN = 215, col = ['#ffffff', '#bfe3ff', '#ffe08a', '#ffb066', '#ff7a6b'];
-      let svg = '<svg viewBox="-40 0 380 290" aria-hidden="true">';
-      rows.forEach((r, i) => {
-        [-1, 1].forEach((side) => {
-          if (!r[1] && side > 0) return;
-          const a = r[1] * PI / 180, x = OX + side * Math.sin(a) * LEN, y = OY - Math.cos(a) * LEN;
-          svg += '<line x1="' + OX + '" y1="' + OY + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="' + col[i] + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 10"/>';
-          const lx = OX + side * Math.sin(a) * (LEN + 16), ly = OY - Math.cos(a) * (LEN + 16) + 5;
-          svg += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" fill="' + col[i] + '">' + (r[0] ? String(r[0]) : '0') + '</text>';
-        });
-      });
-      svg += '<circle cx="' + OX + '" cy="' + (OY + 8) + '" r="16" fill="#fff"/></svg>';
-      guideEl = document.createElement('div');
-      guideEl.className = 'tg';
-      guideEl.innerHTML = '<div class="tg-card"><b>' + tr('Aim into the wind') + '</b>' + svg
-        + '<p>' + tr('Swipe up the screen along the line for the wind. The numbers are the wind, and wind 10 needs a 45 degree lean. If the flag blows right, swipe left.') + '</p>'
-        + '<button class="btn" type="button">' + tr('Start throwing') + '</button></div>';
-      guideEl.querySelector('button').addEventListener('click', () => { A.play('tap'); guideEl.remove(); guideEl = null; mode = 'ready'; K.hint(throwsLeft()); });
-      document.getElementById('gamehud').appendChild(guideEl);
-      mode = 'guide'; K.hint('');
+    /* The aim line, for the first three throws of the tutorial: a dashed line from the snowball along exactly the swipe that drops it in the bucket
+       with this wind, and a finger that flicks along it. The yaw that works is found by running the throw (the same steps the flight uses) for every angle. */
+    let throws = 0, aimYaw = 0, aim = null;
+    function solveYaw() {
+      const v = Math.sqrt(GRAV * RANGE / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v, h = 1 / 180;
+      let bestYaw = 0, bestD = Infinity;
+      for (let yaw = -1.25; yaw <= 1.25; yaw += 0.004) {
+        let x = 0, y = SY, z = SZ + ZB, vx = Math.tan(yaw) * ch, vy = Math.sin(ELEV) * v, prev = SY;
+        for (let i = 0; i < 1500; i++) {
+          vx += wind * WINDK * h; vy -= GRAV * h;
+          x += vx * h; y += vy * h; z -= ch * h;
+          if (prev >= RIM_Y && y < RIM_Y) { const d = Math.hypot(x - bk.x, z - bk.z); if (d < bestD) { bestD = d; bestYaw = yaw; } break; }
+          prev = y;
+        }
+      }
+      return bestYaw;
+    }
+    function buildAim() {
+      const el = document.createElement('div');
+      el.className = 'tl'; el.setAttribute('aria-hidden', 'true');
+      el.innerHTML = '<svg><line class="glow"/><line class="dash"/><polygon/><circle/><g class="fing">' + G.fingerShapes + '</g><text></text></svg>';
+      const hud = document.getElementById('gamehud'); hud.insertBefore(el, hud.firstChild);   // first, so the wind sign hangs in front of it
+      const q = (n) => el.querySelector(n);
+      aim = { el, svg: q('svg'), glow: q('.glow'), dash: q('.dash'), head: q('polygon'), ring: q('circle'), fing: q('.fing'), label: q('text'), w: 0, h: 0 };
+      aim.label.textContent = tr('Flick along the line');
+    }
+    function placeAim() {
+      const show = K.tutoring() && throws < 3 && mode === 'ready';
+      if (!aim) { if (!show) return; buildAim(); }
+      aim.el.hidden = !show;
+      if (!show) return;
+      const rect = W.renderer.domElement.getBoundingClientRect(), w = window.innerWidth, h = window.innerHeight;
+      if (aim.w !== w || aim.h !== h) { aim.svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h); aim.w = w; aim.h = h; }
+      const sx = rect.left + (onScreen.x * 0.5 + 0.5) * rect.width, sy = rect.top + (-onScreen.y * 0.5 + 0.5) * rect.height;
+      const ang = Math.abs(aimYaw) < 0.02 ? 0 : aimYaw + Math.sign(aimYaw) * 0.07;   // the swipe's own angle, past the small dead zone a swipe has to clear
+      const dx = Math.sin(ang), dy = -Math.cos(ang);
+      let len = U.clamp((sy - (rect.top + 120)) * 0.8, 120, 420);
+      if (Math.abs(dx) > 0.01) len = Math.min(len, ((dx > 0 ? w - 34 - sx : sx - 34) / Math.abs(dx)));   // a strong wind leans the line a long way: keep its end on the screen
+      const ex = sx + dx * len, ey = sy + dy * len, px = -dy, py = dx;
+      [aim.glow, aim.dash].forEach((l) => { l.setAttribute('x1', sx); l.setAttribute('y1', sy); l.setAttribute('x2', ex); l.setAttribute('y2', ey); });
+      aim.head.setAttribute('points', [ex, ey, ex - dx * 26 + px * 14, ey - dy * 26 + py * 14, ex - dx * 26 - px * 14, ey - dy * 26 - py * 14].map((n) => n.toFixed(1)).join(' '));
+      aim.ring.setAttribute('cx', sx); aim.ring.setAttribute('cy', sy); aim.ring.setAttribute('r', 26);
+      const t = (clock * 0.75) % 1.5, f = Math.min(1, t), e = f * f * (3 - 2 * f), k = 1.25;
+      aim.fing.setAttribute('transform', 'translate(' + (sx + dx * len * e - 16 * k).toFixed(1) + ' ' + (sy + dy * len * e - 2 * k).toFixed(1) + ') scale(' + k + ')');
+      aim.fing.style.opacity = t < 1.15 ? 1 : 0;
+      aim.label.setAttribute('x', U.clamp(ex, 105, w - 105)); aim.label.setAttribute('y', ey - 34);
     }
     function launch(yaw) {
       const v = Math.sqrt(GRAV * RANGE / Math.sin(2 * ELEV)), ch = Math.cos(ELEV) * v;
       bv.set(Math.tan(yaw) * ch, Math.sin(ELEV) * v, -ch);   // a sideways shot keeps its full reach, so leaning into the wind never falls short
-      mode = 'fly'; prevY = SY; spin = 8;
+      mode = 'fly'; prevY = SY; spin = 8; throws++;
       A.play('whoosh');
       K.hint('');
     }
@@ -428,7 +450,7 @@
       if (mode === 'out') return;
       mode = 'out'; wait = 0.9;
       A.play('nope'); actor.gesture('no', true);
-      K.big(text); K.beat('result');
+      K.big(text);
     }
     function basket() {
       mode = 'in'; wait = 0.9;
@@ -437,7 +459,7 @@
       A.play('match'); A.play('thud', 0.1);
       puffs.emit(bk.x, RIM_Y + 0.1, bk.z, 10, 1.4, 0.09, 0.5, 4);
       actor.gesture(score % 5 === 0 ? 'clap' : 'happy', true);
-      K.big(score % 5 === 0 ? String(score) + '!' : tr('In!')); K.beat('result');
+      K.big(score % 5 === 0 ? String(score) + '!' : tr('In!'));
     }
     return {
       label: 'Baskets', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Three misses and it is over.',
@@ -446,11 +468,10 @@
         if (!view) build();
         cast(view, 0.42, true);
         face(0);
-        score = 0; top = 0; tries = 0; puffs.clear();
+        score = 0; top = 0; tries = 0; throws = 0; puffs.clear();
         setUp();
-        guide();
       },
-      stop() { if (guideEl) { guideEl.remove(); guideEl = null; } if (windEl) { windEl.remove(); windEl = null; } },
+      stop() { if (aim) { aim.el.remove(); aim = null; } if (windEl) { windEl.remove(); windEl = null; } },
       go() {},
       pointer(type, x, y) {
         if (mode !== 'ready') return;
@@ -474,6 +495,7 @@
         const tip = Math.max(11.5, 30.6 - 0.62 * view.camera.fov / 2) * PI / 180;
         view.camera.lookAt(0, 2.1 - 10 * Math.sin(tip), SZ + 2.6 - 10 * Math.cos(tip));
         placeWind();
+        placeAim();
         // the flag streams out with the wind
         const w = Math.abs(wind) / 10;
         cloth.rotation.y = wind >= 0 ? 0 : PI;
@@ -919,6 +941,7 @@
         + (live ? '<div class="bj-bet"><span>' + tr('On the table') + '</span><b>' + bet + '</b></div>' : '') + '</div>'
         + '<div class="bj-msg">' + msg + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div></div>';
       fresh.clear(); flipHole = false;
+      if (mode === 'bet' && most() > MIN) K.beat('slide');   // tutorial: the first time there is more than one bet to choose from
     }
     // How much the bar says: nothing is 5, the top is everything, and in between is that share of what you have now.
     const betNow = () => Math.min(most(), Math.max(MIN, Math.round(MIN + frac * (most() - MIN))));
@@ -1331,6 +1354,7 @@
           cur.p += cur.v * dt;
           if (cur.p > R) { cur.p = 2 * R - cur.p; cur.v = -cur.v; } else if (cur.p < -R) { cur.p = -2 * R - cur.p; cur.v = -cur.v; }
           if (cur.axis === 'x') cur.g.position.x = top.x + cur.p; else cur.g.position.z = top.z + cur.p;
+          if (score === 0 && Math.abs(cur.p) < TOL * 0.5) K.beat('now');   // tutorial: the first scoop waits right over the tower for the tap
         }
         if (mode === 'rest' && playing) {
           wait -= dt;
@@ -1764,6 +1788,12 @@
     }
     return {
       label: 'Tiles', nocount: true, hint: 'Tap the Start tile, then every tile in order.',
+      /* tutorial: point at the Start tile, and only a tap in its lane begins */
+      tutSpot(step) {
+        if (step !== 'start' || !cv || !W) return null;
+        const r = cv.getBoundingClientRect(), t = tile(0), u = unit(), lw = W / LANES, bottom = H * LINE - (startOf(0) - pos) * u, h = t.d * u;
+        return { spot: { x: r.left + (t.lane + 0.5) * lw * r.width / W, y: r.top + (bottom - h / 2) * r.height / H }, where: (px) => Math.floor((px - r.left) / r.width * LANES) === t.lane };
+      },
       view: () => view,
       peek: () => ({ pos, next, n, mode, lane: chart.length ? tile(next).lane : -1, bpm: bpm(pos), total, count: chart.length }),
       read, tap,
@@ -1809,7 +1839,7 @@
 
   /* Coffee Memory is all in coffee.js (its rules and its 3D cafe), which puts itself in G.ext. A phone can briefly hold an old copy of the
      page that does not ask for that file, or an old copy of the file itself; either way the new one is fetched here. */
-  if (!(PN.Coffee && PN.Coffee.V >= 3)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=3'; document.head.appendChild(sc); }
+  if (!(PN.Coffee && PN.Coffee.V >= 4)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=4'; document.head.appendChild(sc); }
 
   G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
@@ -2128,9 +2158,9 @@
     if (!lines) { el.classList.remove('tut'); el.textContent = ''; return; }
     el.classList.add('tut'); el.textContent = '';
     [].concat(lines).forEach(line => { const d = document.createElement('div'); d.textContent = tr(line); el.appendChild(d); });
-    if (button) {
+    if (button) {   // tapping anywhere moves on too (see pointer)
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'btn small'; b.textContent = tr(button);
+      b.type = 'button'; b.className = 'btn small'; b.textContent = tr('Tap anywhere to continue');
       b.addEventListener('click', () => { PN.Audio.play('tap'); advance(); });
       el.appendChild(b);
     }
@@ -2194,8 +2224,8 @@
     if (guide) guide.visible = false;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
-    if (tutStep === 1) say('The further from other seals, the more points. Green seats score most, red seats least.', 'Next bus');
-    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', "That's the tutorial done. From now on the bus won't wait, so be quick!"], 'Start game');
+    if (tutStep === 1) say('The further from other seals, the more points. Green seats score most, red seats least.', true);
+    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', "That's the tutorial done. From now on the bus won't wait, so be quick!"], true);
     else {
       if (i < 0) K.big(tr('Too slow!'), 1.3, 'too-slow');
       K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
@@ -2214,6 +2244,7 @@
     },
     go() { K.score(0, true); },
     pointer(type, x, y) {
+      if (type === 'down' && tutStep && phase === 'reveal' && elapsed > 0.45) { PN.Audio.play('tap'); advance(); return; }
       if (type !== 'down' || phase !== 'choose') return;
       if (performance.now() >= deadline) { choose(-1); return; }
       const rect = W.renderer.domElement.getBoundingClientRect();

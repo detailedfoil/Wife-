@@ -142,7 +142,7 @@
     return r;
   }
 
-  PN.Coffee = { V: 3, STEPS, NAMES, NAMES_EN, ANIMALS, MAX_ITEMS, byId, label, itemCount, stepCount, stepIds, extraCount, makeOrder, lines, tidy, run };
+  PN.Coffee = { V: 4, STEPS, NAMES, NAMES_EN, ANIMALS, MAX_ITEMS, byId, label, itemCount, stepCount, stepIds, extraCount, makeOrder, lines, tidy, run };
 
   /* ================= the 3D cafe ================= */
   /* Everything below draws. It is skipped where there is nothing to draw on (the tests run the rules alone). The game is seen through the
@@ -780,7 +780,7 @@
       if (r.served === 1 && K.beat) K.beat('served');
       dropCup(); bring(r.order.customer);
       slip.n = r.served + 1; printSlip(r.order, null); slip.g.visible = false;
-      after(0.7, () => { slip.g.visible = true; slipSet('drop'); A.play('pop'); slipTo('read', 0.55, () => { mode = 'read'; readAt = time; K.hint(tr('Remember the order, then tap the receipt')); if (K.beat) K.beat('read'); }); });
+      after(0.7, () => { slip.g.visible = true; slipSet('drop'); A.play('pop'); slipTo('read', 0.55, () => { mode = 'read'; readAt = time; K.hint(tr('Remember the order, then tap the receipt')); if (K.beat && K.beat('read')) readAt = -1; /* the tutorial's own wait stands in for the double-tap guard */ }); });
     }
     function beginDrink() { A.play('tap'); r.begin(); mode = 'busy'; slipTo('rest', 0.45); showStep(); }
     /* The things for this step slide along the counter from the right. */
@@ -896,6 +896,12 @@
         if (mode === 'fail' && failReady && time - failAt > 14) finish();
       },
       /* For the tests: what is on the counter and where on the screen it is. */
+      /* tutorial: point at the receipt, and only a tap on it moves on */
+      tutSpot(step) {
+        if (step !== 'read' || !slip.g || !slip.g.visible) return null;
+        const p = screenOf(slip.g.position);
+        return { spot: p, where: (x, y) => Math.hypot(x - p.x, y - p.y) < 120 };
+      },
       peek() {
         return { mode, tall, game: r, eyes: cust ? cust.eyes[0].scale.y : null, served: r ? r.served : 0, order: r && r.order, step: r && r.current() ? r.current().id : null,
           opts: active.map((o) => { const s = screenOf(center(o)); return { id: o.id, x: s.x, y: s.y, on: o.on }; }),
