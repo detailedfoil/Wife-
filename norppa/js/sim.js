@@ -116,6 +116,7 @@
       settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true, medicine: false, stats: true },   // medicine: the daily pill routine is off until it is switched on in Settings
       tut: 0,
     };
+    PN.Appearance.born(s, s.seed);
     s.fav = ['muikku', 'kuore', 'ahven', 'sarki', 'siika'][Math.floor(rnd(s) * 5)];
     return s;
   }
@@ -138,6 +139,8 @@
     if (obj && !obj.shuffleScore2) { obj.shuffleScore2 = 1; if (obj.counters) obj.counters.best_shuffle = 0; }   // one time only: Seal Seat Shuffle scores seats differently now, so the old best is cleared
     if (obj && !obj.shufflePaid) { obj.shufflePaid = 1; if (obj.owned) delete obj.owned.game_shuffle; }   // one time only: Seal Seat Shuffle was free and now costs coins, so everyone buys it afresh
     if (obj && !obj.angyDiveOnly) { obj.angyDiveOnly = 1; if (!obj.medLate) { obj.grudge = 0; obj.sulkWant = null; } }   // one time only: being left alone no longer makes her Angy, so neglect sulks already on a save end   // one time only: the Angy rules changed, so everyone starts clean
+    PN.Appearance.ensure(obj);
+    (obj.pups || []).concat(obj.family || []).forEach(PN.Appearance.ensure);
     fill(obj, base);
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
@@ -343,7 +346,7 @@
       }
       if (p.sick && p.starveMs > T.pupStarveToLost) {
         state.pups.splice(i, 1);
-        state.family.push({ name: p.name, bornAt: p.bornAt, endAt: t + dt, fate: 'lost', wear: p.wear || null });
+        state.family.push({ name: p.name, bornAt: p.bornAt, endAt: t + dt, fate: 'lost', birthAppearance: p.birthAppearance, appearance: p.appearance, wear: p.wear || null });
         state.counters.pupsLost++;
         state.griefUntil = t + dt + DAY;
         const lose = Math.max(0, Math.min(state.xp - xpFloor(state), 60));
@@ -937,6 +940,7 @@
 
   function addPup(state, now, name) {
     const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false, wear: pupLook(state) };
+    PN.Appearance.born(p, (now + p.id * 7919) | 0, state.birthAppearance);
     state.pups.push(p);
     state.pupProg = 0; state.pupMet = 0; state.pupBirthAt = 0;
     state.nextPupAt = now + T.pupGap;
@@ -960,7 +964,7 @@
     const p = state.pups[i];
     if (!p || !p.ready) return no('notyet');
     state.pups.splice(i, 1);
-    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', owned: p.owned || {}, wear: p.wear || pupLook(state) });
+    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', birthAppearance: p.birthAppearance, appearance: p.appearance, owned: p.owned || {}, wear: p.wear || pupLook(state) });
     state.counters.pupsGrown++;
     const farewell = earn(state, T.farewellCoins / T.earnRate);   // exactly 200 coins
     state.nextPupAt = Math.max(state.nextPupAt, now + DAY);

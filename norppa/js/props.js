@@ -56,6 +56,7 @@
     c.addEventListener('contextrestored', () => paint(p));
     return t;
   };
+  U.releaseTex = (texture) => { const i = painted.findIndex((p) => p.t === texture); if (i >= 0) painted.splice(i, 1); texture.dispose(); };
   U.repaint = () => painted.forEach((p) => { try { paint(p); } catch (e) { /* leave that one as it is */ } });
   /* Quiet, seamless colour washes for the home scene. No bump maps or grain:
      the original lighting and round silhouettes do the work. Painted once, shared,
@@ -2064,7 +2065,7 @@
     get(id) { return PN.Thumbs.map[id] || ''; },
 
     /* A little portrait of a pup in its own outfit, for the family album. Drawn the first time it is wanted, then kept. */
-    pupKey: (wear) => 'pup:' + ['head', 'neck', 'face', 'back'].map((k) => (wear && wear[k]) || '').join('|'),
+    pupKey: (record) => { const wear = record && (record.wear || record); return 'pup:' + ['head', 'neck', 'face', 'back'].map((k) => (wear && wear[k]) || '').join('|') + JSON.stringify(record && record.appearance || null); },
     pups(wears) {
       const todo = [], seen = {};
       wears.forEach((w) => { const k = PN.Thumbs.pupKey(w); if (!PN.Thumbs.map[k] && !seen[k]) { seen[k] = 1; todo.push([k, w]); } });
@@ -2079,7 +2080,8 @@
         const cam = new T.PerspectiveCamera(26, 1, 0.05, 50);
         const box = new T.Box3(), c = new T.Vector3(), s = new T.Vector3();
         todo.forEach(([k, w]) => {
-          const pup = new PN.Seal({ pup: true, stage: 0 });
+          const pup = new PN.Seal({ pup: true, stage: 0, appearance: w && w.appearance });
+          w = w && (w.wear || w);
           ['head', 'neck', 'face', 'back'].forEach((slot) => pup.setWear(slot, (w && w[slot]) || null));
           pup.setMood('happy'); pup.shadow.visible = false;
           scene.add(pup.g);
@@ -2092,7 +2094,7 @@
           cam.lookAt(c.x, c.y - 0.01, c.z);
           r.render(scene, cam);
           PN.Thumbs.map[k] = r.domElement.toDataURL('image/png');
-          scene.remove(pup.g);
+          scene.remove(pup.g); pup.dispose();
         });
       } catch (e) { /* no picture: the album shows its icon instead */ }
       if (r) { r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); }

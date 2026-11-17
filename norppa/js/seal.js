@@ -15,25 +15,38 @@
 
   /* Coat texture. The spheres are turned so their poles sit at nose and tail;
      the middle of the back runs along u = 0.75 and the canvas top is the front. */
-  function coatTexture(stage, isHead) {
-    const c = COAT[stage], r = U.rng(31 + stage * 17 + (isHead ? 5 : 0));
+  const rgb = (id) => { const n = parseInt(PN.Appearance.colors[id][2].slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  function coatColors(stage, a) {
+    const c = Object.assign({}, COAT[stage]);
+    if (!a) return c;
+    if (a.coat !== 'original') c.back = PN.Appearance.special(a.coat) ? rgb(a.coat) : mix(rgb(a.coat), COAT[0].back, stage === 0 ? 0.5 : stage === 1 ? 0.18 : 0);
+    if (a.belly !== 'original') c.belly = rgb(a.belly);
+    if (a.coat !== 'original' || a.belly !== 'original') c.face = mix(c.back, c.belly, 0.75);
+    if (a.pattern !== 'original') c.spots = a.pattern === 'plain' ? 'none' : a.pattern;
+    return c;
+  }
+  function coatTexture(stage, isHead, a) {
+    const c = coatColors(stage, a);
     return U.tex(512, 256, (g, w, h) => {
+      const r = U.rng((a ? a.seed : 31) + stage * 17 + (isHead ? 5 : 0));
       const edge = css(mix(c.back, c.belly, 0.64));
       const grad = g.createLinearGradient(0, 0, w, 0);
       grad.addColorStop(0, edge); grad.addColorStop(0.05, css(c.belly)); grad.addColorStop(0.45, css(c.belly));
       grad.addColorStop(0.59, css(c.back)); grad.addColorStop(0.91, css(c.back)); grad.addColorStop(1, edge);
       g.fillStyle = grad; g.fillRect(0, 0, w, h);
       if (c.spots !== 'none') {
-        const n = isHead ? 16 : 78;
+        const n = (isHead ? 16 : 78) * (c.spots === 'freckles' ? 2 : c.spots === 'mottled' ? 0.5 : 1);
         for (let i = 0; i < n; i++) {
           const u = 0.57 + r() * 0.36, v = isHead ? 0.5 + r() * 0.42 : 0.1 + r() * 0.8;
-          const ry = (isHead ? 4 : 5) + r() * (isHead ? 3 : 5);
+          const ry = ((isHead ? 4 : 5) + r() * (isHead ? 3 : 5)) * (a ? a.patternSize : 1) * (c.spots === 'freckles' ? 0.4 : c.spots === 'mottled' ? 1.9 : 1);
           const rx = ry * 1.5 / Math.max(0.4, Math.sin(Math.PI * v));
           g.beginPath(); g.ellipse(u * w, v * h, rx, ry, 0, 0, TAU);
+          const strength = a ? a.patternOpacity / 0.8 : 1;
+          const custom = a && a.marking !== 'original' ? rgb(a.marking) : null;
           if (c.spots === 'ring') {
-            g.fillStyle = 'rgba(70,80,94,0.38)'; g.fill();
-            g.lineWidth = 2; g.strokeStyle = 'rgba(226,232,238,0.8)'; g.stroke();
-          } else { g.fillStyle = 'rgba(120,132,146,0.3)'; g.fill(); }
+            g.fillStyle = css(mix(c.back, [35, 40, 48], 0.5), 0.38 * strength); g.fill();
+            g.lineWidth = 2 * (a ? a.patternSize : 1); g.strokeStyle = css(custom || [226, 232, 238], Math.min(1, 0.8 * strength)); g.stroke();
+          } else { g.fillStyle = css(custom || [120, 132, 146], Math.min(1, (custom ? 0.6 : 0.3) * strength)); g.fill(); }
         }
       }
       if (isHead) {                              // a paler face at the front
@@ -85,8 +98,10 @@
     if (input !== geo) input.dispose(); geo.dispose();
     return out;
   }
-  function fitNeckwear(source, stage, id) {
-    const c = COAT[stage], bodyZ = 1.05 - 1.2 * c.body;
+  function fitNeckwear(source, stage, id, appearance) {
+    const a = PN.Appearance.normalize(appearance), width = a.bodyWidth;
+    const c = Object.assign({}, COAT[stage]); c.body *= a.bodyLength; c.head *= a.headSize;
+    const bodyZ = 1.05 - 1.2 * c.body;
     const fitted = new T.Group();
     const drapes = /^(scarf_|huivi$|solmuke$|solmio$|mitali$|bell$)/.test(id);
     source.updateMatrixWorld(true);
@@ -109,7 +124,7 @@
         const pz = 0.60 - 0.45 * c.head * sy + depth * 0.7 - thickness * 0.6 * sy;
         // Convert the neck position into the body's local coordinates so it
         // follows body motion without inheriting the head's independent turns.
-        p.setXYZ(i, px, Math.max(0.035, py) - 0.46, (pz - bodyZ) / c.body);
+        p.setXYZ(i, px / width, (Math.max(0.035, py + 0.46 * (width - 1)) - 0.46 * width) / width, (pz - bodyZ) / c.body);
       }
       geo.computeVertexNormals(); geo.computeBoundingSphere();
       const m = new T.Mesh(geo, mesh.material); m.castShadow = true;
@@ -172,6 +187,7 @@
       body: bodyGeometry(), head: headGeometry(),
       eye: new T.SphereGeometry(0.108, 22, 16),
       eyeMat: new T.MeshStandardMaterial({ color: 0x1a1210, roughness: 0.06 }),
+      pupilMat: new T.MeshStandardMaterial({ color: 0x100e12, roughness: 0.1 }),
       white: new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }),
       dark: new T.MeshStandardMaterial({ color: 0x2a1f1c, roughness: 0.5 }),
       line: new T.MeshBasicMaterial({ color: 0x33261f }),
@@ -200,6 +216,16 @@
     return S.coats[stage];
   }
 
+  function appearanceCoat(stage, a) {
+    const c = coatColors(stage, a), base = coat(stage);
+    const body = base.body.clone(), head = base.head.clone();
+    body.map = coatTexture(stage, false, a); head.map = coatTexture(stage, true, a);
+    const pad = base.pad.clone(), flip = base.flip.clone();
+    if (a.belly !== 'original' || a.coat !== 'original') pad.color.setRGB(...c.face.map((v) => v / 255), T.SRGBColorSpace);
+    if (a.coat !== 'original') flip.color.setRGB(...mix(c.back, [0, 0, 0], 0.09).map((v) => v / 255), T.SRGBColorSpace);
+    return { body, head, pad, flip };
+  }
+
   class Seal {
     constructor(opts) {
       opts = opts || {};
@@ -207,6 +233,7 @@
       this.isPup = !!opts.pup;
       this.seed = Math.random() * 100;
       this.stage = -1;
+      this.appearance = PN.Appearance.normalize(opts.appearance);
       this.g = new T.Group();                  // place and heading
       this.sq = new T.Group();                 // squash, stretch, lean; pivots at the ground
       this.g.add(this.sq);
@@ -252,9 +279,10 @@
         const h1 = U.ball(0.035, S.white, -0.036, 0.048, 0.056, 1, 1, 0.5, 10);
         const h2 = U.ball(0.017, S.white, 0.042, -0.034, 0.06, 1, 1, 0.5, 8);
         const arc = new T.Mesh(S.arc, S.line); arc.position.z = 0.045; arc.visible = false;
-        e.add(ball, h1, h2, arc);
+        const pupil = U.ball(0.054, S.pupilMat, 0, 0, 0.063, 1, 1.1, 0.18, 16);
+        e.add(ball, pupil, h1, h2, arc);
         this.headP.add(e);
-        this.eyes.push({ g: e, ball, h1, h2, arc });
+        this.eyes.push({ g: e, ball, pupil, h1, h2, arc });
       });
 
       // muzzle: two pads, a nose, a little mouth, whiskers
@@ -276,9 +304,10 @@
           this.muzzle.add(U.ball(0.011, S.dark, pad.position.x + s * (0.02 + i * 0.035), pad.position.y + 0.02 - (i % 2) * 0.045, pad.position.z + 0.098 - i * 0.012));
         }
       });
-      const nose = U.ball(0.062, S.dark, 0, 0, 0, 1.25, 0.8, 0.7, 14);
+      const nose = this.nose = U.ball(0.062, S.dark, 0, 0, 0, 1.25, 0.8, 0.7, 14);
       nose.position.copy(onHead(0, -0.13, 1.04));
-      this.muzzle.add(nose, U.ball(0.014, S.white, nose.position.x - 0.02, nose.position.y + 0.02, nose.position.z + 0.036));
+      this.noseShine = U.ball(0.014, S.white, nose.position.x - 0.02, nose.position.y + 0.02, nose.position.z + 0.036);
+      this.muzzle.add(nose, this.noseShine);
       this.mouth = new T.Group();
       this.mouth.position.copy(onHead(0, -0.46, 1.0));
       [-1, 1].forEach((s) => { const a = new T.Mesh(S.smile, S.line); a.rotation.z = Math.PI; a.position.x = s * 0.04; this.mouth.add(a); });
@@ -305,11 +334,13 @@
       this.headP.add(this.tear);
 
       // dirt patches
+      this.dirtG = new T.Group(); this.body.add(this.dirtG);
+      this.dirtG.position.set(0, -0.46, 0.15);
       this.dirtMat = new T.MeshBasicMaterial({ color: 0x6b5138, transparent: true, opacity: 0, depthWrite: false });
       [[0.5, 0.86, 0.2, 0.22], [-0.42, 0.95, -0.25, 0.26], [0.2, 1.0, -0.6, 0.2], [-0.62, 0.62, 0.3, 0.18], [0.6, 0.6, -0.5, 0.2]].forEach((d) => {
         const m = U.ball(d[3], this.dirtMat, d[0], d[1], d[2], 1, 0.35, 1, 10);
         m.lookAt(0, 0.4, d[2]); m.rotateX(Math.PI / 2); m.renderOrder = 2;
-        this.sq.add(m);
+        this.dirtG.add(m);
       });
 
       // where things attach
@@ -334,32 +365,73 @@
       this.hit = [this.body, this.head];
       this.body.userData.seal = this; this.head.userData.seal = this;
       this.cosy = false; this.blanket = null; this.blanketK = 0;     // cosy: she has a snuggle blanket to sleep under
+      this.eyeMaterial = S.eyeMat.clone(); this.noseMaterial = S.dark.clone();
+      this.eyes.forEach((e) => { e.ball.material = this.eyeMaterial; }); this.nose.material = this.noseMaterial;
       this.setStage(opts.stage || 0);
+      const sharedResources = new Set(Object.values(S));
+      Object.values(S.coats).forEach((c) => Object.values(c).forEach((v) => sharedResources.add(v)));
+      this.ownedGeometry = new Set(); this.ownedMaterial = new Set();
+      this.g.traverse((m) => {
+        if (m.geometry && !sharedResources.has(m.geometry)) this.ownedGeometry.add(m.geometry);
+        if (m.material && !sharedResources.has(m.material) && !Object.values(this.appearanceMats).includes(m.material)) this.ownedMaterial.add(m.material);
+      });
     }
 
     setStage(stage) {
       if (stage === this.stage) return;
-      this.stage = stage;
-      const c = COAT[stage], m = coat(stage), k = c.body;
-      this.body.material = m.body; this.head.material = m.head;
-      this.pads.forEach((p) => { p.material = m.pad; });
-      [this.tailL, this.tailR, this.flipL.children[0], this.flipR.children[0]].forEach((f) => { f.material = m.flip; f.castShadow = true; });
-      this.body.scale.set(1, 1, k);
-      this.body.position.set(0, 0.46, 1.05 - 1.2 * k);
+      this.stage = stage; this.setAppearance(this.appearance, true);
+    }
+    setAppearance(input, force) {
+      const a = PN.Appearance.normalize(input);
+      if (!force && PN.Appearance.equal(a, this.appearance)) return;
+      const old = this.appearance;
+      this.appearance = a;
+      const c = COAT[this.stage], k = c.body * a.bodyLength, width = a.bodyWidth;
+      const texKey = JSON.stringify([this.stage, a.coat, a.belly, a.marking, a.pattern, a.patternSize, a.patternOpacity, a.seed]);
+      if (this.texKey !== texKey) {
+        this.releaseAppearance();
+        this.texKey = texKey; this.appearanceMats = appearanceCoat(this.stage, a);
+        const m = this.appearanceMats;
+        this.body.material = m.body; this.head.material = m.head;
+        this.pads.forEach((p) => { p.material = m.pad; });
+        [this.tailL, this.tailR, this.flipL.children[0], this.flipR.children[0]].forEach((f) => { f.material = m.flip; f.castShadow = true; });
+      }
+      this.eyeMaterial.color.set(PN.Appearance.colors[a.eye][2]);
+      this.noseMaterial.color.set(PN.Appearance.colors[a.nose][2]);
+      this.nose.scale.set(1.25 * a.noseSize, 0.8 * a.noseSize, 0.7 * a.noseSize);
+      this.noseShine.position.copy(this.nose.position).add(new T.Vector3(-0.02, 0.02, 0.036).multiplyScalar(a.noseSize));
+      this.body.scale.set(width, width, k);
+      this.body.position.set(0, 0.46 * width, 1.05 - 1.2 * k);
       this.tailG.position.set(0, 0.17, 1.05 - 2.4 * k + 0.12);
-      this.headP.scale.setScalar(c.head);
-      // Growth changes the neck proportions, so refit from the original item.
-      if (this.wornId.neck) {
+      this.headP.scale.setScalar(c.head * a.headSize);
+      this.headHeight = 0.78 + 0.46 * (width - 1);
+      this.headP.position.y = this.headHeight;
+      this.flipL.position.x = 0.66 * width; this.flipR.position.x = -0.66 * width;
+      if (this.wornId.neck && (force || old.headSize !== a.headSize || old.bodyWidth !== width || old.bodyLength !== a.bodyLength)) {
         const id = this.wornId.neck; this.wornId.neck = null; this.setWear('neck', id);
       }
-      this.backA.position.set(0, 1.062, 1.05 - 1.44 * k); this.backA.scale.setScalar(0.5 + 0.5 * k);
-      this.eyes.forEach((e) => e.g.scale.setScalar(c.eye));
+      this.backA.position.set(0, 1.062 * width, 1.05 - 1.44 * k); this.backA.scale.setScalar((0.5 + 0.5 * k) * width);
+      this.eyes.forEach((e, i) => {
+        const yaw = (i ? 1 : -1) * 0.42 * a.eyeSpacing;
+        aim(e.g, yaw, 0.07); e.g.position.copy(onHead(yaw, 0.07, 0.93));
+        e.g.scale.setScalar(c.eye * a.eyeSize);
+      });
       this.baseScale = this.isPup ? 0.4 : c.scale;
-      this.shadow.scale.set(2.3, 1.2 + 2.2 * k, 1);
+      this.shadow.scale.set(2.3 * width, 1.2 + 2.2 * k, 1);
       this.applyScale();
-      if (this.blanket) this.makeBlanket();
     }
-    applyScale() { this.g.scale.setScalar(this.baseScale * this.grow); }
+    releaseAppearance() {
+      if (!this.appearanceMats) return;
+      Object.values(this.appearanceMats).forEach((m) => { if (m.map) U.releaseTex(m.map); m.dispose(); });
+      this.appearanceMats = null;
+    }
+    dispose() {
+      this.releaseAppearance();
+      this.ownedGeometry.forEach((g) => g.dispose()); this.ownedMaterial.forEach((m) => m.dispose());
+      Object.values(this.worn).forEach((o) => { if (o) o.traverse((m) => { if (m.geometry) m.geometry.dispose(); }); });
+      if (this.blanket) this.blanket.traverse((m) => { if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); });
+    }
+    applyScale() { this.g.scale.setScalar(this.size); }
     makeBlanket() {
       if (this.blanket) {
         const old = this.blanket; old.parent.remove(old);
@@ -372,18 +444,18 @@
       this.body.add(m);
       this.blanket = m;
     }
-    get size() { return this.baseScale * this.grow; }
+    get size() { return this.baseScale * this.grow * this.appearance.size; }
 
     setWear(slot, id) {
       if (this.wornId[slot] === id) return;
       if (this.worn[slot]) {
         const old = this.worn[slot]; old.parent.remove(old);
-        if (slot === 'neck') old.traverse((m) => { if (m.isMesh) m.geometry.dispose(); });
+        old.traverse((m) => { if (m.isMesh) m.geometry.dispose(); });
       }
       this.worn[slot] = null; this.wornId[slot] = id;
       if (!id) return;
       const source = PN.Props.wear(id);
-      const o = U.shadows(slot === 'neck' ? fitNeckwear(source, this.stage, id) : source, true, false);
+      const o = U.shadows(slot === 'neck' ? fitNeckwear(source, this.stage, id, this.appearance) : source, true, false);
       (slot === 'neck' ? this.neckA : slot === 'back' ? this.backA : this.headP).add(o);
       this.worn[slot] = o;
     }
@@ -540,12 +612,13 @@
       this.sq.rotation.set(-p.bPitch, 0, p.bRoll);
       this.headP.rotation.set(-p.pitch, p.yaw, p.roll);
       // A collar supports the chin: do not sink the sleeping head through it.
-      this.headP.position.y = 0.78 - (this.worn.neck ? p.drop * 0.1 : p.drop);
+      this.headP.position.y = this.headHeight - (this.worn.neck ? p.drop * 0.1 : p.drop);
       this.shadow.material.opacity = 0.55 * U.clamp(1 - p.lift * 1.6, 0.25, 1);
 
       this.eyes.forEach((E) => {
         const open = p.eye;
-        E.ball.visible = open > 0.12;
+        E.ball.visible = E.pupil.visible = open > 0.12;
+        E.pupil.scale.set(wide, Math.max(0.12, open) * 1.1 * wide, 0.18);
         E.ball.scale.set(wide, Math.max(0.12, open) * 1.1 * wide, 0.62);
         E.h1.visible = E.h2.visible = open > 0.45;
         E.arc.visible = open <= 0.12;

@@ -58,7 +58,7 @@
     if (Q.get('t')) W.debugDate = new Date(Q.get('t'));
     applySettings();
 
-    seal = G.seal = new PN.Seal({ stage: state.stage });
+    seal = G.seal = new PN.Seal({ stage: state.stage, appearance: state.appearance });
     W.scene.add(seal.g); W.pickables.push(seal.g);
     W.fitHome(seal.size);
     const d = W.DEN;
@@ -93,6 +93,7 @@
   /* Make the seal and the shore match the save. */
   function syncLook() {
     seal.setStage(state.stage);
+    seal.setAppearance(state.appearance);
     seal.cosy = !!state.placed.peitto;
     W.fitHome(seal.size);
     ['head', 'neck', 'face', 'back'].forEach((slot) => seal.setWear(slot, state.wearing[slot]));
@@ -104,6 +105,13 @@
     W.syncPoops(state.poops);
     poopN = state.poops.length;
   }
+  G.refreshAppearance = function () {
+    seal.setAppearance(state.appearance);
+    W.fitHome(seal.size);
+    state.pups.forEach((p) => { if (pups[p.id]) pups[p.id].setAppearance(p.appearance); });
+    state.family.forEach((p, i) => { if (visitors[i]) visitors[i].setAppearance(p.appearance); });
+    save(); UI.refresh();
+  };
   function syncDirt() { seal.setDirt(U.smooth(72, 12, state.stats.clean)); }
 
   async function begin(isNew, sum) {
@@ -226,7 +234,7 @@
     W.cam.focus.set(p.x, W.groundY(p.x, p.z), p.z);
     W.cam.size = U.damp(W.cam.size, seal.size, 3, dt);
     W.update(dt, t);
-    W.render();
+    if (!PN.Clinic.active) W.render();
     hud(dt);
     window.__frames = (window.__frames || 0) + 1;
   }
@@ -457,7 +465,7 @@
     state.pups.forEach((p, i) => {
       have[p.id] = 1;
       if (pups[p.id]) return;
-      const ps = pups[p.id] = new PN.Seal({ pup: true, stage: 0 });
+      const ps = pups[p.id] = new PN.Seal({ pup: true, stage: 0, appearance: p.appearance });
       Object.keys(p.wear || {}).forEach((slot) => ps.setWear(slot, p.wear[slot]));
       const s = pupSlot(i, v3);
       ps.place(s.x, W.groundY(s.x, s.z), s.z, s.h);
@@ -472,6 +480,7 @@
     W.scene.remove(ps.g);
     const k = W.pickables.indexOf(ps.g);
     if (k >= 0) W.pickables.splice(k, 1);
+    ps.dispose();
     delete pups[id];
   }
   function pupIndexOf(ps) {
@@ -507,7 +516,7 @@
   function spawnVisitor(i, arriving) {
     const f = state.family[i];
     if (!f || visitors[i]) return;
-    const ps = visitors[i] = new PN.Seal({ pup: true, stage: 0 });
+    const ps = visitors[i] = new PN.Seal({ pup: true, stage: 0, appearance: f.appearance });
     ps.visit = i;
     Object.keys(f.wear || {}).forEach((slot) => ps.setWear(slot, f.wear[slot]));
     ps.asleep = seal.asleep;
@@ -535,6 +544,7 @@
     W.scene.remove(ps.g);
     const k = W.pickables.indexOf(ps.g);
     if (k >= 0) W.pickables.splice(k, 1);
+    ps.dispose();
     delete visitors[i];
   }
   function updateVisitors(dt) {

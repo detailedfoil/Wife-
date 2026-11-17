@@ -323,11 +323,11 @@
         const title = (x) => esc(PN.isFi() ? x.fi : x.en);
         if (!shop) {
           h = '<p class="lead">' + tr('Little shops for your seal and shore. New doors open as your friendship grows.') + '</p><div class="shop-fronts">'
-            + PN.SHOPS.map((x) => '<button class="shop-front' + (level < x.level ? ' locked' : '') + '" data-do="shopfront" data-id="' + x.id + '"><span class="shop-art" aria-hidden="true">' + x.icon + '</span><b>' + title(x) + '</b><span>' + (level < x.level ? tr('Opens at level {0}', x.level) : x.id === 'sturgeon' ? tr('Coming soon') : tr('Open for browsing')) + '</span></button>').join('') + '</div>';
+            + PN.SHOPS.map((x) => '<button class="shop-front' + (level < x.level ? ' locked' : '') + '" data-do="shopfront" data-id="' + x.id + '"><span class="shop-art" aria-hidden="true">' + x.icon + '</span><b>' + title(x) + '</b><span>' + (level < x.level ? tr('Opens at level {0}', x.level) : tr('Open for browsing')) + '</span></button>').join('') + '</div>';
         } else {
           const locked = level < shop.level;
           h = '<button class="chip-btn" data-do="shopfront">' + tr('Back to shops') + '</button><h3 class="shelf">' + shop.icon + ' ' + title(shop) + '</h3>';
-          if (shop.id === 'sturgeon') h += '<p class="lead">' + tr('A fresh look for your seal. Coming soon.') + '</p>';
+          if (shop.id === 'sturgeon') h += PN.Clinic.storefront(locked);
           if (locked) h += '<p class="lead">' + tr('Opens at level {0}', shop.level) + '</p>';
           h += '<div class="grid">' + shop.items.map((id) => {
             const it = PN.items[id], wear = it.kind === 'wear', own = st.owned[id];
@@ -377,12 +377,12 @@
       if (!st.pups.length && !st.family.length) {
         return '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
       }
-      PN.Thumbs.pups(st.pups.map((p) => p.wear).concat(st.family.map((f) => f.wear)));      // little portraits, drawn once for each outfit
+      PN.Thumbs.pups(st.pups.concat(st.family));      // little portraits, drawn once for each outfit
       const face = (w) => PN.Thumbs.pup(w);
       h += '<div class="rows">';
       st.pups.forEach((p) => {
         const left = Math.max(0, S.T.pupGrow - p.grownMs);
-        h += row({ icon: 'seal', img: face(p.wear), tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
+        h += row({ icon: 'seal', img: face(p), tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
           : p.food < 20 ? tr('Hungry. Pups feed from their mother, so keep {0} well fed.', esc(st.name)) : tr('Growing well. About {0} of good care to go.', mins(left).replace(/ \d+ min$/, '')),
           side: tr('born {0}', day(p.bornAt)) });
       });
@@ -396,7 +396,7 @@
               : wait > 0 ? tr('Grew up and swims the lake. Can be called again in {0}.', mins(wait))
                 : tr('Grew up and swims the lake. Tap to call {0} home.', esc(f.name));
         }
-        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f.wear), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name), text,
+        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name), text,
           side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)), act: f.fate === 'grown' ? 'callpup' : '', id: i });
       });
       return h + '</div><p class="note">' + tr('Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.') + '</p>';
@@ -462,6 +462,7 @@
       UI.renderSheet();
       $('sheetBody').scrollTop = 0;
     }
+    else if (act === 'clinic') PN.Clinic.open();
     else if (act === 'feed') game.feed(id);
     else if (act === 'buy') game.buy(id);
     else if (act === 'wear') game.wear(id);
