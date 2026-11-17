@@ -319,7 +319,7 @@
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
         h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + eats(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), tint(it), 'buy')).join('') + '</div>';
       } else if (UI.tab === 'shops') {
-        const level = Math.max(st.maxLevel || 1, S.level(st).level), shop = PN.SHOPS.find((x) => x.id === UI.shopId);
+        const level = st.dev ? Infinity : Math.max(st.maxLevel || 1, S.level(st).level), shop = PN.SHOPS.find((x) => x.id === UI.shopId);
         const title = (x) => esc(PN.isFi() ? x.fi : x.en);
         if (!shop) {
           h = '<p class="lead">' + tr('Little shops for your seal and shore. New doors open as your friendship grows.') + '</p><div class="shop-fronts">'

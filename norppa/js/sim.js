@@ -773,7 +773,7 @@
     if (it.kind === 'wear' && !outfit) return no('none');
     if ((it.kind === 'wear' && outfit.owned[id]) || (it.kind === 'decor' && state.owned[id])) return no('owned');
     const shop = PN.shopFor(id);
-    if (shop && Math.max(state.maxLevel || 1, level(state).level) < shop.level) return no('locked');
+    if (!state.dev && shop && Math.max(state.maxLevel || 1, level(state).level) < shop.level) return no('locked');
     const cost = price(state, it.price);
     if (state.coins < cost) return no('coins');
     state.coins -= cost;

@@ -105,14 +105,15 @@
     return { next, lines, total: lines.reduce((n, l) => n + l.cost, 0), changed: lines.length > 0, restoring };
   };
   A.purchase = function (state, id, input, now) {
-    if (Math.max(state.maxLevel || 1, PN.Sim.level(state).level) < 30) return { ok: false, why: 'locked' };
+    if (!state.dev && Math.max(state.maxLevel || 1, PN.Sim.level(state).level) < 30) return { ok: false, why: 'locked' };
     const target = A.target(state, id, now);
     if (!target) return { ok: false, why: 'away' };
     const q = A.quote(target, input);
     if (!q.changed) return { ok: false, why: 'unchanged' };
-    if (!Number.isFinite(state.coins) || state.coins < q.total) return { ok: false, why: 'coins' };
-    state.coins -= q.total;
+    if (!state.dev && (!Number.isFinite(state.coins) || state.coins < q.total)) return { ok: false, why: 'coins' };
+    const cost = state.dev ? 0 : q.total;
+    state.coins -= cost;
     target.appearance = q.next; // birthAppearance is never touched by surgery.
-    return { ok: true, cost: q.total };
+    return { ok: true, cost };
   };
 })(window.PN = window.PN || {});

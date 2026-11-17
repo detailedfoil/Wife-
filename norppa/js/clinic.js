@@ -24,7 +24,7 @@
     'The mark shows your natural proportions.': 'Merkki näyttää luontaisen mittasuhteesi.',
     'Make me fabulous': 'Tee minusta upea', 'Restore natural look': 'Palauta luontainen ulkonäkö',
     'Reset preview': 'Nollaa esikatselu', 'Preview natural look': 'Kokeile luontaista ulkonäköä',
-    'Free': 'Ilmainen', 'Your makeover': 'Muodonmuutoksesi', 'No changes yet': 'Ei vielä muutoksia',
+    'Free': 'Ilmainen', 'Developer mode: free': 'Kehittäjätila: ilmainen', 'Your makeover': 'Muodonmuutoksesi', 'No changes yet': 'Ei vielä muutoksia',
     'Total': 'Yhteensä', 'You have {0} coins': 'Sinulla on {0} kolikkoa', 'Need {0} more coins': 'Tarvitset vielä {0} kolikkoa',
     'Looking fabulous!': 'Näytät upealta!', 'Your natural look is back.': 'Luontainen ulkonäkösi on palautettu.',
     'This seal has gone home. Choose another seal.': 'Tämä norppa lähti kotiin. Valitse toinen norppa.',
@@ -38,7 +38,7 @@
 
   C.open = function () {
     const game = PN.Game, state = game.state;
-    if (C.active || Math.max(state.maxLevel || 1, PN.Sim.level(state).level) < 30) return;
+    if (C.active || (!state.dev && Math.max(state.maxLevel || 1, PN.Sim.level(state).level) < 30)) return;
     C.active = true;
     const oldBusy = game.busy; game.busy = true;
     const focusBefore = document.activeElement, inert = Array.from(document.body.children).filter((el) => !['SCRIPT', 'STYLE'].includes(el.tagName)).map((el) => [el, el.inert]);
@@ -81,8 +81,8 @@
       $('.clinic-bill').innerHTML = '<details><summary><span>' + tr('Your makeover') + ' <b>' + num(q.total) + ' ' + tr('coins') + '</b></span><span>' + tr('You have {0} coins', num(Math.floor(state.coins))) + '</span></summary><div class="clinic-receipt">'
         + (q.lines.length ? q.lines.map((l) => '<div><span>' + tr(l.label) + '</span><b>' + (l.cost ? num(l.cost) : tr('Free')) + '</b></div>').join('') : tr('No changes yet')) + '</div></details>';
       const buy = $('[data-c="buy"]');
-      buy.disabled = !ready || !q.changed || q.total > state.coins || !available;
-      buy.textContent = !available ? tr('Choose seal') : !q.changed ? tr('No changes yet') : q.total > state.coins ? tr('Need {0} more coins', num(Math.ceil(q.total - state.coins))) : tr(q.restoring ? 'Restore natural look' : 'Make me fabulous') + ' · ' + num(q.total);
+      buy.disabled = !ready || !q.changed || (!state.dev && q.total > state.coins) || !available;
+      buy.textContent = !available ? tr('Choose seal') : !q.changed ? tr('No changes yet') : !state.dev && q.total > state.coins ? tr('Need {0} more coins', num(Math.ceil(q.total - state.coins))) : tr(q.restoring ? 'Restore natural look' : 'Make me fabulous') + ' · ' + num(q.total) + (state.dev ? ' · ' + tr('Developer mode: free') : '');
     }
     function swatches(key, title, note) {
       return '<fieldset><legend>' + tr(title) + '</legend><div class="clinic-swatches">' + A.palettes[key].map((v) => '<button class="clinic-swatch' + (A.special(v) ? ' special' : '') + '" data-field="' + key + '" data-value="' + v + '" aria-pressed="' + (draft[key] === v) + '" title="' + esc(label(A.colors[v])) + '"><i style="--swatch:' + A.colors[v][2] + '" aria-hidden="true"></i><span>' + esc(label(A.colors[v])) + '</span>' + (A.special(v) ? '<small aria-hidden="true">✦</small>' : '') + '</button>').join('') + '</div>' + (note ? '<p class="clinic-hint">' + tr(note) + '</p>' : '') + '</fieldset>';
