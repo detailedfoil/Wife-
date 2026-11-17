@@ -6,6 +6,11 @@
   'use strict';
 
   const FI = {
+    'Hold the ladle to pour water': 'Pidä kauhaa painettuna kaataaksesi vettä',
+    'Hold the ladle to pour water. Keep the needle in the green.': 'Pidä kauhaa painettuna kaataaksesi vettä. Pidä viisari vihreällä alueella.',
+    'Press and hold the ladle': 'Pidä kauhaa painettuna',
+    'to pour water on the stones. Release to stop pouring.': 'kaataaksesi vettä kiville. Lopeta kaataminen vapauttamalla kauha.',
+
 "Shops":"Kaupat",
 "Wardrobe":"Vaatekaappi",
 "Little shops for your seal and shore. New doors open as your friendship grows.":"Pieniä puoteja norpallesi ja rannalle. Uudet ovet avautuvat ystävyytenne kasvaessa.",

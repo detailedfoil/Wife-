@@ -1045,6 +1045,8 @@
      Hold to throw water on the stones and the green band rises; let go and it sinks. Keep the needle in the green
      to fill the calm meter. Fill it and the round is won, then the next one is harder. Let it run dry and it is over. */
   const sauna = (() => {
+    let ladle, water, stream, pour = 0;
+    const stoveX = -0.95, lip = new T.Vector3(), target = new T.Vector3(stoveX, 0.03, 1.0), up = new T.Vector3(0, 1, 0), delta = new T.Vector3();
     let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null, padEl = null;
     let goal = 7, lvl = 0, band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
     function build() {
@@ -1056,13 +1058,28 @@
       sc.add(U.box(9, 0.2, 6, dark, 0, -1.05, 0.6));
       sc.add(U.box(5.2, 0.16, 1.5, wood, -0.4, -0.08, -0.85));            // the bench she sits on
       sc.add(U.box(5.2, 0.14, 0.9, wood, -0.4, -0.6, 0.25));              // the step below it
-      sc.add(U.box(1.0, 0.95, 0.9, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), 0.62, -0.62, 1.0));   // the stove
+      sc.add(U.box(1.0, 0.95, 0.9, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), stoveX, -0.62, 1.0));   // the stove
       stones = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
-      for (let i = 0; i < 9; i++) sc.add(U.ball(0.17 + rnd() * 0.06, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stones, 0.62 + rs(0.3), -0.1 + rnd() * 0.08, 1.0 + rs(0.26), 1, 0.8, 1, 8, 6));
-      const lamp = new T.PointLight(0xffa85a, 6, 9); lamp.position.set(0.62, 0.5, 1.7); sc.add(lamp);
+      for (let i = 0; i < 9; i++) sc.add(U.ball(0.17 + rnd() * 0.06, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stones, stoveX + rs(0.3), -0.1 + rnd() * 0.08, 1.0 + rs(0.26), 1, 0.8, 1, 8, 6));
+      const lamp = new T.PointLight(0xffa85a, 6, 9); lamp.position.set(stoveX, 0.5, 1.7); sc.add(lamp);
       steam = Puffs(sc, 50, 0xffffff, 0.5);
+      // Pivot at the bowl: the long wooden handle tips as water runs over its left lip.
+      ladle = new T.Group(); ladle.position.set(stoveX + 0.3, 1.0, 1.25);
+      const ladleWood = U.mat(0xc7945b, { roughness: 0.8 });
+      ladle.add(U.mesh(new T.SphereGeometry(0.19, 24, 12, 0, PI * 2, PI / 2, PI / 2), ladleWood, 0, 0, 0));
+      const rim = U.torus(0.19, 0.025, ladleWood, 0, 0, 0, PI * 2, 24); rim.rotation.x = PI / 2; ladle.add(rim);
+      ladle.add(U.rod([0.15, -0.03, 0], [0.78, 0.22, 0], 0.035, ladleWood, 16));
+      water = U.cyl(0.155, 0.155, 0.012, U.mat(0x8ed9f5, { transparent: true, opacity: 0.85 }), 0, -0.035, 0, 24); ladle.add(water); sc.add(ladle);
+      stream = U.cyl(0.018, 0.025, 1, U.mat(0x9cdef7, { transparent: true, opacity: 0.8 }), 0, 0, 0, 12); stream.visible = false; sc.add(stream);
+
       view.camera.position.set(0, 0.9, 5.6);
       el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm'); padEl = document.getElementById('saunaPad');
+      padEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); padEl.setPointerCapture(e.pointerId); if (live) hold = true; });
+      const release = () => { hold = false; };
+      padEl.addEventListener('pointerup', release); padEl.addEventListener('pointercancel', release); padEl.addEventListener('lostpointercapture', release);
+      padEl.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (live) hold = true; } });
+      padEl.addEventListener('keyup', release); padEl.addEventListener('blur', release); window.addEventListener('blur', release);
+
     }
     function newRound() {
       lvl = round * 2 / 7;                       // a gentle increase across the whole visit
@@ -1076,7 +1093,7 @@
       zoneEl.classList.toggle('out', !(pin >= band && pin <= band + size));
     }
     return {
-      label: 'Rounds', hint: 'Hold anywhere to throw water. Keep the needle in the green.',
+      label: 'Rounds', hint: 'Hold the ladle to pour water. Keep the needle in the green.',
       view: () => view,
       start() {
         if (!view) build();
@@ -1084,14 +1101,14 @@
         actor.g.position.set(-0.5, 0, -0.75);
         face(0.25);
         goal = (PN.Games.opts && PN.Games.opts.need) || 7;
-        round = 0; live = false; hold = false; steam.clear();
+        round = 0; live = false; hold = false; pour = 0; splash = 0; stream.visible = false; ladle.rotation.z = 0; steam.clear();
         newRound();
         el.hidden = false; padEl.hidden = false; padEl.classList.remove('on'); paint();
         document.getElementById('gScore').textContent = '0/' + goal;
       },
-      stop() { el.hidden = true; padEl.hidden = true; },
+      stop() { live = false; hold = false; stream.visible = false; el.hidden = true; padEl.hidden = true; },
       go() { live = true; },
-      pointer(type) { if (type === 'down') hold = true; else if (type === 'up') hold = false; },
+      pointer(type, x, y) { if (type === 'up') hold = false; else if (type === 'down') { const r = padEl.getBoundingClientRect(); hold = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; } },
       key() {},
       update(dt, playing) {
         clock += dt;
@@ -1100,17 +1117,27 @@
         actor.update(dt, clock, null);
         steam.update(dt, 0, 0);
         stones.emissiveIntensity = 0.6 + pin * 1.6;
+        const pressing = playing && live && rest <= 0 && (hold || K.keys() !== 0);
+        pour = U.damp(pour, pressing ? 1 : 0, 12, dt);
+        ladle.rotation.z = pour * 0.95;
+        water.visible = pour < 0.8;
+        stream.visible = pressing && pour > 0.25;
+        if (stream.visible) {
+          ladle.updateMatrixWorld(true); lip.set(-0.17, 0, 0); ladle.localToWorld(lip);
+          delta.subVectors(lip, target); stream.position.copy(lip).add(target).multiplyScalar(0.5);
+          stream.quaternion.setFromUnitVectors(up, delta.clone().normalize()); stream.scale.y = delta.length();
+          stream.scale.x = stream.scale.z = 0.85 + 0.15 * Math.sin(clock * 32);
+        }
+        padEl.classList.toggle('on', pressing);
         if (!playing || !live) return;
         if (rest > 0) { rest -= dt; if (rest <= 0) newRound(); paint(); return; }
-        const pressing = hold || K.keys() !== 0;
-        padEl.classList.toggle('on', pressing);
         // the green band: water lifts it, and it sinks back on its own, with a small bounce off the bottom
         bandV += (pressing ? 1.9 : -1.6) * dt;
         bandV = U.clamp(bandV, -0.85, 0.85);
         band += bandV * dt;
         if (band < 0) { band = 0; bandV = Math.abs(bandV) * 0.15; }
         if (band > 1 - size) { band = 1 - size; bandV = 0; }
-        if (pressing) { splash -= dt; if (splash <= 0) { splash = 0.16; steam.emit(0.62, 0.2, 1.0, 2, 0.5, 0.16, 1.3, -1.6); if (rnd() < 0.25) A.play('bubble', 0.25); } }
+        if (pressing) { splash -= dt; if (splash <= 0) { splash = 0.16; steam.emit(stoveX, 0.2, 1.0, 2, 0.5, 0.16, 1.3, -1.6); if (rnd() < 0.25) A.play('bubble', 0.25); } }
         // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
         const k = 1 + lvl * 0.12;
         hop -= dt;
@@ -1123,11 +1150,12 @@
         if (calm >= 1) {
           round++; K.score(round, true); document.getElementById('gScore').textContent = round + '/' + goal;
           A.play(round >= goal ? 'award' : 'match'); actor.gesture('happy', true);
-          steam.emit(0.62, 0.25, 1.0, 14, 1.1, 0.2, 1.6, -1.4);
-          if (round >= goal) { el.hidden = true; padEl.hidden = true; K.over(tr('Squeaky clean!')); return; }
+          steam.emit(stoveX, 0.25, 1.0, 14, 1.1, 0.2, 1.6, -1.4);
+          if (round >= goal) { live = false; hold = false; stream.visible = false; el.hidden = true; padEl.hidden = true; K.over(tr('Squeaky clean!')); return; }
           K.big(tr('Lovely!'));
           rest = 1.3;
         } else if (calm <= 0) {
+          live = false; hold = false; stream.visible = false;
           A.play('nope'); actor.gesture(pin > band ? 'shake' : 'no', true);
           el.hidden = true; padEl.hidden = true;
           K.over(tr(pin > band + size ? 'Too hot!' : 'Too cold!'));

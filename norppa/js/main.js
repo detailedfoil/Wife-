@@ -871,7 +871,7 @@
       + '<rect x="7" y="42" width="28" height="46" rx="11" fill="rgba(62,200,120,.9)" stroke="#1f9a5a" stroke-width="3"/>'
       + '<rect x="3" y="60" width="36" height="8" rx="4" fill="#17264d" stroke="#fff" stroke-width="2"/>'
       + '<rect x="47" y="3" width="12" height="124" rx="6" fill="#fff" stroke="#cfd8ec" stroke-width="2"/><rect x="47" y="68" width="12" height="59" rx="6" fill="#2fbf71"/></svg>';
-    return '<div class="how"><div class="how-hold"><span class="how-pad">' + tr('Hold') + '</span><p><b>' + tr('Press and hold anywhere') + '</b> ' + tr('on the screen to throw water on the stones. No swiping needed.') + '</p></div>'
+    return '<div class="how"><div class="how-hold"><span class="how-pad">' + tr('Hold') + '</span><p><b>' + tr('Press and hold the ladle') + '</b> ' + tr('to pour water on the stones. Release to stop pouring.') + '</p></div>'
       + '<div class="how-gauge-row">' + gauge + '<ul class="how-legend">'
       + '<li>' + tr('The <b>green bar</b> rises while you hold and sinks when you let go.') + '</li>'
       + '<li>' + tr('The dark <b>needle</b> drifts about on its own. Keep it inside the green.') + '</li>'
