@@ -302,7 +302,7 @@
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (gm.dev && !st.dev) return;                       // developer-mode games are not shown otherwise
-        if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', S.price(st, gm.price)) });
+        if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', gm.price) + (st.dev ? ' · ' + tr('Free') : '') });
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text: tr(gm.text), act: 'game', id, cls: off(can), side: can.ok ? mood(id) + (best ? '<small>' + tr('best {0}', gm.low ? PN.mmss(best) : best) + '</small>' : '') : why(can) });
       });
       h += '</div>';
@@ -314,7 +314,7 @@
     },
     shop(st) {
       let h = '';
-      const price = (it) => coinTag(S.price(st, it.price), st.coins >= S.price(st, it.price) ? 'buy' : 'cant');
+      const price = (it) => coinTag(it.price + (st.dev ? ' · ' + tr('Free') : ''), st.coins >= S.price(st, it.price) ? 'buy' : 'cant');
       if (UI.tab === 'food') {
         const list = D.FISH.filter((f) => f.price).concat(D.FOODS);
         h = '<p class="lead">' + tr('Fresh from the village. Tap to buy one.') + '</p><div class="grid">' + list.map((it) => cell(it.id, thumb(it.id) + eats(it) + price(it) + (st.pantry[it.id] ? '<span class="count">' + st.pantry[it.id] + '</span>' : ''), tint(it), 'buy')).join('') + '</div>';

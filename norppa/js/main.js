@@ -978,7 +978,7 @@
   G.unlockGame = async function (id) {
     const g = PN.GAMES[id], title = tr(g.title), cost = S.price(state, g.price);
     if (state.coins < cost) { A.play('nope'); UI.toast(tr('Not enough coins yet. Games and dives earn more.'), 'coin', 'bad'); return; }
-    const v = await UI.modal({ title, html: '<p>' + tr('Unlock {0} for {1} coins?', title, cost) + '</p>', actions: [{ label: tr('Unlock'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+    const v = await UI.modal({ title, html: '<p>' + tr('Unlock {0} for {1} coins?', title, g.price) + (state.dev ? ' · ' + tr('Free') : '') + '</p>', actions: [{ label: tr('Unlock'), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (v !== 1) return;
     const r = S.unlockGame(state, id);
     if (!r.ok) { A.play('nope'); return; }
@@ -1072,7 +1072,7 @@
         .concat(cosmeticVisitors().map(({ f, i }) => ({ id: 'family:' + i, name: f.name, owned: f.owned || {}, wear: f.wear || {} })));
       const actions = seals.map((p) => {
         const own = p.owned[id] || Object.values(p.wear).includes(id);
-        const label = own ? tr(p.wear[it.slot] === id ? 'Take off' : 'tag|Wear') : tr('Buy for {0} coins', S.price(state, it.price));
+        const label = own ? tr(p.wear[it.slot] === id ? 'Take off' : 'tag|Wear') : tr('Buy for {0} coins', it.price) + (state.dev ? ' · ' + tr('Free') : '');
         return { label: UI.esc(p.name) + ' — ' + label, value: p.id };
       });
       actions.push({ label: tr('Cancel'), value: 'cancel' });
