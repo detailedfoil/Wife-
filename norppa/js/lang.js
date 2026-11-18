@@ -8,6 +8,7 @@
   const FI = {
     /* ---------- pup skills (18 Nov 2026) ---------- */
     '{0} and {1}': '{0} ja {1}',
+    'No skill can have more than {0} points.': 'Yhdessä taidossa voi olla enintään {0} pistettä.',
     'Care: happiness drops {0}% slower while you are away (only the best Care pup in the family counts).': 'Hoiva: ilo laskee {0}\u00a0% hitaammin kun olet poissa (vain perheen paras Hoiva-kuutti lasketaan).',
     'on dives +{0}% coins and a {1}% smaller chance of coming up Angy': 'sukelluksilla +{0}\u00a0% kolikoita ja {1}\u00a0% pienempi riski nousta Angyna',
     '{0} helped on the dive: +{1}% coins and a smaller chance of coming up Angy.': '{0} auttoi sukelluksella: +{1}\u00a0% kolikoita ja pienempi riski nousta Angyna.',

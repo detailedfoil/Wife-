@@ -37,7 +37,7 @@
     // Pup levels and skill points (data.js PN.SKILLS): a pup at home earns xp from everything the family does and gets a skill point every pupXpStep xp, up to pupMaxPoints.
     // You spend them on her card and they are locked once spent. A grown pup gives pointBonus% coins per point in the games of that skill while she visits, and each Care point
     // makes happiness drop carePoint% slower while the game is closed (best Care pup only). Every pup raised adds famBonusEach% to all game coins, up to famBonusMax%.
-    famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupXpStep: 30, pointBonus: 1, carePoint: 5, diveSulkCut: 1,
+    famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupSkillMax: 6, pupXpStep: 30, pointBonus: 1, carePoint: 5, diveSulkCut: 1,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
@@ -994,6 +994,7 @@
     const p = state.pups[i];
     if (!p || PN.SKILL_ORDER.indexOf(key) < 0 || pupFree(p) < 1) return { ok: false };
     if (!p.pts) p.pts = zeroPts();
+    if ((p.pts[key] || 0) >= T.pupSkillMax) return { ok: false, full: true };   // no skill goes past pupSkillMax, so a pup is never just one thing
     p.pts[key] = (p.pts[key] || 0) + 1;
     return { ok: true, points: p.pts[key], free: pupFree(p) };
   }

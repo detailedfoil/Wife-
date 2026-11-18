@@ -709,9 +709,9 @@
     while (p && S.pupFree(p) > 0) {
       const games = (k) => k === 'care' ? tr('each point makes her happiness drop {0}% slower while you are away, visiting or not', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
       const v = await UI.modal({ layout: 'spend', title: tr('Skill points for {0}', UI.esc(p.name)),
-        html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + '</p><div class="pup-skills">' + UI.radar(p.pts, 190) + '</div>'
+        html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + ' ' + tr('No skill can have more than {0} points.', S.T.pupSkillMax) + '</p><div class="pup-skills">' + UI.radar(p.pts, 190) + '</div>'
           + '<p class="small">' + PN.SKILL_ORDER.map((k) => '<b>' + UI.skillName(k) + '</b>: ' + games(k) + '.').join('<br>') + '</p>',
-        actions: PN.SKILL_ORDER.map((k) => ({ label: UI.skillName(k) + ' (' + ((p.pts || {})[k] || 0) + ')', value: k, cls: 'ghost' })).concat([{ label: tr('Done for now'), value: 0 }]) });
+        actions: PN.SKILL_ORDER.filter((k) => ((p.pts || {})[k] || 0) < S.T.pupSkillMax).map((k) => ({ label: UI.skillName(k) + ' (' + ((p.pts || {})[k] || 0) + ')', value: k, cls: 'ghost' })).concat([{ label: tr('Done for now'), value: 0 }]) });
       if (!v) break;
       const r = S.spendPoint(state, state.pups.indexOf(p), v);
       if (!r.ok) break;
@@ -1402,7 +1402,7 @@
       grown.forEach((f) => {
         if (!f.pts) { f.pts = {}; PN.SKILL_ORDER.forEach((k) => { f.pts[k] = 0; }); }
         const total = PN.SKILL_ORDER.reduce((a, k) => a + f.pts[k], 0);
-        if (what === 'g+') { if (total < T.pupMaxPoints) f.pts[PN.SKILL_ORDER[Math.floor(Math.random() * PN.SKILL_ORDER.length)]]++; }
+        if (what === 'g+') { if (total < T.pupMaxPoints) { const open = PN.SKILL_ORDER.filter((k) => f.pts[k] < T.pupSkillMax); f.pts[open[Math.floor(Math.random() * open.length)]]++; } }
         else { const top = PN.SKILL_ORDER.slice().sort((a, b) => f.pts[b] - f.pts[a])[0]; if (f.pts[top] > 0) f.pts[top]--; }
         f.spec = S.specOf(f.pts);
       });
@@ -1413,7 +1413,7 @@
     if (what === 'spec') {
       const grown = state.family.filter((f) => f.fate === 'grown');
       if (!grown.length) { A.play('nope'); UI.toast(tr('No grown-up pups to call yet. Try Say farewell now first.'), 'bolt', 'bad', 4200); return; }
-      grown.forEach((f) => { f.pts = {}; PN.SKILL_ORDER.forEach((k) => { f.pts[k] = 0; }); for (let n = 0; n < S.T.pupMaxPoints; n++) f.pts[PN.SKILL_ORDER[Math.floor(Math.random() * PN.SKILL_ORDER.length)]]++; f.spec = S.specOf(f.pts); });
+      grown.forEach((f) => { f.pts = {}; PN.SKILL_ORDER.forEach((k) => { f.pts[k] = 0; }); for (let n = 0; n < S.T.pupMaxPoints; n++) { const open = PN.SKILL_ORDER.filter((k) => f.pts[k] < S.T.pupSkillMax); f.pts[open[Math.floor(Math.random() * open.length)]]++; } f.spec = S.specOf(f.pts); });
       A.play('sparkle'); UI.toast(grown.map((f) => UI.esc(f.name) + ': ' + UI.pointsLine(f.pts)).join('; '), 'star', '', 6000);
       UI.refresh(); UI.renderSheet(); save();
       return;
