@@ -1601,6 +1601,8 @@
 
   function onDown(e) {
     if (!started || !state.name) return;
+    // Only the primary mouse button acts like a finger. Touch and pen input still work.
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     A.unlock();
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { $('gl').setPointerCapture(e.pointerId); } catch (err) { /* fine without */ }
