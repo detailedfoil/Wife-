@@ -707,7 +707,7 @@
   async function spendPoints(i) {
     let p = state.pups[i];
     while (p && S.pupFree(p) > 0) {
-      const games = (k) => k === 'care' ? tr('each point takes {0}% off what muck costs when she visits', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', '));
+      const games = (k) => k === 'care' ? tr('each point takes {0}% off what muck costs when she visits', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
       const v = await UI.modal({ title: tr('Skill points for {0}', UI.esc(p.name)),
         html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + '</p><div class="pup-skills">' + UI.radar(p.pts) + '</div>'
           + '<p class="small">' + PN.SKILL_ORDER.map((k) => '<b>' + UI.skillName(k) + '</b>: ' + games(k) + '.').join('<br>') + '</p>',
@@ -830,6 +830,7 @@
     S.save(state); UI.refresh();
   };
 
+  const helpNote = (loot) => loot.help ? '<p class="small">' + tr('{0} helped on the dive: +{1}% coins and a smaller chance of coming up Angy.', loot.help.names.map(UI.esc).join(' ' + tr('and') + ' '), loot.help.pct) + '</p>' : '';
   const RARE = ['', 'common', 'uncommon', 'rare', 'very rare', 'legendary'];
   function showLoot(loot) {
     if (loot.kind === 'none') {
@@ -838,7 +839,7 @@
     }
     if (loot.kind === 'coins') {
       A.play('coin'); FX.coins(head(), 6);
-      return UI.modal({ title: tr('Sunken coins'), html: '<div class="bigscore">+' + loot.n + '</div><p>' + tr('{0} came up with a flipperful of coins.', plain()) + '</p>', actions: [{ label: 'Kiitos!', value: 1 }] });
+      return UI.modal({ title: tr('Sunken coins'), html: '<div class="bigscore">+' + loot.n + '</div><p>' + tr('{0} came up with a flipperful of coins.', plain()) + '</p>' + helpNote(loot), actions: [{ label: 'Kiitos!', value: 1 }] });
     }
     const it = PN.items[loot.id], rare = tr(RARE[it.rarity]);
     A.play(loot.isNew ? 'award' : 'sparkle');
@@ -847,6 +848,7 @@
       : '<b>' + UI.esc(it.en) + '</b>' + (loot.n > 1 ? ' × ' + loot.n : '') + ', ' + rare + '.';
     let html = '<p>' + what + (loot.isNew ? tr(' New for the album!') : '') + '</p><p>' + UI.esc(PN.itemNote(it)) + '</p>';
     if (loot.coins) html += '<div class="loot">' + coinChip(loot.coins) + '</div><p>' + tr('{0} found some coins too.', plain()) + '</p>';
+    html += helpNote(loot);
     return UI.modal({ art: PN.Thumbs.get(loot.id), title: UI.esc(it.fi), html, actions: [{ label: tr(loot.kind === 'fish' ? 'Into the larder' : 'Into the album'), value: 1 }] });
   }
 

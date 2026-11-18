@@ -37,7 +37,7 @@
     // Pup levels and skill points (data.js PN.SKILLS): a pup at home earns xp from everything the family does and gets a skill point every pupXpStep xp, up to pupMaxPoints.
     // You spend them on her card and they are locked once spent. A grown pup gives pointBonus% coins per point in the games of that skill while she visits, and each Care point
     // takes carePoint% off what muck costs. Every pup raised adds famBonusEach% to all game coins, up to famBonusMax%.
-    famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupXpStep: 30, pointBonus: 1, carePoint: 10,
+    famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupXpStep: 30, pointBonus: 1, carePoint: 10, diveSulkCut: 1,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
@@ -606,10 +606,10 @@
     learn(state, 'avanto');
     // Every dive that finds anything pays 20 to 150 coins, and now and then a fish or a treasure comes up with them.
     let r = rnd(state), loot;
-    const early = state.counters.dives <= 2;
+    const early = state.counters.dives <= 2, help = diveHelp(state, now);
     if (!early && r < 0.05) loot = { kind: 'none' };
     else {
-      const coins = earn(state, (20 + Math.floor(rnd(state) * 131)) / T.earnRate);
+      const coins = earn(state, (20 + Math.floor(rnd(state) * 131)) * (1 + help.pct / 100) / T.earnRate);
       let b = rnd(state);
       if (state.counters.dives === 1) b = 0.1;          // first dive: fish for certain
       else if (state.counters.dives === 2) b = 0.7;     // second dive: a first treasure
@@ -627,10 +627,11 @@
       } else loot = { kind: 'coins', n: coins, coins };
     }
     // Cold water and no say in it: now and then she comes up in a huff.
-    if (rnd(state) < T.diveSulkChance) {
+    if (rnd(state) < Math.max(0, T.diveSulkChance - help.sulkCut / 100)) {
       if (state.grudge <= 0) state.grudge = T.diveSulk;
       loot.sulked = true;
     }
+    if (help.pct > 0) loot.help = { names: help.names, pct: help.pct };
     check(state);
     return loot;
   }
@@ -1024,6 +1025,16 @@
     return out;
   }
 
+  /* Visiting grown pups help on dives with their Swimming points: +pointBonus% coins and diveSulkCut points off the chance of coming up Angy, per point. */
+  function diveHelp(state, now) {
+    let pts = 0; const names = [];
+    (state.family || []).forEach((f) => {
+      if (f.fate !== 'grown' || !f.pts || visitStatus(f, now) !== 'here' || !(f.pts.water > 0)) return;
+      pts += f.pts.water; names.push(f.name);
+    });
+    return { pts, pct: pts * T.pointBonus, sulkCut: pts * T.diveSulkCut, names };
+  }
+
   function addPup(state, now, name) {
     const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false, wear: pupLook(state) };
     p.xp = 0; p.pts = zeroPts();
@@ -1181,7 +1192,7 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
-    pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, topSkills, pupXp, familyBonus, helpers, muckCost,
+    pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, topSkills, pupXp, familyBonus, helpers, diveHelp, muckCost,
     sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
 

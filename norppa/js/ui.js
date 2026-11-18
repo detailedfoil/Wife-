@@ -677,6 +677,7 @@
       if (k === 'care') { parts.push(tr('muck costs {0}% less', n * S.T.carePoint)); return; }
       const games = PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title));
       parts.push(tr('+{0}% coins in {1}', n * S.T.pointBonus, games.length > 1 ? tr('{0} and {1}', games.slice(0, -1).join(', '), games[games.length - 1]) : games[0]));
+      if (k === 'water') parts.push(tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', n * S.T.pointBonus, n * S.T.diveSulkCut));
     });
     return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) : tr('{0} has no skill points, so she gives no visiting bonus.', name);
   };

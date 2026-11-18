@@ -8,6 +8,9 @@
   const FI = {
     /* ---------- pup skills (18 Nov 2026) ---------- */
     '{0} and {1}': '{0} ja {1}',
+    'on dives +{0}% coins and a {1}% smaller chance of coming up Angy': 'sukelluksilla +{0}\u00a0% kolikoita ja {1}\u00a0% pienempi riski nousta Angyna',
+    '{0} helped on the dive: +{1}% coins and a smaller chance of coming up Angy.': '{0} auttoi sukelluksella: +{1}\u00a0% kolikoita ja pienempi riski nousta Angyna.',
+    'per point': 'pisteeltä', 'and': 'ja',
     'Pups: one more level': 'Kuutit: yksi taso lisää', 'Every pup at home gets one more level, and so one more skill point to spend.': 'Jokainen kotona oleva kuutti saa yhden tason lisää ja siis yhden taitopisteen käytettäväksi.',
     'Pups: one level less': 'Kuutit: yksi taso vähemmän', 'Every pup at home goes down a level. If she has spent more points than her new level allows, one is taken back from her biggest skill.': 'Jokainen kotona oleva kuutti laskee tason. Jos hän on käyttänyt enemmän pisteitä kuin uusi taso sallii, yksi otetaan pois hänen suurimmasta taidostaan.',
     'Pups: top level': 'Kuutit: huipputaso', 'Every pup at home goes straight to the top level, with all her points to spend.': 'Jokainen kotona oleva kuutti nousee suoraan huipputasolle kaikki pisteet käytettävänä.',

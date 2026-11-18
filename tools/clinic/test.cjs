@@ -117,6 +117,8 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  assert.ok(Math.abs(S.gameMult(mum,null,now)-fam)<1e-9,'no game, no helpers');
  assert.ok(Math.abs(S.gameMult(mum,'catch',now)-(fam+7*T.pointBonus/100))<1e-9,'a visiting pup gives a percent per point in her skill');
  assert.ok(Math.abs(S.gameMult(mum,'bj',now)-fam)<1e-9,'and nothing in games of other skills');
+ { const run=(withPup)=>{ let coins=0,sulks=0; for(let n=0;n<600;n++){ const s=S.newState(now); s.stage=2; s.counters.dives=5; s.seed=n*7+1; s.stats.energy=100; if(withPup) s.family=[{name:'U',fate:'grown',pts:{water:10,sport:0,brain:0,care:0},arriveAt:now-1,leaveAt:now+3600e3}]; const l=S.diveResult(s,now); coins+=(l.coins||0); if(l.sulked) sulks++; if(withPup) assert.ok(l.kind==='none'||l.help.pct===10); } return {coins,sulks}; }; const a=run(false), b=run(true); assert.ok(b.coins>a.coins,'swimming points earn more on dives'); assert.ok(b.sulks<a.sulks,'and fewer Angy dives'); }
+ { const d=S.diveHelp(mum,now); assert.equal(d.pts,7,'only the visiting pup counts'); assert.equal(d.pct,7*T.pointBonus); assert.equal(d.sulkCut,7*T.diveSulkCut); assert.equal(d.names.join(),'Uimari'); }
  mum.stats.clean=0; const muddy=S.gameMult(mum,'bj',now); mum.family[1].arriveAt=0;
  assert.ok(muddy>S.gameMult(mum,'bj',now),'Care points take a share off the muck');
  mum.family[1].arriveAt=now-1;
