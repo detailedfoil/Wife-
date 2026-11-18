@@ -146,6 +146,7 @@
       await offerLook();
       await newsPupSkills();
     }
+    await statsNotice();
     await pupNews();
     await dailyGift();
     G.ready = true;
@@ -192,6 +193,18 @@
   }
 
   /* Once, for saves that already have pups: pups now have levels and skill points. */
+  /* Once per save: say plainly that anonymous play numbers are sent, and let them switch it off right there. */
+  async function statsNotice() {
+    if (state.statsSeen) return;
+    state.statsSeen = 1;
+    S.save(state);
+    if (state.dev) return;
+    const v = await UI.modal({ title: tr('Anonymous play numbers'), html: tr('<p>This is an early test, so the game sends the maker anonymous numbers: which games get played, for how long, and how far people get. No name, no account, nothing personal.</p><p>You can change this any time in Settings under Share play stats.</p>'),
+      actions: [{ label: tr('Fine by me'), value: 1 }, { label: tr('Turn it off'), value: 0 }] });
+    if (v === 0) { state.settings.stats = false; }
+    S.save(state);
+  }
+
   async function newsPupSkills() {
     if (state.pupPointsSeen) return;
     state.pupPointsSeen = 1;
