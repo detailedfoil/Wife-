@@ -120,15 +120,20 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  assert.ok(muddy>S.gameMult(mum,'bj',now),'Care points take a share off the muck');
  mum.family[1].arriveAt=now-1;
  const r=S.gameReward(mum,'catch',10,{},null,40,now,1); assert.equal(r.help.map(h=>h.name).sort().join(),'Hoiva,Uimari');
- // Old saves: pups at home keep their levels, grown pups keep what they gave before.
- const old=clone(mum); old.pups=[{id:9,name:'Vanha',bornAt:now,food:80,joy:80,sick:false,starveMs:0,grownMs:0,ready:false,lean:'sport',skill:{water:1,sport:5.5,brain:0,care:0.25}}];
+ // Old saves: pups at home start again from nothing, once; grown pups keep what they gave before.
+ const old=clone(mum); delete old.pupsFresh; old.pups=[{id:9,name:'Vanha',bornAt:now,food:80,joy:80,sick:false,starveMs:0,grownMs:T.pupGrow,ready:true,lean:'sport',skill:{water:1,sport:5.5,brain:0,care:0.25}}];
  old.family=[{name:'A',fate:'grown',spec:'brain'},{name:'B',fate:'grown',spec:'care'},{name:'C',fate:'grown',spec:'all'},{name:'D',fate:'lost'}];
  const back=S.migrate(old), q=back.pups[0];
- assert.equal(S.pupLevel(q),6,'as many levels as she had practice points'); assert.equal(S.pupFree(q),6); assert.equal(q.skill,undefined);
+ assert.equal(S.pupLevel(q),0,'a pup at home starts again at level 0'); assert.equal(S.pupFree(q),0); assert.equal(q.skill,undefined); assert.equal(q.grownMs,0,'with a fresh two days'); assert.equal(q.ready,false);
  assert.equal(J(back.family[0].pts),J({water:0,sport:0,brain:5,care:0})); assert.equal(back.family[0].spec,'brain');
  assert.equal(J(back.family[1].pts),J({water:0,sport:0,brain:0,care:5})); assert.equal(J(back.family[2].pts),J({water:2,sport:2,brain:2,care:0})); assert.equal(back.family[2].spec,'all');
  assert.equal(back.family[3].pts,undefined,'lost pups have no points');
- const again=S.migrate(clone(back)); assert.equal(J(again.family[0].pts),J(back.family[0].pts)); assert.equal(S.pupLevel(again.pups[0]),6);
+ q.xp=95; q.grownMs=1000; S.spendPoint(back,0,'water');
+ const again=S.migrate(clone(back)); assert.equal(S.pupLevel(again.pups[0]),3,'it only happens once'); assert.equal(again.pups[0].grownMs,1000); assert.equal(J(again.family[0].pts),J(back.family[0].pts));
+ // A pup already on the points version (without the one-time flag) is reset too.
+ const early=clone(back); delete early.pupsFresh; assert.equal(S.pupLevel(S.migrate(early).pups[0]),0);
+ // A brand new seal's first pup is never reset by a reload.
+ const fresh=S.newState(now); fresh.stage=2; const f1=S.addPup(fresh,now,'Uusi'); f1.xp=T.pupXpStep*2; assert.equal(S.pupLevel(S.migrate(clone(fresh)).pups[0]),2);
 }
 console.log('PASS: pup xp and levels, skill points up to 10, locked once spent, grow-up skill, capped family bonus, visiting perks scaled by points and old saves.');
 try{

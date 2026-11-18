@@ -118,7 +118,7 @@
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
       settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true, medicine: false, stats: true },   // medicine: the daily pill routine is off until it is switched on in Settings
-      tut: 0,
+      tut: 0, pupsFresh: 1,   // pupsFresh: pups at home when skill points arrived were started again, once; a new seal never needs it
     };
     PN.Appearance.born(s, s.seed);
     s.fav = ['muikku', 'kuore', 'ahven', 'sarki', 'siika'][Math.floor(rnd(s) * 5)];
@@ -129,6 +129,7 @@
   function migrate(obj) {
     const base = newState(obj && obj.createdAt ? obj.createdAt : Date.now());
     const hadProg = !!(obj && obj.pupProg !== undefined);
+    const hadFresh = !!(obj && obj.pupsFresh);
     const fill = (dst, src) => {
       Object.keys(src).forEach((k) => {
         const v = src[k];
@@ -149,7 +150,8 @@
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
-    (obj.pups || []).forEach(pupPointsMigrate);
+    (obj.pups || []).forEach((q) => pupPointsMigrate(q, !hadFresh));
+    obj.pupsFresh = 1;
     (obj.family || []).forEach((f) => { if (f.fate === 'grown') grownPointsMigrate(obj, f); });
     // One time only: pups now come at level 10, so a grown seal who is already there and has never had a pup has met someone: she is told on this load
     // and the pup arrives pupWait later.
@@ -986,13 +988,12 @@
     p.pts[key] = (p.pts[key] || 0) + 1;
     return { ok: true, points: p.pts[key], free: pupFree(p) };
   }
-  /* Old saves. Pups at home keep as many levels as they had practice points (and the points are theirs to spend); grown pups keep what they gave before:
+  /* Old saves. Pups at home start again from nothing (level 0, no points, a fresh two days); grown pups keep what they gave before:
      5 points in their skill (5% in its games, or half the muck), an all-rounder 2 in each of the three game skills (2% in every game). */
-  function pupPointsMigrate(q) {
-    if (q.pts) return;
-    const old = q.skill ? Object.keys(q.skill).reduce((a, k) => a + (q.skill[k] || 0), 0) : 0;
-    q.pts = zeroPts();
-    q.xp = Math.min(T.pupMaxPoints, Math.floor(old)) * T.pupXpStep;
+  function pupPointsMigrate(q, fresh) {
+    if (q.pts && !fresh) return;
+    q.pts = zeroPts(); q.xp = 0;
+    if (fresh) { q.grownMs = 0; q.ready = false; }   // once, whatever she had: a pup at home when points arrived starts as if she had just been born, with the full two days to earn them
     delete q.skill; delete q.lean; delete q.focus;
   }
   function grownPointsMigrate(state, f) {
