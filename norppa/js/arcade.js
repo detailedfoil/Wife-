@@ -1,5 +1,5 @@
 /* Pikku Norppa: the arcade. Nine mini-games, each on a little stage of its own.
-   Swimmy Seal: tap to swim up, slip between the ice and the kelp. Three goes, the best counts.
+   Swimmy Seal: tap to swim up, slip between the ice and the kelp. Three goes, the average counts.
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
@@ -138,11 +138,11 @@
 
   /* ================= Swimmy Seal ================= */
   const swim = (() => {
-    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 12, GOES = 3;   // three goes; the best one is what pays
+    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 12, GOES = 3;   // three goes; the average of them is what pays
     let view = null, obs = [], bubbles = null, rays = [], drift = [], used = 5;
     /* Gaps are set far enough ahead to start off the right edge, however wide the screen: a wide landscape one needs more of them. */
     const need = () => U.clamp(Math.ceil((2 * halfW + 3.2 + 5) / 3.55) + 1, 5, N);
-    let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, best = 0, wait = 0;
+    let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, scores = [0], avg = 0, wait = 0;
 
     function frond(mat, ph) {
       const root = new T.Group(), joints = [];
@@ -214,9 +214,14 @@
       bubbles.emit(sx - 0.45, y, 0.25, 3, 0.5, 0.07, 0.9, -2.6);
       actor.gesture('boop', true);
     }
+    /* What pays out is the average of the goes so far, rounded, so a lucky go can't carry it. */
+    function tally() {
+      scores[go - 1] = score;
+      avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      K.result(avg);
+    }
     function point() {
-      score++; K.shown(score);
-      if (score > best) { best = score; K.result(best); }
+      score++; K.shown(score); tally();
     }
     function die() {
       dead = true;
@@ -224,7 +229,7 @@
       actor.gesture('surprise', true);
       bubbles.emit(sx, y, 0.3, 12, 1.6, 0.09, 1.1, -2.6);
       if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; }
-      else K.over(tr(best >= 10 ? 'Wow!' : 'Bonk!'));
+      else K.over(tr(avg >= 10 ? 'Wow!' : 'Bonk!'));
     }
     /* a fresh stretch of water for the next go */
     function reset() {
@@ -235,20 +240,20 @@
       obs.forEach((o, i) => { o.g.visible = i < used; if (i < used) place(o, halfW + 3.2 + i * 3.5); });
     }
     function nextGo() {
-      go++; reset();
+      go++; reset(); scores.push(0); tally();
       K.time(go + '/' + GOES); K.shown(0); K.hint(''); K.big('');
       live = true; flap();
     }
     const tap = () => { if (dead) { if (go < GOES && wait <= 0) nextGo(); } else flap(); };
     return {
-      label: 'Gaps', label2: 'Go', hint: 'Tap to swim up. Three goes, and the best one counts.',
+      label: 'Gaps', label2: 'Go', hint: 'Tap to swim up. Three goes, and the average counts.',
       view: () => view,
       start() {
         if (!view) build();
         cast(view, 0.37, false);
         actor.g.position.set(0, -0.46, 0);
         face(PI / 2);
-        go = 1; best = 0; wait = 0;
+        go = 1; scores = [0]; avg = 0; wait = 0;
         reset();
         K.time(go + '/' + GOES);
       },
@@ -302,7 +307,7 @@
         });
         bubbles.update(dt, -dx, 0);
         if (live && !dead && rnd() < dt * 2) bubbles.emit(sx + 0.5, y + 0.1, 0.2, 1, 0.2, 0.05, 1, -2.2);
-        if (dead && go < GOES && wait > 0 && playing) { wait -= dt; if (wait <= 0) { K.hint(tr('Best so far: {0}. Tap for go {1} of {2}.', best, go + 1, GOES)); K.beat('again'); } }
+        if (dead && go < GOES && wait > 0 && playing) { wait -= dt; if (wait <= 0) { K.hint(tr('Average so far: {0}. Tap for go {1} of {2}.', avg, go + 1, GOES)); K.beat('again'); } }
         actor.update(dt, clock, null);
       },
     };

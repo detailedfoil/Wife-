@@ -38,7 +38,7 @@
     swim: {
       start: { do: 'tap', demo: 'tap', at: 'bottom', lines: ['Tap to swim up. Stop tapping and you sink.', 'Slip through the gaps between the ice and the kelp.'] },
       fish: { at: 'bottom', lines: ['Yum! A fish in a gap is a bonus point.'] },
-      again: { do: 'tap', demo: 'tap', at: 'bottom', lines: ['Bonk! You get three goes, and your best one counts.', 'Tap to start your next go.'] },
+      again: { do: 'tap', demo: 'tap', at: 'bottom', lines: ['Bonk! You get three goes, and the average counts.', 'Tap to start your next go.'] },
     },
     stack: {
       now: { do: 'tap', demo: 'tap', at: 'bottom', lines: ['Tap now to drop the scoop!', 'It is right over the tower, so it lands perfectly.'] },
