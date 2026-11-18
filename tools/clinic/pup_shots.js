@@ -15,10 +15,10 @@ const H1 = 3600e3, DAY = 864e5;
     stats: { food: 90, joy: 80, energy: 95, clean: 95 },
     settings: { sound: false, music: false, instrument: 'original', sky: 'day', haptics: false, lang: LANG },
     pups: [{ id: 6, name: 'Aino', bornAt: now - DAY, food: 80, joy: 80, sick: false, starveMs: 0, grownMs: DAY, ready: false, wear: { neck: 'scarf_blue' },
-      lean: 'water', skill: { water: 6.5, sport: 3, brain: 1, care: 1.25 } }],
+      xp: 200, pts: { water: 3, sport: 1, brain: 0, care: 0 } }],
     family: [
-      grown('Eero', 'water', { callAt: now - 2 * H1, arriveAt: now - H1, leaveAt: now + 6 * H1, paid: true }),
-      grown('Helmi', 'care'), grown('Otso', 'all'), grown('Ilona', 'brain'),
+      grown('Eero', 'water', { pts: { water: 7, sport: 0, brain: 0, care: 3 }, callAt: now - 2 * H1, arriveAt: now - H1, leaveAt: now + 6 * H1, paid: true }),
+      grown('Helmi', 'care', { pts: { water: 0, sport: 0, brain: 0, care: 10 } }), grown('Otso', 'all', { pts: { water: 4, sport: 3, brain: 3, care: 0 } }), grown('Ilona', 'brain', { pts: { water: 0, sport: 2, brain: 8, care: 0 } }),
       { name: 'Pikku', bornAt: now - 20 * DAY, endAt: now - 19 * DAY, fate: 'lost', wear: { head: 'tonttu' } },
     ],
   };
@@ -51,8 +51,14 @@ const H1 = 3600e3, DAY = 864e5;
   page.evaluate(() => PN.Game.pupInfo(0));
   await page.waitForSelector('#modal:not([hidden])'); await wait(page, 700);
   await page.screenshot({ path: OUT + 'pups_card_' + LANG + '.png' });
-  await page.evaluate(() => { const b = [...document.querySelectorAll('#modalCard button')].pop(); b.click(); });
-  await wait(page, 700);
+  await page.evaluate(() => { document.querySelector('#modalCard button').click(); });   // Spend skill points is first
+  await wait(page, 900);
+  await page.screenshot({ path: OUT + 'pups_spend_' + LANG + '.png' });
+  await page.evaluate(() => { [...document.querySelectorAll('#modalCard button')].find((b) => /Sports|Urheilu/.test(b.textContent)).click(); });
+  await wait(page, 900);
+  await page.screenshot({ path: OUT + 'pups_spend2_' + LANG + '.png' });
+  await page.evaluate(() => { [...document.querySelectorAll('#modalCard button')].pop().click(); });   // Done for now
+  await wait(page, 800);
   // 3. a game result: Fish Rain with Eero the Swimmer visiting and Aino at home learning
   page.evaluate(() => { const G = PN.Game, r = PN.Sim.gameReward(G.state, 'catch', 24, {}, null, 45, Date.now(), 1); G.endGame('catch', 24, r); });
   await page.waitForSelector('#modal:not([hidden])'); await wait(page, 900);

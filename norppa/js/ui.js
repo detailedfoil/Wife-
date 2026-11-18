@@ -136,13 +136,13 @@
       b.classList.toggle('need', !!need[b.dataset.act]);
       if (b.dataset.act === 'sleep') b.classList.toggle('on', st.asleep);
     });
-    // A Family button for as long as there is a family (pups at home, grown pups or lost ones). A dot says someone needs you: a pup ready to set off, or a grown pup here to visit.
-    const here = st.family.some((f) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here'), ready = st.pups.some((p) => p.ready), hasFam = st.pups.length + st.family.length > 0;
-    const key = (hasFam ? 'f' : '') + (here ? 'v' : '') + (ready ? 'g' : '') + '|' + st.pups.map((p) => p.name + Math.round(p.food / 4) + (p.sick ? 's' : '') + (p.ready ? 'r' : '')).join('|');
+    // A Family button for as long as there is a family (pups at home, grown pups or lost ones). A dot says someone needs you: a pup ready to set off or with skill points to spend, or a grown pup here to visit.
+    const here = st.family.some((f) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here'), ready = st.pups.some((p) => p.ready || S.pupFree(p) > 0), hasFam = st.pups.length + st.family.length > 0;
+    const key = (hasFam ? 'f' : '') + (here ? 'v' : '') + (ready ? 'g' : '') + '|' + st.pups.map((p) => p.name + Math.round(p.food / 4) + (p.sick ? 's' : '') + (p.ready ? 'r' : '') + S.pupFree(p)).join('|');
     if (key !== famKey) {
       famKey = key;
       $('family').innerHTML = (hasFam ? '<button class="fam-chip pebble" data-open="family">' + ic('heart') + '<span>' + tr('Family') + '</span>' + (here || ready ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>' : '') + st.pups.map((p, i) => '<button class="pup-chip pebble' + (p.sick || p.food < 12 ? ' bad' : '') + '" data-i="' + i + '"><span class="face"></span>' + esc(p.name)
-        + '<span class="bar"><i style="width:' + Math.max(4, p.food) + '%"></i></span></button>').join('');
+        + '<span class="bar"><i style="width:' + Math.max(4, p.food) + '%"></i></span>' + (S.pupFree(p) > 0 ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
     }
     const env = PN.World.env, cond = skyWord(env);
     const sk = cond.icon + env.temp;
@@ -253,14 +253,14 @@
       const n = grown.filter((f) => (f.spec || 'all') === k).length;
       h += line(UI.specName(k) + (k === 'all' ? '' : ' · ' + UI.skillName(k)), n);
     });
-    h += '<p class="note">' + tr('Visiting Swimmers, Sporty and Clever pups add {0}% coins in the games of their skill, All-rounders add {1}% everywhere, and Cuddlers halve what muck costs.', S.T.specBonus, S.T.allBonus) + '</p>';
+    h += '<p class="note">' + tr('Each point a grown pup has gives +{0}% coins in the games of that skill while she visits, and each Care point takes {1}% off what muck costs.', S.T.pointBonus, S.T.carePoint) + '</p>';
     h += '<div class="shelf">' + tr('Every pup') + '<span>' + tr('newest first') + '</span></div><div class="rows">';
     const one = (p, home, i) => {
-      const sk = p.skill ? PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' ' + Math.floor(p.skill[k] || 0)).join(' · ') : '';
-      const spec = home ? S.pupSpec(p) : p.spec;
-      const bits = [home ? tr('At home, born {0}', day(p.bornAt)) : tr('Grown up {0}', day(p.endAt)), sk, p.lean ? tr('Natural at {0}.', UI.skillName(p.lean)) : ''].filter(Boolean);
+      const spec = home ? (S.pupSpent(p) ? S.pupSpec(p) : null) : p.spec;
+      const bits = [home ? tr('At home, born {0}', day(p.bornAt)) : tr('Grown up {0}', day(p.endAt)), home ? tr('Level {0} of {1}', S.pupLevel(p), S.T.pupMaxPoints) : '',
+        home && S.pupFree(p) ? tr('Skill points to spend: {0}', S.pupFree(p)) : '', p.pts ? UI.pointsLine(p.pts) : ''].filter(Boolean);
       return row({ icon: 'seal', img: PN.Thumbs.pup(p), tint: home ? 'leaf' : '', cls: home ? '' : 'done', title: esc(p.name) + (spec ? ' · ' + (home ? tr('heading for {0}', UI.specName(spec)) : UI.specName(spec)) : ''),
-        text: (bits.join('. ') + '.').replace(/\.+$/, '.').replace(/\.\./g, '.') + (!home && spec ? ' ' + UI.perkText(spec, esc(p.name)) : ''), act: home ? 'pupinfo' : (p.fate === 'grown' ? 'callpup' : ''), id: i });
+        text: bits.join('. ') + '.' + (!home ? ' ' + UI.perkText(p, esc(p.name)) : ''), act: home ? 'pupinfo' : (p.fate === 'grown' ? 'callpup' : ''), id: i });
     };
     st.pups.forEach((p, i) => { h += one(p, true, i); });
     grown.map((f) => [f, st.family.indexOf(f)]).reverse().forEach(([f, i]) => { h += one(f, false, i); });
@@ -447,7 +447,7 @@
         const left = Math.max(0, S.T.pupGrow - p.grownMs);
         h += row({ icon: 'seal', img: face(p), tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: (p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
           : p.food < 20 ? tr('Hungry. Pups feed from their mother, so keep {0} well fed.', esc(st.name)) : tr('Growing well. About {0} of good care to go.', mins(left).replace(/ \d+ min$/, '')))
-          + ' ' + tr('Heading for: {0}.', UI.specName(S.pupSpec(p))),
+          + ' ' + tr('Level {0}.', S.pupLevel(p)) + (S.pupFree(p) ? ' ' + tr('Skill points to spend: {0}.', S.pupFree(p)) : '') + ' ' + tr('Heading for: {0}.', UI.headingFor(p)),
           side: tr('born {0}', day(p.bornAt)), act: 'pupinfo', id: i });
       });
       const now = Date.now();
@@ -463,7 +463,7 @@
         h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name) + (f.fate === 'grown' && f.spec ? ' · ' + UI.specName(f.spec) : ''), text,
           side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)), act: f.fate === 'grown' ? 'callpup' : '', id: i });
       });
-      return h + '</div><p class="note">' + tr('Pups learn from what the family does while they are at home: every game teaches its own skill, and cuddles and saunas teach Care. Their best skill when they grow up is what they become, and a grown pup who visits helps with it.') + '</p>'
+      return h + '</div><p class="note">' + tr('Pups earn xp from everything the family does while they are at home, and every {0} xp is a skill point, up to {1}. Spend them on the pup card. A grown pup gives +{2}% coins per point in the games of that skill when she visits, and each Care point takes {3}% off what muck costs.', S.T.pupXpStep, S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint) + '</p>'
         + '<p class="note">' + tr('Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.') + '</p>';
     },
     profile(st) {
@@ -514,8 +514,8 @@
           ['dress', 'New outfits for the pups', 'Give every pup new random things to wear, different from each other.', 'star'],
           ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
           ['heal', 'Feed and cheer the pups', 'Full tummies, full happiness, and no longer poorly.', 'fish'],
-          ['train', 'Train the pups', 'Give every pup at home 5 points in a random skill, to see how what they are heading for changes.', 'star'],
-          ['spec', 'New skills for grown pups', 'Give every grown-up pup a different random skill, to test the visit bonuses.', 'star'],
+          ['train', 'Level up the pups', 'Give every pup at home enough xp for 3 more skill points, to see the points and level-up pop-ups.', 'star'],
+          ['spec', 'New points for grown pups', 'Give every grown-up pup 10 points spread at random over the skills, to test the visit bonuses.', 'star'],
         ].map((r) => '<button class="row dev-row" data-do="devpup" data-id="' + r[0] + '"><span class="ic-wrap">' + ic(r[3]) + '</span><span class="txt"><b>' + tr(r[1]) + '</b><span class="d">' + tr(r[2]) + '</span></span></button>').join('') : '')
         + (st.dev ? '<button class="row dev-row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
         + '</div><p class="note" data-do="devtap">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + ' ' + tr('Last updated {0}.', updatedText()) + ' ' + tr('Weather data by Open-Meteo.com.').replace('Open-Meteo.com', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>') + '</p>';
@@ -663,11 +663,21 @@
   /* Pup skills: what a skill and a grown pup are called, and what a grown pup does for the family when she visits. */
   UI.skillName = (k) => tr(PN.SKILLS[k] ? PN.SKILLS[k].name : 'All-rounder');
   UI.specName = (k) => tr(PN.SKILLS[k] ? PN.SKILLS[k].spec : 'All-rounder');
-  UI.perkText = (spec, name) => {
-    if (spec === 'care') return tr('When {0} visits: muck costs half as many coins.', name);
-    if (!PN.SKILLS[spec]) return tr('When {0} visits: +{1}% coins in every game.', name, S.T.allBonus);
-    const games = PN.SKILLS[spec].games.map((g) => tr(PN.GAMES[g].title));
-    return tr('When {0} visits: +{1}% coins in {2}.', name, S.T.specBonus, games.length > 1 ? tr('{0} and {1}', games.slice(0, -1).join(', '), games[games.length - 1]) : games[0]);
+  /* What a grown pup's points do for the family while she visits. */
+  UI.perkText = (f, name) => {
+    const pts = (f && f.pts) || {}, parts = [];
+    PN.SKILL_ORDER.forEach((k) => {
+      const n = pts[k] || 0;
+      if (!n) return;
+      if (k === 'care') { parts.push(tr('muck costs {0}% less', n * S.T.carePoint)); return; }
+      const games = PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title));
+      parts.push(tr('+{0}% coins in {1}', n * S.T.pointBonus, games.length > 1 ? tr('{0} and {1}', games.slice(0, -1).join(', '), games[games.length - 1]) : games[0]));
+    });
+    return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) : tr('{0} has no skill points, so she gives no visiting bonus.', name);
   };
+  /* A pup's points as one line: Swimming 3 · Sports 0 · Brains 1 · Care 6. */
+  UI.pointsLine = (pts) => PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' ' + ((pts && pts[k]) || 0)).join(' · ');
+  /* What a pup is heading for, or a grown pup is: her one best skill, All-rounder for a tie, or nothing yet. */
+  UI.headingFor = (p) => (S.pupSpent(p) || (p && p.fate === 'grown' && p.pts) ? UI.specName(S.pupSpec(p)) : tr('no skill yet'));
 })(window.PN = window.PN || {});
 
