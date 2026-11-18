@@ -623,7 +623,8 @@
   UI.perkText = (spec, name) => {
     if (spec === 'care') return tr('When {0} visits: muck costs half as many coins.', name);
     if (!PN.SKILLS[spec]) return tr('When {0} visits: +{1}% coins in every game.', name, S.T.allBonus);
-    return tr('When {0} visits: +{1}% coins in {2}.', name, S.T.specBonus, PN.SKILLS[spec].games.map((g) => tr(PN.GAMES[g].title)).join(', '));
+    const games = PN.SKILLS[spec].games.map((g) => tr(PN.GAMES[g].title));
+    return tr('When {0} visits: +{1}% coins in {2}.', name, S.T.specBonus, games.length > 1 ? tr('{0} and {1}', games.slice(0, -1).join(', '), games[games.length - 1]) : games[0]);
   };
 })(window.PN = window.PN || {});
 

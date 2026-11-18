@@ -118,12 +118,13 @@
     UI.title.hide();
     W.setCamMode('home');
     started = true;
-    if (isNew) await intro();
+    if (isNew) { await intro(); state.pupSkillsSeen = 1; }
     else {
       UI.showHud(true); UI.refresh();
       await wait(0.8);
       await welcomeBack(sum);
       await offerLook();
+      await newsPupSkills();
     }
     await pupNews();
     await dailyGift();
@@ -168,6 +169,17 @@
     if (v === 1 && await PN.Clinic.create({ legacy: true })) { seal.gesture('happy'); A.play('chirp'); FX.hearts(head(), 3); }
     state.lookChosen = true;
     S.save(state);
+  }
+
+  /* Once, for saves that already have pups: what the pup skills update does. */
+  async function newsPupSkills() {
+    if (state.pupSkillsSeen) return;
+    state.pupSkillsSeen = 1;
+    if (!state.pups.length && !state.family.length) { S.save(state); return; }
+    const v = await UI.modal({ title: tr('New: pup skills'), html: tr('<p>Pups now learn while they are at home. Every game you play teaches them that game\'s skill, and cuddles and saunas teach Care. Their best skill is what they grow up to be.</p><p>Every pup raised adds {0}% to all game coins (up to {1}%), and a grown pup who visits helps in the games of her own skill. Pups who have already grown up have been given a skill each.</p>', S.T.famBonusEach, S.T.famBonusMax),
+      actions: [{ label: tr('See the family'), value: 1 }, { label: tr('Lovely'), value: 0 }] });
+    S.save(state);
+    if (v === 1) UI.openSheet('album', 'family');
   }
 
   /* ---------- coming back ---------- */
@@ -672,7 +684,7 @@
     const skills = '<p class="pup-skills">' + PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' <b>' + Math.floor((p.skill || {})[k] || 0) + '</b>').join(' · ') + '</p>';
     const course = (p.lean ? tr('A natural at {0}, so learns it faster.', UI.skillName(p.lean)) + ' ' : '') + tr('If {0} grew up today: <b>{1}</b>.', UI.esc(p.name), UI.specName(S.pupSpec(p)));
     const v = await UI.modal({ title: UI.esc(p.name), html: '<p>' + how + '</p><p>' + tr('Tummy <b>{0}%</b>, happiness <b>{1}%</b>.', Math.round(p.food), Math.round(p.joy)) + '</p>'
-      + skills + '<p>' + course + '</p><p class="note">' + tr('Games played while pups are at home teach them that game\'s skill. Cuddles and saunas teach Care.') + '</p>', actions: acts });
+      + skills + '<p>' + course + '</p><p class="small">' + tr('Games played while pups are at home teach them that game\'s skill. Cuddles and saunas teach Care.') + '</p>', actions: acts });
     const idx = state.pups.indexOf(p);
     if (v === 'cuddle' && idx >= 0) cuddle(idx);
     else if (v === 'go' && idx >= 0) graduate(idx);
@@ -706,7 +718,7 @@
     S.save(state); UI.refresh();
     G.busy = false;
     await UI.modal({ title: tr('{0} is all grown up', UI.esc(r.name)), html: '<p class="lead">' + tr('Skill: <b>{0}</b>', UI.specName(r.spec)) + '</p><p>' + UI.perkText(r.spec, UI.esc(r.name)) + '</p><p>'
-      + tr('Family bonus is now +{0}% coins in every game.', r.fam) + '</p><p class="note">' + tr('Call {0} home from the Family album to get the help.', UI.esc(r.name)) + '</p>', actions: [{ label: tr('Lovely'), value: 0 }] });
+      + tr('Family bonus is now +{0}% coins in every game.', r.fam) + '</p><p class="small">' + tr('Call {0} home from the Family album to get the help.', UI.esc(r.name)) + '</p>', actions: [{ label: tr('Lovely'), value: 0 }] });
   }
 
   /* ---------- the ice hole ---------- */

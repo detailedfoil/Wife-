@@ -224,6 +224,8 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .modal-card h3 { font: 600 24px/1.15 var(--display); text-wrap: balance; }
 .modal-card p { margin-top: 8px; color: var(--ink-soft); font-size: 15px; text-wrap: pretty; }
 .modal-card p b { color: var(--ink); font-weight: 800; }
+.modal-card p.small { font-size: 13.5px; }
+.modal-card .pup-skills { font-size: 14px; }
 .modal-card .art { width: 132px; height: 132px; margin: -4px auto 4px; display: block; }
 .modal-card .actions { display: flex; flex-direction: column; gap: 9px; margin: 6px -20px 0; padding: 12px 20px 20px; position: sticky; bottom: 0;
   background: linear-gradient(to bottom, rgba(246, 249, 255, 0), var(--snow) 14px); }   /* when a tall card has to scroll (a short screen), the buttons stay in reach at the bottom */
