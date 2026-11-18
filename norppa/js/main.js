@@ -600,7 +600,7 @@
     const wait = S.callWait(state, i, now);
     if (wait > 0) { await UI.modal({ title: name, html: '<p>' + tr('{0} is busy being a seal. You can call {0} again in {1}.', name, UI.mins(wait)) + '</p>', actions: close }); return; }
     if (S.visiting(state, now) >= S.T.maxVisitors) { await UI.modal({ title: name, html: '<p>' + tr('The shore is full. Two visitors at a time is the most.') + '</p>', actions: close }); return; }
-    const v = await UI.modal({ title: tr('Call {0} home?', name), html: '<p>' + (S.presentsLeft(state, now) > 0 ? tr('{0} will arrive in an hour, bring {1} coins as a present, and can stay for up to 8 hours. You can send {0} home sooner.', name, S.T.visitCoins) : tr('Two visits a day bring presents. {0} will still come and stay, but today\'s presents have been given.', name)) + '</p>',
+    const v = await UI.modal({ title: tr('Call {0} home?', name), html: (f.spec ? '<p>' + UI.perkText(f.spec, name) + '</p>' : '') + '<p>' + (S.presentsLeft(state, now) > 0 ? tr('{0} will arrive in an hour, bring {1} coins as a present, and can stay for up to 8 hours. You can send {0} home sooner.', name, S.T.visitCoins) : tr('Two visits a day bring presents. {0} will still come and stay, but today\'s presents have been given.', name)) + '</p>',
       actions: [{ label: tr('Call {0}', name), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (v !== 1) return;
     const r = S.callPup(state, i, Date.now());
@@ -614,7 +614,7 @@
     if (!f || UI.modalOpen || S.visitStatus(f, Date.now()) !== 'here') return;
     const name = UI.esc(f.name);
     A.play('tap');
-    const v = await UI.modal({ title: name, html: '<p>' + tr('{0} is visiting. {0} will head home in {1}.', name, UI.mins(f.leaveAt - Date.now())) + '</p>',
+    const v = await UI.modal({ title: name + (f.spec ? ' · ' + UI.specName(f.spec) : ''), html: '<p>' + tr('{0} is visiting. {0} will head home in {1}.', name, UI.mins(f.leaveAt - Date.now())) + '</p>' + (f.spec ? '<p>' + UI.perkText(f.spec, name) + '</p>' : ''),
       actions: [{ label: tr('Cuddle'), value: 'cuddle' }, { label: tr('Send home'), value: 'home' }, { label: tr('Close'), value: 0 }] });
     const ps = visitors[i];
     if (v === 'cuddle' && ps && !ps.leaving) {
@@ -669,7 +669,10 @@
     const acts = [{ label: tr('Cuddle'), value: 'cuddle' }];
     if (p.ready) acts.unshift({ label: tr('Wave goodbye'), value: 'go' });
     acts.push({ label: tr('Close'), value: 0 });
-    const v = await UI.modal({ title: UI.esc(p.name), html: '<p>' + how + '</p><p>' + tr('Tummy <b>{0}%</b>, happiness <b>{1}%</b>.', Math.round(p.food), Math.round(p.joy)) + '</p>', actions: acts });
+    const skills = '<p class="pup-skills">' + PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' <b>' + Math.floor((p.skill || {})[k] || 0) + '</b>').join(' · ') + '</p>';
+    const course = (p.lean ? tr('A natural at {0}, so learns it faster.', UI.skillName(p.lean)) + ' ' : '') + tr('If {0} grew up today: <b>{1}</b>.', UI.esc(p.name), UI.specName(S.pupSpec(p)));
+    const v = await UI.modal({ title: UI.esc(p.name), html: '<p>' + how + '</p><p>' + tr('Tummy <b>{0}%</b>, happiness <b>{1}%</b>.', Math.round(p.food), Math.round(p.joy)) + '</p>'
+      + skills + '<p>' + course + '</p><p class="note">' + tr('Games played while pups are at home teach them that game\'s skill. Cuddles and saunas teach Care.') + '</p>', actions: acts });
     const idx = state.pups.indexOf(p);
     if (v === 'cuddle' && idx >= 0) cuddle(idx);
     else if (v === 'go' && idx >= 0) graduate(idx);
@@ -702,6 +705,8 @@
     A.play('award');
     S.save(state); UI.refresh();
     G.busy = false;
+    await UI.modal({ title: tr('{0} is all grown up', UI.esc(r.name)), html: '<p class="lead">' + tr('Skill: <b>{0}</b>', UI.specName(r.spec)) + '</p><p>' + UI.perkText(r.spec, UI.esc(r.name)) + '</p><p>'
+      + tr('Family bonus is now +{0}% coins in every game.', r.fam) + '</p><p class="note">' + tr('Call {0} home from the Family album to get the help.', UI.esc(r.name)) + '</p>', actions: [{ label: tr('Lovely'), value: 0 }] });
   }
 
   /* ---------- the ice hole ---------- */
@@ -1036,6 +1041,9 @@
     html = '<div class="result-body"><div class="result-summary">' + html + '</div><div class="result-details">';
     // why the coins are what they are: how happy she was, and muck; then what this game did to her happiness
     if (!lost && r.happy > 0) html += '<p class="note up">' + UI.ic('heartfull') + tr('Happy seal: +{0}% coins.', r.happy) + '</p>';
+    if (!lost && r.fam > 0) html += '<p class="note up">' + UI.ic('star') + tr('Family bonus: +{0}% coins.', r.fam) + '</p>';
+    if (!lost) (r.help || []).forEach((h) => { html += '<p class="note up">' + UI.ic('seal') + (h.muck ? tr('{0} ({1}) is visiting: muck costs half.', UI.esc(h.name), UI.specName(h.spec)) : tr('{0} ({1}) is visiting: +{2}% coins.', UI.esc(h.name), UI.specName(h.spec), h.pct)) + '</p>'; });
+    if (r.learnt && r.learnt.length && r.skill) html += '<p class="note up">' + UI.ic('star') + learntNote(r.learnt, UI.skillName(r.skill)) + '</p>';
     if (r.joy > 0) html += '<p class="note up">' + UI.ic('heartup') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
     else if (r.joy < 0) html += '<p class="note down">' + UI.ic('heartdown') + tr('{0} is tired of this one: happiness −{1}.', UI.esc(state.name), -r.joy) + '</p>';
     if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';
@@ -1054,10 +1062,13 @@
     if (v === 1) G.startGame(id);
   };
 
+  const learntNote = (names, skill) => names.length > 1 ? tr('{0} and {1} learned from watching: {2}.', UI.esc(names[0]), UI.esc(names[1]), skill)   // two pups at most
+    : tr('{0} learned from watching: {1}.', UI.esc(names[0]), skill);
   async function saunaResult(r) {
     seal.gesture(r.rounds ? 'happy' : 'sad'); A.play(r.rounds ? (r.full ? 'award' : 'coin') : 'sad');
     if (r.rounds) { for (let i = 0; i < 7; i++) { v1.copy(seal.g.position); v1.y += 0.5 * seal.size; FX.steam(v1); } syncDirt(); }
     let html = '<div class="bigscore">' + r.clean + '%</div><p>' + tr('Cleanliness') + '.</p>' + (r.coins > 0 ? '<div class="loot">' + coinChip(r.coins) + '</div>' : '');
+    if (r.learnt && r.learnt.length) html += '<p class="note up">' + learntNote(r.learnt, UI.skillName('care')) + '</p>';
     html += '<p class="note ' + (r.rounds ? 'up' : 'down') + '">' + (r.full ? tr('Ahh. Warm, clean and happy.') : r.rounds ? tr('Cleaner, but not spotless. Another go will finish the job.') : tr('The heat got away before a single round. No clean this time.')) + '</p>';
     const again = !r.full && S.canSauna(state).ok;
     const v = await UI.modal({ title: tr('Löyly'), layout: 'game-result', html: '<div class="result-body"><div class="result-summary">' + html + '</div></div>', actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
@@ -1344,6 +1355,14 @@
       await birth();
       return;
     }
+    if (what === 'spec') {
+      const grown = state.family.filter((f) => f.fate === 'grown'), keys = PN.SKILL_ORDER.concat(['all']);
+      if (!grown.length) { A.play('nope'); UI.toast(tr('No grown-up pups to call yet. Try Say farewell now first.'), 'bolt', 'bad', 4200); return; }
+      grown.forEach((f) => { const at = Math.max(0, keys.indexOf(f.spec)); f.spec = keys[(at + 1 + Math.floor(Math.random() * (keys.length - 1))) % keys.length]; });
+      A.play('sparkle'); UI.toast(grown.map((f) => UI.esc(f.name) + ': ' + UI.specName(f.spec)).join(', '), 'star', '', 5200);
+      UI.refresh(); UI.renderSheet(); save();
+      return;
+    }
     if (!P.length) { A.play('nope'); UI.toast(tr('There are no pups yet.'), 'bolt', 'bad'); return; }
     if (what === 'ready') {
       P.forEach((p) => { p.grownMs = Math.max(p.grownMs, T.pupGrow); p.ready = true; p.sick = false; p.starveMs = 0; });
@@ -1364,6 +1383,9 @@
     } else if (what === 'heal') {
       P.forEach((p) => { p.food = 100; p.joy = 100; p.sick = false; p.starveMs = 0; });
       A.play('chirp');
+    } else if (what === 'train') {
+      P.forEach((p) => S.train(state, p, PN.SKILL_ORDER[Math.floor(Math.random() * PN.SKILL_ORDER.length)], 5));
+      A.play('sparkle'); UI.toast(P.map((p) => UI.esc(p.name) + ': ' + UI.specName(S.pupSpec(p))).join(', '), 'star', '', 5200);
     }
     UI.refresh(); UI.renderSheet(); save();
   };

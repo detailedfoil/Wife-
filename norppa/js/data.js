@@ -390,6 +390,18 @@
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
   PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
+  /* Pup skills (18 Nov 2026). A pup at home learns from what the family does: every game played while she is home is practice in
+     that game's skill, and cuddles and saunas are practice in Care. Her best skill when she grows up is what she becomes (Sim.pupSpec),
+     an all-rounder when her two best are close. Every pup raised adds to the family bonus on all game coins, and a grown pup who is
+     visiting helps in the games of her own skill. The numbers are in Sim.T (famBonusEach and below). */
+  PN.SKILLS = {
+    water: { icon: 'drop', tint: 'sea', name: 'Swimming', spec: 'Swimmer', games: ['catch', 'swim'] },
+    sport: { icon: 'ball', tint: 'warm', name: 'Sports', spec: 'Sporty', games: ['ball', 'stack', 'toss', 'curl', 'sled'] },
+    brain: { icon: 'star', tint: 'sky', name: 'Brains', spec: 'Clever', games: ['shuffle', 'puff', 'piano', 'coffee', 'bj'] },
+    care: { icon: 'heart', tint: 'rose', name: 'Care', spec: 'Cuddler', games: [] },   // cuddles and saunas
+  };
+  PN.SKILL_ORDER = ['water', 'sport', 'brain', 'care'];
+  PN.skillOf = (game) => PN.SKILL_ORDER.find((k) => PN.SKILLS[k].games.indexOf(game) >= 0) || null;
   const ECON = { price: 2, food: 1.25, cosmetic: 6, cosmeticFloor: 200, cosmeticCut: 0.85, earn: 2 / 3, fishFood: 0.75 };   // food: fish and food cost a quarter more; cosmeticCut: things to wear and for the shore cost 15% less
   PN.ECON = ECON;
   [FISH, FOODS].forEach((list) => list.forEach((x) => { if (x.price) x.price = Math.round(x.price * ECON.price * (x.med ? 1 : ECON.food)); }));

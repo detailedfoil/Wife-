@@ -88,6 +88,48 @@ assert.equal(A.quote(state,{...fancy,decalColor:'pink'}).lines[0].cost,2500,'twe
 for(let i=0;i<200;i++){const kid=A.natural(now+i,state.birthAppearance);for(const k of ['decal','gradient','mask','flippers','tail','finish','eyeRight','eyeStar','cheeks','freckles'])assert.equal(kid[k],A.defaults[k]);}
 console.log('PASS: creator is free and natural-only, the free choice is once, clinic extras are priced and never inherited.');
 console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid restoration, 2,000 natural births, inheritance, family transitions, legacy migration and save/import round trip.');
+// Pup skills: practice, natural lean, what a pup becomes, the family bonus, visiting helpers and old saves.
+{
+ const T=S.T, mum=S.newState(now); mum.stage=2; mum.name='Emo'; mum.stats.joy=55; mum.stats.clean=100;
+ assert.ok(ctx.PN.SKILL_ORDER.includes(mum.lean),'every seal is a natural at something');
+ ctx.PN.GAME_ORDER.forEach(g=>assert.ok(ctx.PN.skillOf(g),'every coin game teaches a skill: '+g));
+ const pup=S.addPup(mum,now,'Aino');
+ assert.equal(pup.skill[pup.lean],T.leanStart);
+ assert.equal(S.pupSpec(pup),pup.lean,'an untrained pup grows up a natural');
+ const other=ctx.PN.SKILL_ORDER.find(k=>k!==pup.lean&&k!=='care'), game=ctx.PN.SKILLS[other].games[0];
+ const r=S.gameReward(mum,game,10,{},null,40,now,1);
+ assert.deepEqual([...r.learnt],['Aino']); assert.equal(r.skill,other); assert.equal(pup.skill[other],1);
+ S.gameReward(mum,game,10,{},null,4,now,1); assert.equal(pup.skill[other],1,'a game quit early teaches nothing');
+ S.gameReward(mum,game,10,{},null,40,now,1); assert.equal(S.pupSpec(pup),'all','two close skills make an all-rounder');
+ S.gameReward(mum,game,10,{},null,40,now,1); assert.equal(S.pupSpec(pup),other,'practice wins over the natural lean');
+ S.train(mum,pup,pup.lean,4); assert.equal(pup.skill[pup.lean],T.leanStart+4*T.leanMult,'the natural lean is learned faster');
+ const pats=mum.counters.pets, care=pup.skill.care; mum.petWin={t0:now,n:0};
+ for(let k=0;k<15;k++) S.cuddlePup(mum,0,now);
+ assert.ok(Math.abs(pup.skill.care-care-10*T.careCuddle*(pup.lean==='care'?T.leanMult:1))<1e-9,'only the ten cuddles an hour count');
+ mum.stats.clean=20; const sr=S.saunaDone(mum,S.saunaNeed(mum),S.saunaNeed(mum)); assert.deepEqual([...sr.learnt],['Aino']);
+ assert.equal(S.familyBonus(mum),0);
+ pup.ready=true; const spec=S.pupSpec(pup), g=S.graduatePup(mum,0,now);
+ assert.equal(g.spec,spec); assert.equal(mum.family[0].spec,spec); assert.equal(g.fam,T.famBonusEach);
+ for(let k=0;k<20;k++) mum.family.push({name:'P'+k,fate:k%5?'grown':'lost',spec:'water'});
+ assert.equal(S.familyBonus(mum),T.famBonusMax,'the family bonus is capped');
+ mum.family=[{name:'Uimari',fate:'grown',spec:'water',arriveAt:now-1,leaveAt:now+3600e3},{name:'Halailija',fate:'grown',spec:'care',arriveAt:now-1,leaveAt:now+3600e3},{name:'Kotona',fate:'grown',spec:'water'}];
+ mum.stats.joy=55; mum.stats.clean=100;
+ const fam=1+S.familyBonus(mum)/100, base=S.gameMult(mum,null,now);
+ assert.ok(Math.abs(base-fam)<1e-9,'no game, no helpers');
+ assert.ok(Math.abs(S.gameMult(mum,'catch',now)-(fam+T.specBonus/100))<1e-9,'a visiting Swimmer helps in Fish Rain');
+ assert.ok(Math.abs(S.gameMult(mum,'bj',now)-fam)<1e-9,'but not at the card table');
+ mum.stats.clean=0; const muddy=S.gameMult(mum,'bj',now); mum.family[1].arriveAt=0;
+ assert.ok(muddy>S.gameMult(mum,'bj',now),'a visiting Cuddler halves the muck');
+ mum.family[1].spec='all'; mum.family[1].arriveAt=now-1;
+ assert.ok(Math.abs(S.helpers(mum,'bj',now)[0].pct-T.allBonus)<1e-9,'an all-rounder helps everywhere');
+ // Old saves: pups at home get skills, grown pups get a skill of their own.
+ const old=clone(mum); delete old.lean; old.pups=[{id:9,name:'Vanha',bornAt:now,food:80,joy:80,sick:false,starveMs:0,grownMs:0,ready:false}];
+ old.family=[{name:'Ennen',fate:'grown'},{name:'Poissa',fate:'lost'}];
+ const back=S.migrate(old);
+ assert.ok(ctx.PN.SKILL_ORDER.includes(back.lean)); assert.ok(back.pups[0].skill&&back.pups[0].lean);
+ assert.ok(ctx.PN.SKILL_ORDER.includes(back.family[0].spec)); assert.equal(back.family[1].spec,undefined,'lost pups have no skill');
+}
+console.log('PASS: pup skills from games, cuddles and saunas, natural lean, all-rounders, grow-up skill, capped family bonus, visiting helpers and old saves.');
 try{
  const {createCanvas}=require('@napi-rs/canvas');
  ctx.document={createElement:(name)=>{if(name!=='canvas')throw Error(name);const c=createCanvas(1,1);c.addEventListener=()=>{};return c;}};

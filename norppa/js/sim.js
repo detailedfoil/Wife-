@@ -34,6 +34,12 @@
     pupGrow: 2 * DAY, pupGap: 2.5 * DAY, firstPupDelay: 0, maxPups: 2, twinChance: 0.15, pupWait: 9 * H,   // once she has the xp the pup waits for the game to be closed; next load she has met someone, and the pup arrives pupWait later   // a pup is grown and ready to swim off after 2 days; a birth is twins one time in seven or so; the friendship points for the next birth only count once they have gone
     tuckSettle: 30 * 60e3, visitPresents: 2, gameFull: 24, joyRef: 45, joyLongMax: 2.5, joyLongPow: 0.85,   // a tuck pays once she has slept this long; this many pup visits a day bring presents; a game this many seconds long gives full friendship and happiness
     growCoins: 50, farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
+    // Pup skills (data.js PN.SKILLS): every pup raised adds famBonusEach% to all game coins, up to famBonusMax%. A visiting grown pup adds specBonus% in
+    // games of her own skill, an all-rounder allBonus% in every game, and a Cuddler makes muck cost careMuck as much. A pup starts leanStart points up in her
+    // natural lean and learns it leanMult times as fast; she takes her mother's lean leanChance of the time. She grows up an all-rounder when her second
+    // skill is at least allCut of her best. A counted game is a point of practice; a cuddle (of the ten an hour that count) careCuddle, a full sauna careSauna.
+    famBonusEach: 1, famBonusMax: 10, specBonus: 5, allBonus: 2, careMuck: 0.5,
+    leanStart: 2, leanMult: 1.25, leanChance: 0.6, allCut: 0.8, careCuddle: 0.25, careSauna: 1,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
@@ -118,6 +124,7 @@
     };
     PN.Appearance.born(s, s.seed);
     s.fav = ['muikku', 'kuore', 'ahven', 'sarki', 'siika'][Math.floor(rnd(s) * 5)];
+    s.lean = PN.SKILL_ORDER[Math.floor(rnd(s) * PN.SKILL_ORDER.length)];   // what she is a natural at; her pups often take after her
     return s;
   }
 
@@ -145,6 +152,8 @@
     if (obj && !hadProg) obj.pupProg = (!obj.pupSeq && !(obj.family && obj.family.length) && obj.pups && !obj.pups.length) ? obj.xp : 0;   // a seal that has never had a pup counts all her xp; otherwise the count starts afresh
     if (obj.pups && obj.pups.length) obj.pups.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // pups born before outfits get one now
     if (obj.family && obj.family.length) obj.family.forEach((q) => { if (!q.wear) q.wear = pupLook(obj); });   // and so do the ones who have already left
+    (obj.pups || []).forEach((q) => { if (!q.skill) pupSkillStart(obj, q); });   // pups at home from before skills start with just their natural lean
+    (obj.family || []).forEach((f) => { if (f.fate === 'grown' && !f.spec) f.spec = PN.SKILL_ORDER[Math.floor(rnd(obj) * PN.SKILL_ORDER.length)]; });   // grown pups from before get a skill of their own, so the bonuses work straight away
     // One time only: pups now come at level 10, so a grown seal who is already there and has never had a pup has met someone: she is told on this load
     // and the pup arrives pupWait later.
     if (obj && !obj.pupAtTen) { obj.pupAtTen = 1; if (obj.stage === 2 && obj.pupProg >= xpFor(T.pupLevel) && !obj.pups.length && !(obj.family && obj.family.length) && !obj.pupSeq && !obj.pupMet) { obj.nextPupAt = 0; obj.pupMet = 'ready'; } }
@@ -686,8 +695,14 @@
   const happyBonus = (state) => {
     return Math.round(T.happyMax * clamp((state.stats.joy - T.happyMid) / (100 - T.happyMid), 0, 1));   // never a penalty: a glum seal just earns the base rate
   };
-  /* What a game's coins are multiplied by right now: her happiness, and muck. The game itself makes no difference. */
-  const gameMult = (state) => (1 + happyBonus(state) / 100) * (1 - muckLoss(state));
+  /* What a game's coins are multiplied by right now: her happiness, muck, the family bonus and any grown pup visiting who is good at it. */
+  const gameMult = (state, game, now) => {
+    const help = game ? helpers(state, game, now || Date.now()) : [];
+    const extra = familyBonus(state) + help.reduce((a, h) => a + (h.pct || 0), 0);
+    return (1 + happyBonus(state) / 100) * (1 + extra / 100) * (1 - muckCost(state, help));
+  };
+  /* What muck takes off a game's coins: a visiting Cuddler halves it (two of them do not halve it again). */
+  const muckCost = (state, help) => muckLoss(state) * ((help || []).some((h) => h.muck) ? T.careMuck : 1);
   /* How much a game moves her happiness, by her taste for it. */
   /* How much of that a play of this many seconds gives. A usual 45 second game gives the plain amount; a longer one more, as (seconds / 45)
      to the power 0.85 up to two and a half times (reached at about two and a half minutes), so a game that takes minutes lifts her mood
@@ -722,8 +737,9 @@
     let coins = 0, best = false;
     const got = [];
     tasteSync(state, now || state.tasteAt);
-    const taste = tasteOf(state, game), muck = muckLoss(state), happy = happyBonus(state);   // the bonus goes by how happy she was when the game began
-    coins = gamePay(game, score * (payMult || 1)) * gameMult(state);   // payMult: a tune that pays differently per tile (Kantele Tiles), so its score and best stay in tiles
+    const at = now || Date.now(), help = helpers(state, game, at), fam = familyBonus(state);
+    const taste = tasteOf(state, game), muck = muckCost(state, help), happy = happyBonus(state);   // the bonus goes by how happy she was when the game began
+    coins = gamePay(game, score * (payMult || 1)) * gameMult(state, game, at);   // payMult: a tune that pays differently per tile (Kantele Tiles), so its score and best stay in tiles
     const key = gm && gm.best;
     // In a timed game (low) the score is the seconds it took, so the best is the smallest, and 0 means it was lost.
     if (key && (gm.low ? score > 0 && (!c[key] || score < c[key]) : score > (c[key] || 0))) { c[key] = score; best = score > 0; }
@@ -748,11 +764,13 @@
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
     const dirt = gm && gm.muck ? Math.max(1, Math.round(clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) * 0.75)) : 0;
     s.clean = pct(Math.max(s.clean - dirt, Math.min(s.clean, calm)));
-    if (part >= 0.5) { tastePlayed(state, game); c.games++; }
+    let learnt = [];
+    if (part >= 0.5) { tastePlayed(state, game); c.games++; learnt = practise(state, PN.skillOf(game), 1); }   // pups at home learn from every proper game
     addXp(state, secs > 0 ? Math.min(8, Math.floor(secs / 3)) : 8);
     learn(state, 'leikki');
     check(state);
-    return { coins, best, fish: got, tired, taste: Math.round(taste), happy, muck: Math.round(muck * 100), joy, dirt };
+    const helped = help.filter((h) => h.pct || (h.muck && muck > 0)).map((h) => ({ name: h.name, spec: h.spec, pct: h.pct || 0, muck: !!h.muck }));
+    return { coins, best, fish: got, tired, taste: Math.round(taste), happy, muck: Math.round(muck * 100), joy, dirt, fam, help: helped, learnt, skill: PN.skillOf(game) };
   }
 
   // Pups keep their own wardrobe, including the outfit they arrived in.
@@ -834,13 +852,14 @@
     if (s.clean >= 60) state.filthMs = 0;
     const coins = was < 60 ? earn(state, T.saunaBonus * frac / T.earnRate) : 0;   // the coins are for a real wash, begun under 60% clean (a one-round top-up used to pay the full 12)
     c.saunas++; c.washes++;
+    const learnt = practise(state, 'care', T.careSauna * frac);   // the pups come along to the sauna: practice in Care
     addXp(state, was < 60 ? 6 : 2);
     if (state.sick && rounds >= need) state.wellMs += H;
     const want = sulkNeeds(state);
     if (want && !want.bath && s.clean >= 60) { want.bath = true; state.grudge = Math.max(0, state.grudge - 100 * T.sulkBathCut); sulkCheck(state); }
     learn(state, 'kylpy'); learn(state, 'sauna'); learn(state, 'loyly');
     check(state);
-    return { rounds, need, coins, clean: Math.round(s.clean), full: rounds >= need };
+    return { rounds, need, coins, clean: Math.round(s.clean), full: rounds >= need, learnt };
   }
 
   /* Nothing to eat and no coins to buy any: the neighbours will spare a few fish, now and then.
@@ -938,8 +957,53 @@
     return wear;
   }
 
+  /* ---------- Pup skills ----------
+     A pup is born a natural at one skill (often her mother's, see T.leanChance) and a couple of points up in it. Whatever the family does
+     while she is at home is practice: games in their own skill, cuddles and saunas in Care. Her best skill when she leaves is what she becomes. */
+  function pupSkillStart(state, p) {
+    const keys = PN.SKILL_ORDER;
+    p.lean = state.lean && rnd(state) < T.leanChance ? state.lean : keys[Math.floor(rnd(state) * keys.length)];
+    p.skill = {};
+    keys.forEach((k) => { p.skill[k] = 0; });
+    p.skill[p.lean] = T.leanStart;
+  }
+  function train(state, p, key, n) {
+    if (!p || !key || !(n > 0)) return;
+    if (!p.skill) pupSkillStart(state, p);
+    p.skill[key] = (p.skill[key] || 0) + n * (p.lean === key ? T.leanMult : 1);
+  }
+  /* Practice for every pup at home. Returns the names of the pups who learned something. */
+  function practise(state, key, n) {
+    if (!key || !(n > 0) || !state.pups || !state.pups.length) return [];
+    state.pups.forEach((p) => train(state, p, key, n));
+    return state.pups.map((p) => p.name);
+  }
+  /* What a pup is (or would grow up to be today): her best skill, or 'all' when her second best is close behind. */
+  function pupSpec(p) {
+    if (!p) return 'all';
+    if (p.spec) return p.spec;
+    if (!p.skill) return 'all';
+    const ranked = PN.SKILL_ORDER.slice().sort((a, b) => (p.skill[b] || 0) - (p.skill[a] || 0));
+    const best = p.skill[ranked[0]] || 0, next = p.skill[ranked[1]] || 0;
+    return best > 0 && next < best * T.allCut ? ranked[0] : 'all';
+  }
+  /* The family bonus on every game, in percent: famBonusEach for each pup raised to grown-up, up to famBonusMax. Lost pups do not count. */
+  const familyBonus = (state) => Math.min(T.famBonusMax, T.famBonusEach * (state.family || []).filter((f) => f.fate === 'grown').length);
+  /* The grown pups on the shore right now who help in this game: { i, name, spec, pct } for a coin bonus, or { muck: true } for a Cuddler. */
+  function helpers(state, game, now) {
+    const key = PN.skillOf(game), out = [];
+    (state.family || []).forEach((f, i) => {
+      if (f.fate !== 'grown' || !f.spec || visitStatus(f, now) !== 'here') return;
+      if (f.spec === 'all') out.push({ i, name: f.name, spec: 'all', pct: T.allBonus });
+      else if (f.spec === 'care') out.push({ i, name: f.name, spec: 'care', muck: true });
+      else if (key && f.spec === key) out.push({ i, name: f.name, spec: key, pct: T.specBonus });
+    });
+    return out;
+  }
+
   function addPup(state, now, name) {
     const p = { id: ++state.pupSeq, name, bornAt: now, food: 85, joy: 75, sick: false, starveMs: 0, grownMs: 0, ready: false, wear: pupLook(state) };
+    pupSkillStart(state, p);
     PN.Appearance.born(p, (now + p.id * 7919) | 0, state.birthAppearance);
     state.pups.push(p);
     state.pupProg = 0; state.pupMet = 0; state.pupBirthAt = 0;
@@ -956,22 +1020,24 @@
     p.joy = pct(p.joy + 6);
     if (now - state.petWin.t0 > H) state.petWin = { t0: now, n: 0 };
     if (state.petWin.n < T.petJoyPats) state.stats.joy = pct(state.stats.joy + T.petJoy);   // the pup loves every cuddle; its mother is cheered as much as by a pat, out of the same ten an hour (it used to be half a point every time, with no limit)
-    if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); }
+    if (state.petWin.n < 10) { state.petWin.n++; addXp(state, 1); train(state, p, 'care', T.careCuddle); }   // the cuddles that count are practice in Care too
     return ok({});
   }
 
   function graduatePup(state, i, now) {
     const p = state.pups[i];
     if (!p || !p.ready) return no('notyet');
+    const spec = pupSpec(p);   // her best skill is what she becomes
     state.pups.splice(i, 1);
-    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', birthAppearance: p.birthAppearance, appearance: p.appearance, owned: p.owned || {}, wear: p.wear || pupLook(state) });
+    state.family.push({ name: p.name, bornAt: p.bornAt, endAt: now, fate: 'grown', birthAppearance: p.birthAppearance, appearance: p.appearance, owned: p.owned || {}, wear: p.wear || pupLook(state),
+      spec, lean: p.lean, skill: p.skill || null });
     state.counters.pupsGrown++;
     const farewell = earn(state, T.farewellCoins / T.earnRate);   // exactly 200 coins
     state.nextPupAt = Math.max(state.nextPupAt, now + DAY);
     addXp(state, 40);
     learn(state, 'heihei');
     check(state);
-    return ok({ name: p.name, coins: farewell });
+    return ok({ name: p.name, coins: farewell, spec, fam: familyBonus(state), index: state.family.length - 1 });
   }
 
   /* ---------- Calling a grown pup home ----------
@@ -1092,6 +1158,7 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
+    pupSkillStart, train, practise, pupSpec, familyBonus, helpers, muckCost,
     sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
 
