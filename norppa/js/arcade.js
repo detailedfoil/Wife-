@@ -1491,7 +1491,13 @@
         if (!p.held && b && +b.dataset.i === p.i) tap(p.i);
       });
       el.addEventListener('pointercancel', drop);
-      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      // Desktop: right-click toggles a flag without changing the touch-friendly dig/flag mode.
+      // Keep the first tile as a normal reveal, since the puzzle is generated on first dig.
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const i = tile(e);
+        if (i >= 0 && mode === 'play') { drop(); setFlag(i); }
+      });
       modeEl.addEventListener('click', (e) => { const b = e.target.closest('[data-pf]'); if (b) { flagging = b.dataset.pf === 'flag'; A.play('tap'); bar(); } });
     }
     function bar() {
