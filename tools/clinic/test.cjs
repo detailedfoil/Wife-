@@ -119,10 +119,12 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  assert.ok(Math.abs(S.gameMult(mum,'bj',now)-fam)<1e-9,'and nothing in games of other skills');
  { const run=(withPup)=>{ let coins=0,sulks=0; for(let n=0;n<600;n++){ const s=S.newState(now); s.stage=2; s.counters.dives=5; s.seed=n*7+1; s.stats.energy=100; if(withPup) s.family=[{name:'U',fate:'grown',pts:{water:10,sport:0,brain:0,care:0},arriveAt:now-1,leaveAt:now+3600e3}]; const l=S.diveResult(s,now); coins+=(l.coins||0); if(l.sulked) sulks++; if(withPup) assert.ok(l.kind==='none'||l.help.pct===10); } return {coins,sulks}; }; const a=run(false), b=run(true); assert.ok(b.coins>a.coins,'swimming points earn more on dives'); assert.ok(b.sulks<a.sulks,'and fewer Angy dives'); }
  { const d=S.diveHelp(mum,now); assert.equal(d.pts,7,'only the visiting pup counts'); assert.equal(d.pct,7*T.pointBonus); assert.equal(d.sulkCut,7*T.diveSulkCut); assert.equal(d.names.join(),'Uimari'); }
- mum.stats.clean=0; const muddy=S.gameMult(mum,'bj',now); mum.family[1].arriveAt=0;
- assert.ok(muddy>S.gameMult(mum,'bj',now),'Care points take a share off the muck');
+ assert.equal(S.careSlow(mum),5*T.carePoint,'the best Care pup sets how much slower happiness drops');
+ { const away=(fam)=>{ const s=S.newState(now); s.stage=2; s.stats.joy=90; s.stats.food=100; s.stats.clean=100; s.family=fam; S.advance(s,now+3*3600e3,{away:true}); return s.stats.joy; };
+   const none=away([]), cared=away([{name:'H',fate:'grown',pts:{water:0,sport:0,brain:0,care:10},arriveAt:0,leaveAt:0}]);
+   assert.ok(cared>none,'Care keeps her happier while the game is closed'); }
  mum.family[1].arriveAt=now-1;
- const r=S.gameReward(mum,'catch',10,{},null,40,now,1); assert.equal(r.help.map(h=>h.name).sort().join(),'Hoiva,Uimari');
+ const r=S.gameReward(mum,'catch',10,{},null,40,now,1); assert.equal(r.help.map(h=>h.name).sort().join(),'Uimari','Care no longer shows in game results');
  // Old saves: pups at home start again from nothing, once; grown pups keep what they gave before.
  const old=clone(mum); delete old.pupsFresh; old.pups=[{id:9,name:'Vanha',bornAt:now,food:80,joy:80,sick:false,starveMs:0,grownMs:T.pupGrow,ready:true,lean:'sport',skill:{water:1,sport:5.5,brain:0,care:0.25}}];
  old.family=[{name:'A',fate:'grown',spec:'brain'},{name:'B',fate:'grown',spec:'care'},{name:'C',fate:'grown',spec:'all'},{name:'D',fate:'lost'}];

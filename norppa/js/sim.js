@@ -36,8 +36,8 @@
     growCoins: 50, farewellCoins: 200, visitWait: H, visitStay: 8 * H, visitCooldown: 12 * H, visitCoins: 100, maxVisitors: 2,   // a grown pup can be called home: arrives in an hour, stays up to 8, can be called again 12 hours after the call
     // Pup levels and skill points (data.js PN.SKILLS): a pup at home earns xp from everything the family does and gets a skill point every pupXpStep xp, up to pupMaxPoints.
     // You spend them on her card and they are locked once spent. A grown pup gives pointBonus% coins per point in the games of that skill while she visits, and each Care point
-    // takes carePoint% off what muck costs. Every pup raised adds famBonusEach% to all game coins, up to famBonusMax%.
-    famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupXpStep: 30, pointBonus: 1, carePoint: 10, diveSulkCut: 1,
+    // makes happiness drop carePoint% slower while the game is closed (best Care pup only). Every pup raised adds famBonusEach% to all game coins, up to famBonusMax%.
+    famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupXpStep: 30, pointBonus: 1, carePoint: 5, diveSulkCut: 1,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
@@ -293,6 +293,7 @@
     if (s.food < 25) joyRate *= 1.5;
     if (s.clean < 25) joyRate *= 1.4;
     if (state.sick) joyRate *= 1.5;
+    if (away) joyRate *= 1 - careSlow(state) / 100;   // grown pups with Care look in on her while you are away
 
     const wasFed = s.food > 20;
     s.food = pct(s.food - foodRate * h);
@@ -703,7 +704,9 @@
     return (1 + happyBonus(state) / 100) * (1 + extra / 100) * (1 - muckCost(state, help));
   };
   /* What muck takes off a game's coins: each Care point of a visiting grown pup takes carePoint% off it. */
-  const muckCost = (state, help) => muckLoss(state) * (1 - Math.min(1, (help || []).reduce((a, h) => a + (h.cut || 0), 0) / 100));
+  const muckCost = (state) => muckLoss(state);
+  /* While the game is closed her happiness drops this much % slower: carePoint% per Care point of the family's best Care pup (grown, visiting or not). Pups don't stack. */
+  const careSlow = (state) => Math.min(100, Math.max(0, ...(state.family || []).filter((f) => f.fate === 'grown' && f.pts).map((f) => (f.pts.care || 0) * T.carePoint)));
   /* How much a game moves her happiness, by her taste for it. */
   /* How much of that a play of this many seconds gives. A usual 45 second game gives the plain amount; a longer one more, as (seconds / 45)
      to the power 0.85 up to two and a half times (reached at about two and a half minutes), so a game that takes minutes lifts her mood
@@ -1019,8 +1022,8 @@
     const key = PN.skillOf(game), out = [];
     (state.family || []).forEach((f, i) => {
       if (f.fate !== 'grown' || !f.pts || visitStatus(f, now) !== 'here') return;
-      const pct = key ? (f.pts[key] || 0) * T.pointBonus : 0, cut = (f.pts.care || 0) * T.carePoint;
-      if (pct > 0 || cut > 0) out.push({ i, name: f.name, spec: f.spec, pts: f.pts, pct, cut });
+      const pct = key ? (f.pts[key] || 0) * T.pointBonus : 0;
+      if (pct > 0) out.push({ i, name: f.name, spec: f.spec, pts: f.pts, pct, cut: 0 });
     });
     return out;
   }
@@ -1192,7 +1195,7 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
-    pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, topSkills, pupXp, familyBonus, helpers, diveHelp, muckCost,
+    pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, topSkills, pupXp, familyBonus, helpers, diveHelp, muckCost, careSlow,
     sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
 

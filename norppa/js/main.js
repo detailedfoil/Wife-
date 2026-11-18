@@ -176,7 +176,7 @@
     if (state.pupPointsSeen) return;
     state.pupPointsSeen = 1;
     if (!state.pups.length && !state.family.length) { S.save(state); return; }
-    const v = await UI.modal({ title: tr('New: pup skill points'), html: tr('<p>Pups now level up. Everything you do while they are at home earns them xp, and every level is a skill point (up to {0}) that you spend on their card: Swimming, Sports, Brains or Care. Where the points go is what they grow up to be.</p><p>A grown pup who visits gives +{1}% coins per point in the games of that skill, and each Care point takes {2}% off what muck costs. Every pup raised still adds {3}% to all game coins (up to {4}%).</p><p>Pups who are already here start again as if they were newborn, with the full two days to earn their points, and pups who have already grown up keep the bonus they had.</p>', S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint, S.T.famBonusEach, S.T.famBonusMax),
+    const v = await UI.modal({ title: tr('New: pup skill points'), html: tr('<p>Pups now level up. Everything you do while they are at home earns them xp, and every level is a skill point (up to {0}) that you spend on their card: Swimming, Sports, Brains or Care. Where the points go is what they grow up to be.</p><p>A grown pup who visits gives +{1}% coins per point in the games of that skill, and each Care point makes her happiness drop {2}% slower while you are away (visiting or not; only the best Care pup in the family counts). Every pup raised still adds {3}% to all game coins (up to {4}%).</p><p>Pups who are already here start again as if they were newborn, with the full two days to earn their points, and pups who have already grown up keep the bonus they had.</p>', S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint, S.T.famBonusEach, S.T.famBonusMax),
       actions: [{ label: tr('See the family'), value: 1 }, { label: tr('Lovely'), value: 0 }] });
     S.save(state);
     if (v === 1) UI.openSheet('album', 'family');
@@ -707,7 +707,7 @@
   async function spendPoints(i) {
     let p = state.pups[i];
     while (p && S.pupFree(p) > 0) {
-      const games = (k) => k === 'care' ? tr('each point takes {0}% off what muck costs when she visits', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
+      const games = (k) => k === 'care' ? tr('each point makes her happiness drop {0}% slower while you are away, visiting or not', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
       const v = await UI.modal({ title: tr('Skill points for {0}', UI.esc(p.name)),
         html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + '</p><div class="pup-skills">' + UI.radar(p.pts) + '</div>'
           + '<p class="small">' + PN.SKILL_ORDER.map((k) => '<b>' + UI.skillName(k) + '</b>: ' + games(k) + '.').join('<br>') + '</p>',

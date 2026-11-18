@@ -253,7 +253,7 @@
       const n = grown.filter((f) => { const top = S.topSkills(f.pts); return k === 'all' ? top.length !== 1 && top.length !== 2 : top.indexOf(k) >= 0 && top.length <= 2; }).length;
       h += line(UI.specName(k) + (k === 'all' ? '' : ' · ' + UI.skillName(k)), n);
     });
-    h += '<p class="note">' + tr('Each point a grown pup has gives +{0}% coins in the games of that skill while she visits, and each Care point takes {1}% off what muck costs.', S.T.pointBonus, S.T.carePoint) + '</p>';
+    h += '<p class="note">' + tr('Each point a grown pup has gives +{0}% coins in the games of that skill while she visits, and each Care point makes her happiness drop {1}% slower while you are away (visiting or not; only the best Care pup in the family counts).', S.T.pointBonus, S.T.carePoint) + '</p>';
     h += '<div class="shelf">' + tr('Every pup') + '<span>' + tr('newest first') + '</span></div><div class="rows">';
     const one = (p, home, i) => {
       const spec = home ? (S.pupSpent(p) ? UI.specLabel(p) : null) : UI.specLabel(p);
@@ -463,7 +463,7 @@
         h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name) + (f.fate === 'grown' && f.pts ? ' · ' + UI.specLabel(f) : ''), text: text + (f.fate === 'grown' && f.pts ? UI.radar(f.pts, 96, true) : ''),
           side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)), act: f.fate === 'grown' ? 'callpup' : '', id: i });
       });
-      return h + '</div><p class="note">' + tr('Pups earn xp from everything the family does while they are at home, and every {0} xp is a skill point, up to {1}. Spend them on the pup card. A grown pup gives +{2}% coins per point in the games of that skill when she visits, and each Care point takes {3}% off what muck costs.', S.T.pupXpStep, S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint) + '</p>'
+      return h + '</div><p class="note">' + tr('Pups earn xp from everything the family does while they are at home, and every {0} xp is a skill point, up to {1}. Spend them on the pup card. A grown pup gives +{2}% coins per point in the games of that skill when she visits, and each Care point makes her happiness drop {3}% slower while you are away (visiting or not; only the best Care pup in the family counts).', S.T.pupXpStep, S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint) + '</p>'
         + '<p class="note">' + tr('Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.') + '</p>';
     },
     profile(st) {
@@ -674,12 +674,13 @@
     PN.SKILL_ORDER.forEach((k) => {
       const n = pts[k] || 0;
       if (!n) return;
-      if (k === 'care') { parts.push(tr('muck costs {0}% less', n * S.T.carePoint)); return; }
+      if (k === 'care') return;
       const games = PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title));
       parts.push(tr('+{0}% coins in {1}', n * S.T.pointBonus, games.length > 1 ? tr('{0} and {1}', games.slice(0, -1).join(', '), games[games.length - 1]) : games[0]));
       if (k === 'water') parts.push(tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', n * S.T.pointBonus, n * S.T.diveSulkCut));
     });
-    return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) : tr('{0} has no skill points, so she gives no visiting bonus.', name);
+    const care = pts.care ? ' ' + tr('Care: happiness drops {0}% slower while you are away (only the best Care pup in the family counts).', pts.care * S.T.carePoint) : '';
+    return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) + care : care ? care.trim() : tr('{0} has no skill points, so she gives no visiting bonus.', name);
   };
   /* A pup's points as one line: Swimming 3 · Sports 0 · Brains 1 · Care 6. */
   /* Radar chart of a pup's points: one spoke per skill, rings at 2, 4, 6, 8 and 10 points. */
