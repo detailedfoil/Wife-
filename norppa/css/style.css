@@ -509,3 +509,11 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .row.dev-row[hidden] { display: none; }
 
 .row .radar.mini { display: block; margin-top: 6px; }
+
+/* Spend-points window: the whole card scrolls, and the choices sit in a compact two-by-two block pinned at the bottom so the text above stays readable. */
+.modal-card.spend { text-align: left; }
+.modal-card.spend h3, .modal-card.spend > p:first-of-type { text-align: center; }
+.modal-card.spend p.small { font-size: 14px; line-height: 1.45; margin-top: 10px; }
+.modal-card.spend .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 10px; padding-bottom: 14px; }
+.modal-card.spend .actions .btn { min-height: 0; padding: 12px 8px; font-size: 16px; }
+.modal-card.spend .actions .btn:last-child { grid-column: 1 / -1; }
