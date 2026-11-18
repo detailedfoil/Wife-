@@ -450,8 +450,8 @@
     'Sends anonymous numbers (which games, how long, coins, progress, how the game runs) to the maker. No name or personal details.': 'Lähettää tekijälle nimettömiä lukuja (mitkä pelit, kuinka kauan, kolikot, eteneminen, miten peli toimii). Ei nimeä eikä henkilötietoja.',
     'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets anxiety until she has had it.': 'Aluksi pois päältä. Kun kytket sen päälle, hän tarvitsee lääkkeensä joka päivä klo 5 alkaen, tästä päivästä lähtien, tai hän on ahdistunut, kunnes on saanut sen.',
     'Sky': 'Taivas',
-    'Real time shows the daylight and the weather over Inari in Lapland as they are right now.': 'Oikea aika näyttää Inarin päivänvalon ja sään sellaisina kuin ne juuri nyt ovat.',
-    'Live from Inari in Lapland, where it is {0}.': 'Suoraan Inarista, jossa kello on {0}.',
+    'Real time shows the daylight over Inari in Lapland and the weather in Tampere as they are right now.': 'Oikea aika näyttää Inarin päivänvalon ja Tampereen sään sellaisina kuin ne juuri nyt ovat.',
+    'Live weather from Tampere, where it is {0}.': 'Sää suoraan Tampereelta, jossa kello on {0}.',
     'Weather data by Open-Meteo.com.': 'Säätiedot: Open-Meteo.com.',
     'Real time': 'Oikea aika',
     'Day': 'Päivä',
@@ -546,7 +546,7 @@
     'When the tummy bar runs low, tap <b>Feed</b>.': 'Kun mahapalkki hupenee, napauta <b>Ruoki</b>.',
     'Tap the hole in the ice to send {0} diving for finds.': 'Napauta avantoa, niin {0} sukeltaa etsimään löytöjä.',
     'Games in <b>Play</b> earn coins for the shop.': '<b>Leiki</b>-valikon peleistä saa kolikoita kauppaan.',
-    'Drag the sky to look around. It shows the real daylight and weather in Lapland right now.': 'Katsele ympärillesi vetämällä taivasta. Se näyttää Lapin oikean päivänvalon ja sään juuri nyt.',
+    'Drag the sky to look around. It shows the real daylight in Lapland and the real weather in Tampere right now.': 'Katsele ympärillesi vetämällä taivasta. Se näyttää Lapin oikean päivänvalon ja Tampereen oikean sään juuri nyt.',
     'Tap a poo to clear it away.': 'Napauta kakkaa, niin se siivotaan pois.',
 
     // ----- pups -----

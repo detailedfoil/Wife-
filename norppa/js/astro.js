@@ -2,7 +2,8 @@
    The lake sits by Inari in Finnish Lapland, at about 69 degrees north, so midwinter
    has a polar night and midsummer has a sun that never sets. The sky is worked out for
    that spot at this very moment, wherever the player is, and the weather is fetched
-   live from Open-Meteo (with a made-up forecast to fall back on when there is no signal). */
+   live from Open-Meteo (with a made-up forecast to fall back on when there is no signal).
+   The daylight follows Inari, but the weather is Tampere's. */
 (function (PN) {
   'use strict';
 
@@ -100,8 +101,9 @@
     return { cloud, precip, wind, temp, kind, frozen, aurora: smooth(0.46, 0.76, act), live: false };
   }
 
-  /* ---------- the real weather over the lake ---------- */
-  const WX_KEY = 'pikkunorppa.wx', WX_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON
+  /* ---------- the real weather, from Tampere ---------- */
+  const WX_LAT = 61.498, WX_LON = 23.761;   // Tampere
+  const WX_KEY = 'pikkunorppa.wx.tampere', WX_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + WX_LAT + '&longitude=' + WX_LON
     + '&wind_speed_unit=ms&current=temperature_2m,precipitation,wind_speed_10m,weather_code';
   const FRESH = 3 * HOUR;               // after this long without news, go back to the made-up forecast
   const live = { now: null, prev: null, at: 0, changed: 0, busy: false, tried: 0 };

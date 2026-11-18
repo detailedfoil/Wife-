@@ -418,7 +418,7 @@
     if (state.tut === 1 && c.pets >= 4) { state.tut = 2; hint(tr('When the tummy bar runs low, tap <b>Feed</b>.'), 'fish'); }
     else if (state.tut === 2 && c.feeds >= 1) { state.tut = 3; hint(tr('Tap the hole in the ice to send {0} diving for finds.', nm()), 'dive'); }
     else if (state.tut === 3 && c.dives >= 1) { state.tut = 4; hint(tr('Games in <b>Play</b> earn coins for the shop.'), 'heart'); }
-    else if (state.tut === 4 && c.games >= 1) { state.tut = 5; hint(tr('Drag the sky to look around. It shows the real daylight and weather in Lapland right now.'), 'sun'); }
+    else if (state.tut === 4 && c.games >= 1) { state.tut = 5; hint(tr('Drag the sky to look around. It shows the real daylight in Lapland and the real weather in Tampere right now.'), 'sun'); }
     else if (state.tut === 5 && state.poops.length) { state.tut = 6; hint(tr('Tap a poo to clear it away.'), 'poo'); }
   }
 

@@ -165,7 +165,7 @@
     if (env.polarNight) extra = ' It is <em>kaamos</em>, the polar night: the sun stays below the horizon.';
     else if (env.midnightSun) extra = ' It is the time of <em>yötön yö</em>, when the sun does not set.';
     else if (env.blue) extra = ' This is <em>sininen hetki</em>, the blue moment.';
-    const where = env.live ? ' ' + tr('Live from Inari in Lapland, where it is {0}.', PN.Astro.wallClock(PN.World.now())) : '';
+    const where = env.live ? ' ' + tr('Live weather from Tampere, where it is {0}.', PN.Astro.wallClock(PN.World.now())) : '';
     UI.toast(tr('<b>{0}C</b> and {1} at the lake.', temp(env.temp), tr(c.text)) + where + (extra ? tr(extra) : ''), c.icon, '', env.live ? 6000 : 4200);
   };
 
@@ -496,7 +496,7 @@
         + tog('medicine', 'Daily medicine', 'med', 'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets anxiety until she has had it.')
         + tog('stats', 'Share play stats', 'globe', 'Sends anonymous numbers (which games, how long, coins, progress, how the game runs) to the maker. No name or personal details.')
         + '<div class="row"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Language') + '</b><span class="d">' + tr('Play in English or in Finnish.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + lang + '</span></span></div>'
-        + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight and the weather over Inari in Lapland as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
+        + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight over Inari in Lapland and the weather in Tampere as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>' + tr('Move to another device') + '</b><span class="d">' + tr('Your seal is saved on this device only. A save code lets you carry it to another one.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="export">' + tr('Get save code') + '</button><button class="btn small ghost" data-do="import">' + tr('Use a save code') + '</button></span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset high scores') + '</b><span class="d">' + tr('Set the best score of every game back to zero. Coins and everything else stay.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="resetscores">' + tr('Reset high scores') + '</button></span></span></div>'
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
