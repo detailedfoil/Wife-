@@ -203,8 +203,8 @@
     if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry or grubby for {0} hour.', 'Was left hungry or grubby for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
-    if (state.medLate) { bad = true; add('anxi', tr('{0} is Anxi. She needs her medicine.', plain()), 'bad'); }
-    else if (state.grudge > 0) { bad = true; add('grump', tr('{0} is Angy. Food and gentle strokes will win it round.', plain()), 'bad'); }
+    if (state.medLate) { bad = true; add('anxi', tr('{0} has anxiety. She needs her medicine.', plain()), 'bad'); }
+    else if (state.grudge > 0) { bad = true; add('grump', tr('{0} is angry. Food and gentle strokes will win it round.', plain()), 'bad'); }
     if (sum.cured) add('check', tr('Got over being poorly.'), 'good');
     sum.pupWell.forEach((n) => add('check', tr('<b>{0}</b> is feeling better.', UI.esc(n)), 'good'));
     if (sum.poops > 0) add('poo', sum.poops === 1 ? tr('Left a little present on the shore.') : tr('Left {0} little presents on the shore.', sum.poops));
@@ -338,7 +338,7 @@
         UI.toast(tr('Award: <b>{0}</b>. +{1} coins', UI.esc(PN.awardTitle(a)), a.c), 'star', '', 4200);
         A.play('award', 0.6);
       } else if (e.type === 'medlate') {
-        UI.toast(tr('{0} has not had her medicine and is Anxi.', nm()), 'anxi', '', 4200);
+        UI.toast(tr('{0} has not had her medicine and has anxiety.', nm()), 'anxi', '', 4200);
       } else if (e.type === 'forgiven') {
         UI.toast(tr('{0} has forgiven you.', nm()), 'heart', '', 3800);
         seal.sulk = false; seal.heading = W.HOME_HEADING;
@@ -707,7 +707,7 @@
   async function spendPoints(i) {
     let p = state.pups[i];
     while (p && S.pupFree(p) > 0) {
-      const games = (k) => k === 'care' ? tr('each point makes her happiness drop {0}% slower while you are away, visiting or not', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
+      const games = (k) => k === 'care' ? tr('each point makes her happiness drop {0}% slower while you are away, visiting or not', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up angry', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
       const v = await UI.modal({ layout: 'spend', title: tr('Skill points for {0}', UI.esc(p.name)),
         html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + ' ' + tr('No skill can have more than {0} points.', S.T.pupSkillMax) + '</p><div class="pup-skills">' + UI.radar(p.pts, 190) + '</div>'
           + '<p class="small">' + PN.SKILL_ORDER.map((k) => '<b>' + UI.skillName(k) + '</b>: ' + games(k) + '.').join('<br>') + '</p>',
@@ -823,14 +823,14 @@
     await wait(0.9);
     await showLoot(loot);
     if (carried) seal.mouthA.remove(carried);
-    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up Angy.', '{0} got bitten down there and is Angy.', '{0} got her flippers tangled in weed and came up Angy.', '{0} was spooked by a big shadow under the ice and is Angy.', '{0} swallowed a mouthful of icy water and is Angy.', '{0} got stuck in the ice hole on the way out and is Angy.'][Math.floor(Math.random() * 6)], nm()), 'grump'); }
+    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up angry.', '{0} got bitten down there and is angry.', '{0} got her flippers tangled in weed and came up angry.', '{0} was spooked by a big shadow under the ice and is angry.', '{0} swallowed a mouthful of icy water and is angry.', '{0} got stuck in the ice hole on the way out and is angry.'][Math.floor(Math.random() * 6)], nm()), 'grump'); }
     else { seal.gesture('happy'); A.play('chirp'); }
     await seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.0, face: W.HOME_HEADING });
     G.busy = false; UI.setBusy(false);
     S.save(state); UI.refresh();
   };
 
-  const helpNote = (loot) => loot.help ? '<p class="small">' + tr('{0} helped on the dive: +{1}% coins and a smaller chance of coming up Angy.', loot.help.names.map(UI.esc).join(' ' + tr('and') + ' '), loot.help.pct) + '</p>' : '';
+  const helpNote = (loot) => loot.help ? '<p class="small">' + tr('{0} helped on the dive: +{1}% coins and a smaller chance of coming up angry.', loot.help.names.map(UI.esc).join(' ' + tr('and') + ' '), loot.help.pct) + '</p>' : '';
   const RARE = ['', 'common', 'uncommon', 'rare', 'very rare', 'legendary'];
   function showLoot(loot) {
     if (loot.kind === 'none') {
@@ -853,12 +853,12 @@
   }
 
   /* ---------- looking after the seal ---------- */
-  const WHY = { asleep: '{0} is fast asleep.', sick: '{0} is poorly and needs rest.', sulk: '{0} is Angy and will not play.', tired: '{0} is too tired for that.', wait: 'Not just yet.' };
+  const WHY = { asleep: '{0} is fast asleep.', sick: '{0} is poorly and needs rest.', sulk: '{0} is angry and will not play.', tired: '{0} is too tired for that.', wait: 'Not just yet.' };
   const whyText = (why) => tr(WHY[why] || WHY.wait, nm());
   function refuse(why) {
     A.play('nope');
     if (!seal.asleep && why !== 'asleep') seal.gesture('no');
-    if (why === 'sulk' && state.medLate) { UI.toast(tr('{0} is Anxi and will not play. She needs her medicine.', nm()), 'anxi'); return; }
+    if (why === 'sulk' && state.medLate) { UI.toast(tr('{0} has anxiety and will not play. She needs her medicine.', nm()), 'anxi'); return; }
     UI.toast(whyText(why), why === 'asleep' ? 'zzz' : why === 'sick' ? 'med' : why === 'sulk' ? 'grump' : 'clock');
   }
 
@@ -1257,7 +1257,7 @@
       if (!res.ok) throw new Error('status ' + res.status);
       const m = /PN\.UPDATED = '([^']*)'/.exec(await res.text());
       if (!m) throw new Error('no stamp');
-      if (!(m[1] > PN.UPDATED)) { done(tr('You have the latest version.')); return; }
+      if (!(PN.stampKey(m[1]) > PN.stampKey(PN.UPDATED))) { done(tr('You have the latest version.')); return; }
       say(tr('Updating...'));
       if (state && !noSave) S.save(state);
       const files = ['./'].concat(Array.prototype.map.call(document.querySelectorAll('script[src], link[rel="stylesheet"]'), (el) => el.getAttribute('src') || el.getAttribute('href')));

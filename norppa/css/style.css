@@ -229,6 +229,11 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .modal-card p { margin-top: 8px; color: var(--ink-soft); font-size: 15px; text-wrap: pretty; }
 .modal-card p b { color: var(--ink); font-weight: 800; }
 .modal-card p.small { font-size: 13.5px; }
+.modal.over { z-index: 30; }   /* the first screen comes later in the page, so a pop-up opened from it needs lifting */
+.modal-card ol.steps { list-style: none; counter-reset: step; display: grid; gap: 10px; margin: 12px 0 2px; padding: 0; text-align: left; }
+.modal-card ol.steps li { counter-increment: step; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; font-size: 15px; line-height: 1.35; color: var(--ink); }
+.modal-card ol.steps li::before { content: counter(step); width: 26px; height: 26px; border-radius: 50%; background: var(--berry); color: #fff; font: 600 14px/26px var(--display); text-align: center; }
+.inst-ic { width: 18px; height: 18px; vertical-align: -3px; margin: 0 2px; }
 .modal-card .pup-skills { font-size: 14px; display: flex; justify-content: center; margin: 6px 0; }
 .modal-card .pup-skills .radar { max-width: 100%; height: auto; }
 .modal-card .art { width: 132px; height: 132px; margin: -4px auto 4px; display: block; }
@@ -408,11 +413,14 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .title-lang:active { transform: scale(.95); }
 .title-update { margin-top: -4px; background: none; box-shadow: none; font-size: 13px; color: #b9caf5; text-decoration: underline; text-underline-offset: 3px; padding: 6px 12px; }
 .title-update:disabled { opacity: .75; text-decoration: none; }
+.title-install { color: #fff1c2; background: rgba(255, 212, 92, .14); box-shadow: inset 0 0 0 1.5px rgba(255, 212, 92, .55); margin-top: 0; }
+.title-more { display: contents; }   /* the three small buttons stack as before; on a phone on its side they sit in one row (below), or the last one slides off the bottom */
 .fade { position: fixed; inset: 0; background: #f4f8ff; opacity: 0; pointer-events: none; transition: opacity .5s; }
 .fade.on { opacity: 1; }
 
 @media (orientation: landscape) and (max-height: 480px) {
   .meters { max-width: 420px; } .dock button { height: 56px; } .sheet { max-height: 86%; } .title-in { margin-top: 0; gap: 8px; } .title h1 { font-size: 44px; }
+  .title-more { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; } .title-more .title-lang { margin-top: 0; }
   .toasts { bottom: calc(80px + var(--sb)); }
 }
 /* Very narrow phones (320px wide): squeeze the top row so the settings button stays on screen. */

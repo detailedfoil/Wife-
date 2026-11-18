@@ -2,7 +2,13 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '18 Nov 2026, 10:04';
+  PN.UPDATED = '18 Nov 2026, 10:37';
+  /* An update stamp as a number that sorts by time. Compared as text, "10 Dec" would come before "18 Nov". */
+  PN.stampKey = function (s) {
+    const m = /^\s*(\d{1,2}) ([A-Za-z]{3}) (\d{4}),? (\d{1,2}):(\d{2})\s*$/.exec(String(s || ''));
+    const mon = m ? ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m[2].toLowerCase()) : -1;
+    return m && mon >= 0 ? ((((+m[3] * 12 + mon) * 31 + +m[1]) * 24 + +m[4]) * 60 + +m[5]) : 0;
+  };
   'use strict';
 
   /* Fish. rarity: 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary.
@@ -313,7 +319,7 @@
     { id: 'wear25', t: 'Walk-in wardrobe', d: 'Own 25 things to wear.', c: 150, test: (s) => ownedOf(s, WEAR) >= 25 },
     { id: 'home12', t: 'Kylä', d: 'Own 12 things for the shore. It means village.', c: 150, test: (s) => ownedOf(s, DECOR) >= 12 },
     { id: 'loyly', t: 'Löyly', d: 'Take a sauna.', c: 30, test: (s) => s.counters.saunas >= 1 },
-    { id: 'sorry', t: 'Anteeksi', d: 'Make up after an Angy spell.', c: 10, test: (s) => s.counters.forgiven >= 1 },
+    { id: 'sorry', t: 'Anteeksi', d: 'Make up after an angry spell.', c: 10, test: (s) => s.counters.forgiven >= 1 },
   ];
 
   /* Names to suggest, with what they mean. */

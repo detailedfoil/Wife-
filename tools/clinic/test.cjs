@@ -118,7 +118,7 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  assert.ok(Math.abs(S.gameMult(mum,null,now)-fam)<1e-9,'no game, no helpers');
  assert.ok(Math.abs(S.gameMult(mum,'catch',now)-(fam+7*T.pointBonus/100))<1e-9,'a visiting pup gives a percent per point in her skill');
  assert.ok(Math.abs(S.gameMult(mum,'bj',now)-fam)<1e-9,'and nothing in games of other skills');
- { const run=(withPup)=>{ let coins=0,sulks=0; for(let n=0;n<600;n++){ const s=S.newState(now); s.stage=2; s.counters.dives=5; s.seed=n*7+1; s.stats.energy=100; if(withPup) s.family=[{name:'U',fate:'grown',pts:{water:10,sport:0,brain:0,care:0},arriveAt:now-1,leaveAt:now+3600e3}]; const l=S.diveResult(s,now); coins+=(l.coins||0); if(l.sulked) sulks++; if(withPup) assert.ok(l.kind==='none'||l.help.pct===10); } return {coins,sulks}; }; const a=run(false), b=run(true); assert.ok(b.coins>a.coins,'swimming points earn more on dives'); assert.ok(b.sulks<a.sulks,'and fewer Angy dives'); }
+ { const run=(withPup)=>{ let coins=0,sulks=0; for(let n=0;n<600;n++){ const s=S.newState(now); s.stage=2; s.counters.dives=5; s.seed=n*7+1; s.stats.energy=100; if(withPup) s.family=[{name:'U',fate:'grown',pts:{water:10,sport:0,brain:0,care:0},arriveAt:now-1,leaveAt:now+3600e3}]; const l=S.diveResult(s,now); coins+=(l.coins||0); if(l.sulked) sulks++; if(withPup) assert.ok(l.kind==='none'||l.help.pct===10); } return {coins,sulks}; }; const a=run(false), b=run(true); assert.ok(b.coins>a.coins,'swimming points earn more on dives'); assert.ok(b.sulks<a.sulks,'and fewer angry dives'); }
  { const d=S.diveHelp(mum,now); assert.equal(d.pts,7,'only the visiting pup counts'); assert.equal(d.pct,7*T.pointBonus); assert.equal(d.sulkCut,7*T.diveSulkCut); assert.equal(d.names.join(),'Uimari'); }
  assert.equal(S.careSlow(mum),5*T.carePoint,'the best Care pup sets how much slower happiness drops');
  { const away=(fam)=>{ const s=S.newState(now); s.stage=2; s.stats.joy=90; s.stats.food=100; s.stats.clean=100; s.family=fam; S.advance(s,now+3*3600e3,{away:true}); return s.stats.joy; };
@@ -142,6 +142,22 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  const fresh=S.newState(now); fresh.stage=2; const f1=S.addPup(fresh,now,'Uusi'); f1.xp=T.pupXpStep*2; assert.equal(S.pupLevel(S.migrate(clone(fresh)).pups[0]),2);
 }
 console.log('PASS: pup xp and levels, skill points up to 10, locked once spent, grow-up skill, capped family bonus, visiting perks scaled by points and old saves.');
+// "Add to Home Screen": which kind of device is it, and do update stamps sort by time? (Compared as text, 10 Dec comes before 18 Nov.)
+load('js/install.js');
+{
+ const K=ctx.PN.Install.kind, ua={
+  iphone:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+  mac:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  android:'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+  win:'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'};
+ assert.equal(K(ua.iphone,'iPhone',5),'ios'); assert.equal(K(ua.mac,'MacIntel',5),'ios','an iPad asking for the desktop site');
+ assert.equal(K(ua.mac,'MacIntel',0),'desktop'); assert.equal(K(ua.android,'Linux armv8l',5),'android');
+ assert.equal(K(ua.win,'Win32',0),'desktop'); assert.equal(K('','',0),'desktop');
+ const key=ctx.PN.stampKey, order=['18 Nov 2026, 10:04','18 Nov 2026, 10:30','19 Nov 2026, 09:00','1 Dec 2026, 09:00','10 Dec 2026, 09:00','18 Dec 2026, 09:00','2 Jan 2027, 09:00','12 Jan 2027, 09:00'];
+ for(let i=1;i<order.length;i++) assert.ok(key(order[i])>key(order[i-1]),order[i]+' is later than '+order[i-1]);
+ assert.equal(key('nonsense'),0); assert.ok(key(ctx.PN.UPDATED)>0,'the real stamp parses');
+}
+console.log('PASS: install button device detection and update stamps that sort by time.');
 try{
  const {createCanvas}=require('@napi-rs/canvas');
  ctx.document={createElement:(name)=>{if(name!=='canvas')throw Error(name);const c=createCanvas(1,1);c.addEventListener=()=>{};return c;}};

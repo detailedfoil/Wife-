@@ -24,7 +24,7 @@
     diveSulkChance: 0.15, diveSulk: 100,
     grudgePerH: 12, xpLossPerH: 12, xpRate: 1,
     sulkGrow: 0.5, sulkBlock: 20,         // a sulk halves growing; sulking harder than sulkBlock, she will not play
-    medHour: 5, medBonus: 100,             // she is Anxi from 5am until she has had it; a photo of the pill earns a bonus
+    medHour: 5, medBonus: 100,             // she has anxiety from 5am until she has had it; a photo of the pill earns a bonus
     sulkTreats: 3, sulkPats: 20,          // she picks three different treats and wants twenty head pats and a bath
     sulkSleepH: 4, sulkTreatCut: 1 / 5, sulkPatCut: 1 / 5, sulkBathCut: 1 / 5,   // a full sulk naps off in 4 h; each of the three treats takes a fifth off it, the twenty pats together a fifth, and the sauna a fifth
     starveToSick: 6 * H, filthToSick: 10 * H, wellToCure: 4 * H,
@@ -41,7 +41,7 @@
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
     // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
-    // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean, unless she is Angy and still wants her sauna.
+    // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean, unless she is angry and still wants her sauna.
     ballJoy: 1, ballJoyGoes: 6,   // a bounce on the nose lifts happiness by a point (a quarter of that if it is quick after the last), and only the first six an hour
     petJoy: 0.2, petJoyPats: 10,   // a pat lifts happiness by only a fifth of a point, and only the first ten an hour
     saunaRounds: 7, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
@@ -95,7 +95,7 @@
   function newState(now) {
     const s = {
       v: 1, createdAt: now, lastSeen: now, seed: (now % 2147483647) | 0,
-      angyCleared: 1, shufflePaid: 1, angyDiveOnly: 1, shuffleScore2: 1, tuckXp: 0, tuckAt: 0, visitDay: '', visitN: 0,   // the one-time changes in migrate() are for older saves: a new one starts with them done, or it would lose Seal Seat Shuffle (and an Angy spell) the second time it is opened
+      angyCleared: 1, shufflePaid: 1, angyDiveOnly: 1, shuffleScore2: 1, tuckXp: 0, tuckAt: 0, visitDay: '', visitN: 0,   // the one-time changes in migrate() are for older saves: a new one starts with them done, or it would lose Seal Seat Shuffle (and an angry spell) the second time it is opened
       name: '', stage: 0, ageMs: 0, xp: 0, maxLevel: 1,
       stats: { food: 62, joy: 70, energy: 88, clean: 90 },
       asleep: false, sleepKind: null, wakeAt: 100,
@@ -143,7 +143,7 @@
     if (obj && !obj.angyCleared) { obj.grudge = 0; obj.sulkWant = null; obj.angyCleared = 1; }
     if (obj && !obj.shuffleScore2) { obj.shuffleScore2 = 1; if (obj.counters) obj.counters.best_shuffle = 0; }   // one time only: Seal Seat Shuffle scores seats differently now, so the old best is cleared
     if (obj && !obj.shufflePaid) { obj.shufflePaid = 1; if (obj.owned) delete obj.owned.game_shuffle; }   // one time only: Seal Seat Shuffle was free and now costs coins, so everyone buys it afresh
-    if (obj && !obj.angyDiveOnly) { obj.angyDiveOnly = 1; if (!obj.medLate) { obj.grudge = 0; obj.sulkWant = null; } }   // one time only: being left alone no longer makes her Angy, so neglect sulks already on a save end   // one time only: the Angy rules changed, so everyone starts clean
+    if (obj && !obj.angyDiveOnly) { obj.angyDiveOnly = 1; if (!obj.medLate) { obj.grudge = 0; obj.sulkWant = null; } }   // one time only: being left alone no longer makes her angry, so neglect sulks already on a save end   // one time only: the angry rules changed, so everyone starts clean
     PN.Appearance.ensure(obj);
     (obj.pups || []).concat(obj.family || []).forEach(PN.Appearance.ensure);
     fill(obj, base);
@@ -317,7 +317,7 @@
     if (neglected) {
       state.neglectMs += dt;
       sum.neglectH += h;
-      // being left alone no longer makes her Angy: that now comes only from a bad dive (and the late medicine)
+      // being left alone no longer makes her angry: that now comes only from a bad dive (and the late medicine)
       const lose = Math.max(0, Math.min(state.xp - xpFloor(state), T.xpLossPerH * h));
       state.xp -= lose; sum.xpLost += lose;
       // and sets her growing back, though never below where her current stage began
@@ -393,7 +393,7 @@
     if (late) state.grudge = 100;
   }
   /* The daily medicine is off for everyone until it is switched on in Settings. Switching it on starts the routine tomorrow
-     (not the moment it is switched on), and switching it off ends any Anxi she is in. */
+     (not the moment it is switched on), and switching it off ends any anxiety she is in. */
   function setMedicine(state, on, now) {
     const was = !!state.settings.medicine;
     state.settings.medicine = !!on;
@@ -457,7 +457,7 @@
       addXp(state, 3); check(state);
       return ok({ med: true });
     }
-    if (it.full) {                         // coffee: tummy, happiness and energy all full at once. Not cleanliness, and it cures nothing (Angy, Anxi, poorly)
+    if (it.full) {                         // coffee: tummy, happiness and energy all full at once. Not cleanliness, and it cures nothing (angry, anxiety, poorly)
       if (state.asleep) return no('asleep');
       state.pantry[id]--;
       s.food = s.joy = s.energy = 100;
@@ -763,7 +763,7 @@
     // used to count as a full game). No seconds given (old callers) means a full game.
     const part = secs > 0 ? clamp(secs / T.gameFull, 0, 1) : 1;
     const joy = Math.round(gameJoy(taste, state.skip.indexOf(game) >= 0) * joyScale(secs));
-    // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her Angy.
+    // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her angry.
     const calm = T.neglectLine + T.gameCalm;
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);
     const dirt = gm && gm.muck ? Math.max(1, Math.round(clamp(Math.round((secs > 0 ? secs : 45) / 60 * gm.muck), 1, T.muckMost) * 0.75)) : 0;
@@ -839,7 +839,7 @@
   function canSauna(state) {
     if (state.asleep) return no('asleep');
     if (state.stats.clean >= T.saunaClean) {
-      const want = sulkNeeds(state);                       // already clean is no reason to refuse when the sauna is what an Angy seal is waiting for
+      const want = sulkNeeds(state);                       // already clean is no reason to refuse when the sauna is what an angry seal is waiting for
       if (!(want && !want.bath)) return no('clean');
     }
     return ok({});
@@ -891,7 +891,7 @@
     if (state.gift.last === today) return null;
     const kept = state.gift.last === dayKey(now - DAY);
     state.gift.last = today;
-    // An Angy seal keeps her gift back. The medicine mood does not: the pill is due from 5 am, so the first visit of every day found her Anxi,
+    // An angry seal keeps her gift back. The medicine mood does not: the pill is due from 5 am, so the first visit of every day found her anxious,
     // and the gift was withheld and the streak broken every single morning.
     if (state.grudge > T.sulkBlock && !state.medLate) { state.gift.streak = 0; return { withheld: true }; }
     state.gift.streak = kept ? state.gift.streak + 1 : 1;
@@ -1029,7 +1029,7 @@
     return out;
   }
 
-  /* Visiting grown pups help on dives with their Swimming points: +pointBonus% coins and diveSulkCut points off the chance of coming up Angy, per point. */
+  /* Visiting grown pups help on dives with their Swimming points: +pointBonus% coins and diveSulkCut points off the chance of coming up angry, per point. */
   function diveHelp(state, now) {
     let pts = 0; const names = [];
     (state.family || []).forEach((f) => {

@@ -126,7 +126,7 @@
     });
     const sn = S.sulkNeeds(st), chip = $('sulkChip');
     chip.hidden = !sn;
-    if (sn) chip.textContent = st.medLate ? tr('Anxi: needs her medicine') : tr('Angy: {0} of sleep left', mins(napMs(st)));
+    if (sn) chip.textContent = st.medLate ? tr('Anxiety: needs her medicine') : tr('Angry: {0} of sleep left', mins(napMs(st)));
     const mi = S.medInfo(st, Date.now()), mc = $('medChip');
     mc.hidden = !st.name || !mi.late;
     if (!mc.hidden) mc.textContent = mi.taken ? tr('Pill photo +{0}', S.T.medBonus) : tr('Medicine');
@@ -312,12 +312,12 @@
     + o.title + '</b><span class="d">' + o.text + '</span></span>' + (o.side ? '<span class="side">' + o.side + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
   const mins = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
   const napMs = (st) => Math.max(0, st.grudge) / (100 / S.T.sulkSleepH) * 3600e3;   // sleep it would take to sulk it off
-  const WHY = { asleep: 'asleep', sick: 'poorly', sulk: 'Angy', tired: 'too tired', wait: 'resting' };
+  const WHY = { asleep: 'asleep', sick: 'poorly', sulk: 'angry', tired: 'too tired', wait: 'resting' };
 
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} is Anxi.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will calm her down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is Angy.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angy timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it. All the head pats together and the sauna cut {0} each.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} has anxiety.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will calm her down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is angry.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angry timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it. All the head pats together and the sauna cut {0} each.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
         + '<span class="' + (need.pats >= S.T.sulkPats ? 'done' : '') + '">' + ic('heart') + tr('Head pats') + ' ' + Math.min(need.pats, S.T.sulkPats) + '/' + S.T.sulkPats + (need.pats >= S.T.sulkPats ? ' \u2713' : ' \u2212' + mins(S.T.sulkPatCut * S.T.sulkSleepH * 3600e3)) + '</span>'
         + '<span class="' + (need.bath ? 'done' : '') + '">' + ic('steam') + tr('Sauna') + (need.bath ? ' \u2713' : ' \u2212' + mins(S.T.sulkBathCut * S.T.sulkSleepH * 3600e3)) + '</span>'
@@ -354,7 +354,7 @@
       let h = (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a sauna.', moods.muck) + '</div>' : '')
         + happyCard + '<p class="lead">' + tr('The heart by a game shows whether it lifts her happiness (arrow up) or lowers it (arrow down), and by how much for every minute you play it. Each play wears a game out a little and makes the others more fun.') + '</p>';
       h += '<div class="rows">';
-      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back Angy.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
+      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back angry.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (gm.dev && !st.dev) return;                       // developer-mode games are not shown otherwise
@@ -468,7 +468,7 @@
     },
     profile(st) {
       const lv = S.level(st), days = Math.floor((Date.now() - st.createdAt) / S.DAY), fi = PN.isFi();
-      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|Angy', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a sauna', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
+      const moods = { sleep: 'fast asleep', sick: 'mood|poorly', sulk: 'mood|angry', hungry: 'hungry', tired: 'sleepy', dirty: 'in need of a sauna', sad: 'a bit glum', happy: 'very happy', ok: 'content' };
       const line = (a, b) => '<div class="statline"><span>' + tr(a) + '</span><b>' + b + '</b></div>';
       const stage = D.STAGES[st.stage], favIt = PN.items[st.fav];
       let next;
@@ -477,7 +477,7 @@
         next = tr('Becomes a {0} at friendship level {1}.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage]);
       } else next = st.pupMet === 'waiting' ? tr('Expecting! The pup is due in about {0} hours.', Math.max(1, Math.ceil((st.pupBirthAt - Date.now()) / S.H))) : st.pupMet === 'ready' ? tr('Fully grown, and something is in the air. Close the game and come back to see.') : st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once her pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
-        + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|Anxi') : tr(moods[S.mood(st)]))
+        + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|anxiety') : tr(moods[S.mood(st)]))
         + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
         + line('Strokes', st.counters.pets) + line('Meals', st.counters.feeds) + line('Dives', st.counters.dives) + line('Games played', st.counters.games)
         + (st.counters.pupsGrown + st.counters.pupsLost ? line('Pups raised', st.counters.pupsGrown) + line('Pups lost', st.counters.pupsLost) : '')
@@ -492,7 +492,7 @@
       return '<div class="rows">' + tog('sound', 'Sound', 'sound', 'Squeaks, splashes and chimes.') + tog('music', 'Music', 'music', 'Gentle little melodies, with room for quiet.')
         + '<div class="row"><span class="ic-wrap">' + ic('music') + '</span><span class="txt"><b>' + tr('Background instrument') + '</b><span class="d">' + tr('A random instrument each time you open the game. Change it here anytime.') + '</span><span class="music-choices">' + PN.Audio.instruments.map((i) => '<button class="music-choice' + (PN.Audio.instrument === i.id ? ' on' : '') + '" data-do="instrument" data-id="' + i.id + '" aria-pressed="' + (PN.Audio.instrument === i.id) + '"><b>' + tr(i.name) + '</b><span class="d">' + tr(i.description) + '</span></button>').join('') + '</span></span></div>'
         + (navigator.vibrate ? tog('haptics', 'Buzz', 'bolt', 'A little buzz under your finger when you stroke and tap.') : '')
-        + tog('medicine', 'Daily medicine', 'med', 'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets Anxi until she has had it.')
+        + tog('medicine', 'Daily medicine', 'med', 'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets anxiety until she has had it.')
         + tog('stats', 'Share play stats', 'globe', 'Sends anonymous numbers (which games, how long, coins, progress, how the game runs) to the maker. No name or personal details.')
         + '<div class="row"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Language') + '</b><span class="d">' + tr('Play in English or in Finnish.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + lang + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight and the weather over Inari in Lapland as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
@@ -589,6 +589,7 @@
     const run = () => new Promise((resolve) => {
       const m = $('modal'), card = $('modalCard');
       card.classList.toggle('game-result', o.layout === 'game-result'); card.classList.toggle('spend', o.layout === 'spend');
+      m.classList.toggle('over', !!o.over);   // over: true lifts it above the first screen, which comes later in the page
       card.innerHTML = (o.art ? '<img class="art" src="' + o.art + '" alt="">' : '') + '<h3>' + o.title + '</h3>' + (o.html || '')
         + '<div class="actions">' + (o.actions || [{ label: 'OK', value: 1 }]).map((a, i) => '<button class="btn ' + (a.cls || (i ? 'ghost' : '')) + '" data-i="' + i + '">' + a.label + '</button>').join('') + '</div>';
       m.hidden = false; UI.modalOpen = true;
@@ -646,6 +647,12 @@
       UI.title.label();
       go.addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('pop'); onGo(); }, { once: true });
       $('titleUpdate').addEventListener('click', () => G().checkUpdate());
+      const inst = $('titleInstall');          // Add to Home Screen: there until the game is installed
+      if (PN.Install && inst) {
+        const sync = () => { inst.hidden = !PN.Install.visible(); };
+        sync(); PN.Install.onChange(sync);
+        inst.addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('tap'); PN.Install.start(); });
+      }
       $('titleLang').addEventListener('click', () => { PN.Audio.unlock(); PN.Audio.play('tap'); G().setLang(PN.lang === 'fi' ? 'en' : 'fi'); });
     },
     label() {
@@ -677,7 +684,7 @@
       if (k === 'care') return;
       const games = PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title));
       parts.push(tr('+{0}% coins in {1}', n * S.T.pointBonus, games.length > 1 ? tr('{0} and {1}', games.slice(0, -1).join(', '), games[games.length - 1]) : games[0]));
-      if (k === 'water') parts.push(tr('on dives +{0}% coins and a {1}% smaller chance of coming up Angy', n * S.T.pointBonus, n * S.T.diveSulkCut));
+      if (k === 'water') parts.push(tr('on dives +{0}% coins and a {1}% smaller chance of coming up angry', n * S.T.pointBonus, n * S.T.diveSulkCut));
     });
     const care = pts.care ? ' ' + tr('Care: happiness drops {0}% slower while you are away (only the best Care pup in the family counts).', pts.care * S.T.carePoint) : '';
     return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) + care : care ? care.trim() : tr('{0} has no skill points, so she gives no visiting bonus.', name);
