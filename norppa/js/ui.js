@@ -515,6 +515,12 @@
           ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
           ['heal', 'Feed and cheer the pups', 'Full tummies, full happiness, and no longer poorly.', 'fish'],
           ['train', 'Level up the pups', 'Give every pup at home enough xp for 3 more skill points, to see the points and level-up pop-ups.', 'star'],
+          ['lvl+', 'Pups: one more level', 'Every pup at home gets one more level, and so one more skill point to spend.', 'star'],
+          ['lvl-', 'Pups: one level less', 'Every pup at home goes down a level. If she has spent more points than her new level allows, one is taken back from her biggest skill.', 'star'],
+          ['lvlmax', 'Pups: top level', 'Every pup at home goes straight to the top level, with all her points to spend.', 'star'],
+          ['refund', 'Pups: take points back', 'Every pup at home gets her spent points back to spend again.', 'star'],
+          ['g+', 'Grown pups: one more point', 'Every grown-up pup gets a point in a random skill, up to the most points.', 'star'],
+          ['g-', 'Grown pups: one point less', 'Every grown-up pup loses a point from her biggest skill.', 'star'],
           ['spec', 'New points for grown pups', 'Give every grown-up pup 10 points spread at random over the skills, to test the visit bonuses.', 'star'],
         ].map((r) => '<button class="row dev-row" data-do="devpup" data-id="' + r[0] + '"><span class="ic-wrap">' + ic(r[3]) + '</span><span class="txt"><b>' + tr(r[1]) + '</b><span class="d">' + tr(r[2]) + '</span></span></button>').join('') : '')
         + (st.dev ? '<button class="row dev-row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')

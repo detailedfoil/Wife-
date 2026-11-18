@@ -8,6 +8,12 @@
   const FI = {
     /* ---------- pup skills (18 Nov 2026) ---------- */
     '{0} and {1}': '{0} ja {1}',
+    'Pups: one more level': 'Kuutit: yksi taso lisää', 'Every pup at home gets one more level, and so one more skill point to spend.': 'Jokainen kotona oleva kuutti saa yhden tason lisää ja siis yhden taitopisteen käytettäväksi.',
+    'Pups: one level less': 'Kuutit: yksi taso vähemmän', 'Every pup at home goes down a level. If she has spent more points than her new level allows, one is taken back from her biggest skill.': 'Jokainen kotona oleva kuutti laskee tason. Jos hän on käyttänyt enemmän pisteitä kuin uusi taso sallii, yksi otetaan pois hänen suurimmasta taidostaan.',
+    'Pups: top level': 'Kuutit: huipputaso', 'Every pup at home goes straight to the top level, with all her points to spend.': 'Jokainen kotona oleva kuutti nousee suoraan huipputasolle kaikki pisteet käytettävänä.',
+    'Pups: take points back': 'Kuutit: pisteet takaisin', 'Every pup at home gets her spent points back to spend again.': 'Jokainen kotona oleva kuutti saa käytetyt pisteensä takaisin uudelleen käytettäväksi.',
+    'Grown pups: one more point': 'Aikuiset kuutit: yksi piste lisää', 'Every grown-up pup gets a point in a random skill, up to the most points.': 'Jokainen aikuinen kuutti saa pisteen satunnaiseen taitoon, enintään suurimpaan pistemäärään asti.',
+    'Grown pups: one point less': 'Aikuiset kuutit: yksi piste vähemmän', 'Every grown-up pup loses a point from her biggest skill.': 'Jokainen aikuinen kuutti menettää pisteen suurimmasta taidostaan.',
     /* ---------- pup levels and skill points (18 Nov 2026) ---------- */
     'muck costs {0}% less': 'likaisuus maksaa {0} % vähemmän', '+{0}% coins in {1}': '+{0} % kolikoita: {1}',
     'When {0} visits: {1}.': 'Kun {0} on kylässä: {1}.',

@@ -1394,6 +1394,20 @@
       await birth();
       return;
     }
+    if (what === 'g+' || what === 'g-') {
+      const grown = state.family.filter((f) => f.fate === 'grown');
+      if (!grown.length) { A.play('nope'); UI.toast(tr('No grown-up pups to call yet. Try Say farewell now first.'), 'bolt', 'bad', 4200); return; }
+      grown.forEach((f) => {
+        if (!f.pts) { f.pts = {}; PN.SKILL_ORDER.forEach((k) => { f.pts[k] = 0; }); }
+        const total = PN.SKILL_ORDER.reduce((a, k) => a + f.pts[k], 0);
+        if (what === 'g+') { if (total < T.pupMaxPoints) f.pts[PN.SKILL_ORDER[Math.floor(Math.random() * PN.SKILL_ORDER.length)]]++; }
+        else { const top = PN.SKILL_ORDER.slice().sort((a, b) => f.pts[b] - f.pts[a])[0]; if (f.pts[top] > 0) f.pts[top]--; }
+        f.spec = S.specOf(f.pts);
+      });
+      A.play('sparkle'); UI.toast(grown.map((f) => UI.esc(f.name) + ': ' + UI.pointsLine(f.pts)).join('; '), 'star', '', 6000);
+      UI.refresh(); UI.renderSheet(); save();
+      return;
+    }
     if (what === 'spec') {
       const grown = state.family.filter((f) => f.fate === 'grown');
       if (!grown.length) { A.play('nope'); UI.toast(tr('No grown-up pups to call yet. Try Say farewell now first.'), 'bolt', 'bad', 4200); return; }
@@ -1422,6 +1436,17 @@
     } else if (what === 'heal') {
       P.forEach((p) => { p.food = 100; p.joy = 100; p.sick = false; p.starveMs = 0; });
       A.play('chirp');
+    } else if (what === 'lvl+' || what === 'lvl-' || what === 'lvlmax' || what === 'refund') {
+      P.forEach((p) => {
+        if (!p.pts) { p.pts = {}; PN.SKILL_ORDER.forEach((k) => { p.pts[k] = 0; }); }
+        const cap = T.pupMaxPoints * T.pupXpStep;
+        if (what === 'lvl+') p.xp = Math.min(cap, (S.pupLevel(p) + 1) * T.pupXpStep);
+        else if (what === 'lvl-') p.xp = Math.max(0, (S.pupLevel(p) - 1) * T.pupXpStep);
+        else if (what === 'lvlmax') p.xp = cap;
+        else PN.SKILL_ORDER.forEach((k) => { p.pts[k] = 0; });
+        while (S.pupSpent(p) > S.pupLevel(p)) { const top = PN.SKILL_ORDER.slice().sort((a, b) => p.pts[b] - p.pts[a])[0]; p.pts[top]--; }
+      });
+      A.play('sparkle'); UI.toast(P.map((p) => UI.esc(p.name) + ': ' + tr('Level {0}.', S.pupLevel(p)) + ' ' + tr('Skill points to spend: {0}.', S.pupFree(p))).join(' '), 'star', '', 5200);
     } else if (what === 'train') {
       P.forEach((p) => { p.xp = Math.min(S.T.pupMaxPoints * S.T.pupXpStep, (p.xp || 0) + 3 * S.T.pupXpStep); });
       A.play('sparkle'); UI.toast(P.map((p) => UI.esc(p.name) + ': ' + tr('Level {0}.', S.pupLevel(p)) + ' ' + tr('Skill points to spend: {0}.', S.pupFree(p))).join(' '), 'star', '', 5200);
