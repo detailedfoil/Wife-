@@ -200,7 +200,7 @@
     S.save(state);
     if (state.dev) return;
     const v = await UI.modal({ title: tr('Anonymous play numbers'), html: tr('<p>This is an early test, so the game sends the maker anonymous numbers: which games get played, for how long, and how far people get. No name, no account, nothing personal.</p><p>You can change this any time in Settings under Share play stats.</p>'),
-      actions: [{ label: tr('Fine by me'), value: 1 }, { label: tr('Turn it off'), value: 0 }] });
+      actions: [{ label: tr('Fine by me'), value: 1 }, { label: tr('Turn it off'), value: 0 }], over: true });   // over: it now opens while the title is still up
     if (v === 0) { state.settings.stats = false; }
     S.save(state);
   }
