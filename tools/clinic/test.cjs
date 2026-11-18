@@ -106,6 +106,7 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  assert.equal(S.pupSpec(pup),'water');
  pup.ready=true; const g=S.graduatePup(mum,0,now);
  assert.equal(g.spec,'water'); assert.equal(g.pts.water,6); assert.equal(g.pts.care,4); assert.equal(mum.family[0].pts.water,6); assert.equal(g.fam,T.famBonusEach);
+ assert.equal(S.topSkills({water:5,sport:5,brain:0,care:0}).join(),'water,sport','two skills at the same level are both hers'); assert.equal(S.topSkills({water:0,sport:0,brain:0,care:0}).length,0); assert.equal(S.topSkills({water:2,sport:1,brain:0,care:0}).join(),'water');
  assert.equal(S.specOf({water:3,sport:3,brain:0,care:0}),'all','a tie is an all-rounder'); assert.equal(S.specOf({water:0,sport:0,brain:0,care:0}),'all'); assert.equal(S.specOf({water:3,sport:4,brain:0,care:0}),'sport');
  for(let k=0;k<20;k++) mum.family.push({name:'P'+k,fate:k%5?'grown':'lost',pts:{water:1,sport:0,brain:0,care:0}});
  assert.equal(S.familyBonus(mum),T.famBonusMax,'the family bonus is capped');

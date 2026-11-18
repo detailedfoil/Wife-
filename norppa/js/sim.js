@@ -768,7 +768,7 @@
     addXp(state, secs > 0 ? Math.min(8, Math.floor(secs / 3)) : 8);
     learn(state, 'leikki');
     check(state);
-    const helped = help.filter((h) => h.pct || (h.cut && muckLoss(state) > 0)).map((h) => ({ name: h.name, spec: h.spec, pct: h.pct || 0, cut: muckLoss(state) > 0 ? h.cut || 0 : 0 }));
+    const helped = help.filter((h) => h.pct || (h.cut && muckLoss(state) > 0)).map((h) => ({ name: h.name, spec: h.spec, pts: h.pts, pct: h.pct || 0, cut: muckLoss(state) > 0 ? h.cut || 0 : 0 }));
     return { coins, best, fish: got, tired, taste: Math.round(taste), happy, muck: Math.round(muck * 100), joy, dirt, fam, help: helped };
   }
 
@@ -969,6 +969,11 @@
     return best > 0 && best > next ? ranked[0] : 'all';
   }
   const pupSpec = (p) => (p && p.spec) || specOf(p && p.pts);
+  /* Every skill she is best at: one, or two or more that tie. A pup with 5 points in two skills is good at both, and her perks already count each point. */
+  function topSkills(pts) {
+    const best = Math.max(0, ...PN.SKILL_ORDER.map((k) => (pts && pts[k]) || 0));
+    return best > 0 ? PN.SKILL_ORDER.filter((k) => ((pts && pts[k]) || 0) === best) : [];
+  }
   /* Everything the family does earns the pups at home xp. A level reached is an event, so the game can say so. */
   function pupXp(state, n) {
     if (!(n > 0)) return;
@@ -1014,7 +1019,7 @@
     (state.family || []).forEach((f, i) => {
       if (f.fate !== 'grown' || !f.pts || visitStatus(f, now) !== 'here') return;
       const pct = key ? (f.pts[key] || 0) * T.pointBonus : 0, cut = (f.pts.care || 0) * T.carePoint;
-      if (pct > 0 || cut > 0) out.push({ i, name: f.name, spec: f.spec, pct, cut });
+      if (pct > 0 || cut > 0) out.push({ i, name: f.name, spec: f.spec, pts: f.pts, pct, cut });
     });
     return out;
   }
@@ -1176,7 +1181,7 @@
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
     feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
-    pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, pupXp, familyBonus, helpers, muckCost,
+    pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, topSkills, pupXp, familyBonus, helpers, muckCost,
     sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };
 })(window.PN = window.PN || {});
 

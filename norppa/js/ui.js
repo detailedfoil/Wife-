@@ -250,16 +250,16 @@
       + line(tr('Family bonus'), '+' + fam + '%' + (fam >= S.T.famBonusMax ? ' ' + tr('(top)') : ' ' + tr('(next pup: +{0}%)', S.T.famBonusEach)));
     h += '<div class="shelf">' + tr('Grown pups by skill') + '<span>' + tr('{0} grown', grown.length) + '</span></div>';
     PN.SKILL_ORDER.concat(['all']).forEach((k) => {
-      const n = grown.filter((f) => (f.spec || 'all') === k).length;
+      const n = grown.filter((f) => { const top = S.topSkills(f.pts); return k === 'all' ? top.length !== 1 && top.length !== 2 : top.indexOf(k) >= 0 && top.length <= 2; }).length;
       h += line(UI.specName(k) + (k === 'all' ? '' : ' · ' + UI.skillName(k)), n);
     });
     h += '<p class="note">' + tr('Each point a grown pup has gives +{0}% coins in the games of that skill while she visits, and each Care point takes {1}% off what muck costs.', S.T.pointBonus, S.T.carePoint) + '</p>';
     h += '<div class="shelf">' + tr('Every pup') + '<span>' + tr('newest first') + '</span></div><div class="rows">';
     const one = (p, home, i) => {
-      const spec = home ? (S.pupSpent(p) ? S.pupSpec(p) : null) : p.spec;
+      const spec = home ? (S.pupSpent(p) ? UI.specLabel(p) : null) : UI.specLabel(p);
       const bits = [home ? tr('At home, born {0}', day(p.bornAt)) : tr('Grown up {0}', day(p.endAt)), home ? tr('Level {0} of {1}', S.pupLevel(p), S.T.pupMaxPoints) : '',
         home && S.pupFree(p) ? tr('Skill points to spend: {0}', S.pupFree(p)) : '', p.pts ? UI.pointsLine(p.pts) : ''].filter(Boolean);
-      return row({ icon: 'seal', img: PN.Thumbs.pup(p), tint: home ? 'leaf' : '', cls: home ? '' : 'done', title: esc(p.name) + (spec ? ' · ' + (home ? tr('heading for {0}', UI.specName(spec)) : UI.specName(spec)) : ''),
+      return row({ icon: 'seal', img: PN.Thumbs.pup(p), tint: home ? 'leaf' : '', cls: home ? '' : 'done', title: esc(p.name) + (spec ? ' · ' + (home ? tr('heading for {0}', spec) : spec) : ''),
         text: bits.join('. ') + '.' + (!home ? ' ' + UI.perkText(p, esc(p.name)) : ''), act: home ? 'pupinfo' : (p.fate === 'grown' ? 'callpup' : ''), id: i });
     };
     st.pups.forEach((p, i) => { h += one(p, true, i); });
@@ -460,7 +460,7 @@
               : wait > 0 ? tr('Grew up and swims the lake. Can be called again in {0}.', mins(wait))
                 : tr('Grew up and swims the lake. Tap to call {0} home.', esc(f.name));
         }
-        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name) + (f.fate === 'grown' && f.spec ? ' · ' + UI.specName(f.spec) : ''), text,
+        h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name) + (f.fate === 'grown' && f.pts ? ' · ' + UI.specLabel(f) : ''), text,
           side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)), act: f.fate === 'grown' ? 'callpup' : '', id: i });
       });
       return h + '</div><p class="note">' + tr('Pups earn xp from everything the family does while they are at home, and every {0} xp is a skill point, up to {1}. Spend them on the pup card. A grown pup gives +{2}% coins per point in the games of that skill when she visits, and each Care point takes {3}% off what muck costs.', S.T.pupXpStep, S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint) + '</p>'
@@ -514,8 +514,7 @@
           ['dress', 'New outfits for the pups', 'Give every pup new random things to wear, different from each other.', 'star'],
           ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
           ['heal', 'Feed and cheer the pups', 'Full tummies, full happiness, and no longer poorly.', 'fish'],
-          ['train', 'Level up the pups', 'Give every pup at home enough xp for 3 more skill points, to see the points and level-up pop-ups.', 'star'],
-          ['lvl+', 'Pups: one more level', 'Every pup at home gets one more level, and so one more skill point to spend.', 'star'],
+          ['train', 'Level up the pups', 'Every pup at home goes up exactly one level, and gets one skill point to spend.', 'star'],
           ['lvl-', 'Pups: one level less', 'Every pup at home goes down a level. If she has spent more points than her new level allows, one is taken back from her biggest skill.', 'star'],
           ['lvlmax', 'Pups: top level', 'Every pup at home goes straight to the top level, with all her points to spend.', 'star'],
           ['refund', 'Pups: take points back', 'Every pup at home gets her spent points back to spend again.', 'star'],
@@ -684,6 +683,8 @@
   /* A pup's points as one line: Swimming 3 · Sports 0 · Brains 1 · Care 6. */
   UI.pointsLine = (pts) => PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' ' + ((pts && pts[k]) || 0)).join(' · ');
   /* What a pup is heading for, or a grown pup is: her one best skill, All-rounder for a tie, or nothing yet. */
-  UI.headingFor = (p) => (S.pupSpent(p) || (p && p.fate === 'grown' && p.pts) ? UI.specName(S.pupSpec(p)) : tr('no skill yet'));
+  UI.headingFor = (p) => (S.pupSpent(p) || (p && p.fate === 'grown' && p.pts) ? UI.specLabel(p) : tr('no skill yet'));
+  /* What a pup is good at, from her points: one skill, two that tie ("Swimmer and Sporty"), or All-rounder for three or more. */
+  UI.specLabel = (o) => { const top = S.topSkills(o && o.pts); return top.length === 1 ? UI.specName(top[0]) : top.length === 2 ? tr('{0} and {1}', UI.specName(top[0]), UI.specName(top[1])) : tr('All-rounder'); };
 })(window.PN = window.PN || {});
 

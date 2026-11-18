@@ -629,7 +629,7 @@
     if (!f || UI.modalOpen || S.visitStatus(f, Date.now()) !== 'here') return;
     const name = UI.esc(f.name);
     A.play('tap');
-    const v = await UI.modal({ title: name + (f.spec ? ' · ' + UI.specName(f.spec) : ''), html: '<p>' + tr('{0} is visiting. {0} will head home in {1}.', name, UI.mins(f.leaveAt - Date.now())) + '</p>' + (f.pts ? '<p>' + UI.perkText(f, name) + '</p>' : ''),
+    const v = await UI.modal({ title: name + (f.pts ? ' · ' + UI.specLabel(f) : ''), html: '<p>' + tr('{0} is visiting. {0} will head home in {1}.', name, UI.mins(f.leaveAt - Date.now())) + '</p>' + (f.pts ? '<p>' + UI.perkText(f, name) + '</p>' : ''),
       actions: [{ label: tr('Cuddle'), value: 'cuddle' }, { label: tr('Send home'), value: 'home' }, { label: tr('Close'), value: 0 }] });
     const ps = visitors[i];
     if (v === 'cuddle' && ps && !ps.leaving) {
@@ -748,7 +748,7 @@
     A.play('award');
     S.save(state); UI.refresh();
     G.busy = false;
-    await UI.modal({ title: tr('{0} is all grown up', UI.esc(r.name)), html: '<p class="lead">' + tr('Skill: <b>{0}</b>', UI.specName(r.spec)) + '</p><p>' + UI.pointsLine(r.pts) + '</p><p>' + UI.perkText(r, UI.esc(r.name)) + '</p><p>'
+    await UI.modal({ title: tr('{0} is all grown up', UI.esc(r.name)), html: '<p class="lead">' + tr('Skill: <b>{0}</b>', UI.specLabel(r)) + '</p><p>' + UI.pointsLine(r.pts) + '</p><p>' + UI.perkText(r, UI.esc(r.name)) + '</p><p>'
       + tr('Family bonus is now +{0}% coins in every game.', r.fam) + '</p><p class="small">' + tr('Call {0} home from the Family album to get the help.', UI.esc(r.name)) + '</p>', actions: [{ label: tr('Lovely'), value: 0 }] });
   }
 
@@ -1448,7 +1448,7 @@
       });
       A.play('sparkle'); UI.toast(P.map((p) => UI.esc(p.name) + ': ' + tr('Level {0}.', S.pupLevel(p)) + ' ' + tr('Skill points to spend: {0}.', S.pupFree(p))).join(' '), 'star', '', 5200);
     } else if (what === 'train') {
-      P.forEach((p) => { p.xp = Math.min(S.T.pupMaxPoints * S.T.pupXpStep, (p.xp || 0) + 3 * S.T.pupXpStep); });
+      P.forEach((p) => { p.xp = Math.min(T.pupMaxPoints * T.pupXpStep, (S.pupLevel(p) + 1) * T.pupXpStep); });
       A.play('sparkle'); UI.toast(P.map((p) => UI.esc(p.name) + ': ' + tr('Level {0}.', S.pupLevel(p)) + ' ' + tr('Skill points to spend: {0}.', S.pupFree(p))).join(' '), 'star', '', 5200);
     }
     UI.refresh(); UI.renderSheet(); save();
