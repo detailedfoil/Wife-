@@ -267,6 +267,7 @@
     'Close': 'Sulje',
     'Time': 'Aika',
     'Packing the snow': 'Lunta lapioidaan',
+    'This game needs WebGL, and this browser has it switched off. Try another browser, or turn on hardware acceleration in the browser settings.': 'Tämä peli tarvitsee WebGL:n, ja selaimessasi se on pois päältä. Kokeile toista selainta tai ota laitteistokiihdytys käyttöön selaimen asetuksista.',
     'Meet your seal': 'Tapaa norppasi',
     'title|Play': 'Pelaa',
     'Norppa is Finnish for a ringed seal. Pikku means little.': 'Norppa on pohjoisen järvien ja merien pieni hylje.',

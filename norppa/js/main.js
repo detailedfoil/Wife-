@@ -41,7 +41,27 @@
   const ease = (k) => k * k * (3 - 2 * k);
 
   /* ---------- start-up ---------- */
+  /* Some browsers have WebGL switched off (hardware acceleration disabled, a strict privacy mode, a very old device).
+     Without this check the title says "Packing the snow" for ever and the console shows an error nobody sees. */
+  const webglOk = () => {
+    try {
+      const gl = document.createElement('canvas').getContext('webgl2') || document.createElement('canvas').getContext('webgl');
+      if (!gl) return false;
+      const lose = gl.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();      // the test context is not needed again
+      return true;
+    } catch (e) { return false; }
+  };
+  function noWebGL() {
+    PN.setLang(PN.guessLang());
+    const sub = $('titleSub');
+    if (!sub) return;
+    sub.removeAttribute('data-l');       // setLang would put "Packing the snow" back
+    sub.textContent = tr('This game needs WebGL, and this browser has it switched off. Try another browser, or turn on hardware acceleration in the browser settings.');
+    sub.style.maxWidth = '300px';
+  }
   function boot() {
+    if (!webglOk()) { noWebGL(); return; }
     PN.Thumbs.build(128);
     W.init($('gl'));
     PN.Astro.startLive();
