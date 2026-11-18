@@ -681,6 +681,19 @@
     return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) : tr('{0} has no skill points, so she gives no visiting bonus.', name);
   };
   /* A pup's points as one line: Swimming 3 · Sports 0 · Brains 1 · Care 6. */
+  /* Radar chart of a pup's points: one spoke per skill, rings at 2, 4, 6, 8 and 10 points. */
+  UI.radar = (pts, size) => {
+    const W = size || 220, c = W / 2, R = W / 2 - 52, keys = PN.SKILL_ORDER, max = S.T.pupMaxPoints;
+    const at = (i, v) => { const a = -Math.PI / 2 + i * 2 * Math.PI / keys.length; return [c + Math.cos(a) * R * v / max, c + Math.sin(a) * R * v / max]; };
+    const poly = (v) => keys.map((k, i) => at(i, typeof v === 'function' ? v(k) : v).map((n) => n.toFixed(1)).join(',')).join(' ');
+    let g = [2, 4, 6, 8, 10].map((r) => '<polygon points="' + poly(r) + '" fill="none" stroke="var(--ice)" stroke-width="' + (r === 10 ? 2 : 1) + '"/>').join('');
+    g += keys.map((k, i) => { const e = at(i, max); return '<line x1="' + c + '" y1="' + c + '" x2="' + e[0].toFixed(1) + '" y2="' + e[1].toFixed(1) + '" stroke="var(--ice)"/>'; }).join('');
+    g += '<polygon points="' + poly((k) => (pts && pts[k]) || 0) + '" fill="var(--berry)" fill-opacity=".28" stroke="var(--berry)" stroke-width="2.5" stroke-linejoin="round"/>';
+    g += keys.map((k, i) => { const p = at(i, (pts && pts[k]) || 0); return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="var(--berry)"/>'; }).join('');
+    g += keys.map((k, i) => { const l = at(i, max + 3.4), n = (pts && pts[k]) || 0; return '<text x="' + l[0].toFixed(1) + '" y="' + l[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="var(--ink)">' + esc(UI.skillName(k)) + ' ' + n + '</text>'; }).join('');
+    const label = esc(UI.pointsLine(pts));
+    return '<svg class="radar" viewBox="0 0 ' + W + ' ' + W + '" width="' + W + '" height="' + W + '" role="img" aria-label="' + label + '">' + g + '</svg>';
+  };
   UI.pointsLine = (pts) => PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' ' + ((pts && pts[k]) || 0)).join(' · ');
   /* What a pup is heading for, or a grown pup is: her one best skill, All-rounder for a tie, or nothing yet. */
   UI.headingFor = (p) => (S.pupSpent(p) || (p && p.fate === 'grown' && p.pts) ? UI.specLabel(p) : tr('no skill yet'));

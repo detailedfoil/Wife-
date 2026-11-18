@@ -688,7 +688,7 @@
     acts.push({ label: tr('Close'), value: 0 });
     const lvl = S.pupLevel(p), full = lvl >= S.T.pupMaxPoints, into = full ? 100 : Math.round(((p.xp || 0) % S.T.pupXpStep) / S.T.pupXpStep * 100);
     const levelLine = '<p>' + tr('Level <b>{0}</b> of {1}', lvl, S.T.pupMaxPoints) + (full ? '' : ' · ' + tr('{0}% to the next', into)) + (free ? ' · ' + tr('Skill points to spend: <b>{0}</b>', free) : '') + '</p>';
-    const skills = '<p class="pup-skills">' + UI.pointsLine(p.pts) + '</p>';
+    const skills = '<div class="pup-skills">' + UI.radar(p.pts) + '</div>';
     const course = tr('If {0} grew up today: <b>{1}</b>.', UI.esc(p.name), UI.headingFor(p));
     const v = await UI.modal({ title: UI.esc(p.name), html: '<p>' + how + '</p><p>' + tr('Tummy <b>{0}%</b>, happiness <b>{1}%</b>.', Math.round(p.food), Math.round(p.joy)) + '</p>'
       + levelLine + skills + '<p>' + course + '</p><p class="small">' + tr('Pups earn xp from everything the family does while they are at home. Points are locked in once spent.') + '</p>', actions: acts });
@@ -709,7 +709,7 @@
     while (p && S.pupFree(p) > 0) {
       const games = (k) => k === 'care' ? tr('each point takes {0}% off what muck costs when she visits', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', '));
       const v = await UI.modal({ title: tr('Skill points for {0}', UI.esc(p.name)),
-        html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + '</p><p class="pup-skills">' + UI.pointsLine(p.pts) + '</p>'
+        html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + '</p><div class="pup-skills">' + UI.radar(p.pts) + '</div>'
           + '<p class="small">' + PN.SKILL_ORDER.map((k) => '<b>' + UI.skillName(k) + '</b>: ' + games(k) + '.').join('<br>') + '</p>',
         actions: PN.SKILL_ORDER.map((k) => ({ label: UI.skillName(k) + ' (' + ((p.pts || {})[k] || 0) + ')', value: k })).concat([{ label: tr('Done for now'), value: 0 }]) });
       if (!v) break;
@@ -748,7 +748,7 @@
     A.play('award');
     S.save(state); UI.refresh();
     G.busy = false;
-    await UI.modal({ title: tr('{0} is all grown up', UI.esc(r.name)), html: '<p class="lead">' + tr('Skill: <b>{0}</b>', UI.specLabel(r)) + '</p><p>' + UI.pointsLine(r.pts) + '</p><p>' + UI.perkText(r, UI.esc(r.name)) + '</p><p>'
+    await UI.modal({ title: tr('{0} is all grown up', UI.esc(r.name)), html: '<p class="lead">' + tr('Skill: <b>{0}</b>', UI.specLabel(r)) + '</p><div class="pup-skills">' + UI.radar(r.pts) + '</div><p>' + UI.perkText(r, UI.esc(r.name)) + '</p><p>'
       + tr('Family bonus is now +{0}% coins in every game.', r.fam) + '</p><p class="small">' + tr('Call {0} home from the Family album to get the help.', UI.esc(r.name)) + '</p>', actions: [{ label: tr('Lovely'), value: 0 }] });
   }
 
