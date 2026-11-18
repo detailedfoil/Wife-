@@ -549,6 +549,14 @@
     [SPOTS.xmastree[0], SPOTS.xmastree[1], 0.8], [SPOTS.lahjat[0], SPOTS.lahjat[1], 0.6], [SPOTS.lumilyhty[0], SPOTS.lumilyhty[1], 0.5], [SPOTS.jaalyhty[0], SPOTS.jaalyhty[1], 0.5],
     [SPOTS.kurpitsa[0], SPOTS.kurpitsa[1], 0.5], [SPOTS.piknikkori[0], SPOTS.piknikkori[1], 0.45], [SPOTS.cookie[0], SPOTS.cookie[1], 0.6], [SPOTS.siili[0], SPOTS.siili[1], 0.5],
     [W.BALL.x, W.BALL.z, 0.55], [W.HOME.x, W.HOME.z, 1.3]];
+  /* A place for a pup to trot to: on the front of the shore, never in the fire, the snowman, the mother's spot or anything put out there. Returns false if nothing fits. */
+  W.roamSpot = function (out) {
+    for (let n = 0; n < 14; n++) {
+      const x = -2.3 + Math.random() * 4.6, shore = -1.0 + 0.42 * x, z = shore + 0.5 + Math.random() * (2.8 - shore - 0.5);
+      if (AVOID.every((o) => Math.hypot(x - o[0], z - o[1]) > o[2] + 0.35)) return out.set(x, 0, z);
+    }
+    return false;
+  };
   W.poopSpot = function (p, out) {
     const ang = (-30 + p.a * 240) * RAD, rad = 1.45 + p.r * 0.85;
     let x = W.HOME.x + Math.cos(ang) * rad, z = W.HOME.z + Math.sin(ang) * rad * 0.8;
