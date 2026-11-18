@@ -551,24 +551,41 @@
   }
   /* Pups are lively: every few seconds an awake, well pup trots off to somewhere else on the shore, has a look around, then wanders on or heads back to her place. */
   const roamV = new T.Vector3();
+  /* How much room the mother takes up: pups walk round this, never through her. */
+  const sealR = () => 0.95 * seal.size + 0.2;
+  /* Walk a pup to x, z the long way round the mother if the straight line would pass through her: one side-step out past her, then on. */
+  function goAround(ps, x, z, opts, depth) {
+    const c = seal.g.position, R = sealR(), px = ps.g.position.x, pz = ps.g.position.z;
+    const dx = x - px, dz = z - pz, L2 = dx * dx + dz * dz;
+    if ((depth || 0) < 3 && L2 > 0.01 && seal.g.visible !== false) {
+      const t = U.clamp(((c.x - px) * dx + (c.z - pz) * dz) / L2, 0, 1), qx = px + dx * t, qz = pz + dz * t;
+      let nx = qx - c.x, nz = qz - c.z, d = Math.hypot(nx, nz);
+      if (d < R && t > 0.02 && t < 0.98) {
+        if (d < 0.05) { const L = Math.sqrt(L2); nx = -dz / L; nz = dx / L; d = 1; }   // dead centre: step to one side of the line
+        const wx = c.x + nx / d * (R + 0.3), wz = c.z + nz / d * (R + 0.3);
+        return ps.moveTo(wx, wz, { speed: opts && opts.speed }).then((ok) => (ok ? goAround(ps, x, z, opts, (depth || 0) + 1) : false));
+      }
+    }
+    return ps.moveTo(x, z, opts);
+  }
   function roam(ps, dt, mood, k) {
     const calm = !ps || ps.asleep || seal.asleep || state.asleep || G.busy || PN.Games.active || mood === 'sick' || mood === 'hungry';
-    if (calm) { if (ps) { ps.free = false; ps.roamT = 1 + Math.random() * 2; } return; }
+    if (calm) { if (ps) { if (ps.free && ps.move) ps.halt(); ps.free = false; ps.roamT = 1 + Math.random() * 2; } return; }   // bedtime, a game or a dive: stop wandering and go back to her place
     if (ps.move) return;
     if (ps.free) {
       ps.stay = (ps.stay == null ? 1 + Math.random() * 3 : ps.stay) - dt;
       if (ps.stay > 0) return;
       ps.stay = null;
-      if (Math.random() < 0.45 && W.roamSpot(roamV)) { ps.moveTo(roamV.x, roamV.z, { speed: 1.5 + Math.random() * 0.7 }); return; }
+      if (Math.random() < 0.45 && W.roamSpot(roamV, seal.g.position, sealR() + 0.3)) { goAround(ps, roamV.x, roamV.z, { speed: 1.5 + Math.random() * 0.7 }); return; }
       ps.free = false; ps.roamT = 3 + Math.random() * 4;
       return;
     }
     ps.roamT = (ps.roamT == null ? 1 + Math.random() * 4 : ps.roamT) - dt;
     if (ps.roamT > 0) return;
-    if (W.roamSpot(roamV)) {
+    if (W.roamSpot(roamV, seal.g.position, sealR() + 0.3)) {
       ps.free = true; ps.stay = null;
       ps.look = null;
-      ps.moveTo(roamV.x, roamV.z, { speed: 1.5 + Math.random() * 0.7 });
+      goAround(ps, roamV.x, roamV.z, { speed: 1.5 + Math.random() * 0.7 });
       if (mood === 'happy' && Math.random() < 0.5) ps.gesture('happy');
     } else ps.roamT = 4;
   }
@@ -584,7 +601,7 @@
       const s = pupSlot(i, v3), far = Math.hypot(s.x - ps.g.position.x, s.z - ps.g.position.z);
       const mood = p.sick ? 'sick' : p.food < 20 ? 'hungry' : p.joy > 55 ? 'happy' : 'ok';
       roam(ps, dt, mood, i);
-      if (far > 0.55 && !ps.move && !inGame && !ps.free) { ps.asleep = false; ps.moveTo(s.x, s.z, { speed: 2.1, face: s.h }); }
+      if (far > 0.55 && !ps.move && !inGame && !ps.free) { ps.asleep = false; goAround(ps, s.x, s.z, { speed: 2.1, face: s.h }); }
       if (!ps.move && !ps.free) ps.asleep = seal.asleep;
       ps.setMood(mood);
       ps.look = ps.asleep ? null : (i % 2 ? W.camera.position : seal.g.position);
@@ -642,7 +659,7 @@
       ps.g.visible = !inGame;
       const s = pupSlot(state.pups.length + k, v3), far = Math.hypot(s.x - ps.g.position.x, s.z - ps.g.position.z);
       roam(ps, dt, 'happy', k);
-      if (far > 0.55 && !ps.move && !inGame && !ps.free) { ps.asleep = false; ps.moveTo(s.x, s.z, { speed: 2.1, face: s.h }); }
+      if (far > 0.55 && !ps.move && !inGame && !ps.free) { ps.asleep = false; goAround(ps, s.x, s.z, { speed: 2.1, face: s.h }); }
       if (!ps.move && !ps.free) ps.asleep = seal.asleep;
       ps.setMood('happy');
       ps.look = ps.asleep ? null : (k % 2 ? seal.g.position : W.camera.position);
