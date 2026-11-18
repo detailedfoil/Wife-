@@ -135,6 +135,7 @@
   function syncDirt() { seal.setDirt(U.smooth(72, 12, state.stats.clean)); }
 
   async function begin(isNew, sum) {
+    await statsNotice();                  // first thing after the language is picked and Play is tapped, so it is read in that language
     UI.title.hide();
     W.setCamMode('home');
     started = true;
@@ -146,7 +147,6 @@
       await offerLook();
       await newsPupSkills();
     }
-    await statsNotice();
     await pupNews();
     await dailyGift();
     G.ready = true;
