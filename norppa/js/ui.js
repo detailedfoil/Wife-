@@ -136,8 +136,8 @@
       b.classList.toggle('need', !!need[b.dataset.act]);
       if (b.dataset.act === 'sleep') b.classList.toggle('on', st.asleep);
     });
-    // A Family button for as long as there is a family (pups at home, grown pups or lost ones). A dot says someone needs you: a pup ready to set off or with skill points to spend, or a grown pup here to visit.
-    const here = st.family.some((f) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here'), ready = st.pups.some((p) => p.ready || S.pupFree(p) > 0), hasFam = st.pups.length + st.family.length > 0;
+    // A Family button for as long as there is a family (pups at home, grown pups or lost ones). A dot says someone needs you: a pup ready to set off or with skill points to spend, or a grown pup newly here to visit (it rests once the Family tab has been opened during her visit).
+    const here = st.family.some((f) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here' && f.seenAt !== f.arriveAt), ready = st.pups.some((p) => p.ready || S.pupFree(p) > 0), hasFam = st.pups.length + st.family.length > 0;
     const key = (hasFam ? 'f' : '') + (here ? 'v' : '') + (ready ? 'g' : '') + '|' + st.pups.map((p) => p.name + Math.round(p.food / 4) + (p.sick ? 's' : '') + (p.ready ? 'r' : '') + S.pupFree(p)).join('|');
     if (key !== famKey) {
       famKey = key;
@@ -451,6 +451,7 @@
           side: tr('born {0}', day(p.bornAt)), act: 'pupinfo', id: i });
       });
       const now = Date.now();
+      st.family.forEach((f) => { if (f.fate === 'grown' && S.visitStatus(f, now) === 'here') f.seenAt = f.arriveAt; });   // she has been noticed: the Family dot rests until the next visit
       st.family.map((f, i) => [f, i]).reverse().forEach(([f, i]) => {
         const stat = S.visitStatus(f, now), wait = S.callWait(st, i, now);
         let text = tr('Did not make it. Remembered always.');
