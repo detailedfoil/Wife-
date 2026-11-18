@@ -40,6 +40,7 @@
     cards: '<rect x="3" y="7" width="10" height="13" rx="2.5"/><path d="M9.5 7V5.6a2 2 0 0 1 2.3-2l6.6 1.2A2 2 0 0 1 20 7.1l-1.5 8.6a2 2 0 0 1-2.3 1.6L13 16.8"/>',
     gift: '<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M3 7h18v3H3zM12 7v13M12 7c-1.5-4-6-3-4 0M12 7c1.5-4 6-3 4 0"/>',
     lock: '<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 018 0v3"/>',
+    search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
     poo: '<path d="M8 19.5c-3.2 0-4-3.2-2-5-1-2 .2-4 3-4-.4-2 1.2-3.8 3.6-4-.4 2 2 2.2 2 4 2.6 0 4 2 3 4 2 1.8 1.2 5-2 5H8z"/>',
     piano: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.2 4.5v15M14.8 4.5v15"/><path class="f" d="M7.6 4.5h3.2v8H7.6zM13.2 4.5h3.2v8h-3.2z"/>',
@@ -102,6 +103,7 @@
     $('sheetClose').addEventListener('click', () => UI.closeSheet());
     $('sheetTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) { PN.Audio.play('tap'); UI.tab = b.dataset.tab; UI.renderSheet(); } });
     $('sheetBody').addEventListener('click', onSheetClick);
+    $('sheetBody').addEventListener('input', (e) => { if (e.target.classList.contains('dev-search')) { UI.devQuery = e.target.value; filterDev(); } });
     $('family').addEventListener('click', (e) => { const c = e.target.closest('.pup-chip'); if (c) G().pupInfo(+c.dataset.i); });
   };
 
@@ -239,8 +241,20 @@
     const html = VIEWS[name](st);
     if (soft && html === body._last) return;
     body._last = html; body.innerHTML = html;
+    filterDev();
     body.scrollTop = keep;
   };
+  /* Developer options: a search box narrows the list as you type. The words typed survive a redraw. */
+  UI.devQuery = '';
+  function filterDev() {
+    const box = $('sheetBody').querySelector('.dev-search');
+    if (!box) return;
+    if (box.value !== UI.devQuery) box.value = UI.devQuery;
+    const q = UI.devQuery.trim().toLowerCase();
+    let shown = 0;
+    $('sheetBody').querySelectorAll('.dev-row').forEach((r) => { const on = !q || r.textContent.toLowerCase().includes(q); r.hidden = !on; shown += on; });
+    const none = $('sheetBody').querySelector('.dev-none'); if (none) none.hidden = shown > 0;
+  }
 
   const cell = (id, inner, cls, act) => '<button class="cell ' + (cls || '') + '" data-do="' + act + '" data-id="' + id + '">' + inner + '</button>';
   /* The colour of a tile in the shop and the larder: orange for food, yellow for energy drinks, and coffee brown for the coffee, which is a special thing of its own. */
@@ -373,9 +387,11 @@
       }
       // family
       const day = (ms) => new Date(ms).toLocaleDateString(PN.isFi() ? 'fi-FI' : undefined, { day: 'numeric', month: 'short' });
-      let h = '';
+      // then and now: her natural look as a pup beside how she looks today
+      const pic = (src, cap) => '<figure>' + (src ? '<img src="' + src + '" alt="">' : '<span class="ic-wrap">' + ic('seal') + '</span>') + '<figcaption>' + cap + '</figcaption></figure>';
+      let h = '<div class="then-now" aria-label="' + tr('{0}, then and now', esc(st.name)) + '">' + pic(PN.Thumbs.seal(st.birthAppearance, 0), tr('{0} as a kuutti', esc(st.name))) + pic(PN.Thumbs.seal(st.appearance, st.stage), tr('album|Now')) + '</div>';
       if (!st.pups.length && !st.family.length) {
-        return '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
+        return h + '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
       }
       PN.Thumbs.pups(st.pups.concat(st.family));      // little portraits, drawn once for each outfit
       const face = (w) => PN.Thumbs.pup(w);
@@ -436,9 +452,11 @@
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
         + '<button class="row" data-do="update"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Check for updates') + '</b><span class="d">' + tr('Look for a newer version of the game and load it. Your seal stays as she is.') + '</span></span></button>'
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
-        + (st.dev && st.settings.medicine ? '<button class="row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
-        + (st.dev ? '<button class="row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
-        + (st.dev ? '<button class="row" data-do="devtut"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset tutorials') + '</b><span class="d">' + tr('Show the first-time game tutorials again, for testing.') + '</span></span></button>' : '')
+        + (st.dev ? '<label class="dev-find"><span class="ic-wrap">' + ic('search') + '</span><input type="search" class="dev-search" placeholder="' + tr('Search developer options') + '" aria-label="' + tr('Search developer options') + '"></label><p class="note dev-none" hidden>' + tr('No developer options match.') + '</p>'
+          + '<button class="row dev-row" data-do="devcreate"><span class="ic-wrap">' + ic('seal') + '</span><span class="txt"><b>' + tr('Try the seal creator') + '</b><span class="d">' + tr('Open the new-seal creator with a random kuutti, just to test it. Nothing is saved and your seal stays as she is.') + '</span></span></button>' : '')
+        + (st.dev && st.settings.medicine ? '<button class="row dev-row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
+        + (st.dev ? '<button class="row dev-row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
+        + (st.dev ? '<button class="row dev-row" data-do="devtut"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset tutorials') + '</b><span class="d">' + tr('Show the first-time game tutorials again, for testing.') + '</span></span></button>' : '')
         + (st.dev ? [
           ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
           ['visit', 'Call a pup home now', 'Call the first grown-up pup back and skip the hour of waiting, to see the visit and the 100 coins. Dev mode also ignores the 12 hour wait between calls.', 'seal'],
@@ -447,8 +465,8 @@
           ['dress', 'New outfits for the pups', 'Give every pup new random things to wear, different from each other.', 'star'],
           ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
           ['heal', 'Feed and cheer the pups', 'Full tummies, full happiness, and no longer poorly.', 'fish'],
-        ].map((r) => '<button class="row" data-do="devpup" data-id="' + r[0] + '"><span class="ic-wrap">' + ic(r[3]) + '</span><span class="txt"><b>' + tr(r[1]) + '</b><span class="d">' + tr(r[2]) + '</span></span></button>').join('') : '')
-        + (st.dev ? '<button class="row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
+        ].map((r) => '<button class="row dev-row" data-do="devpup" data-id="' + r[0] + '"><span class="ic-wrap">' + ic(r[3]) + '</span><span class="txt"><b>' + tr(r[1]) + '</b><span class="d">' + tr(r[2]) + '</span></span></button>').join('') : '')
+        + (st.dev ? '<button class="row dev-row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
         + '</div><p class="note" data-do="devtap">' + tr('Pikku Norppa, version 1. Drawn with three.js. Lettering: DynaPuff and Nunito.') + ' ' + tr('Last updated {0}.', updatedText()) + ' ' + tr('Weather data by Open-Meteo.com.').replace('Open-Meteo.com', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>') + '</p>';
     },
   };
@@ -486,6 +504,7 @@
     else if (act === 'devreset') game.devReset();
     else if (act === 'devenergy') game.devEnergy();
     else if (act === 'devtut') game.devTutorials();
+    else if (act === 'devcreate') PN.Clinic.create({ mock: true });
     else if (act === 'devmed') game.devMed();
     else if (act === 'devpup') game.devPup(id);
     else if (act === 'callpup') game.callPup(+id);

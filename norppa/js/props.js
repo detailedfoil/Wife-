@@ -2032,6 +2032,39 @@
   };
 
   /* ---------- small pictures of every item, drawn once at start-up ---------- */
+  /* Draw portraits with one throwaway renderer: [[key, { appearance, wear, stage, pup }], ...]. Drawn once, then kept. */
+  function draw(list) {
+    const todo = [], seen = {};
+    list.forEach(([k, o]) => { if (!PN.Thumbs.map[k] && !seen[k]) { seen[k] = 1; todo.push([k, o]); } });
+    if (!todo.length) return;
+    let r = null;
+    try {
+      r = new T.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+      r.setPixelRatio(1); r.setSize(128, 128, false);
+      const scene = new T.Scene();
+      scene.add(new T.HemisphereLight(0xffffff, 0xb8c6e0, 2.2));
+      const key = new T.DirectionalLight(0xfff4e2, 2.4); key.position.set(1.5, 3, 5); scene.add(key);
+      const cam = new T.PerspectiveCamera(26, 1, 0.05, 50);
+      const box = new T.Box3(), c = new T.Vector3(), s = new T.Vector3();
+      todo.forEach(([k, o]) => {
+        const seal = new PN.Seal({ pup: o.pup, stage: o.stage, appearance: o.appearance });
+        ['head', 'neck', 'face', 'back'].forEach((slot) => seal.setWear(slot, (o.wear && o.wear[slot]) || null));
+        seal.setMood('happy'); seal.shadow.visible = false;
+        scene.add(seal.g);
+        seal.update(0.05, 1, () => 0); seal.update(0.05, 1.05, () => 0);
+        seal.g.updateMatrixWorld(true);
+        box.setFromObject(seal.headP); box.expandByObject(seal.neckA);       // the head, hat and glasses, and what is round the neck
+        box.getCenter(c); box.getSize(s);
+        const dist = Math.max(0.3, Math.max(s.x, s.y) * 0.66) / Math.tan(cam.fov * Math.PI / 360);
+        cam.position.set(c.x + 0.05, c.y + 0.07, c.z + dist + s.z * 0.5);
+        cam.lookAt(c.x, c.y - 0.01, c.z);
+        r.render(scene, cam);
+        PN.Thumbs.map[k] = r.domElement.toDataURL('image/png');
+        scene.remove(seal.g); seal.dispose();
+      });
+    } catch (e) { /* no picture: the album shows its icon instead */ }
+    if (r) { r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); }
+  }
   PN.Thumbs = {
     map: {},
     build(size) {
@@ -2066,38 +2099,14 @@
 
     /* A little portrait of a pup in its own outfit, for the family album. Drawn the first time it is wanted, then kept. */
     pupKey: (record) => { const wear = record && (record.wear || record); return 'pup:' + ['head', 'neck', 'face', 'back'].map((k) => (wear && wear[k]) || '').join('|') + JSON.stringify(record && record.appearance || null); },
-    pups(wears) {
-      const todo = [], seen = {};
-      wears.forEach((w) => { const k = PN.Thumbs.pupKey(w); if (!PN.Thumbs.map[k] && !seen[k]) { seen[k] = 1; todo.push([k, w]); } });
-      if (!todo.length) return;
-      let r = null;
-      try {
-        r = new T.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
-        r.setPixelRatio(1); r.setSize(128, 128, false);
-        const scene = new T.Scene();
-        scene.add(new T.HemisphereLight(0xffffff, 0xb8c6e0, 2.2));
-        const key = new T.DirectionalLight(0xfff4e2, 2.4); key.position.set(1.5, 3, 5); scene.add(key);
-        const cam = new T.PerspectiveCamera(26, 1, 0.05, 50);
-        const box = new T.Box3(), c = new T.Vector3(), s = new T.Vector3();
-        todo.forEach(([k, w]) => {
-          const pup = new PN.Seal({ pup: true, stage: 0, appearance: w && w.appearance });
-          w = w && (w.wear || w);
-          ['head', 'neck', 'face', 'back'].forEach((slot) => pup.setWear(slot, (w && w[slot]) || null));
-          pup.setMood('happy'); pup.shadow.visible = false;
-          scene.add(pup.g);
-          pup.update(0.05, 1, () => 0); pup.update(0.05, 1.05, () => 0);
-          pup.g.updateMatrixWorld(true);
-          box.setFromObject(pup.headP); box.expandByObject(pup.neckA);       // the head, hat and glasses, and what is round the neck
-          box.getCenter(c); box.getSize(s);
-          const dist = Math.max(0.3, Math.max(s.x, s.y) * 0.66) / Math.tan(cam.fov * Math.PI / 360);
-          cam.position.set(c.x + 0.05, c.y + 0.07, c.z + dist + s.z * 0.5);
-          cam.lookAt(c.x, c.y - 0.01, c.z);
-          r.render(scene, cam);
-          PN.Thumbs.map[k] = r.domElement.toDataURL('image/png');
-          scene.remove(pup.g); pup.dispose();
-        });
-      } catch (e) { /* no picture: the album shows its icon instead */ }
-      if (r) { r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); }
+    pups(records) {
+      draw(records.map((w) => [PN.Thumbs.pupKey(w), { appearance: w && w.appearance, wear: w && (w.wear || w), stage: 0, pup: true }]));
+    },
+    /* A head-and-shoulders portrait of a seal with this look at this age, without clothes. For "then and now". */
+    seal(appearance, stage) {
+      const k = 'seal:' + stage + JSON.stringify(PN.Appearance.normalize(appearance));
+      if (!PN.Thumbs.map[k]) draw([[k, { appearance, wear: null, stage, pup: false }]]);
+      return PN.Thumbs.map[k] || '';
     },
     pup(wear) { return PN.Thumbs.map[PN.Thumbs.pupKey(wear)] || ''; },
   };

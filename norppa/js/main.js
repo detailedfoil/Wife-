@@ -123,6 +123,7 @@
       UI.showHud(true); UI.refresh();
       await wait(0.8);
       await welcomeBack(sum);
+      await offerLook();
     }
     await pupNews();
     await dailyGift();
@@ -143,6 +144,9 @@
     await seal.moveTo(W.HOME.x, W.HOME.z, { speed: 1.7, face: W.HOME_HEADING });
     seal.gesture('wave'); A.play('chirp');
     await wait(1.2);
+    await PN.Clinic.create();                 // choose how she looks: her natural traits, free
+    seal.gesture('happy'); A.play('chirp');
+    await wait(0.6);
     const name = await UI.askName({ title: tr('A little kuutti!'), text: tr('A ringed seal pup has wriggled out of the snow den. What will you call it?'), ok: tr('That is the one') });
     state.name = name;
     state.settings.lang = PN.lang;
@@ -154,6 +158,16 @@
     UI.toast(tr('Say hello to {0}. Stroke with a finger.', nm()), 'heart', '', 5200);
     state.tut = 1;
     G.busy = false;
+  }
+
+  /* Seals born before the creator get to choose their natural look once, for free. */
+  async function offerLook() {
+    if (!PN.Appearance.canChooseFree(state)) return;
+    const v = await UI.modal({ title: tr('New: choose her look'), html: tr('<p>Seals can now have their own natural look: coat, markings, eyes and more. {0} gets to choose hers once, for free.</p><p>Her pups can take after it. Any change after this is made at Plastic Sturgeon.</p>', plain()),
+      actions: [{ label: tr('Choose her look'), value: 1 }, { label: tr('Keep her as she is'), value: 0 }] });
+    if (v === 1 && await PN.Clinic.create({ legacy: true })) { seal.gesture('happy'); A.play('chirp'); FX.hearts(head(), 3); }
+    state.lookChosen = true;
+    S.save(state);
   }
 
   /* ---------- coming back ---------- */

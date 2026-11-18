@@ -32,11 +32,12 @@ let matches=0; const coats=new Set(), bodies=new Set();
 for(let i=0;i<2000;i++){
  const born=A.natural(now+i*7919,state.birthAppearance);
  for(const k of ['coat','belly','marking','eye','nose']) assert.ok(!A.special(born[k]));
- assert.ok(born.size>=.94&&born.size<=1.06); assert.ok(born.headSize>=.96&&born.headSize<=1.05);
+ assert.equal(born.size,1,'overall size is clinic-only'); assert.ok(born.headSize>=A.naturalRanges.headSize[0]&&born.headSize<=A.naturalRanges.headSize[1]);
+ assert.equal(born.decal,'none'); assert.equal(born.finish,'none');
  if(born.coat===natural.coat) matches++;
  coats.add(born.coat);bodies.add(born.bodyWidth);
 }
-assert.equal(coats.size,6);assert.ok(bodies.size>5);assert.ok(matches>1200&&matches<1700,'offspring often resemble natural parent');
+assert.equal(coats.size,7);assert.ok(bodies.size>3);assert.ok(matches>1200&&matches<1700,'offspring often resemble natural parent');
 const pup=S.addPup(state,now+100,'Lumi');
 assert.notEqual(pup.appearance.coat,'pink');
 const pupBirth=clone(pup.birthAppearance);
@@ -69,6 +70,23 @@ assert.ok(S.save(state));assert.deepEqual(clone(S.load().birthAppearance),natura
 assert.deepEqual(clone(S.importCode(S.exportCode(state)).appearance),clone(state.appearance));
 assert.equal(A.normalize({size:Infinity,headSize:100,coat:'bad'}).size,1);
 assert.equal(A.normalize({headSize:100}).headSize,1.2);
+// The creator: free, natural only, sets both layers, and the free choice is once.
+const fresh=S.newState(now); fresh.coins=0;
+assert.ok(A.canChooseFree(fresh));
+const picked=A.create(fresh,{...fresh.birthAppearance,coat:'pink',decal:'hearts',size:1.2,headSize:1.2,pattern:'spots',coat2:'x'});
+assert.equal(picked.coat,'original'===fresh.birthAppearance.coat?'original':fresh.birthAppearance.coat,'dream colours are not natural');
+assert.equal(picked.decal,'none'); assert.equal(picked.size,1); assert.equal(picked.headSize,A.naturalRanges.headSize[1]); assert.equal(picked.pattern,'spots');
+assert.deepEqual(clone(fresh.appearance),clone(fresh.birthAppearance)); assert.equal(fresh.coins,0); assert.ok(!A.canChooseFree(fresh));
+// Clinic extras are priced, and never inherited.
+const fancy={...clone(state.appearance),decal:'stars',decalLayout:'one',decalColor:'gold',gradient:'lavender',mask:'charcoal',flippers:'pink',tail:'teal',finish:'aurora',eyeRight:'ocean',eyeStar:'star',cheeks:'rosy',freckles:'cheeks',whiskerColor:'pink',whiskerLength:1.4};
+const fq=A.quote(state,fancy), labels=fq.lines.map(l=>l.label);
+for(const l of ['Special marking','Head to tail fade','Face mask','Flipper tips','Dipped tail','Coat finish','Odd eyes','Star sparkle','Rosy cheeks','Cheek freckles','Whiskers']) assert.ok(labels.includes(l),l);
+assert.equal(fq.lines.find(l=>l.label==='Coat finish').cost,20000);
+assert.equal(fq.lines.find(l=>l.label==='Special marking').cost,7500);
+state.coins=200000; assert.ok(A.purchase(state,'main',fancy,now).ok);
+assert.equal(A.quote(state,{...fancy,decalColor:'pink'}).lines[0].cost,2500,'tweaking an owned marking is cheaper');
+for(let i=0;i<200;i++){const kid=A.natural(now+i,state.birthAppearance);for(const k of ['decal','gradient','mask','flippers','tail','finish','eyeRight','eyeStar','cheeks','freckles'])assert.equal(kid[k],A.defaults[k]);}
+console.log('PASS: creator is free and natural-only, the free choice is once, clinic extras are priced and never inherited.');
 console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid restoration, 2,000 natural births, inheritance, family transitions, legacy migration and save/import round trip.');
 try{
  const {createCanvas}=require('@napi-rs/canvas');
@@ -77,11 +95,11 @@ try{
  const Seal=ctx.PN.Seal;
  const one=new Seal({stage:2,appearance:state.appearance}),two=new Seal({stage:2,appearance:state.appearance});
  const oldMap=one.body.material.map;
- const baseColor=two.eyeMaterial.color.getHex();
+ const baseColor=two.eyeMats[0].color.getHex();
  one.setAppearance(pink);one.update(.016,1,()=>0);
  assert.notEqual(one.body.material.map,oldMap);
  assert.notEqual(one.body.material,two.body.material,'per-seal materials');
- assert.equal(two.eyeMaterial.color.getHex(),baseColor);
+ assert.equal(two.eyeMats[0].color.getHex(),baseColor);
  const texture=one.body.material.map;
  one.setAppearance({...pink,headSize:1.1});assert.equal(one.body.material.map,texture,'shape adjustments reuse textures');
  for(const stage of [0,1,2]) for(const headSize of [.85,1.2]) for(const bodyWidth of [.85,1.2]){
