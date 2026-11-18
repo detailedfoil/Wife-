@@ -104,7 +104,10 @@
     $('sheetTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) { PN.Audio.play('tap'); UI.tab = b.dataset.tab; UI.renderSheet(); } });
     $('sheetBody').addEventListener('click', onSheetClick);
     $('sheetBody').addEventListener('input', (e) => { if (e.target.classList.contains('dev-search')) { UI.devQuery = e.target.value; filterDev(); } });
-    $('family').addEventListener('click', (e) => { const c = e.target.closest('.pup-chip'); if (c) G().pupInfo(+c.dataset.i); });
+    $('family').addEventListener('click', (e) => {
+      if (e.target.closest('.fam-chip')) { PN.Audio.play('tap'); UI.openSheet('album', 'family'); return; }
+      const c = e.target.closest('.pup-chip'); if (c) G().pupInfo(+c.dataset.i);
+    });
   };
 
   /* ---------- the bars and badges ---------- */
@@ -133,10 +136,12 @@
       b.classList.toggle('need', !!need[b.dataset.act]);
       if (b.dataset.act === 'sleep') b.classList.toggle('on', st.asleep);
     });
-    const key = st.pups.map((p) => p.name + Math.round(p.food / 4) + (p.sick ? 's' : '') + (p.ready ? 'r' : '')).join('|');
+    // A Family button for as long as there is a family (pups at home, grown pups or lost ones). A dot says someone needs you: a pup ready to set off, or a grown pup here to visit.
+    const here = st.family.some((f) => f.fate === 'grown' && S.visitStatus(f, Date.now()) === 'here'), ready = st.pups.some((p) => p.ready), hasFam = st.pups.length + st.family.length > 0;
+    const key = (hasFam ? 'f' : '') + (here ? 'v' : '') + (ready ? 'g' : '') + '|' + st.pups.map((p) => p.name + Math.round(p.food / 4) + (p.sick ? 's' : '') + (p.ready ? 'r' : '')).join('|');
     if (key !== famKey) {
       famKey = key;
-      $('family').innerHTML = st.pups.map((p, i) => '<button class="pup-chip pebble' + (p.sick || p.food < 12 ? ' bad' : '') + '" data-i="' + i + '"><span class="face"></span>' + esc(p.name)
+      $('family').innerHTML = (hasFam ? '<button class="fam-chip pebble" data-open="family">' + ic('heart') + '<span>' + tr('Family') + '</span>' + (here || ready ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>' : '') + st.pups.map((p, i) => '<button class="pup-chip pebble' + (p.sick || p.food < 12 ? ' bad' : '') + '" data-i="' + i + '"><span class="face"></span>' + esc(p.name)
         + '<span class="bar"><i style="width:' + Math.max(4, p.food) + '%"></i></span></button>').join('');
     }
     const env = PN.World.env, cond = skyWord(env);
@@ -229,7 +234,40 @@
     PN.Audio.play('close');
   };
   const TITLES = { play: 'sheet|Play', shop: 'Shop', album: 'Album', settings: 'Settings' };
-  const TABS = { shop: [['food', 'Food'], ['shops', 'Shops'], ['wear', 'Wardrobe'], ['home', 'For the shore']], album: [['fish', 'tab|Fish'], ['finds', 'Finds'], ['words', 'Words'], ['awards', 'Awards'], ['family', 'Family']] };
+  /* The pup stats page: how the family is doing, how many of each skill there are, and every pup's skill points, newest first. */
+  function pupStatsPage(st) {
+    const now = Date.now(), c = st.counters || {};
+    const grown = st.family.filter((f) => f.fate === 'grown'), lost = st.family.filter((f) => f.fate !== 'grown');
+    const fam = S.familyBonus(st), line = (a, b) => '<div class="statline"><span>' + a + '</span><b>' + b + '</b></div>';
+    const visiting = grown.filter((f) => S.visitStatus(f, now) === 'here');
+    const day = (t) => new Date(t).toLocaleDateString(PN.isFi() ? 'fi-FI' : 'en-GB', { day: 'numeric', month: 'short' });
+    if (!st.pups.length && !st.family.length) return '<p class="lead">' + tr('No pups yet.') + '</p>';
+    PN.Thumbs.pups(st.pups.concat(st.family));
+    let h = '<div class="shelf">' + tr('The family') + '<span>' + tr('{0} in all', st.pups.length + st.family.length) + '</span></div>'
+      + line(tr('Pups at home'), st.pups.length) + line(tr('Raised to grown-up'), grown.length) + line(tr('Did not make it'), lost.length || c.pupsLost || 0)
+      + line(tr('Visits so far'), c.pupVisits || 0)
+      + line(tr('Visiting now'), visiting.length ? visiting.map((f) => esc(f.name)).join(', ') : tr('nobody'))
+      + line(tr('Family bonus'), '+' + fam + '%' + (fam >= S.T.famBonusMax ? ' ' + tr('(top)') : ' ' + tr('(next pup: +{0}%)', S.T.famBonusEach)));
+    h += '<div class="shelf">' + tr('Grown pups by skill') + '<span>' + tr('{0} grown', grown.length) + '</span></div>';
+    PN.SKILL_ORDER.concat(['all']).forEach((k) => {
+      const n = grown.filter((f) => (f.spec || 'all') === k).length;
+      h += line(UI.specName(k) + (k === 'all' ? '' : ' · ' + UI.skillName(k)), n);
+    });
+    h += '<p class="note">' + tr('Visiting Swimmers, Sporty and Clever pups add {0}% coins in the games of their skill, All-rounders add {1}% everywhere, and Cuddlers halve what muck costs.', S.T.specBonus, S.T.allBonus) + '</p>';
+    h += '<div class="shelf">' + tr('Every pup') + '<span>' + tr('newest first') + '</span></div><div class="rows">';
+    const one = (p, home, i) => {
+      const sk = p.skill ? PN.SKILL_ORDER.map((k) => UI.skillName(k) + ' ' + Math.floor(p.skill[k] || 0)).join(' · ') : '';
+      const spec = home ? S.pupSpec(p) : p.spec;
+      const bits = [home ? tr('At home, born {0}', day(p.bornAt)) : tr('Grown up {0}', day(p.endAt)), sk, p.lean ? tr('Natural at {0}.', UI.skillName(p.lean)) : ''].filter(Boolean);
+      return row({ icon: 'seal', img: PN.Thumbs.pup(p), tint: home ? 'leaf' : '', cls: home ? '' : 'done', title: esc(p.name) + (spec ? ' · ' + (home ? tr('heading for {0}', UI.specName(spec)) : UI.specName(spec)) : ''),
+        text: (bits.join('. ') + '.').replace(/\.+$/, '.').replace(/\.\./g, '.') + (!home && spec ? ' ' + UI.perkText(spec, esc(p.name)) : ''), act: home ? 'pupinfo' : (p.fate === 'grown' ? 'callpup' : ''), id: i });
+    };
+    st.pups.forEach((p, i) => { h += one(p, true, i); });
+    grown.map((f) => [f, st.family.indexOf(f)]).reverse().forEach(([f, i]) => { h += one(f, false, i); });
+    lost.slice().reverse().forEach((f) => { h += row({ icon: 'heart', img: PN.Thumbs.pup(f), title: esc(f.name), text: tr('Did not make it. Remembered always.'), side: day(f.endAt) }); });
+    return h + '</div>';
+  }
+  const TABS = { shop: [['food', 'Food'], ['shops', 'Shops'], ['wear', 'Wardrobe'], ['home', 'For the shore']], album: [['fish', 'tab|Fish'], ['finds', 'Finds'], ['words', 'Words'], ['awards', 'Awards'], ['family', 'Family'], ['pupstats', 'Pup stats']] };
   UI.renderSheet = function (soft) {
     const name = UI.sheetName, st = G().state;
     if (!name) return;
@@ -237,7 +275,11 @@
     $('sheetTitle').textContent = name === 'feed' ? tr('Feed {0}', st.name) : name === 'profile' ? st.name : tr(TITLES[name]);
     const tabs = TABS[name];
     $('sheetTabs').hidden = !tabs;
-    if (tabs) $('sheetTabs').innerHTML = tabs.map((t) => '<button class="tab' + (t[0] === UI.tab ? ' on' : '') + '" data-tab="' + t[0] + '">' + tr(t[1]) + '</button>').join('');
+    if (tabs) {
+      $('sheetTabs').innerHTML = tabs.map((t) => '<button class="tab' + (t[0] === UI.tab ? ' on' : '') + '" data-tab="' + t[0] + '">' + tr(t[1]) + '</button>').join('');
+      const on = $('sheetTabs').querySelector('.tab.on');
+      if (on) $('sheetTabs').scrollLeft = Math.max(0, on.offsetLeft - ($('sheetTabs').clientWidth - on.offsetWidth) / 2);   // a tab off the edge (Family, Pup stats) is scrolled into view
+    }
     const html = VIEWS[name](st);
     if (soft && html === body._last) return;
     body._last = html; body.innerHTML = html;
@@ -390,6 +432,7 @@
       // then and now: her natural look as a pup beside how she looks today
       const pic = (src, cap) => '<figure>' + (src ? '<img src="' + src + '" alt="">' : '<span class="ic-wrap">' + ic('seal') + '</span>') + '<figcaption>' + cap + '</figcaption></figure>';
       let h = '<div class="then-now" aria-label="' + tr('{0}, then and now', esc(st.name)) + '">' + pic(PN.Thumbs.seal(st.birthAppearance, 0), tr('{0} as a kuutti', esc(st.name))) + pic(PN.Thumbs.seal(st.appearance, st.stage), tr('album|Now')) + '</div>';
+      if (t === 'pupstats') return pupStatsPage(st);
       if (!st.pups.length && !st.family.length) {
         return h + '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
       }

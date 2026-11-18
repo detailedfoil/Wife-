@@ -8,6 +8,12 @@
   const FI = {
     /* ---------- pup skills (18 Nov 2026) ---------- */
     '{0} and {1}': '{0} ja {1}',
+    'Pup stats': 'Kuuttitilastot', 'The family': 'Perhe', '{0} in all': '{0} yhteensä', 'Pups at home': 'Kuutteja kotona', 'Raised to grown-up': 'Aikuiseksi kasvatettu',
+    'Did not make it': 'Ei selvinnyt', 'Visits so far': 'Vierailuja tähän mennessä', 'Visiting now': 'Kylässä nyt', 'nobody': 'ei ketään', '(top)': '(täysi)',
+    '(next pup: +{0}%)': '(seuraava kuutti: +{0} %)', 'Grown pups by skill': 'Aikuiset kuutit taidon mukaan', '{0} grown': '{0} aikuista',
+    'Visiting Swimmers, Sporty and Clever pups add {0}% coins in the games of their skill, All-rounders add {1}% everywhere, and Cuddlers halve what muck costs.': 'Kylässä olevat Uimarit, Urheilijat ja Älykkäät kuutit lisäävät {0} % kolikoita oman taitonsa peleissä, Monitaiturit {1} % kaikkialla ja Halailijat puolittavat likaisuuden hinnan.',
+    'Every pup': 'Jokainen kuutti', 'newest first': 'uusin ensin', 'At home, born {0}': 'Kotona, syntynyt {0}', 'Grown up {0}': 'Aikuistui {0}', 'Natural at {0}.': 'Luonnonlahjakkuus: {0}.',
+    'heading for {0}': 'suunta: {0}',
     'New: pup skills': 'Uutta: kuuttien taidot', 'See the family': 'Katso perhe',
     '<p>Pups now learn while they are at home. Every game you play teaches them that game\'s skill, and cuddles and saunas teach Care. Their best skill is what they grow up to be.</p><p>Every pup raised adds {0}% to all game coins (up to {1}%), and a grown pup who visits helps in the games of her own skill. Pups who have already grown up have been given a skill each.</p>': '<p>Kuutit oppivat nyt kotona ollessaan. Jokainen pelaamasi peli opettaa niille sen pelin taitoa, ja halit ja saunat opettavat hoivaa. Paras taito ratkaisee, millainen kuutista tulee aikuisena.</p><p>Jokainen aikuiseksi kasvatettu kuutti lisää kaikkien pelien kolikoihin {0} % (enintään {1} %), ja kylään tuleva aikuinen kuutti auttaa oman taitonsa peleissä. Jo aikuisiksi kasvaneet kuutit ovat saaneet kukin oman taidon.</p>',
     'Swimming': 'Uinti', 'Sports': 'Urheilu', 'Brains': 'Äly', 'Care': 'Hoiva',

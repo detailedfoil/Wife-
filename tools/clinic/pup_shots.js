@@ -24,6 +24,20 @@ const H1 = 3600e3, DAY = 864e5;
   };
   const { browser, page, errors } = await launch({ width: W, height: H, save });
   await enter(page);
+  // 0. the main screen with the Family button
+  await wait(page, 1200);
+  await page.screenshot({ path: OUT + 'pups_home_' + LANG + '.png' });
+  await page.click('.fam-chip');
+  await wait(page, 1500);
+  await page.screenshot({ path: OUT + 'pups_chip_open_' + LANG + '.png' });
+  await page.evaluate(() => PN.UI.openSheet('album', 'pupstats'));
+  await wait(page, 1200);
+  await page.screenshot({ path: OUT + 'pups_stats_' + LANG + '.png' });
+  await page.evaluate(() => { const b = document.getElementById('sheetBody'); b.scrollTop = b.scrollHeight; });
+  await wait(page, 500);
+  await page.screenshot({ path: OUT + 'pups_stats2_' + LANG + '.png' });
+  await page.evaluate(() => PN.UI.closeSheet());
+  await wait(page, 600);
   // 1. the Family album
   await page.evaluate(() => PN.UI.openSheet('album', 'family'));
   await wait(page, 1500);

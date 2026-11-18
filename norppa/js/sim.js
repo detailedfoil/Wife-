@@ -1073,7 +1073,7 @@
     state.family.forEach((f, i) => {
       if (!f.arriveAt) return;
       if (now >= f.arriveAt && !f.paid) {
-        f.paid = true; f.coins = 0;
+        f.paid = true; f.coins = 0; state.counters.pupVisits = (state.counters.pupVisits || 0) + 1;
         const day = dayKey(f.arriveAt);
         if (state.visitDay !== day) { state.visitDay = day; state.visitN = 0; }
         if (state.visitN < T.visitPresents) { state.visitN++; f.coins = earn(state, T.visitCoins / T.earnRate); addXp(state, 5); }   // the first two visits of the day bring presents
