@@ -3,7 +3,7 @@
 --    create table events (id bigint generated always as identity primary key, created_at timestamptz default now(), player_id text not null, session_id text, event text not null, game text, duration_sec int, coins int, score int, lang text);
 --    alter table events enable row level security;
 --    create policy "anyone can add events" on events for insert to anon with check (true);
--- Then run this file, after replacing CHANGE-ME with your own passcode.
+-- Then run this file. There is no passcode: the stats are anonymous totals, so anyone with the page address can read them.
 
 -- Columns the game fills in (balancing numbers, progress, device)
 alter table events add column if not exists joy int;
@@ -50,14 +50,13 @@ alter table events add constraint events_sane check (
   and (installed is null or installed in (0, 1))
 );
 
--- The passcode for the stats page (stored scrambled, nobody can read it back)
-create table if not exists stats_key (hash text not null);
-alter table stats_key enable row level security;
-delete from stats_key;
-insert into stats_key values (encode(sha256(convert_to('CHANGE-ME', 'UTF8')), 'hex'));
+-- The old passcode is gone (this is safe to run on a database that had one)
+drop table if exists stats_key;
+-- Re-made so the passcode is optional; any value sent is ignored
+drop function if exists get_stats(text);
 
--- The stats page asks this question; it only answers if the passcode is right
-create or replace function get_stats(pass text)
+-- The stats page (and the daily snapshot) ask this question; it answers anyone
+create or replace function get_stats(pass text default null)
 returns json
 language plpgsql
 security definer
@@ -65,9 +64,6 @@ set search_path = public
 as $fn$
 declare res json;
 begin
-  if not exists (select 1 from stats_key where hash = encode(sha256(convert_to(coalesce(pass, ''), 'UTF8')), 'hex')) then
-    raise exception 'wrong passcode';
-  end if;
   select json_build_object(
     'generated', now(),
     'players', (select count(distinct player_id) from events),
