@@ -40,8 +40,6 @@ The seal is kept in the browser's own storage on the device, so there is no acco
 
 The game sends anonymous play stats (a random device id, which game, how long it was played, the score, the coins it paid, how the game changed her happiness and energy, the language, the coin balance, her needs and level when you open the game, games unlocked and things bought, plays that were blocked and why, the screen size, whether it is installed as an app, how smoothly games ran, which Coffee Memory step went wrong, and any script errors) to a Supabase table, so the maker can see which games are liked. No name, email or anything personal is sent, nothing is sent in developer mode, and **Share play stats** in Settings turns it off. Events wait on the phone when there is no signal and go later. The code is `norppa/js/track.js`; the stats page is at `stats/` (no passcode: the numbers are anonymous totals), and `stats/setup.sql` is the database setup. Settings has a save code for moving a seal to another phone or browser.
 
-A GitHub Action (`.github/workflows/stats-snapshot.yml`, run by `tools/stats-snapshot.js`) saves the stats into the repo every morning, and on demand from the Actions tab: `stats/latest.txt` is the same text report the stats page copies, `stats/latest.json` the raw numbers, and `stats/history/` keeps one snapshot a day. `stats/report.js` builds that text and is shared with the stats page.
-
 ## How it is built
 
 Plain HTML, CSS and JavaScript with [three.js](https://threejs.org) for the 3D. No build step: the files in this repository are exactly what runs. Every model is made from code, so there are no model, image or sound files to load.
@@ -70,7 +68,6 @@ norppa/
 stats/
   index.html            stats page (no passcode; anonymous totals)
   setup.sql             database tables, limits and the stats question
-  report.js             the plain-text stats report (shared by the page and the daily snapshot)
   vendor/three.min.js   three.js r160 (MIT licence)
   fonts/                DynaPuff and Nunito (SIL Open Font Licence)
 ```
