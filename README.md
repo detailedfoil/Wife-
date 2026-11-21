@@ -38,7 +38,7 @@ The seal is kept in the browser's own storage on the device, so there is no acco
 
 ## Play stats
 
-The game sends anonymous play stats (a random device id, which game, how long it was played, the score, the coins it paid, how the game changed her happiness and energy, the language, the coin balance, her needs and level when you open the game, games unlocked and things bought, plays that were blocked and why, the screen size, whether it is installed as an app, how smoothly games ran, which Coffee Memory step went wrong, and any script errors) to a Supabase table, so the maker can see which games are liked. No name, email or anything personal is sent, nothing is sent in developer mode, and **Share play stats** in Settings turns it off. Events wait on the phone when there is no signal and go later. The code is `norppa/js/track.js`; the stats page is at `stats/` (no passcode: the numbers are anonymous totals), and `stats/setup.sql` is the database setup. Settings has a save code for moving a seal to another phone or browser.
+The game sends anonymous play stats (a random device id, which game, how long it was played, the score, the coins it paid, how the game changed her happiness and energy, the language, the coin balance, her needs and level when you open the game, games unlocked and things bought, plays that were blocked and why, the screen size, whether it is installed as an app, how smoothly games ran, which Coffee Memory step went wrong, and any script errors) to a Supabase table, so the maker can see which games are liked. No name, email or anything personal is sent, nothing is sent in developer mode, and **Share play stats** in Settings turns it off. Events wait on the phone when there is no signal and go later. The code is `norppa/js/track.js`; the private stats page is at `stats/` (it needs a passcode), and `stats/setup.sql` is the database setup. Settings has a save code for moving a seal to another phone or browser.
 
 ## How it is built
 
@@ -66,8 +66,8 @@ norppa/
   js/track.js           anonymous play stats sent to Supabase
   sw.js                 offline support
 stats/
-  index.html            stats page (no passcode; anonymous totals)
-  setup.sql             database tables, limits and the stats question
+  index.html            private stats page (passcode)
+  setup.sql             database tables, limits and the passcode check
   vendor/three.min.js   three.js r160 (MIT licence)
   fonts/                DynaPuff and Nunito (SIL Open Font Licence)
 ```

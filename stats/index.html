@@ -73,9 +73,12 @@
 <body>
 <main>
   <h1>Pikku Norppa stats</h1>
-  <p class="sub" id="when">Anonymous play stats.</p>
+  <p class="sub" id="when">Private page. Needs the passcode.</p>
 
-  <form id="login" hidden></form>
+  <form id="login" autocomplete="off">
+    <input id="pass" type="password" placeholder="Passcode" aria-label="Passcode" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button type="submit">Open</button>
+  </form>
   <p class="err" id="err" hidden></p>
 
   <div id="out" hidden>
@@ -141,7 +144,7 @@
     <h2>Language</h2>
     <div class="card bars" id="langs"></div>
 
-    <div class="foot"><span id="gen"></span><span><button class="ghost" id="refresh">Refresh</button></span></div>
+    <div class="foot"><span id="gen"></span><span><button class="ghost" id="refresh">Refresh</button> <button class="ghost" id="logout">Lock</button></span></div>
   </div>
 </main>
 <script>
@@ -203,13 +206,13 @@
     } else show();
   }
 
-  function load() {
+  function load(pass) {
     $('err').hidden = true;
     return fetch(URL + '/rest/v1/rpc/get_stats', {
-      method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({})
+      method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ pass: pass })
     }).then(function (r) {
       return r.json().then(function (j) {
-        if (!r.ok) { var e = new Error(j && j.message || 'failed'); throw e; }
+        if (!r.ok) { var e = new Error(j && j.message || 'failed'); e.bad = /passcode/i.test(e.message); throw e; }
         return j;
       });
     });
@@ -338,22 +341,27 @@
     $('errors').innerHTML = '<b>Most common errors</b>' + (((E.top || []).length) ? E.top.map(function (x) { return '<p>' + num(x.n) + 'x (' + num(x.players) + ' players): <small>' + esc(x.msg) + '</small></p>'; }).join('') : '<p><small>None so far.</small></p>');
   }
 
-  function open() {
-    return load().then(function (d) {
-      $('login').hidden = true; $('out').hidden = false; $('err').hidden = true; render(d);
+  function open(pass, remember) {
+    return load(pass).then(function (d) {
+      if (remember) { try { localStorage.setItem('norppa.statspass', pass); } catch (e) {} }
+      $('login').hidden = true; $('out').hidden = false; render(d);
     }).catch(function (e) {
-      $('out').hidden = true;
-      $('err').textContent = 'Could not load the stats (' + e.message + '). Check the connection and try again. If it says the passcode is wrong, the new stats/setup.sql has not been run yet.';
+      $('out').hidden = true; $('login').hidden = false;
+      var bad = e.bad; if (bad) { try { localStorage.removeItem('norppa.statspass'); } catch (x) {} }
+      $('err').textContent = bad ? 'Wrong passcode.' : 'Could not load the stats (' + e.message + '). Check the connection and try again.';
       $('err').hidden = false;
     });
   }
 
+  $('login').addEventListener('submit', function (e) { e.preventDefault(); var p = $('pass').value.trim(); if (p) open(p, true); });
   function setAll(on) { Array.prototype.forEach.call(document.querySelectorAll('#cards details'), function (el) { el.open = on; }); }
   $('openall').addEventListener('click', function () { setAll(true); });
   $('closeall').addEventListener('click', function () { setAll(false); });
   $('copy').addEventListener('click', function () { if (last) copyText(summary(last)); });
-  $('refresh').addEventListener('click', function () { open(); });
-  open();
+  $('refresh').addEventListener('click', function () { var p; try { p = localStorage.getItem('norppa.statspass'); } catch (e) {} if (p) open(p, false); });
+  $('logout').addEventListener('click', function () { try { localStorage.removeItem('norppa.statspass'); } catch (e) {} location.reload(); });
+  var saved; try { saved = localStorage.getItem('norppa.statspass'); } catch (e) {}
+  if (saved) open(saved, false);
 })();
 </script>
 </body>
