@@ -299,10 +299,10 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .pt canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 /* Puffer Sweep: floes of ice on dark water. Opening a tile leaves the water, with a number on it. */
 .pf { position: absolute; left: 50%; bottom: calc(10px + var(--sb)); transform: translateX(-50%); width: max-content; pointer-events: auto; padding: 7px; border-radius: 22px;
-  background: #173a73; box-shadow: inset 0 0 0 3px #2a579f, 0 10px 30px rgba(8, 20, 40, .45); --t: min((100vw - 26px) / 9, (100vh - 290px) / 9, 50px);
+  background: #173a73; box-shadow: inset 0 0 0 3px #2a579f, 0 10px 30px rgba(8, 20, 40, .45); --board-size: 9; --t: min((100vw - 26px) / var(--board-size), (100vh - 290px) / var(--board-size), 50px);
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .pf-tip { position: absolute; left: -8px; right: -8px; bottom: calc(100% + 10px); width: fit-content; margin: 0 auto; padding: 4px 12px; border-radius: 14px; background: rgba(16, 43, 82, .6); text-align: center; font: 600 16px var(--display); color: #fff; text-shadow: 0 2px 0 rgba(13, 24, 60, .55), 0 0 12px rgba(13, 24, 60, .5); pointer-events: none; text-wrap: balance; }   /* a soft dark pill, so it reads over the white ice floes behind it */
-.pf-grid { display: grid; grid-template-columns: repeat(9, var(--t)); grid-auto-rows: var(--t); touch-action: none; }
+.pf-grid { display: grid; grid-template-columns: repeat(var(--board-size), var(--t)); grid-auto-rows: var(--t); touch-action: none; }
 .pf-c { margin: 1.5px; border-radius: calc(var(--t) * .22); display: grid; place-items: center; font: 600 calc(var(--t) * .56)/1 var(--display); color: #fff; touch-action: none;
   background: linear-gradient(#fafdff, #c3e2fa); box-shadow: inset 0 2px 0 #fff, 0 2px 0 #6f9fd6; -webkit-tap-highlight-color: transparent; }
 .pf-c:not(.open):active { transform: translateY(1px); box-shadow: inset 0 2px 0 #fff, 0 1px 0 #6f9fd6; }
@@ -336,8 +336,8 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
     align-items: center;
     column-gap: 14px;
     row-gap: 12px;
-    --t: min((100vw - var(--sl) - var(--sr) - 238px) / 9, (100vh - var(--st) - var(--sb) - 94px) / 9, 50px);
-    --t: min((100vw - var(--sl) - var(--sr) - 238px) / 9, (100dvh - var(--st) - var(--sb) - 94px) / 9, 50px);
+    --t: min((100vw - var(--sl) - var(--sr) - 238px) / var(--board-size), (100vh - var(--st) - var(--sb) - 94px) / var(--board-size), 50px);
+    --t: min((100vw - var(--sl) - var(--sr) - 238px) / var(--board-size), (100dvh - var(--st) - var(--sb) - 94px) / var(--board-size), 50px);
   }
   .pf-grid { grid-column: 1; grid-row: 1 / 3; }
   .pf-tip { position: static; grid-column: 2; grid-row: 1; font-size: 15px; width: auto; margin: 0; padding: 0; background: none; }

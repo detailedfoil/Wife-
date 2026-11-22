@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '18 Nov 2026, 18:45';
+  PN.UPDATED = '22 Nov 2026, 19:18';
   /* An update stamp as a number that sorts by time. Compared as text, "10 Dec" would come before "18 Nov". */
   PN.stampKey = function (s) {
     const m = /^\s*(\d{1,2}) ([A-Za-z]{3}) (\d{4}),? (\d{1,2}):(\d{2})\s*$/.exec(String(s || ''));
@@ -396,6 +396,11 @@
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
   PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
+  PN.MUM_GAME_TEXT = {
+    shuffle: 'Take your time and pick a green seat.',
+    toss: 'Follow the guide to flick the snowball into the bucket. You get five misses.',
+    piano: 'Tap the green tiles in order. The next tile waits for you.',
+  };
   /* Pup skills (18 Nov 2026). A pup at home learns from what the family does: every game played while she is home is practice in
      that game's skill, and cuddles and saunas are practice in Care. Her best skill when she grows up is what she becomes (Sim.pupSpec),
      an all-rounder when her two best are close. Every pup raised adds to the family bonus on all game coins, and a grown pup who is

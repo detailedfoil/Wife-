@@ -11,8 +11,8 @@
   /* First-time tutorials: each game remembers on this device that its tutorial has been seen. Developer mode can clear them all. */
   const TUT = 'pikkunorppa.tut.';
   Games.tutorial = {
-    seen(id) { try { return !!localStorage.getItem(TUT + id); } catch (e) { return false; } },
-    mark(id) { try { localStorage.setItem(TUT + id, '1'); } catch (e) { /* private browsing: it simply shows again next time */ } },
+    seen(id) { try { return !!localStorage.getItem(TUT + id + (Games.mumMode ? '.mum' : '')); } catch (e) { return false; } },
+    mark(id) { try { localStorage.setItem(TUT + id + (Games.mumMode ? '.mum' : ''), '1'); } catch (e) { /* private browsing: it simply shows again next time */ } },
     reset() {
       try { Object.keys(localStorage).filter((k) => k.indexOf(TUT) === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) { /* nothing to do */ }
     },
@@ -81,6 +81,16 @@
     },
   };
   let tutCard = null, tutSpotEl = null, tipTimer = 0, glowing = [];
+  const MUM_TUTORIAL_LINES = {
+    ball: { bounce: ["Nice bounce! That's a point.", 'Hit it off-centre to send it sideways.'] },
+    piano: {
+      start: ['Tap the Start tile to begin.', 'Tap the green tiles in order. The next tile waits for you.'],
+      go: ['The tune has started! Keep tapping each green tile to play the next note.'],
+    },
+    toss: { start: ['Flick the snowball up the screen along the dotted line.', 'The guide shows where to aim on every throw.'] },
+    sled: { start: ['Slide your finger left and right to steer down the hill.', 'Dodge the trees and rocks. You can brush off the first two bumps.'] },
+  };
+
   function tutDom() {
     if (tutCard) return;
     tutCard = document.createElement('div'); tutCard.className = 'g-tut'; tutCard.hidden = true; tutCard.setAttribute('role', 'status');
@@ -159,6 +169,8 @@
     const src = (TUTORIALS[g.id] || {})[key];
     if (!src || g.tut.shown[key]) return false;
     const b = Object.assign({ key }, src);
+    const lines = g.mumMode && MUM_TUTORIAL_LINES[g.id];
+    if (lines && lines[key]) b.lines = lines[key];
     g.tut.shown[key] = 1; g.tut.count++;
     if (b.do) tutAsk(b, opts); else tutTip(b);
     return true;
@@ -172,6 +184,7 @@
   const rs = (k) => (Math.random() - 0.5) * 2 * k;
   let g = null;                // the game in play
   let bound = false;
+  Object.defineProperty(Games, 'mumMode', { get: () => !!(g && g.mumMode) });
 
   function big(text, hold, cls) {   // hold: seconds it stays up (0.8 if not given); cls: an extra style, such as 'too-slow'
     const el = $('gBig');
@@ -247,6 +260,7 @@
     UI.closeSheet();
     UI.setBubble(null);
     const seal = PN.Game.seal, ext = Games.ext[id];
+    const mumMode = PN.Game.state.settings.mumMode === true && id !== 'coffee';
     UI.showHud(false);
     $('gamehud').hidden = false;
     $('gScoreLabel').textContent = ext ? tr(ext.label) : tr(id === 'catch' ? 'label|Fish' : 'Bounces');
@@ -258,9 +272,10 @@
     else if (quit.classList.contains('back')) { quit.classList.remove('back'); quit.innerHTML = UI.ic('close'); quit.setAttribute('aria-label', tr('Stop the game')); }
     $('gTime').textContent = GAME_LEN;
     $('gBig').textContent = '';
-    $('gHint').textContent = ext ? tr(ext.hint) : tr(id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.');
+    const hint = ext ? ext.hint : id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.';
+    $('gHint').textContent = tr(mumMode ? PN.MUM_GAME_TEXT?.[id] || (id === 'catch' ? 'Slide left and right to catch the fish.' : hint) : hint);
     if (ext) {
-      g = { id, ext, seal, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0, secs: 0 };
+      g = { id, ext, seal, mumMode, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0, secs: 0 };
       if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
       ext.start();
       W.override = ext.view();
@@ -271,7 +286,7 @@
     W.ball.visible = false;
     seal.sulk = false; seal.petting = 0;
     seal.moveTo(0, LANE_Z, { speed: 3.2, face: 0 });
-    g = { id, seal, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
+    g = { id, seal, mumMode, saves: mumMode ? 2 : 0, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
       keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null, secs: 0 };
     if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
   };
@@ -360,7 +375,7 @@
 
   /* ---------- Fish Rain ---------- */
   function spawnCatch(prog) {
-    const isBall = g.clock > 3 && Math.random() < 0.17 + 0.2 * prog;
+    const isBall = !g.mumMode && g.clock > 3 && Math.random() < 0.17 + 0.2 * prog;
     const holder = new T.Group();
     let it;
     if (isBall) {
@@ -371,9 +386,9 @@
       holder.add(model);
       holder.rotation.z = -Math.PI / 2 + rs(0.35);          // nose down
       holder.scale.setScalar(1.75);
-      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.9 + prog * 3.5 + Math.random() * 1.2, spin: rs(5), inner: model };
+      it = { m: holder, id: f.id, gold: f.rarity === 5, v: g.mumMode ? 3.6 + Math.random() * 0.6 : 3.9 + prog * 3.5 + Math.random() * 1.2, spin: rs(5), inner: model };
       // Later on, some fish wriggle from side to side on the way down.
-      if (prog > 0.2 && Math.random() < 0.35 + 0.55 * prog) { it.sway = 0.4 + Math.random() * 0.7 * prog; it.swayF = 2 + Math.random() * 2.2; it.swayP = Math.random() * 6.3; }
+      if (!g.mumMode && prog > 0.2 && Math.random() < 0.35 + 0.55 * prog) { it.sway = 0.4 + Math.random() * 0.7 * prog; it.swayF = 2 + Math.random() * 2.2; it.swayP = Math.random() * 6.3; }
     }
     const x = U.clamp(g.seal.g.position.x + rs(3.4), -HALF, HALF);
     it.x0 = x;
@@ -407,7 +422,7 @@
       if (it.sway) p.x = U.clamp(it.x0 + Math.sin(g.clock * it.swayF + it.swayP) * it.sway, -HALF - 0.2, HALF + 0.2);
       if (it.ball && !quiet && !g.sawBall && p.y < skyTop() - 1.2) { g.sawBall = true; beat('snowball'); }   // the first snowball to come into view
       if (it.inner) it.inner.rotation.x += it.spin * dt;
-      const reach = it.ball ? 0.44 * size + 0.32 : 0.38 * size + 0.25;
+      const reach = it.ball ? 0.44 * size + 0.32 : 0.38 * size + (g.mumMode ? 0.55 : 0.25);
       if (!quiet && g.stun <= 0 && p.y < my + 0.5 && p.y > my - 0.45 * size - 0.25 && Math.abs(p.x - mx) < reach) {
         if (it.ball) {
           g.stun = 1.2;
@@ -453,7 +468,7 @@
     if (g.bigAt != null && g.clock - g.bigAt > 0.7) { $('gBig').textContent = ''; g.bigAt = null; }
     g.spawn -= dt;
     if (g.spawn <= 0 && g.time > 1.2) {
-      g.spawn = U.lerp(0.85, 0.4, prog) * (0.75 + Math.random() * 0.5);
+      g.spawn = (g.mumMode ? 0.65 : U.lerp(0.85, 0.4, prog)) * (0.75 + Math.random() * 0.5);
       spawnCatch(prog);
     }
     fall(dt, false);
@@ -463,7 +478,8 @@
   /* ---------- Nose Ball ---------- */
   function updateBall(dt) {
     const s = g.seal, b = g.b, R = 0.36;
-    const grav = 8.6 + Math.min(5.8, g.score * 0.2);    // the ball comes down faster with every bounce
+    if (g.mumMode) dt *= 0.65;
+    const grav = 8.6 + (g.mumMode ? 0 : Math.min(5.8, g.score * 0.2));    // the ball comes down faster with every bounce
     b.vy -= grav * dt;
     b.x += b.vx * dt; b.y += b.vy * dt;
     const wall = HALF + 0.35;
@@ -471,13 +487,14 @@
     else if (b.x < -wall) { b.x = -wall; b.vx = Math.abs(b.vx); A.play('tap', 0.1); }
     s.noseA.getWorldPosition(v1);
     const top = v1.y + 0.1 * s.size, nx = v1.x, nz = v1.z;
-    if (b.vy < 0 && b.y - R < top && b.y - R > top - 0.6 && Math.abs(b.x - nx) < 0.36 * s.size + 0.3) {
+    if (b.vy < 0 && b.y - R < top && b.y - R > top - 0.6 && Math.abs(b.x - nx) < 0.36 * s.size + (g.mumMode ? 0.64 : 0.3)) {
       g.score++;
       setScore(g.score);
       b.y = top + R;
-      const g2 = 8.6 + Math.min(5.8, g.score * 0.2);
+      const g2 = 8.6 + (g.mumMode ? 0 : Math.min(5.8, g.score * 0.2));
       b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
       b.vx = U.clamp((b.x - nx) * 5.2 + g.vx * 0.4 + rs(2.2 + Math.min(4.4, g.score * 0.2)), -8.5, 8.5);   // it can fly off sideways, fast
+      if (g.mumMode) b.vx *= 0.5;
       s.gesture('boop', true);
       beat('bounce');
       A.play('boing');
@@ -493,6 +510,13 @@
     if (b.y <= floor) {
       A.play('thud');
       FX.puff(v1.set(b.x, floor - R + 0.05, nz), 6, 0xffffff, 0.4);
+      if (g.saves > 0) {
+        g.saves--;
+        b.x = nx; b.y = Math.min(7.5, skyTop() - 1.5); b.vx = 0; b.vy = 0;
+        big(tr('Try that bounce again!'));
+        g.bigAt = g.clock;
+        return;
+      }
       s.gesture('surprise', true);
       g.phase = 'over'; g.clock = 0;
       big(tr(g.score >= 10 ? 'Wow!' : 'Oops!'));

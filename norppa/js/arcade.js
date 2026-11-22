@@ -141,7 +141,8 @@
     const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 12, GOES = 3;   // three goes; the average of them is what pays
     let view = null, obs = [], bubbles = null, rays = [], drift = [], used = 5;
     /* Gaps are set far enough ahead to start off the right edge, however wide the screen: a wide landscape one needs more of them. */
-    const need = () => U.clamp(Math.ceil((2 * halfW + 3.2 + 5) / 3.55) + 1, 5, N);
+    const spacing = () => G.mumMode ? 4.75 : 3.55;
+    const need = () => U.clamp(Math.ceil((2 * halfW + 3.2 + 5) / spacing()) + 1, 5, N);
     let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, scores = [0], avg = 0, wait = 0;
 
     function frond(mat, ph) {
@@ -199,8 +200,8 @@
       bubbles = Puffs(sc, 40, 0xdff6ff, 0.55);
     }
     function place(o, x) {
-      const gap = 2.45 - Math.min(0.55, score * 0.025);
-      const mid = U.clamp(lastGapY + rs(2.4), -2.2, 2.2);
+      const gap = G.mumMode ? 4.4 : 2.45 - Math.min(0.55, score * 0.025);
+      const mid = G.mumMode ? rs(0.7) : U.clamp(lastGapY + rs(2.4), -2.2, 2.2);
       lastGapY = mid;
       o.x = x; o.mid = mid; o.top = mid + gap / 2; o.bot = mid - gap / 2; o.passed = false;
       o.ice.position.y = o.top; o.kelp.position.y = o.bot;
@@ -237,7 +238,7 @@
       bubbles.clear();
       halfW = H * W.aspect;
       used = need();
-      obs.forEach((o, i) => { o.g.visible = i < used; if (i < used) place(o, halfW + 3.2 + i * 3.5); });
+      obs.forEach((o, i) => { o.g.visible = i < used; if (i < used) place(o, halfW + 3.2 + i * (spacing() - 0.05)); });
     }
     function nextGo() {
       go++; reset(); scores.push(0); tally();
@@ -266,8 +267,8 @@
         const c = view.camera;
         c.position.set(0, 0, H / Math.tan(c.fov * PI / 360)); c.lookAt(0, 0, 0);
         halfW = H * W.aspect; sx = -halfW * 0.42;
-        const speed = dead ? 0 : live ? 2.7 + Math.min(1.5, score * 0.06) : 1.2;
-        const dx = speed * dt;
+        const speed = dead ? 0 : live ? 2.7 + (G.mumMode ? 0 : Math.min(1.5, score * 0.06)) : 1.2;
+        const motion = dt * (G.mumMode ? 0.64 : 1), dx = speed * motion;
         // scenery slides by
         drift.forEach((m) => {
           m.userData.x -= dx;
@@ -278,20 +279,20 @@
         // the seal
         if (!live) y = 0.3 + Math.sin(clock * 2.2) * 0.18;
         else {
-          vy = Math.max(-6, vy - 11 * dt);
-          y += vy * dt;
+          vy = Math.max(-6, vy - 11 * motion);
+          y += vy * motion;
           if (y + R > CEIL) { y = CEIL - R; vy = Math.min(vy, 0); }
-          if (y - R < FLOOR) { y = FLOOR + R; if (!dead) die(); }
+          if (y - R < FLOOR) { y = FLOOR + R; if (G.mumMode) vy = 0; else if (!dead) die(); }
         }
         view.rig.position.set(sx, y, 0);
         view.rig.rotation.z = U.damp(view.rig.rotation.z, live ? U.clamp(vy * 0.11, -0.75, 0.5) : 0, 10, dt);
         // ice above, kelp below
         let far = -99;
         for (let i = 0; i < used; i++) if (obs[i].x > far) far = obs[i].x;
-        for (const want = need(); used < want; used++) { const o = obs[used]; o.g.visible = true; place(o, far + 3.3 + rnd() * 0.5); far = o.x; }   // the screen got wider
+        for (const want = need(); used < want; used++) { const o = obs[used]; o.g.visible = true; place(o, far + spacing() - 0.25 + rnd() * 0.5); far = o.x; }   // the screen got wider
         obs.slice(0, used).forEach((o) => {
           if (live) o.x -= dx;
-          if (o.x < -halfW - 1.6) { place(o, far + 3.3 + rnd() * 0.5); far = o.x; }
+          if (o.x < -halfW - 1.6) { place(o, far + spacing() - 0.25 + rnd() * 0.5); far = o.x; }
           o.g.position.x = o.x;
           o.fronds.forEach((f) => f.joints.forEach((j, i) => { j.rotation.z = Math.sin(clock * 1.5 + i * 0.6 + f.ph) * 0.03; }));
           if (o.hasFish) { o.fish.position.y = o.mid + Math.sin(clock * 3 + o.x) * 0.12; o.fish.rotation.z = Math.sin(clock * 5 + o.x) * 0.15; }
@@ -361,21 +362,24 @@
       sc.add(ball);
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
-    const LIVES = 3;   // tries counts the misses: three and the game is over, like Swimmy Seal's three goes
-    const throwsLeft = () => tr(LIVES - tries === 1 ? 'One miss left' : 'Misses left: {0}', LIVES - tries);
+    const lives = () => G.mumMode ? 5 : 3;
+    const throwsLeft = () => tr(lives() - tries === 1 ? 'One miss left' : 'Misses left: {0}', lives() - tries);
     /* New wind, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
-      wind = Math.round(10 * Math.pow(rnd(), 1.2) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
+      wind = Math.round((G.mumMode ? 3 : 10) * Math.pow(rnd(), 1.2) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
       bk.set(0, 0, SZ - dist);
       bucket.position.copy(bk);
+      const width = G.mumMode ? 1.35 : 1;
+      bucket.scale.set(width, 1, width);
       flag.position.set(0.95, 0, bk.z - 0.2);
       view.rig.position.set(-1.05, 0, bk.z + 0.15);
       paintWind();
       ball.position.set(0, SY, SZ + ZB); ball.visible = true; ball.scale.setScalar(1);
       mode = 'ready'; rimHit = false;
       K.hint(throwsLeft());
-      if (K.tutoring()) { aimYaw = solveYaw(); if (throws === 3) K.beat('solo'); }
+      if (G.mumMode || K.tutoring()) aimYaw = solveYaw();
+      if (!G.mumMode && throws === 3) K.beat('solo');
     }
     /* The wind, big, right above the snowball: how strong it is, and an arrow that grows with it and points the way it blows.
        The colours are the ones on the throwing guide. */
@@ -424,7 +428,7 @@
       aim.label.textContent = tr('Flick along the line');
     }
     function placeAim() {
-      const show = K.tutoring() && throws < 3 && mode === 'ready';
+      const show = (G.mumMode || (K.tutoring() && throws < 3)) && mode === 'ready';
       if (!aim) { if (!show) return; buildAim(); }
       aim.el.hidden = !show;
       if (!show) return;
@@ -484,7 +488,7 @@
         if (!drag || type !== 'up') return;
         const dx = x - drag.x, dy = y - drag.y;
         drag = null;
-        if (dy > -30 || Math.hypot(dx, dy) < 40) return;           // a flick has to go up the screen
+        if (dy > (G.mumMode ? -16 : -30) || Math.hypot(dx, dy) < (G.mumMode ? 22 : 40)) return;           // a flick has to go up the screen
         // like Paper Toss: the swipe's own angle is the throw's angle, one to one. A swipe within about 4 degrees of
         // straight goes dead straight. Wind 10 needs a lean of about 45 degrees, and each point is roughly 4.5 degrees.
         const ang = Math.atan2(dx, -dy);
@@ -508,15 +512,15 @@
         cloth.userData.mesh.rotation.y = Math.sin(clock * (4 + 8 * w)) * (0.1 + 0.35 * w);
         if (mode === 'ready') ball.position.y = SY + Math.sin(clock * 3) * 0.02;
         if (mode === 'fly' || mode === 'out' && ball.visible && bv.lengthSq() > 0.01) {
-          const steps = 3, h = dt / steps;
+          const steps = 3, h = dt * (G.mumMode ? 0.78 : 1) / steps, hit = G.mumMode ? 1.25 : HIT;
           for (let i = 0; i < steps; i++) {
             bv.x += wind * WINDK * h   /* a point of wind pushes the snowball about a quarter of a metre off line; 10 is a hard but possible shove */; bv.y -= GRAV * h;
             ball.position.addScaledVector(bv, h);
             const p = ball.position, d = Math.hypot(p.x - bk.x, p.z - bk.z);
             ball.rotation.x -= spin * h;
             if (mode === 'fly' && prevY >= RIM_Y && p.y < RIM_Y) {
-              if (d < HIT - BR * 0.5) { p.set(bk.x + (p.x - bk.x) * 0.5, RIM_Y - 0.25, bk.z + (p.z - bk.z) * 0.5); bv.set(0, 0, 0); basket(); break; }
-              if (d < HIT + BR) {                                      // clang off the rim
+              if (d < hit - BR * 0.5) { p.set(bk.x + (p.x - bk.x) * 0.5, RIM_Y - 0.25, bk.z + (p.z - bk.z) * 0.5); bv.set(0, 0, 0); basket(); break; }
+              if (d < hit + BR) {                                      // clang off the rim
                 A.play('tap'); A.play('thud', 0.1);
                 const ox = (p.x - bk.x) / (d || 1), oz = (p.z - bk.z) / (d || 1);
                 bv.set(ox * 2.2, Math.abs(bv.y) * 0.4, oz * 2.2);
@@ -524,7 +528,7 @@
                 miss(tr('So close!'));
               }
             }
-            if (mode === 'fly' && p.y < RIM_Y && d < HIT + BR && d > HIT - BR) { bv.x *= -0.4; bv.z *= -0.4; miss(tr('So close!')); }
+            if (mode === 'fly' && p.y < RIM_Y && d < hit + BR && d > hit - BR) { bv.x *= -0.4; bv.z *= -0.4; miss(tr('So close!')); }
             prevY = p.y;
             if (p.y < BR) {
               p.y = BR;
@@ -539,7 +543,7 @@
           wait -= dt;
           if (wait <= 0) {
             if (mode === 'out') tries++;
-            if (tries >= LIVES) { mode = 'done'; K.over(tr(score >= 15 ? 'Wow!' : score >= 5 ? 'Nice!' : 'Done!')); }
+            if (tries >= lives()) { mode = 'done'; K.over(tr(score >= 15 ? 'Wow!' : score >= 5 ? 'Nice!' : 'Done!')); }
             else setUp();
           }
         }
@@ -598,11 +602,14 @@
     }
     function next() {
       n++;
-      target.x = n === 1 ? 0 : rs(1.5); target.z = n === 1 ? -6.5 : -(5 + rnd() * 5);
+      target.x = n === 1 ? 0 : rs(G.mumMode ? 0.6 : 1.5);
+      target.z = n === 1 || G.mumMode ? -6.5 : -(5 + rnd() * 5);
       rings.position.set(target.x, 0.012, target.z);
+      const size = G.mumMode ? 1.4 : 1;
+      rings.scale.set(size, size, 1);
       pos.x = 0; pos.z = START_Z; vel.x = vel.z = 0;
       mode = 'aim'; aim = null;
-      const count = n >= 6 ? 2 : n >= 3 ? 1 : 0;
+      const count = G.mumMode ? 0 : n >= 6 ? 2 : n >= 3 ? 1 : 0;
       blocks.forEach((b, i) => {
         b.on = i < count; b.g.visible = b.on;
         b.z = U.lerp(START_Z, target.z, i ? 0.72 : 0.42); b.ph = rnd() * 6; b.sp = 1.3 + rnd() * 0.9;
@@ -671,15 +678,15 @@
           face(PI - aim.yaw);
         }
         if (mode === 'slide') {
-          const sp = Math.hypot(vel.x, vel.z), dec = MU * dt;
+          const motion = dt * (G.mumMode ? 0.75 : 1), sp = Math.hypot(vel.x, vel.z), dec = MU * motion;
           if (sp <= dec) {
-            const d = Math.hypot(pos.x - target.x, pos.z - target.z);
+            const d = Math.hypot(pos.x - target.x, pos.z - target.z) / rings.scale.x;
             const pts = d < 0.55 ? 5 : d < 1.2 ? 3 : d < 2.0 ? 1 : 0;
             stop(pts === 5 ? tr('Bullseye!') : pts ? '+' + pts : tr('Miss'), pts, false);
           } else {
             const k = (sp - dec) / sp;
             vel.x *= k; vel.z *= k;
-            pos.x += vel.x * dt; pos.z += vel.z * dt;
+            pos.x += vel.x * motion; pos.z += vel.z * motion;
             face(Math.atan2(vel.x, vel.z));
             trail -= dt;
             if (trail <= 0 && sp > 1.5) { trail = 0.06; puffs.emit(pos.x, 0.08, pos.z + 0.3, 1, 0.5, 0.07, 0.4, 2); }
@@ -705,7 +712,7 @@
     let view = null, gtex = null, board = null, puffs = null, piste = null, banks = [];
     const pool = { tree: [], rock: [], fish: [], ramp: [] };
     let live = [], track = 2.1, x = 0, tx = 0, vx = 0, dist = 0, bonus = 0, rowAt = 0, free = 2, air = 0, dead = false, going = false, shown = -1, rows = 0, spray = 0;
-    let wide = false, perPx = 0.012, lastPx = null;
+    let wide = false, perPx = 0.012, lastPx = null, saves = 0;
     /* The lane and the finger, sized from the screen. Upright, the lane fills most of the width and the finger picks a spot on it.
        On a wide screen that same lane would be far too wide for the seal to keep up, so there it stays about as wide as it is upright
        and the seal slides exactly as far as the finger does (perPx is one screen pixel, in world units, at the seal). */
@@ -793,7 +800,7 @@
       if (rows < 3) return;
       // one lane is always open, and never far from the last open one
       free = U.clamp(free + Math.round(rs(2.4)), 0, 4);
-      const count = 1 + (rnd() < 0.6 ? 1 : 0) + (dist > 150 && rnd() < 0.35 ? 1 : 0);
+      const count = G.mumMode ? 1 : 1 + (rnd() < 0.6 ? 1 : 0) + (dist > 150 && rnd() < 0.35 ? 1 : 0);
       const lanes = [0, 1, 2, 3, 4].filter((i) => i !== free).sort(() => rnd() - 0.5).slice(0, count);
       lanes.forEach((i) => {
         if (rnd() < 0.65) put('tree', lane(i) + rs(0.22), z + rs(0.7), 0.4, 0.95 + rnd() * 0.3);
@@ -822,7 +829,9 @@
         puffs.clear();
         x = tx = vx = 0; dist = 0; bonus = 0; free = 2; air = 0; dead = false; going = false; shown = -1; rows = 0; lastPx = null;
         fit(lens(view));
-        for (let z = -6; z > SPAWN; z -= 6) row(z);
+        saves = G.mumMode ? 2 : 0;
+        const spacing = G.mumMode ? 9 : 6;
+        for (let z = -spacing; z > SPAWN; z -= spacing) row(z);
         rowAt = 0;
       },
       go() { going = true; A.play('whoosh'); },
@@ -837,7 +846,7 @@
         clock += dt;
         fit(lens(view));
         view.camera.position.set(0, 4.6, 9); view.camera.lookAt(0, 0.5, -7);
-        const speed = dead ? 0 : going ? 9 + Math.min(9, dist / 60) : 3;
+        const speed = dead ? 0 : going ? (G.mumMode ? 5.5 + Math.min(2, dist / 100) : 9 + Math.min(9, dist / 60)) : 3;
         const dz = speed * dt;
         gtex.offset.y += dz * REP / LEN;
         piste.scale.x = track * 2 + 1.4;
@@ -852,7 +861,7 @@
           x += step; vx = step / dt;
           if (air > 0) air -= dt;
           rowAt -= dz;
-          if (rowAt <= 0) { rowAt += Math.max(4.8, 6.5 - dist / 250); row(SPAWN); }
+          if (rowAt <= 0) { rowAt += G.mumMode ? 9 : Math.max(4.8, 6.5 - dist / 250); row(SPAWN); }
           const m = Math.floor(dist) + bonus;
           if (m !== shown) { shown = m; K.score(m, true); if (m === 40) K.hint(''); }
           spray -= dt;
@@ -866,7 +875,8 @@
           if (it.kind === 'fish') { it.inner.rotation.y += dt * 3; it.inner.position.y = 0.55 + Math.sin(clock * 4 + it.x) * 0.08; }
           if (it.z > GONE) { it.live = false; it.m.visible = false; live.splice(i, 1); continue; }
           if (!playing || dead || !it.r || air > 0) continue;
-          if (Math.abs(it.z + 0.2) < 0.55 && Math.abs(it.x - x) < it.r + 0.3) {
+          const margin = G.mumMode && (it.kind === 'tree' || it.kind === 'rock') ? 0.12 : 0.3;
+          if (Math.abs(it.z + 0.2) < 0.55 && Math.abs(it.x - x) < it.r + margin) {
             if (it.kind === 'fish') {
               it.live = false; it.m.visible = false; live.splice(i, 1);
               bonus += 10; K.big('+10'); A.play('gulp'); K.beat('fish');
@@ -875,6 +885,10 @@
               it.r = 0; air = 0.9; bonus += 20;
               K.big(tr('Jump!')); A.play('boing'); K.beat('ramp');
               K.score(Math.floor(dist) + bonus);
+            } else if (saves > 0) {
+              saves--; it.r = 0;
+              A.play('thud', 0.4);
+              K.big(tr('Keep going!'));
             } else crash();
           }
         }
@@ -914,6 +928,14 @@
       return t;
     };
     const draw = () => deck.pop();
+    function suggestedMove() {
+      const score = total(you), dealer = total(house.slice(0, 1));
+      const lowTotal = you.reduce((sum, card) => sum + Math.min(10, card % 13 + 1), 0);
+      const soft = score > lowTotal;
+      const stand = soft ? score >= 19 || (score === 18 && dealer <= 8)
+        : score >= 17 || (score >= 13 && dealer <= 6) || (score === 12 && dealer >= 4 && dealer <= 6);
+      return stand ? 'stand' : 'hit';
+    }
     function shuffle() {
       deck = [];
       for (let i = 0; i < 52; i++) deck.push(i);
@@ -934,17 +956,19 @@
     function paint() {
       const btn = (act, label, cls, off) => '<button data-bj="' + act + '" class="' + (cls || '') + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
       const mine = you.slice(0, shownYou), theirs = house.slice(0, shownHouse), live = mode === 'dealing' || mode === 'play' || mode === 'house';
+      const suggestion = G.mumMode && mode === 'play' ? suggestedMove() : '';
       let btns = '';
       // With only one bet possible (5) there is nothing to slide, so no slider; otherwise it runs from the minimum to the maximum
       if (mode === 'bet') btns = btn('bet', betLabel(), 'go', stack < MIN) + (most() > MIN ? '<div class="bj-slide"><input type="range" id="bjRange" min="0" max="100" step="1" value="' + Math.round(frac * 100) + '" aria-label="' + tr('How much to bet') + '">'
         + '<span class="bj-ticks"><i></i><i></i><i></i></span><span class="bj-ends"><span>' + tr('Minimum') + '</span><span>' + tr('Maximum') + '</span></span></div>' : '');
-      else btns = btn('hit', tr('Hit'), '', mode !== 'play') + btn('stand', tr('Stand'), 'go', mode !== 'play');
-      el.innerHTML = '<div class="bj-top"><div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (theirs.length ? (hide ? '?' : total(theirs)) : '') + '</b></div><div class="bj-cards">'
+      else btns = btn('hit', tr('Hit'), suggestion === 'hit' ? 'go' : '', mode !== 'play')
+        + btn('stand', tr('Stand'), suggestion === 'hit' ? '' : 'go', mode !== 'play');
+      el.innerHTML = '<div class="bj-top"><div class="bj-row"><div class="bj-who">' + tr('Dealer') + '<b>' + (theirs.length ? (hide ? (G.mumMode ? total(theirs.slice(0, 1)) + ' + ?' : '?') : total(theirs)) : '') + '</b></div><div class="bj-cards">'
         + theirs.map((c, k) => card(c, hide && k === 1, flipHole && k === 1)).join('') + '</div></div>'
         + '<div class="bj-row"><div class="bj-who">' + tr('You') + '<b>' + (mine.length ? total(mine) : '') + '</b></div><div class="bj-cards">' + mine.map((c) => card(c)).join('') + '</div></div></div>'
         + '<div class="bj-panel"><div class="bj-bank"><div class="bj-stack" aria-hidden="true">' + chips() + '</div><div class="bj-have"><b>' + stack + '</b><span>' + tr(stack === 1 ? 'token' : 'tokens') + '</span></div>'
         + (live ? '<div class="bj-bet"><span>' + tr('On the table') + '</span><b>' + bet + '</b></div>' : '') + '</div>'
-        + '<div class="bj-msg">' + msg + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div></div>';
+        + '<div class="bj-msg">' + (suggestion ? tr(suggestion === 'hit' ? 'Try Hit' : 'Try Stand') : msg) + '</div><div class="bj-potential" id="bjPotential">' + potentialLabel() + '</div><div class="bj-btns">' + btns + '</div></div>';
       fresh.clear(); flipHole = false;
       if (mode === 'bet' && most() > MIN) K.beat('slide');   // tutorial: the first time there is more than one bet to choose from
     }
@@ -1050,7 +1074,7 @@
         actor.update(dt, clock, null);
         if (lock > 0) lock -= dt;
         if (!playing || wait <= 0) return;
-        wait -= dt;
+        wait -= dt * (G.mumMode ? 0.75 : 1);
         if (wait > 0) return;
         if (mode === 'dealing') {
           if (dealt < 4) {
@@ -1113,8 +1137,8 @@
     }
     function newRound() {
       lvl = round * 2 / 7;                       // a gentle increase across the whole visit
-      size = Math.max(0.32, 0.42 - lvl * 0.018);
-      band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.9; calm = 0.5; rest = 0;
+      size = G.mumMode ? 0.66 : Math.max(0.32, 0.42 - lvl * 0.018);
+      band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.9; calm = G.mumMode ? 0.62 : 0.5; rest = 0;
     }
     function paint() {
       zoneEl.style.height = (size * 100) + '%'; zoneEl.style.bottom = (band * 100) + '%';
@@ -1163,7 +1187,8 @@
         if (rest > 0) { rest -= dt; if (rest <= 0) newRound(); paint(); return; }
         // the green band: water lifts it, and it sinks back on its own, with a small bounce off the bottom
         bandV += (pressing ? 1.9 : -1.6) * dt;
-        bandV = U.clamp(bandV, -0.85, 0.85);
+        const bandSpeed = G.mumMode ? 0.46 : 0.85;
+        bandV = U.clamp(bandV, -bandSpeed, bandSpeed);
         band += bandV * dt;
         if (band < 0) { band = 0; bandV = Math.abs(bandV) * 0.15; }
         if (band > 1 - size) { band = 1 - size; bandV = 0; }
@@ -1171,11 +1196,14 @@
         // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
         const k = 1 + lvl * 0.12;
         hop -= dt;
-        if (hop <= 0) { hop = (0.55 + rnd() * 1.15) / Math.sqrt(k); pinT = U.clamp(pin + rs(0.36 + 0.035 * lvl), 0.04, 0.96); }
+        if (hop <= 0) {
+          hop = (0.55 + rnd() * 1.15) / Math.sqrt(k) * (G.mumMode ? 1.5 : 1);
+          pinT = G.mumMode ? U.clamp(pin + rs(0.19), 0.18, 0.82) : U.clamp(pin + rs(0.36 + 0.035 * lvl), 0.04, 0.96);
+        }
         pinV += ((pinT - pin) * 9 * k - pinV * 4.6) * dt;
         pin = U.clamp(pin + pinV * dt, 0, 1);
         const inside = pin >= band && pin <= band + size;
-        calm = U.clamp(calm + (inside ? 0.16 : -0.08) * dt, 0, 1);
+        calm = U.clamp(calm + (inside ? (G.mumMode ? 0.21 : 0.16) : (G.mumMode ? -0.035 : -0.08)) * dt, 0, 1);
         paint();
         if (calm >= 1) {
           round++; K.score(round, true); document.getElementById('gScore').textContent = round + '/' + goal;
@@ -1198,10 +1226,11 @@
   /* Stack ice cream: a layer slides across, tap to set it down. Whatever hangs over the edge breaks off, so the tower narrows.
      Miss the tower altogether and the game is over. */
   const stack = (() => {
-    const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, LIVES = 1, HOP = 0.28, KEEP = 46;
+    const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, HOP = 0.28, KEEP = 46;
     // A square spreading into an equal-area circle expands equally on both axes.
     const CREAM_SPREAD = 2 / Math.sqrt(PI), CONE_RADIUS = S0 * CREAM_SPREAD / 2;
-    const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
+    const speedAt = (n) => G.mumMode ? Math.min(2, 1.35 + 0.025 * n) : Math.min(6, 2.6 + 0.085 * n);
+    const tolerance = () => G.mumMode ? 0.42 : TOL;
     let view = null, bodyGeo = null, softGeo = null, puffs = null, circleGeo = null, scoopPoints = null, baseIce = null;
     let history = [], revealT = 0;
     const flavours = [0xf7d5df, 0xffedc6, 0xc4e4cc, 0xd2b5a5, 0xd6cdf1, 0xf5d3a9];
@@ -1283,7 +1312,7 @@
         return;
       }
       let keep = size, mid = c;
-      if (ad <= TOL) {                                         // spot on: nothing breaks, and a run of them wins some width back
+      if (ad <= tolerance()) {                                         // spot on: nothing breaks, and a run of them wins some width back
         streak++;
         if (streak >= 3 && size < S0) keep = Math.min(S0, size + GROW);
         K.big(tr('Perfect!')); A.play('match'); K.beat('perfect');
@@ -1364,7 +1393,7 @@
         if (mode === 'rest' && playing) {
           wait -= dt;
           if (wait <= 0) {
-            if (misses >= LIVES) { mode = 'reveal'; revealT = 0; }
+            if (misses >= (G.mumMode ? 3 : 1)) { mode = 'reveal'; revealT = 0; }
             else spawn();
           }
         }
@@ -1425,7 +1454,8 @@
      Clear the lot and the coins go by the clock: the quicker, the more (data.js). The clock starts on the first tap.
      Flags are optional. Hold a tile, or switch to Flag and tap. Tap a number whose flags are all down to open the rest around it. */
   const puff = (() => {
-    const BW = 9, BH = 9, N = 10, CELLS = BW * BH, HOLD = 140, Sw = PN.Sweep;
+    const HOLD = 140, Sw = PN.Sweep;
+    let size = 9, mineCount = 10, saves = 0;
     const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21V4" stroke="#17264d" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M8.6 4.4l10.4 3.7-10.4 4z" fill="#f2683c" stroke="#f2683c" stroke-width="1.2" stroke-linejoin="round"/></svg>';
     const FISH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M19.2 4.8l-2.4 2.4M4.8 19.2l2.4-2.4M19.2 19.2l-2.4-2.4" stroke="#c9822a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
       + '<circle cx="12" cy="12" r="7.2" fill="#f6c443"/><path d="M5.4 14.6a7.2 7.2 0 0 0 13.2 0z" fill="#fff1c9"/><circle cx="9.2" cy="10.4" r="1.5" fill="#17264d"/><circle cx="14.8" cy="10.4" r="1.5" fill="#17264d"/>'
@@ -1469,11 +1499,8 @@
       [[-1.42, 0.35, 0.45], [1.45, -0.1, -0.4]].forEach((p, i) => { const g = puffer(); g.position.set(p[0], -0.12, p[1]); g.rotation.y = p[2]; sc.add(g); fish.push({ g, big: 1, y: -0.12, ph: i * 2.1 }); });
       view.camera.position.set(0, 2.5, 7.2);
       el = document.getElementById('puffBoard');
-      let h = '<div class="pf-tip" id="pfTip"></div><div class="pf-grid">';
-      for (let i = 0; i < CELLS; i++) h += '<button class="pf-c" data-i="' + i + '" tabindex="-1"></button>';
-      h += '</div><div class="pf-bar"><span class="pf-prize" id="pfPrize"></span><span class="pf-mode" id="pfMode" role="group"><button data-pf="dig"></button><button data-pf="flag"></button></span></div>';
-      el.innerHTML = h;
-      cells = Array.prototype.slice.call(el.querySelectorAll('.pf-c'));
+      el.innerHTML = '<div class="pf-tip" id="pfTip"></div><div class="pf-grid"></div>'
+        + '<div class="pf-bar"><span class="pf-prize" id="pfPrize"></span><span class="pf-mode" id="pfMode" role="group"><button data-pf="dig"></button><button data-pf="flag"></button></span></div>';
       prizeEl = document.getElementById('pfPrize'); modeEl = document.getElementById('pfMode'); tipEl = document.getElementById('pfTip');
       const tile = (e) => { const b = e.target.closest ? e.target.closest('.pf-c') : null; return b ? +b.dataset.i : -1; };
       const drop = () => { if (press) { clearTimeout(press.timer); press = null; } };
@@ -1493,6 +1520,18 @@
       el.addEventListener('pointercancel', drop);
       el.addEventListener('contextmenu', (e) => e.preventDefault());
       modeEl.addEventListener('click', (e) => { const b = e.target.closest('[data-pf]'); if (b) { flagging = b.dataset.pf === 'flag'; A.play('tap'); bar(); } });
+    }
+    function resizeBoard() {
+      const count = size * size;
+      if (cells.length === count) return;
+      el.style.setProperty('--board-size', size);
+      cells = Array.from({ length: count }, (_, i) => {
+        const tile = document.createElement('button');
+        tile.dataset.i = i;
+        tile.tabIndex = -1;
+        return tile;
+      });
+      el.querySelector('.pf-grid').replaceChildren(...cells);
     }
     function bar() {
       const b = modeEl.children;
@@ -1515,7 +1554,7 @@
     function setFlag(i) {
       if (mode !== 'play' || open[i]) return;
       mark[i] = mark[i] ? 0 : 1; flags += mark[i] ? 1 : -1;
-      paint(i); A.play('tick'); K.shown(N - flags);
+      paint(i); A.play('tick'); K.shown(mineCount - flags);
     }
     /* A long press flags a shut tile. False: there was nothing to flag, so the press counts as a plain tap. */
     function hold(i) {
@@ -1525,10 +1564,18 @@
       setFlag(i);
       return true;
     }
-    /* Open a tile and whatever comes with it. False: there was a pufferfish under it. */
+    /* Open a tile and whatever comes with it. Stop digging when a pufferfish is found. */
     function dig(i) {
-      if (mines[i]) { boom(i); return false; }
-      const got = Sw.flood(BW, BH, mines, num, open, i);
+      if (mines[i]) {
+        if (saves > 0) {
+          saves--;
+          setFlag(i);
+          tipEl.textContent = tr('Pufferfish spotted and flagged!');
+        } else boom(i);
+        return false;
+      }
+      tipEl.textContent = '';
+      const got = Sw.flood(size, size, mines, num, open, i);
       got.forEach((j) => { if (mark[j]) { mark[j] = 0; flags--; } paint(j); if (j !== i || got.length > 1) cells[j].classList.add('fresh'); });
       left -= got.length;
       return true;
@@ -1536,13 +1583,13 @@
     function tap(i) {
       const first = mode === 'ready';                           // the first tap always opens, whichever way the switch is set
       if (first) {
-        mines = Sw.make(BW, BH, N, i); num = Sw.counts(BW, BH, mines);
+        mines = Sw.make(size, size, mineCount, i); num = Sw.counts(size, size, mines);
         mode = 'play'; tipEl.textContent = '';
       }
       if (mode !== 'play') return;
       if (open[i]) {
         if (!num[i]) return;
-        const nb = Sw.hood(BW, BH)[i];
+        const nb = Sw.hood(size, size)[i];
         let fl = 0, hid = 0;
         nb.forEach((j) => { if (!open[j]) { if (mark[j]) fl++; else hid++; } });
         if (fl !== num[i] || !hid) return;
@@ -1556,21 +1603,21 @@
         if (!dig(i)) return;
         A.play(before - left > 2 ? 'pop' : 'tap');
       }
-      K.shown(N - flags);
+      K.shown(mineCount - flags);
       if (first) K.beat('open');
       if (left === 0) win();
     }
     function win() {
       mode = 'won';
-      for (let i = 0; i < CELLS; i++) if (!open[i] && !mark[i]) { mark[i] = 1; paint(i); }
-      flags = N; K.shown(0);
+      for (let i = 0; i < cells.length; i++) if (!open[i] && !mark[i]) { mark[i] = 1; paint(i); }
+      flags = mineCount; K.shown(0);
       K.result(Math.max(1, Math.ceil(t)));
       A.play('award'); actor.gesture('happy', true);
       K.over(tr('All clear!'));
     }
     function boom(i) {
       mode = 'boom'; wait = 1.1;
-      for (let j = 0; j < CELLS; j++) {
+      for (let j = 0; j < cells.length; j++) {
         if (mines[j] && !mark[j]) { cells[j].className = 'pf-c open puff' + (j === i ? ' hit' : ''); cells[j].innerHTML = FISH; }
         else if (!mines[j] && mark[j]) cells[j].classList.add('wrong');
       }
@@ -1587,16 +1634,20 @@
         if (!view) build();
         cast(view, 0.85, true);
         face(0);
-        mines = null; num = new Uint8Array(CELLS); open = new Uint8Array(CELLS); mark = new Uint8Array(CELLS);
-        left = CELLS - N; flags = 0; t = 0; mode = 'ready'; flagging = false; wait = 0; press = null; shownT = shownP = -1;
+        size = G.mumMode ? 6 : 9;
+        mineCount = G.mumMode ? 4 : 10;
+        saves = G.mumMode ? 2 : 0;
+        resizeBoard();
+        mines = null; num = new Uint8Array(cells.length); open = new Uint8Array(cells.length); mark = new Uint8Array(cells.length);
+        left = cells.length - mineCount; flags = 0; t = 0; mode = 'ready'; flagging = false; wait = 0; press = null; shownT = shownP = -1;
         fish.forEach((f) => { f.big = 1; f.g.scale.setScalar(1); });
-        for (let i = 0; i < CELLS; i++) paint(i);
+        for (let i = 0; i < cells.length; i++) paint(i);
         bar(); clockNow();
         tipEl.textContent = tr('Tap any tile to start. Hold a tile to flag it.');
         el.hidden = false;
       },
       stop() { if (press) { clearTimeout(press.timer); press = null; } el.hidden = true; },
-      go() { K.shown(N); },
+      go() { K.shown(mineCount); },
       pointer() {},
       key() {},
       update(dt, playing) {
@@ -1672,7 +1723,8 @@
     // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
     // (for Ievan that is exactly half a loop). song.speed scales it all so every tune earns what Ievan does.
     const REF = 83;
-    const bpm = (p) => (song.speed || 1) * Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length)));
+    const bpm = (p) => (song.speed || 1) * (G.mumMode ? START * 0.55
+      : Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length))));
     function songTitle(text) {
       let e = document.getElementById('gSong');
       // Older cached HTML may not contain the title element yet.
@@ -1710,7 +1762,12 @@
         const x = t.lane * lw + 4, w = lw - 8, y = top + 3, hh = h - 6, rad = Math.min(14, hh / 2);
         if (i < next) { g2.fillStyle = 'rgba(255,255,255,.1)'; box(x, y, w, hh, rad); g2.fill(); continue; }
         if (i === badTile) g2.fillStyle = '#e2503a';
-        else { const gr = g2.createLinearGradient(0, y, 0, y + hh); gr.addColorStop(0, '#fafdff'); gr.addColorStop(1, '#bfe0fa'); g2.fillStyle = gr; }
+        else {
+          const gr = g2.createLinearGradient(0, y, 0, y + hh), guided = G.mumMode && i === next;
+          gr.addColorStop(0, guided ? '#edffed' : '#fafdff');
+          gr.addColorStop(1, guided ? '#8edba9' : '#bfe0fa');
+          g2.fillStyle = gr;
+        }
         box(x, y, w, hh, rad); g2.fill();
         if (i !== badTile) { g2.fillStyle = 'rgba(255,255,255,.9)'; box(x + 5, y + 4, w - 10, Math.min(5, hh / 3), 2.5); g2.fill(); }
         if (i === 0 && mode === 'ready') {
@@ -1728,7 +1785,7 @@
       const t = tile(next);
       if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); }
       else if (lane !== t.lane || (startOf(next) - pos) * unit() > H * LINE) {
-        if (lane === lastLane && clock - lastAt < BOUNCE) return;        // the same finger landing twice
+        if (G.mumMode || (lane === lastLane && clock - lastAt < BOUNCE)) return;        // the same finger landing twice
         fail(lane, -1, tr('Wrong tile!'));
         return;
       }
@@ -1835,7 +1892,8 @@
         if (playing && mode === 'play') {
           pos += dt * bpm(pos) / 15;
           const t = tile(next), u = unit();
-          if (H * LINE - (startOf(next) - pos) * u - t.d * u > H) fail(t.lane, next, tr('Missed one!'));
+          if (G.mumMode) pos = Math.min(pos, startOf(next) + H * (0.9 - LINE) / u);
+          else if (H * LINE - (startOf(next) - pos) * u - t.d * u > H) fail(t.lane, next, tr('Missed one!'));
         } else if (playing && mode === 'fail') { wait -= dt; if (wait <= 0) { mode = 'done'; K.over(why); } }
         draw();
       },
@@ -1864,6 +1922,10 @@
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
   const color = new T.Color();
+
+  const pace = () => PN.Games.mumMode ? 1.6 : 1;
+  const crawl = () => PN.Games.mumMode ? 0.28 : CRAWL;
+  const busLayoutRound = () => PN.Games.mumMode ? 1 : round;
 
   const rowsFor = n => FIRST_ROWS + Math.floor((n - 1) / 4) * 2;
   function layout(n) {
@@ -2042,8 +2104,9 @@
     clearBus();
     bus = new T.Group(); scenery = new T.Group(); view.scene.add(scenery, bus);
     const center = (seats[0].x + seats[seats.length - 1].x) / 2;
-    busWidth = Math.ceil(round / 4) * 2 + 1.15;
-    const half = busWidth / 2, rows = rowsFor(round);
+    const cols = Math.ceil(busLayoutRound() / 4) * 2;
+    busWidth = cols + 1.15;
+    const half = busWidth / 2, rows = rowsFor(busLayoutRound());
     busExtra = (rows - FIRST_ROWS) * ROW_PITCH;
     const front = z => z - busExtra / 2, rear = z => z + busExtra / 2;
     // A quiet snowy street. All surfaces, kerbs and lane marks are meshes.
@@ -2065,7 +2128,7 @@
       const x = sign * (half - 0.10);
       box(bus, materials.paint, 0.18, 0.53, 10.9 + busExtra, x, 0.86, -0.05);
       box(bus, materials.cream, 0.20, 0.10, 10.9 + busExtra, x, 1.14, -0.05);
-      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 4) * 2].z);
+      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * cols].z);
       // Mirror stalks are outside the cabin, away from the selectable seats.
       box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, front(-5.12));
       box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, front(-5.12));
@@ -2152,6 +2215,7 @@
         const quality = best - worst < 1e-7 ? 1 : (s.distance - worst) / (best - worst);
         color.setHSL(quality / 3, 0.82, 0.48);
       } else if (revealing) color.setHSL(0, 0.82, 0.48);   // a seat with a seal on it is as bad as a seat can be: red
+      else if (PN.Games.mumMode && !tutStep && !s.occupied && s.distance === best) color.setHex(0x81d6a0);
       else color.setHex(s.occupied ? 0x507bb5 : 0x6b9bdd);
       cushions.setColorAt(i, color); seatBacks.setColorAt(i, color);
     });
@@ -2187,12 +2251,17 @@
     bus.add(guide);
   }
   function next() {
-    round = tutStep ? 1 : round + 1; seats = layout(round);
-    populateSeats(seats, round);
+    round = tutStep ? 1 : round + 1;
+    const layoutRound = busLayoutRound();
+    seats = layout(layoutRound);
+    populateSeats(seats, layoutRound);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
     if (tutStep === 1) say('Tap the seat furthest from any other seal. Try the one with the arrow!');
     else if (tutStep === 2) say('Your turn! Tap the seat furthest from the seals.');
-    else { say(null); K.hint(tr('Bus {0} / {1} · Find your personal space', round, 20)); }
+    else {
+      say(null);
+      K.hint(tr(PN.Games.mumMode ? 'Bus {0} / {1} · Pick a green seat' : 'Bus {0} / {1} · Find your personal space', round, 20));
+    }
     makeBus();
     if (tutStep === 1) addGuide();
   }
@@ -2223,14 +2292,15 @@
     // Points run from the worst free seat (0) to the best (100). Measured from nothing, a seat tapped without looking still scored about 56.
     const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
     const points = i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
-    hold = tutStep ? Infinity : i < 0 ? 0.55 : Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter; a missed bus lingers a beat so the message can be read
+    hold = tutStep ? Infinity : i < 0 ? 0.55 : PN.Games.mumMode ? 0.2 : Math.max(0, (deadline - performance.now()) / 1000);
+    // A missed bus lingers for its message. In regular play the bus waits out the full choice time.
     if (!tutStep) { total += points; K.score(total); }
     phase = 'reveal'; elapsed = 0;
     if (guide) guide.visible = false;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
     if (tutStep === 1) say('The further from other seals, the more points. Green seats score most, red seats least.', true);
-    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', "That's the tutorial done. From now on the bus won't wait, so be quick!"], true);
+    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', PN.Games.mumMode ? PN.MUM_GAME_TEXT.shuffle : "That's the tutorial done. From now on the bus won't wait, so be quick!"], true);
     else {
       if (i < 0) K.big(tr('Too slow!'), 1.3, 'too-slow');
       K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
@@ -2275,22 +2345,22 @@
       if (!playing) return;
       elapsed += dt;
       if (phase === 'arrive') {
-        const t = Math.min(elapsed, ARRIVE), u = t / ARRIVE;
+        const duration = ARRIVE * pace(), t = Math.min(elapsed, duration), u = t / duration;
         // Ease from a fast arrival to the same nonzero speed as the crawl.
-        bus.position.z = CRAWL_START + CRAWL * (ARRIVE - t)
-          + (travel - CRAWL_START - CRAWL * ARRIVE) * Math.pow(1 - u, 3);
-        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = tutStep ? Infinity : performance.now() + 1100; elapsed = 0; }
+        bus.position.z = CRAWL_START + crawl() * (duration - t)
+          + (travel - CRAWL_START - crawl() * duration) * Math.pow(1 - u, 3);
+        if (elapsed >= duration) { phase = 'choose'; deadline = tutStep ? Infinity : performance.now() + (PN.Games.mumMode ? 4200 : 1100); elapsed = 0; }
       } else if (phase === 'choose') {
-        if (!tutStep) bus.position.z -= CRAWL * dt;   // the tutorial buses wait where they stopped
+        if (!tutStep) bus.position.z -= crawl() * dt;   // the tutorial buses wait where they stopped
         if (performance.now() >= deadline) choose(-1);
       } else if (phase === 'reveal') {
-        if (!tutStep) bus.position.z -= CRAWL * dt;
+        if (!tutStep) bus.position.z -= crawl() * dt;
         if (elapsed >= REVEAL + hold) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
       } else if (phase === 'depart') {
-        const t = Math.min(elapsed, DEPART);
+        const duration = DEPART * pace(), t = Math.min(elapsed, duration);
         // Accelerate out of the crawl without a position or speed jump.
-        bus.position.z = departFrom - CRAWL * t - travel * Math.pow(t / DEPART, 3);
-        if (elapsed >= DEPART) {
+        bus.position.z = departFrom - crawl() * t - travel * Math.pow(t / duration, 3);
+        if (elapsed >= duration) {
           if (round === 20) { phase = 'done'; K.over(total + ' / 2,000'); K.hint(tr('Twenty buses · A little space to yourself')); }
           else next();
         }
@@ -2311,7 +2381,7 @@
       view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done'; tutStep = 0; say(null);
     },
     layout, evaluate, populateSeats,
-    peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
+    peek: () => ({ round, rows: rowsFor(busLayoutRound()), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
 
