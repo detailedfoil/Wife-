@@ -433,7 +433,6 @@
     'The tune has started! Keep tapping each green tile to play the next note.': 'Sävelmä alkoi! Soita seuraava sävel napauttamalla vihreää laattaa.',
     'The guide shows where to aim on every throw.': 'Tähtäysviiva näyttää jokaisen heiton suunnan.',
     'Dodge the trees and rocks. You can brush off the first two bumps.': 'Väistä puita ja kiviä. Kaksi ensimmäistä kolhua eivät haittaa.',
-    'Slide left and right to catch the fish.': 'Liu’u sivusuunnassa ja nappaa kalat.',
     'Try that bounce again!': 'Kokeile ponnautusta uudelleen!',
     'Keep going!': 'Jatka vain!',
     'Try Hit': 'Kokeile ottaa kortti',

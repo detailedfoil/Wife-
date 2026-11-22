@@ -273,7 +273,7 @@
     $('gTime').textContent = GAME_LEN;
     $('gBig').textContent = '';
     const hint = ext ? ext.hint : id === 'catch' ? 'Slide left and right to catch the fish. Mind the snowballs.' : 'Slide to get under the ball. Keep it off the snow.';
-    $('gHint').textContent = tr(mumMode ? PN.MUM_GAME_TEXT?.[id] || (id === 'catch' ? 'Slide left and right to catch the fish.' : hint) : hint);
+    $('gHint').textContent = tr(mumMode ? PN.MUM_GAME_TEXT?.[id] || hint : hint);
     if (ext) {
       g = { id, ext, seal, mumMode, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0, secs: 0 };
       if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
@@ -375,7 +375,8 @@
 
   /* ---------- Fish Rain ---------- */
   function spawnCatch(prog) {
-    const isBall = !g.mumMode && g.clock > 3 && Math.random() < 0.17 + 0.2 * prog;
+    const snowballChance = (0.17 + 0.2 * prog) * (g.mumMode ? 0.3 : 1);
+    const isBall = g.clock > 3 && Math.random() < snowballChance;
     const holder = new T.Group();
     let it;
     if (isBall) {
@@ -386,9 +387,9 @@
       holder.add(model);
       holder.rotation.z = -Math.PI / 2 + rs(0.35);          // nose down
       holder.scale.setScalar(1.75);
-      it = { m: holder, id: f.id, gold: f.rarity === 5, v: g.mumMode ? 3.6 + Math.random() * 0.6 : 3.9 + prog * 3.5 + Math.random() * 1.2, spin: rs(5), inner: model };
+      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.9 + prog * 3.5 + Math.random() * 1.2, spin: rs(5), inner: model };
       // Later on, some fish wriggle from side to side on the way down.
-      if (!g.mumMode && prog > 0.2 && Math.random() < 0.35 + 0.55 * prog) { it.sway = 0.4 + Math.random() * 0.7 * prog; it.swayF = 2 + Math.random() * 2.2; it.swayP = Math.random() * 6.3; }
+      if (prog > 0.2 && Math.random() < 0.35 + 0.55 * prog) { it.sway = 0.4 + Math.random() * 0.7 * prog; it.swayF = 2 + Math.random() * 2.2; it.swayP = Math.random() * 6.3; }
     }
     const x = U.clamp(g.seal.g.position.x + rs(3.4), -HALF, HALF);
     it.x0 = x;
@@ -422,7 +423,7 @@
       if (it.sway) p.x = U.clamp(it.x0 + Math.sin(g.clock * it.swayF + it.swayP) * it.sway, -HALF - 0.2, HALF + 0.2);
       if (it.ball && !quiet && !g.sawBall && p.y < skyTop() - 1.2) { g.sawBall = true; beat('snowball'); }   // the first snowball to come into view
       if (it.inner) it.inner.rotation.x += it.spin * dt;
-      const reach = it.ball ? 0.44 * size + 0.32 : 0.38 * size + (g.mumMode ? 0.55 : 0.25);
+      const reach = it.ball ? 0.44 * size + 0.32 : 0.38 * size + 0.25;
       if (!quiet && g.stun <= 0 && p.y < my + 0.5 && p.y > my - 0.45 * size - 0.25 && Math.abs(p.x - mx) < reach) {
         if (it.ball) {
           g.stun = 1.2;
@@ -468,7 +469,7 @@
     if (g.bigAt != null && g.clock - g.bigAt > 0.7) { $('gBig').textContent = ''; g.bigAt = null; }
     g.spawn -= dt;
     if (g.spawn <= 0 && g.time > 1.2) {
-      g.spawn = (g.mumMode ? 0.65 : U.lerp(0.85, 0.4, prog)) * (0.75 + Math.random() * 0.5);
+      g.spawn = U.lerp(0.85, 0.4, prog) * (0.75 + Math.random() * 0.5);
       spawnCatch(prog);
     }
     fall(dt, false);
