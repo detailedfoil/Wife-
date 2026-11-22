@@ -1723,7 +1723,7 @@
     // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
     // (for Ievan that is exactly half a loop). song.speed scales it all so every tune earns what Ievan does.
     const REF = 83;
-    const bpm = (p) => (song.speed || 1) * (G.mumMode ? START * 0.576
+    const bpm = (p) => (song.speed || 1) * (G.mumMode ? START * 0.6
       : Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length))));
     function songTitle(text) {
       let e = document.getElementById('gSong');
