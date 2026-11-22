@@ -426,10 +426,10 @@
 
     'Mum Mode': 'Äititila',
     'Slower minigames, fewer obstacles and more room for mistakes.': 'Hitaammat minipelit, vähemmän esteitä ja enemmän varaa virheille.',
-    'Take your time and pick a green seat.': 'Valitse rauhassa vihreä istumapaikka.',
+    'Tap to swim up and slip through the gaps. You get one go.': 'Napauta uidaksesi ylöspäin ja sujahda aukoista. Saat yhden yrityksen.',
+    'gaps swum': 'läpäistyä aukkoa',
     'Follow the guide to flick the snowball into the bucket. You get five misses.': 'Seuraa tähtäysviivaa ja heitä lumipallo ämpäriin. Saat heittää viisi kertaa ohi.',
-    'Tap the green tiles in order. The next tile waits for you.': 'Napauta vihreitä laattoja järjestyksessä. Seuraava laatta odottaa sinua.',
-    'Hit it off-centre to send it sideways.': 'Ponnauta palloa sivusta, niin se lentää sivulle.',
+    'Tap the green tiles in order before they slide off the bottom.': 'Napauta vihreitä laattoja järjestyksessä, ennen kuin ne liukuvat pois näkyvistä.',
     'The tune has started! Keep tapping each green tile to play the next note.': 'Sävelmä alkoi! Soita seuraava sävel napauttamalla vihreää laattaa.',
     'The guide shows where to aim on every throw.': 'Tähtäysviiva näyttää jokaisen heiton suunnan.',
     'Dodge the trees and rocks. You can brush off the first two bumps.': 'Väistä puita ja kiviä. Kaksi ensimmäistä kolhua eivät haittaa.',
@@ -438,7 +438,6 @@
     'Try Hit': 'Kokeile ottaa kortti',
     'Try Stand': 'Kokeile jäädä',
     'Pufferfish spotted and flagged!': 'Pallokala löytyi ja sai lipun!',
-    'Bus {0} / {1} · Pick a green seat': 'Bussi {0} / {1} · Valitse vihreä istumapaikka',
 
     // ----- settings -----
     'Sound': 'Äänet',

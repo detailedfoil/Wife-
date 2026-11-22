@@ -138,12 +138,12 @@
 
   /* ================= Swimmy Seal ================= */
   const swim = (() => {
-    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 12, GOES = 3;   // three goes; the average of them is what pays
+    const H = 4.6, CEIL = 3.9, FLOOR = -3.9, R = 0.27, N = 12;
     let view = null, obs = [], bubbles = null, rays = [], drift = [], used = 5;
     /* Gaps are set far enough ahead to start off the right edge, however wide the screen: a wide landscape one needs more of them. */
     const spacing = () => G.mumMode ? 4.75 : 3.55;
     const need = () => U.clamp(Math.ceil((2 * halfW + 3.2 + 5) / spacing()) + 1, 5, N);
-    let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, scores = [0], avg = 0, wait = 0;
+    let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, goes = 3, scores = [0], avg = 0, wait = 0;
 
     function frond(mat, ph) {
       const root = new T.Group(), joints = [];
@@ -200,7 +200,7 @@
       bubbles = Puffs(sc, 40, 0xdff6ff, 0.55);
     }
     function place(o, x) {
-      const gap = G.mumMode ? 4.4 : 2.45 - Math.min(0.55, score * 0.025);
+      const gap = G.mumMode ? 3.2 : 2.45 - Math.min(0.55, score * 0.025);
       const mid = G.mumMode ? rs(0.7) : U.clamp(lastGapY + rs(2.4), -2.2, 2.2);
       lastGapY = mid;
       o.x = x; o.mid = mid; o.top = mid + gap / 2; o.bot = mid - gap / 2; o.passed = false;
@@ -229,7 +229,7 @@
       A.play('thud');
       actor.gesture('surprise', true);
       bubbles.emit(sx, y, 0.3, 12, 1.6, 0.09, 1.1, -2.6);
-      if (go < GOES) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; }
+      if (go < goes) { K.big(tr(score >= 10 ? 'Wow!' : 'Bonk!')); wait = 0.9; }
       else K.over(tr(avg >= 10 ? 'Wow!' : 'Bonk!'));
     }
     /* a fresh stretch of water for the next go */
@@ -242,10 +242,10 @@
     }
     function nextGo() {
       go++; reset(); scores.push(0); tally();
-      K.time(go + '/' + GOES); K.shown(0); K.hint(''); K.big('');
+      K.time(go + '/' + goes); K.shown(0); K.hint(''); K.big('');
       live = true; flap();
     }
-    const tap = () => { if (dead) { if (go < GOES && wait <= 0) nextGo(); } else flap(); };
+    const tap = () => { if (dead) { if (go < goes && wait <= 0) nextGo(); } else flap(); };
     return {
       label: 'Gaps', label2: 'Go', hint: 'Tap to swim up. Three goes, and the average counts.',
       view: () => view,
@@ -254,9 +254,9 @@
         cast(view, 0.37, false);
         actor.g.position.set(0, -0.46, 0);
         face(PI / 2);
-        go = 1; scores = [0]; avg = 0; wait = 0;
+        go = 1; goes = G.mumMode ? 1 : 3; scores = [0]; avg = 0; wait = 0;
         reset();
-        K.time(go + '/' + GOES);
+        K.time(go + '/' + goes);
       },
       go() { live = true; flap(); },
       pointer(type) { if (type === 'down') tap(); },
@@ -308,7 +308,7 @@
         });
         bubbles.update(dt, -dx, 0);
         if (live && !dead && rnd() < dt * 2) bubbles.emit(sx + 0.5, y + 0.1, 0.2, 1, 0.2, 0.05, 1, -2.2);
-        if (dead && go < GOES && wait > 0 && playing) { wait -= dt; if (wait <= 0) { K.hint(tr('Average so far: {0}. Tap for go {1} of {2}.', avg, go + 1, GOES)); K.beat('again'); } }
+        if (dead && go < goes && wait > 0 && playing) { wait -= dt; if (wait <= 0) { K.hint(tr('Average so far: {0}. Tap for go {1} of {2}.', avg, go + 1, goes)); K.beat('again'); } }
         actor.update(dt, clock, null);
       },
     };
@@ -1723,7 +1723,7 @@
     // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
     // (for Ievan that is exactly half a loop). song.speed scales it all so every tune earns what Ievan does.
     const REF = 83;
-    const bpm = (p) => (song.speed || 1) * (G.mumMode ? START * 0.55
+    const bpm = (p) => (song.speed || 1) * (G.mumMode ? START * 0.48
       : Math.min(MAX, START + RISE * Math.floor(p / (total * (REF / 2) / chart.length))));
     function songTitle(text) {
       let e = document.getElementById('gSong');
@@ -1785,7 +1785,7 @@
       const t = tile(next);
       if (mode === 'ready') { if (lane !== t.lane) return; mode = 'play'; K.hint(''); }
       else if (lane !== t.lane || (startOf(next) - pos) * unit() > H * LINE) {
-        if (G.mumMode || (lane === lastLane && clock - lastAt < BOUNCE)) return;        // the same finger landing twice
+        if (lane === lastLane && clock - lastAt < BOUNCE) return;        // the same finger landing twice
         fail(lane, -1, tr('Wrong tile!'));
         return;
       }
@@ -1892,8 +1892,7 @@
         if (playing && mode === 'play') {
           pos += dt * bpm(pos) / 15;
           const t = tile(next), u = unit();
-          if (G.mumMode) pos = Math.min(pos, startOf(next) + H * (0.9 - LINE) / u);
-          else if (H * LINE - (startOf(next) - pos) * u - t.d * u > H) fail(t.lane, next, tr('Missed one!'));
+          if (H * LINE - (startOf(next) - pos) * u - t.d * u > H) fail(t.lane, next, tr('Missed one!'));
         } else if (playing && mode === 'fail') { wait -= dt; if (wait <= 0) { mode = 'done'; K.over(why); } }
         draw();
       },
@@ -1922,10 +1921,6 @@
   let materials, geometry, templates, wheels = [], batches = [];
   const ownedGeometries = new Set(), ownedMaterials = new Set();
   const color = new T.Color();
-
-  const pace = () => PN.Games.mumMode ? 1.6 : 1;
-  const crawl = () => PN.Games.mumMode ? 0.28 : CRAWL;
-  const busLayoutRound = () => PN.Games.mumMode ? 1 : round;
 
   const rowsFor = n => FIRST_ROWS + Math.floor((n - 1) / 4) * 2;
   function layout(n) {
@@ -2104,9 +2099,8 @@
     clearBus();
     bus = new T.Group(); scenery = new T.Group(); view.scene.add(scenery, bus);
     const center = (seats[0].x + seats[seats.length - 1].x) / 2;
-    const cols = Math.ceil(busLayoutRound() / 4) * 2;
-    busWidth = cols + 1.15;
-    const half = busWidth / 2, rows = rowsFor(busLayoutRound());
+    busWidth = Math.ceil(round / 4) * 2 + 1.15;
+    const half = busWidth / 2, rows = rowsFor(round);
     busExtra = (rows - FIRST_ROWS) * ROW_PITCH;
     const front = z => z - busExtra / 2, rear = z => z + busExtra / 2;
     // A quiet snowy street. All surfaces, kerbs and lane marks are meshes.
@@ -2128,7 +2122,7 @@
       const x = sign * (half - 0.10);
       box(bus, materials.paint, 0.18, 0.53, 10.9 + busExtra, x, 0.86, -0.05);
       box(bus, materials.cream, 0.20, 0.10, 10.9 + busExtra, x, 1.14, -0.05);
-      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * cols].z);
+      for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 4) * 2].z);
       // Mirror stalks are outside the cabin, away from the selectable seats.
       box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, front(-5.12));
       box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, front(-5.12));
@@ -2215,7 +2209,6 @@
         const quality = best - worst < 1e-7 ? 1 : (s.distance - worst) / (best - worst);
         color.setHSL(quality / 3, 0.82, 0.48);
       } else if (revealing) color.setHSL(0, 0.82, 0.48);   // a seat with a seal on it is as bad as a seat can be: red
-      else if (PN.Games.mumMode && !tutStep && !s.occupied && s.distance === best) color.setHex(0x81d6a0);
       else color.setHex(s.occupied ? 0x507bb5 : 0x6b9bdd);
       cushions.setColorAt(i, color); seatBacks.setColorAt(i, color);
     });
@@ -2251,17 +2244,12 @@
     bus.add(guide);
   }
   function next() {
-    round = tutStep ? 1 : round + 1;
-    const layoutRound = busLayoutRound();
-    seats = layout(layoutRound);
-    populateSeats(seats, layoutRound);
+    round = tutStep ? 1 : round + 1; seats = layout(round);
+    populateSeats(seats, round);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
     if (tutStep === 1) say('Tap the seat furthest from any other seal. Try the one with the arrow!');
     else if (tutStep === 2) say('Your turn! Tap the seat furthest from the seals.');
-    else {
-      say(null);
-      K.hint(tr(PN.Games.mumMode ? 'Bus {0} / {1} · Pick a green seat' : 'Bus {0} / {1} · Find your personal space', round, 20));
-    }
+    else { say(null); K.hint(tr('Bus {0} / {1} · Find your personal space', round, 20)); }
     makeBus();
     if (tutStep === 1) addGuide();
   }
@@ -2292,15 +2280,14 @@
     // Points run from the worst free seat (0) to the best (100). Measured from nothing, a seat tapped without looking still scored about 56.
     const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
     const points = i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
-    hold = tutStep ? Infinity : i < 0 ? 0.55 : PN.Games.mumMode ? 0.2 : Math.max(0, (deadline - performance.now()) / 1000);
-    // A missed bus lingers for its message. In regular play the bus waits out the full choice time.
+    hold = tutStep ? Infinity : i < 0 ? 0.55 : Math.max(0, (deadline - performance.now()) / 1000);   // the bus waits out its time anyway, so tapping fast does not make the game shorter; a missed bus lingers a beat so the message can be read
     if (!tutStep) { total += points; K.score(total); }
     phase = 'reveal'; elapsed = 0;
     if (guide) guide.visible = false;
     if (i >= 0) seatPlayer(seats[i]);
     paintSeats();
     if (tutStep === 1) say('The further from other seals, the more points. Green seats score most, red seats least.', true);
-    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', PN.Games.mumMode ? PN.MUM_GAME_TEXT.shuffle : "That's the tutorial done. From now on the bus won't wait, so be quick!"], true);
+    else if (tutStep === 2) say([points === 100 ? 'Perfect pick! That was the best seat.' : 'Good try! The green seats would have scored even more.', "That's the tutorial done. From now on the bus won't wait, so be quick!"], true);
     else {
       if (i < 0) K.big(tr('Too slow!'), 1.3, 'too-slow');
       K.hint(i < 0 ? tr('You missed the bus! · 0 points') : tr('+{0} points · Green = best · Red = worst', points));
@@ -2345,22 +2332,22 @@
       if (!playing) return;
       elapsed += dt;
       if (phase === 'arrive') {
-        const duration = ARRIVE * pace(), t = Math.min(elapsed, duration), u = t / duration;
+        const t = Math.min(elapsed, ARRIVE), u = t / ARRIVE;
         // Ease from a fast arrival to the same nonzero speed as the crawl.
-        bus.position.z = CRAWL_START + crawl() * (duration - t)
-          + (travel - CRAWL_START - crawl() * duration) * Math.pow(1 - u, 3);
-        if (elapsed >= duration) { phase = 'choose'; deadline = tutStep ? Infinity : performance.now() + (PN.Games.mumMode ? 4200 : 1100); elapsed = 0; }
+        bus.position.z = CRAWL_START + CRAWL * (ARRIVE - t)
+          + (travel - CRAWL_START - CRAWL * ARRIVE) * Math.pow(1 - u, 3);
+        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = tutStep ? Infinity : performance.now() + 1100; elapsed = 0; }
       } else if (phase === 'choose') {
-        if (!tutStep) bus.position.z -= crawl() * dt;   // the tutorial buses wait where they stopped
+        if (!tutStep) bus.position.z -= CRAWL * dt;   // the tutorial buses wait where they stopped
         if (performance.now() >= deadline) choose(-1);
       } else if (phase === 'reveal') {
-        if (!tutStep) bus.position.z -= crawl() * dt;
+        if (!tutStep) bus.position.z -= CRAWL * dt;
         if (elapsed >= REVEAL + hold) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
       } else if (phase === 'depart') {
-        const duration = DEPART * pace(), t = Math.min(elapsed, duration);
+        const t = Math.min(elapsed, DEPART);
         // Accelerate out of the crawl without a position or speed jump.
-        bus.position.z = departFrom - crawl() * t - travel * Math.pow(t / duration, 3);
-        if (elapsed >= duration) {
+        bus.position.z = departFrom - CRAWL * t - travel * Math.pow(t / DEPART, 3);
+        if (elapsed >= DEPART) {
           if (round === 20) { phase = 'done'; K.over(total + ' / 2,000'); K.hint(tr('Twenty buses · A little space to yourself')); }
           else next();
         }
@@ -2381,7 +2368,7 @@
       view = null; bus = scenery = cushions = pickSeats = null; seats = []; phase = 'done'; tutStep = 0; say(null);
     },
     layout, evaluate, populateSeats,
-    peek: () => ({ round, rows: rowsFor(busLayoutRound()), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
+    peek: () => ({ round, rows: rowsFor(round), total, phase, best, chosen, seats: seats.map(s => ({ x: s.worldX, y: 0.97, z: s.z + (bus ? bus.position.z : 0), occupied: s.occupied, distance: s.distance })) }),
   };
 })(window.PN);
 

@@ -1155,7 +1155,7 @@
     const gm = PN.GAMES[id], lost = gm.low && !score;      // a timed game: the score is the seconds it took, and none means it was lost
     seal.gesture(lost ? 'sad' : r.best ? 'happy' : 'clap'); A.play(lost ? 'sad' : r.best ? 'award' : 'coin');
     const title = tr(gm.title);
-    const unit = tr(gm.unit || (id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces')));
+    const unit = tr((state.settings.mumMode && gm.mumUnit) || gm.unit || (id === 'catch' ? 'fish caught' : (score === 1 ? 'bounce' : 'bounces')));
     let html = lost ? '<p>' + tr('You woke a pufferfish. No coins this time.') + '</p>'
       : '<div class="bigscore">' + (gm.low ? PN.mmss(score) : score) + '</div><p>' + unit + (r.best ? tr('. <b>A new best!</b>') : '.') + '</p><div class="loot">' + coinChip(r.coins)
       + r.fish.map((f) => itemChip(f.id, f.n)).join('') + '</div>';

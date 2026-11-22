@@ -82,9 +82,8 @@
   };
   let tutCard = null, tutSpotEl = null, tipTimer = 0, glowing = [];
   const MUM_TUTORIAL_LINES = {
-    ball: { bounce: ["Nice bounce! That's a point.", 'Hit it off-centre to send it sideways.'] },
     piano: {
-      start: ['Tap the Start tile to begin.', 'Tap the green tiles in order. The next tile waits for you.'],
+      start: ['Tap the Start tile to begin.', 'Tap the green tiles in order before they slide off the bottom.'],
       go: ['The tune has started! Keep tapping each green tile to play the next note.'],
     },
     toss: { start: ['Flick the snowball up the screen along the dotted line.', 'The guide shows where to aim on every throw.'] },
@@ -260,7 +259,7 @@
     UI.closeSheet();
     UI.setBubble(null);
     const seal = PN.Game.seal, ext = Games.ext[id];
-    const mumMode = PN.Game.state.settings.mumMode === true && id !== 'coffee';
+    const mumMode = PN.Game.state.settings.mumMode === true && id !== 'coffee' && id !== 'shuffle';
     UI.showHud(false);
     $('gamehud').hidden = false;
     $('gScoreLabel').textContent = ext ? tr(ext.label) : tr(id === 'catch' ? 'label|Fish' : 'Bounces');
@@ -479,8 +478,7 @@
   /* ---------- Nose Ball ---------- */
   function updateBall(dt) {
     const s = g.seal, b = g.b, R = 0.36;
-    if (g.mumMode) dt *= 0.65;
-    const grav = 8.6 + (g.mumMode ? 0 : Math.min(5.8, g.score * 0.2));    // the ball comes down faster with every bounce
+    const grav = 8.6 + Math.min(5.8, g.score * 0.2);    // the ball comes down faster with every bounce
     b.vy -= grav * dt;
     b.x += b.vx * dt; b.y += b.vy * dt;
     const wall = HALF + 0.35;
@@ -492,10 +490,9 @@
       g.score++;
       setScore(g.score);
       b.y = top + R;
-      const g2 = 8.6 + (g.mumMode ? 0 : Math.min(5.8, g.score * 0.2));
+      const g2 = 8.6 + Math.min(5.8, g.score * 0.2);
       b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
       b.vx = U.clamp((b.x - nx) * 5.2 + g.vx * 0.4 + rs(2.2 + Math.min(4.4, g.score * 0.2)), -8.5, 8.5);   // it can fly off sideways, fast
-      if (g.mumMode) b.vx *= 0.5;
       s.gesture('boop', true);
       beat('bounce');
       A.play('boing');

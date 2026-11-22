@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '22 Nov 2026, 19:29';
+  PN.UPDATED = '22 Nov 2026, 19:34';
   /* An update stamp as a number that sorts by time. Compared as text, "10 Dec" would come before "18 Nov". */
   PN.stampKey = function (s) {
     const m = /^\s*(\d{1,2}) ([A-Za-z]{3}) (\d{4}),? (\d{1,2}):(\d{2})\s*$/.exec(String(s || ''));
@@ -347,7 +347,7 @@
     shuffle: { len: 60, price: 0, muck: 3, title: 'Seal Seat Shuffle', icon: 'seal', tint: 'sky', text: 'Choose an empty seat as far away from others as possible, be quick.', best: 'best_shuffle', pay: [0.181, 0.7], unit: 'points out of 2,000' },
     ball: { len: 45, price: 0, muck: 7, title: 'Nose Ball', icon: 'up', tint: 'warm', text: 'Keep the ball in the air for as long as you can.', best: 'bestBall', pay: [0.56, 1.1] },
     catch: { len: 45, price: 0, muck: 6, title: 'Fish Rain', icon: 'fish', tint: 'sea', text: 'Slide left and right to catch the fish. Now and then you get to keep one.', best: 'bestCatch', pay: [0.82, 1] },
-    swim: { len: 60, price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the average of them counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum on average' },
+    swim: { len: 60, price: 450, muck: 3, title: 'Swimmy Seal', icon: 'drop', tint: 'sea', text: 'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the average of them counts.', best: 'best_swim', pay: [1.24, 1.03], unit: 'gaps swum on average', mumUnit: 'gaps swum' },
     stack: { len: 60, price: 575, muck: 6, title: 'Ice Cream Stack', icon: 'stack', tint: 'sea', text: 'Build a delicious ice cream tower! Tap to stack each scoop neatly. Overhanging bits tumble off', best: 'best_stack', pay: [0.78, 0.96], unit: 'scoops stacked' },
     puff: { len: 45, price: 650, muck: 5, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [60.5, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
     piano: { len: 75, price: 775, muck: 3, title: 'Kantele Tiles', icon: 'piano', tint: 'sky', text: 'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.', best: 'best_piano', pay: [0.2, 1], unit: 'tiles played' },
@@ -397,9 +397,9 @@
   PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
   PN.MUM_GAME_TEXT = {
-    shuffle: 'Take your time and pick a green seat.',
+    swim: 'Tap to swim up and slip through the gaps. You get one go.',
     toss: 'Follow the guide to flick the snowball into the bucket. You get five misses.',
-    piano: 'Tap the green tiles in order. The next tile waits for you.',
+    piano: 'Tap the green tiles in order before they slide off the bottom.',
   };
   /* Pup skills (18 Nov 2026). A pup at home learns from what the family does: every game played while she is home is practice in
      that game's skill, and cuddles and saunas are practice in Care. Her best skill when she grows up is what she becomes (Sim.pupSpec),
