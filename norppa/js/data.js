@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '22 Nov 2026, 19:45';
+  PN.UPDATED = '23 Nov 2026, 09:06';
   /* An update stamp as a number that sorts by time. Compared as text, "10 Dec" would come before "18 Nov". */
   PN.stampKey = function (s) {
     const m = /^\s*(\d{1,2}) ([A-Za-z]{3}) (\d{4}),? (\d{1,2}):(\d{2})\s*$/.exec(String(s || ''));

@@ -1229,8 +1229,7 @@
     const S0 = 2, BH = 0.42, SNOW = 0.08, R = 3, TOL = 0.09, GROW = 0.12, HOP = 0.28, KEEP = 46;
     // A square spreading into an equal-area circle expands equally on both axes.
     const CREAM_SPREAD = 2 / Math.sqrt(PI), CONE_RADIUS = S0 * CREAM_SPREAD / 2;
-    const speedAt = (n) => G.mumMode ? Math.min(2, 1.35 + 0.025 * n) : Math.min(6, 2.6 + 0.085 * n);
-    const tolerance = () => G.mumMode ? 0.42 : TOL;
+    const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
     let view = null, bodyGeo = null, softGeo = null, puffs = null, circleGeo = null, scoopPoints = null, baseIce = null;
     let history = [], revealT = 0;
     const flavours = [0xf7d5df, 0xffedc6, 0xc4e4cc, 0xd2b5a5, 0xd6cdf1, 0xf5d3a9];
@@ -1312,7 +1311,7 @@
         return;
       }
       let keep = size, mid = c;
-      if (ad <= tolerance()) {                                         // spot on: nothing breaks, and a run of them wins some width back
+      if (ad <= TOL) {                                         // spot on: nothing breaks, and a run of them wins some width back
         streak++;
         if (streak >= 3 && size < S0) keep = Math.min(S0, size + GROW);
         K.big(tr('Perfect!')); A.play('match'); K.beat('perfect');
@@ -1393,7 +1392,7 @@
         if (mode === 'rest' && playing) {
           wait -= dt;
           if (wait <= 0) {
-            if (misses >= (G.mumMode ? 3 : 1)) { mode = 'reveal'; revealT = 0; }
+            if (misses >= 1) { mode = 'reveal'; revealT = 0; }
             else spawn();
           }
         }

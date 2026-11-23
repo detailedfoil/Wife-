@@ -259,7 +259,7 @@
     UI.closeSheet();
     UI.setBubble(null);
     const seal = PN.Game.seal, ext = Games.ext[id];
-    const mumMode = PN.Game.state.settings.mumMode === true && id !== 'coffee' && id !== 'shuffle';
+    const mumMode = PN.Game.state.settings.mumMode === true && id !== 'coffee' && id !== 'shuffle' && id !== 'stack';
     UI.showHud(false);
     $('gamehud').hidden = false;
     $('gScoreLabel').textContent = ext ? tr(ext.label) : tr(id === 'catch' ? 'label|Fish' : 'Bounces');
