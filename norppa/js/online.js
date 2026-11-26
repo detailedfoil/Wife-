@@ -27,9 +27,9 @@
   const WORDS = ('aika aita auto hame hiha hiki ilta jalo jano joki juna kala kana kapu kari kasa katu kota koti kuha kuka kuva laji lama lapa loma luku lumi lupa maja mato mela meri muna noki oksa onni '
     + 'paja pata peli pesa pipo poro puku pulu puro raha rata reki ruis saha sana sata savi soma sopu sora susi taka talo tuli tupa uuni vene vesi yksi').split(' ').filter((w) => /^[a-z]{4}$/.test(w)).map((w) => w.toUpperCase());
   /* The games that can be raced: they end with a score where more is better, and what makes each one hard (where things fall, the wind, the tune) comes from the shared seed.
-     Live picture in the corner: catch, ball, swim, sled. The others show their score card (stack, toss, curl, piano).
-     Not raced yet: Puffer Sweeper (the board depends on the first tap), Blackjack, Coffee Memory and Seat Shuffle. */
-  const RACE_IDS = ['catch', 'ball', 'swim', 'stack', 'toss', 'curl', 'sled', 'piano'];
+     Live picture in the corner (drawn from a few small numbers, not video): all of them except Seat Shuffle, which shows both players on one shared bus instead.
+     Not raced (by choice): Puffer Sweeper, Blackjack and Coffee Memory. Seat Shuffle is raced on one shared bus, with a seat conflict rule (see arcade.js). */
+  const RACE_IDS = ['catch', 'ball', 'swim', 'stack', 'toss', 'curl', 'sled', 'piano', 'shuffle'];
   const gameTitle = (id) => (PN.GAMES[id] ? tr(PN.GAMES[id].title) : id);
   const iOwn = (id) => { try { return PN.Sim.gameOwned(PN.Game.state, id); } catch (e) { return false; } };
   const RACE_GAMES = {}; RACE_IDS.forEach((id) => { RACE_GAMES[id] = id; });
@@ -151,6 +151,7 @@
     if (m.kind === 'invite') return gotInvite(m);
     if (m.kind === 'answer') return gotAnswer(m);
     if (m.kind === 'go') { if (race && race.k === m.k && race.state === 'wait') startRace(); return; }
+    if (m.kind === 'seat') { if (race && race.k === m.k && PN.Games.netIn) PN.Games.netIn(m); return; }   // Seat Shuffle: where the other player sat
     if (m.kind === 'score' || m.kind === 'end') {
       if (!race || race.k !== m.k) return;
       race.them.s = m.s | 0; race.them.t = m.t;
@@ -221,7 +222,7 @@
   }
   function leave(quiet) {
     if (wire) { send('bye'); wire.close(); }
-    wireGen++; clearTimeout(retryT); stopPip();
+    wireGen++; clearTimeout(retryT); stopPip(); PN.Games.net = null;
     wire = null; room = null; remember('');
     clearInterval(pinger); pinger = null;
     if (friend && PN.Game.friendGo) PN.Game.friendGo();
@@ -300,6 +301,7 @@
     if (friend) race.name = friend.p.name;     // kept with the race, in case they leave before it is over
     const ok = PN.Game.raceStart(race.game, { seed: race.seed, name: friend ? friend.p.name : '' });
     if (!ok) { send('end', { k: race.k, s: 0, quit: true }); race = null; return; }
+    PN.Games.net = { send: (kind, data) => send(kind, Object.assign({ k: race && race.k }, data)), tie: () => !!(friend && friend.p && String(oid) < String(friend.p.oid)) };
     paintRace();
     let lastS = -1, lastAt = 0;
     clearInterval(sender);
@@ -334,8 +336,17 @@
     cancelAnimationFrame(pipRaf);
     if (pip) { pip.box.remove(); pip = null; }
   }
+  let pipT = 0;
+  /* A number that glides towards where the last snapshot said it is, so five updates a second look like smooth video. */
+  function glide(key, target, rate) {
+    const th = race.them, sm = th.sm || (th.sm = {});
+    if (sm[key] === undefined || !isFinite(sm[key])) sm[key] = target;
+    else sm[key] += (target - sm[key]) * (1 - Math.exp(-(rate || 14) * pip.dt));
+    return sm[key];
+  }
   function drawPip() {
     if (!pip || !race) return;
+    const nowT = performance.now(); pip.dt = Math.min(0.1, (nowT - (pipT || nowT)) / 1000); pipT = nowT;
     const wide = window.innerWidth > window.innerHeight, w = wide ? 132 : 96, h = wide ? 88 : 128, dpr = Math.min(2, window.devicePixelRatio || 1);
     const cv = pip.cv;
     if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px'; }
@@ -366,10 +377,40 @@
       (n.it || []).forEach((it) => { const px = lane(it[1]), py = zy(it[2] + (n.v || 0) * dt); if (py > h + 6) return; if (it[0] === 0) { c.fillStyle = '#2f6b52'; c.beginPath(); c.moveTo(px, py - 7); c.lineTo(px - 5, py + 3); c.lineTo(px + 5, py + 3); c.fill(); } else if (it[0] === 1) dot(px, py, 4, '#7d8793'); else if (it[0] === 2) dot(px, py, 3, '#ee8a5a'); else { c.fillStyle = '#b98b5a'; c.fillRect(px - 5, py - 2, 10, 4); } });
       c.fillStyle = '#c9ced6'; c.beginPath(); c.ellipse(lane(n.x), zy(0), 4, 6, 0, 0, 6.3); c.fill();
       if (n.d) { c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(0, 0, w, h); }
+    } else if (n && id === 'stack') {
+      c.fillStyle = '#cfe7f3'; c.fillRect(0, 0, w, h);
+      const k = Math.min(w, h - 22) / 7, ox = w / 2, oy = (h - 14) / 2 + 2;
+      const rect = (x, z, ww, dd, col, line) => { c.fillStyle = col; c.fillRect(ox + (x - ww / 2) * k, oy + (z - dd / 2) * k, ww * k, dd * k); if (line) { c.strokeStyle = line; c.lineWidth = 1; c.strokeRect(ox + (x - ww / 2) * k, oy + (z - dd / 2) * k, ww * k, dd * k); } };
+      rect(n.t[0], n.t[1], n.t[2], n.t[3], '#ffe3a9', '#d9b46c');
+      if (n.c) rect(glide('cx', n.c[0], 18), glide('cz', n.c[1], 18), n.c[2], n.c[3], 'rgba(237,176,189,.88)', '#c9788c');
+      c.fillStyle = '#26456b'; c.font = '800 11px sans-serif'; c.textAlign = 'center'; c.fillText(String(n.n), w / 2, h - 4);
+    } else if (n && id === 'toss') {
+      c.fillStyle = sky; c.fillRect(0, 0, w, h); c.fillStyle = '#f5fbff'; c.fillRect(0, 12, w, h - 24);
+      const X = (x) => w / 2 + x * (w / 6), Z = (z) => 18 + (z + 2.4) / 6.2 * (h - 44);
+      c.fillStyle = '#5c9ba3'; c.beginPath(); c.arc(X(n.k[0]), Z(n.k[1]), 9, 0, 6.3); c.fill(); c.fillStyle = '#2d5c64'; c.beginPath(); c.arc(X(n.k[0]), Z(n.k[1]), 6, 0, 6.3); c.fill();
+      if (n.b) { const bx = glide('bx', n.b[0], 22), bz = glide('bz', n.b[1], 22); dot(X(bx), Z(bz) - n.b[2] * 4, 4 + n.b[2] * 0.8, '#ffffff'); c.strokeStyle = '#9db8cc'; c.lineWidth = 1; c.beginPath(); c.arc(X(bx), Z(bz) - n.b[2] * 4, 4 + n.b[2] * 0.8, 0, 6.3); c.stroke(); }
+      c.fillStyle = '#26456b'; c.font = '800 10px sans-serif'; c.textAlign = 'center'; c.fillText((n.w < 0 ? '← ' : n.w > 0 ? '→ ' : '') + Math.abs(n.w), w / 2, 22);
+      for (let i = 0; i < n.l; i++) dot(w / 2 + (i - (n.l - 1) / 2) * 11, h - 8, 3.5, i < n.t ? '#b3412f' : '#4d8f64');
+    } else if (n && id === 'curl') {
+      c.fillStyle = '#e8f3fa'; c.fillRect(0, 0, w, h);
+      const X = (x) => w / 2 + x * (w / 7), Z = (z) => 14 + (3.4 - z) / 17.5 * (h - 24);
+      const gx = X(n.g[0]), gz = Z(n.g[1]);
+      [['#3f7fb3', 22], ['#ffffff', 15], ['#d9604c', 9], ['#ffffff', 4]].forEach((r) => { c.fillStyle = r[0]; c.beginPath(); c.arc(gx, gz, r[1] * (wide ? 0.7 : 0.55), 0, 6.3); c.fill(); });
+      (n.bl || []).forEach((b) => { c.fillStyle = '#8fb6d4'; c.fillRect(X(glide('bl' + b[1], b[0], 14)) - 6, Z(b[1]) - 3, 12, 6); });
+      const sx = glide('sx', n.p[0], 20), sz = glide('sz', n.p[1], 20);
+      dot(X(sx), Z(sz), 4.5, '#dfe3ea'); c.strokeStyle = '#6b7380'; c.lineWidth = 1; c.beginPath(); c.arc(X(sx), Z(sz), 4.5, 0, 6.3); c.stroke();
+      c.fillStyle = '#26456b'; c.font = '800 10px sans-serif'; c.textAlign = 'center'; c.fillText(n.n + ' / 8', w / 2, h - 3);
+    } else if (n && id === 'piano') {
+      c.fillStyle = '#2a1d2a'; c.fillRect(0, 0, w, h);
+      const L = n.l || 4, lw = w / L, line = h * 0.82;
+      for (let i = 1; i < L; i++) { c.fillStyle = 'rgba(255,226,171,.18)'; c.fillRect(i * lw - 0.5, 0, 1, h); }
+      c.fillStyle = 'rgba(255,226,171,.35)'; c.fillRect(0, line, w, 1);
+      n.t.forEach((t, i) => { const d = t[1] - (n.v || 0) * dt, y = line - d * h * 1.1 - h * 0.2; if (y > h || y < -h * 0.3) return; c.fillStyle = i === 1 || (i === 0 && n.t.length < 8) ? '#ffd15c' : '#f4ead6'; c.fillRect(t[0] * lw + 2, y, lw - 4, h * 0.2); });
+      if (n.m) { c.fillStyle = 'rgba(179,65,47,.35)'; c.fillRect(0, 0, w, h); }
     } else {
       // no live picture for this game: a score card
       c.fillStyle = '#26456b'; c.fillRect(0, 0, w, h);
-      c.fillStyle = '#9fc2e6'; c.font = '800 11px sans-serif'; c.textAlign = 'center'; c.fillText(gameTitle(id), w / 2, 18, w - 8);
+      c.fillStyle = '#9fc2e6'; c.font = '800 11px sans-serif'; c.textAlign = 'center'; c.fillText(gameTitle(id), w / 2, 28, w - 8);
       c.fillStyle = '#ffffff'; c.font = '600 ' + (wide ? 34 : 40) + 'px sans-serif'; c.fillText(String(th.s), w / 2, h / 2 + 12);
       c.fillStyle = '#9fc2e6'; c.font = '800 10px sans-serif'; c.fillText(th.done ? tr('Done') : tr('Playing...'), w / 2, h - 10);
     }
@@ -425,7 +466,7 @@
         } });
       r.waiter = null;
     }
-    race = null; stopPip();
+    race = null; stopPip(); PN.Games.net = null;
     const name = UI().esc(r.name || tr('Your friend')), a = r.me.s, b = r.them.s;
     let head, line, cls;
     if (r.me.quit && !r.them.quit) { head = tr('{0} wins', name); line = tr('You stopped the game, so the race goes to {0}.', name); cls = 'sad'; }
