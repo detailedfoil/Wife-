@@ -26,7 +26,13 @@
   /* Room codes are Finnish four-letter words, plain a to z (no ä, ö or å, so anyone can type them). */
   const WORDS = ('aika aita auto hame hiha hiki ilta jalo jano joki juna kala kana kapu kari kasa katu kota koti kuha kuka kuva laji lama lapa loma luku lumi lupa maja mato mela meri muna noki oksa onni '
     + 'paja pata peli pesa pipo poro puku pulu puro raha rata reki ruis saha sana sata savi soma sopu sora susi taka talo tuli tupa uuni vene vesi yksi').split(' ').filter((w) => /^[a-z]{4}$/.test(w)).map((w) => w.toUpperCase());
-  const RACE_GAMES = { catch: 'Fish Rain' };
+  /* The games that can be raced: they end with a score where more is better, and what makes each one hard (where things fall, the wind, the tune) comes from the shared seed.
+     Live picture in the corner: catch, ball, swim, sled. The others show their score card (stack, toss, curl, piano).
+     Not raced yet: Puffer Sweeper (the board depends on the first tap), Blackjack, Coffee Memory and Seat Shuffle. */
+  const RACE_IDS = ['catch', 'ball', 'swim', 'stack', 'toss', 'curl', 'sled', 'piano'];
+  const gameTitle = (id) => (PN.GAMES[id] ? tr(PN.GAMES[id].title) : id);
+  const iOwn = (id) => { try { return PN.Sim.gameOwned(PN.Game.state, id); } catch (e) { return false; } };
+  const RACE_GAMES = {}; RACE_IDS.forEach((id) => { RACE_GAMES[id] = id; });
   const local = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname) || /[?&]mp=local\b/.test(location.search);
 
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -111,7 +117,7 @@
 
   const profile = () => {
     const st = PN.Game.state;
-    return { oid, name: String(st.name || '').slice(0, 24), stage: st.stage, appearance: st.appearance, wearing: st.wearing };
+    return { oid, name: String(st.name || '').slice(0, 24), stage: st.stage, appearance: st.appearance, wearing: st.wearing, games: RACE_IDS.filter(iOwn) };
   };
   const send = (kind, extra) => { if (wire) wire.send(Object.assign({ kind, from: me }, extra || {})); };
   const fname = () => UI().esc(friend ? friend.p.name || tr('Your friend') : tr('Your friend'));
@@ -148,6 +154,7 @@
     if (m.kind === 'score' || m.kind === 'end') {
       if (!race || race.k !== m.k) return;
       race.them.s = m.s | 0; race.them.t = m.t;
+      if (m.n) { race.them.snap = m.n; race.them.snapAt = performance.now(); }
       if (m.kind === 'end') { race.them.done = true; race.them.quit = !!m.quit; }
       paintRace();
       if (race.waiter) race.waiter();
@@ -214,7 +221,7 @@
   }
   function leave(quiet) {
     if (wire) { send('bye'); wire.close(); }
-    wireGen++; clearTimeout(retryT);
+    wireGen++; clearTimeout(retryT); stopPip();
     wire = null; room = null; remember('');
     clearInterval(pinger); pinger = null;
     if (friend && PN.Game.friendGo) PN.Game.friendGo();
@@ -251,14 +258,15 @@
     askedK = k;
     race = { k, game, seed, me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true };
     send('invite', { game, seed, k });
-    UI().toast(tr('Asked <b>{0}</b> to race at {1}...', fname(), tr(RACE_GAMES[game])), 'globe', '', 4000);
+    UI().toast(tr('Asked <b>{0}</b> to race at {1}...', fname(), gameTitle(game)), 'globe', '', 4000);
     setTimeout(() => { if (race && race.k === k && race.state === 'asked') { race = null; askedK = null; UI().toast(tr('<b>{0}</b> did not answer.', fname()), 'globe', 'bad', 3600); } }, 30000);
   }
 
   async function gotInvite(m) {
     if (!RACE_GAMES[m.game]) { send('answer', { k: m.k, yes: false, why: 'game' }); return; }
+    if (!iOwn(m.game)) { send('answer', { k: m.k, yes: false, why: 'own' }); return; }
     if (race || PN.Games.active || UI().modalOpen) { send('answer', { k: m.k, yes: false, why: 'busy' }); return; }
-    const title = tr(RACE_GAMES[m.game]);
+    const title = gameTitle(m.game);
     PN.Audio.play('chirp');
     const v = await UI().modal({ title: tr('A race!'), html: '<p>' + tr('<b>{0}</b> wants to race you at {1}.', fname(), title) + '</p>',
       actions: [{ label: tr('Race'), value: 1 }, { label: tr('Not now'), value: 0 }] });
@@ -277,7 +285,7 @@
     askedK = null;
     if (!m.yes) {
       race = null;
-      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : tr('<b>{0}</b> said not now.', fname());
+      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : tr('<b>{0}</b> said not now.', fname());
       UI().toast(msg, 'globe', 'bad', 3600);
       return;
     }
@@ -301,15 +309,79 @@
       if (!live) return;
       race.me.s = live.score;
       const now = Date.now();
-      if (live.score !== lastS || now - lastAt > 1000) { lastS = live.score; lastAt = now; send('score', { k: race.k, s: live.score, t: Math.ceil(live.time) }); }
+      // with a live picture: 5 a second, small numbers only. Without: when the score changes, and once a second
+      if (live.snap || live.score !== lastS || now - lastAt > 1000) { lastS = live.score; lastAt = now; send('score', { k: race.k, s: live.score, t: live.time == null ? null : Math.ceil(live.time), n: live.snap || undefined }); }
       paintRace();
-    }, 250);
+    }, 200);
+    startPip();
+  }
+
+  /* ---------- the picture in the corner ---------- */
+  let pip = null, pipRaf = 0;
+  const GREEN = '#3f7d5a', ICE = '#dff1fb';
+  function startPip() {
+    stopPip();
+    const box = document.createElement('div');
+    box.className = 'vs-pip'; box.id = 'vsPip';
+    box.innerHTML = '<canvas></canvas><div class="vs-pip-name"></div>';
+    $('gamehud').appendChild(box);
+    pip = { box, cv: box.querySelector('canvas'), name: box.querySelector('.vs-pip-name') };
+    pip.name.textContent = race && race.name ? race.name : '';
+    const loop = () => { if (!pip) return; drawPip(); pipRaf = requestAnimationFrame(loop); };
+    pipRaf = requestAnimationFrame(loop);
+  }
+  function stopPip() {
+    cancelAnimationFrame(pipRaf);
+    if (pip) { pip.box.remove(); pip = null; }
+  }
+  function drawPip() {
+    if (!pip || !race) return;
+    const wide = window.innerWidth > window.innerHeight, w = wide ? 132 : 96, h = wide ? 88 : 128, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cv = pip.cv;
+    if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px'; }
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+    const th = race.them, n = th.snap, dt = th.snapAt ? Math.min(0.6, (performance.now() - th.snapAt) / 1000) : 0, id = race.game;
+    const stale = th.snapAt && performance.now() - th.snapAt > 2000;
+    c.globalAlpha = stale || th.done ? 0.55 : 1;
+    const sky = c.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#a9d3ef'); sky.addColorStop(1, '#eaf5fb');
+    const seal = (x, y, r) => { c.fillStyle = '#c9ced6'; c.beginPath(); c.ellipse(x, y, r * 1.5, r, 0, 0, 6.3); c.fill(); c.fillStyle = '#eef0f4'; c.beginPath(); c.arc(x + r * 0.9, y - r * 0.25, r * 0.62, 0, 6.3); c.fill(); c.fillStyle = '#2b3140'; c.beginPath(); c.arc(x + r * 1.1, y - r * 0.4, r * 0.12, 0, 6.3); c.fill(); };
+    const dot = (x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 6.3); c.fill(); };
+    if (n && id === 'catch') {
+      c.fillStyle = sky; c.fillRect(0, 0, w, h); c.fillStyle = '#f5fbff'; c.fillRect(0, h - 14, w, 14);
+      (n.it || []).forEach((it) => { const y = Math.max(0, it[1] - (n.v || 0.4) * dt); const px = 8 + it[0] * (w - 16), py = (1 - y) * (h - 24) + 4; dot(px, py, it[2] === 2 ? 5 : 3.5, it[2] === 2 ? '#ffffff' : it[2] === 1 ? '#ffc94a' : '#ee8a5a'); if (it[2] === 2) { c.strokeStyle = '#9db8cc'; c.lineWidth = 1; c.stroke(); } });
+      seal(8 + n.x * (w - 16) - 6, h - 12, 6);
+    } else if (n && id === 'ball') {
+      c.fillStyle = sky; c.fillRect(0, 0, w, h); c.fillStyle = '#f5fbff'; c.fillRect(0, h - 14, w, 14);
+      seal(8 + n.x * (w - 16) - 6, h - 12, 6);
+      if (n.b) dot(8 + n.b[0] * (w - 16), (1 - n.b[1]) * (h - 24) + 4, 5, '#e97559');
+    } else if (n && id === 'swim') {
+      const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#5aa6cf'); g.addColorStop(1, '#1d5a86'); c.fillStyle = g; c.fillRect(0, 0, w, h);
+      const px = (v) => v * w, py = (v) => (1 - v) * h;
+      (n.o || []).forEach((o) => { const x = px(o[0] - (n.v || 0) * dt); c.fillStyle = ICE; c.fillRect(x - 4, 0, 8, py(o[1])); c.fillStyle = GREEN; c.fillRect(x - 4, py(o[2]), 8, h - py(o[2])); });
+      seal(px(n.s), py(n.y), 5);
+      if (n.d) { c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(0, 0, w, h); }
+    } else if (n && id === 'sled') {
+      c.fillStyle = '#f4f9ff'; c.fillRect(0, 0, w, h); c.fillStyle = '#e1ecf7'; c.fillRect(w * 0.1, 0, w * 0.8, h);
+      const lane = (x) => w / 2 + x * w * 0.36, zy = (z) => ((z + 24) / 28) * (h - 10) + 2;
+      (n.it || []).forEach((it) => { const px = lane(it[1]), py = zy(it[2] + (n.v || 0) * dt); if (py > h + 6) return; if (it[0] === 0) { c.fillStyle = '#2f6b52'; c.beginPath(); c.moveTo(px, py - 7); c.lineTo(px - 5, py + 3); c.lineTo(px + 5, py + 3); c.fill(); } else if (it[0] === 1) dot(px, py, 4, '#7d8793'); else if (it[0] === 2) dot(px, py, 3, '#ee8a5a'); else { c.fillStyle = '#b98b5a'; c.fillRect(px - 5, py - 2, 10, 4); } });
+      c.fillStyle = '#c9ced6'; c.beginPath(); c.ellipse(lane(n.x), zy(0), 4, 6, 0, 0, 6.3); c.fill();
+      if (n.d) { c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(0, 0, w, h); }
+    } else {
+      // no live picture for this game: a score card
+      c.fillStyle = '#26456b'; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#9fc2e6'; c.font = '800 11px sans-serif'; c.textAlign = 'center'; c.fillText(gameTitle(id), w / 2, 18, w - 8);
+      c.fillStyle = '#ffffff'; c.font = '600 ' + (wide ? 34 : 40) + 'px sans-serif'; c.fillText(String(th.s), w / 2, h / 2 + 12);
+      c.fillStyle = '#9fc2e6'; c.font = '800 10px sans-serif'; c.fillText(th.done ? tr('Done') : tr('Playing...'), w / 2, h - 10);
+    }
+    c.globalAlpha = 1;
+    if (th.done) { c.fillStyle = 'rgba(20,40,70,.55)'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(tr('Done'), w / 2, h / 2); }
   }
 
   /* the friend's score in the game's top bar */
   function paintRace() {
     let el = $('gVs');
     if (!race || race.state !== 'on') { if (el) el.hidden = true; return; }
+    if (!pip) startPip();
     if (!el) {
       el = document.createElement('div');
       el.className = 'g-pill pebble g-vs'; el.id = 'gVs';
@@ -337,13 +409,23 @@
     if (!race || race.state !== 'over') return;
     const r = race;
     if (!r.them.done && !r.them.gone) {
-      await new Promise((res) => {
-        const t = setTimeout(res, 15000);   // a slow phone, or one that was put away for a moment, can be a few seconds behind
-        r.waiter = () => { if (r.them.done || r.them.gone) { clearTimeout(t); res(); } };
-        UI().toast(tr('Waiting for <b>{0}</b> to finish...', UI().esc(r.name || '')), 'clock', '', 3000);
-      });
+      // my game is over but theirs is still going: wait here, with their score as it climbs, until they finish (or I stop waiting)
+      const nm = UI().esc(r.name || tr('Your friend'));
+      const text = () => tr('{0} is still playing. Score so far: <b>{1}</b>.', nm, r.them.s);
+      let closer = null;
+      const ping = () => { if ((r.them.done || r.them.gone) && closer) closer(); };
+      r.waiter = () => { const el = document.getElementById('vsWait'); if (el) el.innerHTML = text(); ping(); };
+      await UI().modal({ title: tr('Your game is over'), html: '<p id="vsWait">' + text() + '</p><p class="note">' + tr('Your score: {0}', r.me.s) + '</p>',
+        actions: [{ label: tr('Stop waiting'), value: 0, cls: 'ghost' }],
+        onOpen(card) {
+          const t0 = performance.now();
+          closer = () => setTimeout(() => { const b = card.querySelector('.actions .btn'); if (b) b.click(); }, Math.max(0, UI().modalDelay + 60 - (performance.now() - t0)));
+          setTimeout(() => { if (closer) closer(); }, 5 * 60 * 1000);   // never wait for ever
+          ping();
+        } });
+      r.waiter = null;
     }
-    race = null;
+    race = null; stopPip();
     const name = UI().esc(r.name || tr('Your friend')), a = r.me.s, b = r.them.s;
     let head, line, cls;
     if (r.me.quit && !r.them.quit) { head = tr('{0} wins', name); line = tr('You stopped the game, so the race goes to {0}.', name); cls = 'sad'; }
@@ -413,8 +495,9 @@
         }
         return;
       }
-      const games = Object.keys(RACE_GAMES);
-      const acts = friend && !race ? games.map((id) => ({ label: tr('Race at {0}', tr(RACE_GAMES[id])), value: 'race:' + id })) : [];
+      const theirs = friend && friend.p.games ? friend.p.games : ['catch'];
+      const games = RACE_IDS.filter((id) => iOwn(id) && theirs.indexOf(id) >= 0);
+      const acts = friend && !race && games.length ? [{ label: tr('Race a game'), value: 'pick' }] : [];
       acts.push({ label: tr('Share invite link'), value: 'share', cls: friend ? 'ghost' : '' });
       const met = savedFriends().filter((f) => !friend || f.oid !== (friend.p && friend.p.oid)).slice(0, 5).map((f) => UI().esc(f.name)).join(', ');
       const text = (friend ? tr('<b>{0}</b> is on your shore.', fname()) : tr('Waiting for a friend. Your room code is <b>{0}</b>.', room))
@@ -422,10 +505,13 @@
       const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>', actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
       if (v === 'leave') leave();
       else if (v === 'share') share();
-      else if (typeof v === 'string' && v.indexOf('race:') === 0) {
+      else if (v === 'pick') {
+        const pick = await UI().modal({ title: tr('Race a game'), html: '<p>' + tr('Both of you play the same game at the same time, and see how the other is doing in a corner of the screen.') + '</p>',
+          actions: games.map((id) => ({ label: gameTitle(id), value: id, cls: 'ghost' })).concat([{ label: tr('Not now'), value: 0 }]) });
+        if (!pick || !friend) return;
         const why = canRace();
         if (why !== true) { PN.Game.raceRefuse(why); return; }
-        invite(v.slice(5));
+        invite(pick);
       }
     },
   };

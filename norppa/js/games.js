@@ -191,7 +191,10 @@
   /* Random numbers for what a game spawns. In an online race both players get the same seed, so the same things come in the same order. */
   const rnd = Games.rnd = () => (g && g.rng ? g.rng() : Math.random());
   const rs = (k) => (Math.random() - 0.5) * 2 * k;
-  const rss = (k) => (rnd() - 0.5) * 2 * k;  // the same, seeded in a race
+  const rss = Games.rs = (k) => (rnd() - 0.5) * 2 * k;  // the same, seeded in a race
+  /* A game with several goes or rounds calls this at the start of each, so every round is the same for both players however many random numbers the last one used. */
+  Games.seeded = () => !!(g && g.versus);
+  Games.reseed = (n) => { if (g && g.versus) g.rng = seeded((g.versus.seed + Math.imul(n | 0, 7919)) >>> 0); };
   function seeded(seed) {                    // mulberry32: small, quick and the same on every phone
     let a = seed >>> 0;
     return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -384,8 +387,17 @@
     if (versus) { g.versus = versus; g.rng = seeded(versus.seed); }
     else if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
   };
-  /* The score and seconds left right now, for the online race. */
-  Games.live = () => (g ? { score: g.score, time: Math.max(0, g.time != null ? g.time : 0), phase: g.phase } : null);
+  /* What the online race needs to know right now: the score, the seconds left, and a small picture of the game for the corner view
+     (snap: numbers between 0 and 1 where it can, so it is tiny to send; null when a game has no live picture). */
+  function coreSnap() {
+    if (!g || !g.seal) return null;
+    const top = skyTop(), floor = W.groundY(0, LANE_Z) + 0.12, nx = (x) => U.clamp((x + HALF) / (2 * HALF), 0, 1), ny = (y) => U.clamp((y - floor) / (top - floor), 0, 1);
+    const r2 = (n) => Math.round(n * 100) / 100;
+    if (g.id === 'catch') return { x: r2(nx(g.seal.g.position.x)), it: g.items.slice(0, 14).map((it) => [r2(nx(it.m.position.x)), r2(ny(it.m.position.y)), it.ball ? 2 : it.gold ? 1 : 0]), v: r2(4.5 / (top - floor)) };
+    if (g.id === 'ball' && g.b) return { x: r2(nx(g.seal.g.position.x)), b: [r2(nx(g.b.x)), r2(ny(g.b.y))] };
+    return null;
+  }
+  Games.live = () => (g ? { score: g.score, time: g.ext ? null : Math.max(0, g.time != null ? g.time : 0), phase: g.phase, snap: g.ext ? (g.ext.snap ? g.ext.snap() : null) : coreSnap() } : null);
 
   /* A finger on the screen says where the seal should go. */
   Games.pointer = function (type, x, y) {
@@ -589,8 +601,8 @@
       setScore(g.score);
       b.y = top + R;
       const g2 = 8.6 + Math.min(5.8, g.score * 0.2);
-      b.vy = Math.sqrt(2 * g2 * (2.75 + Math.random() * 0.6));   // about the same height, less time to get there
-      b.vx = U.clamp((b.x - nx) * 5.2 + g.vx * 0.4 + rs(2.2 + Math.min(4.4, g.score * 0.2)), -8.5, 8.5);   // it can fly off sideways, fast
+      b.vy = Math.sqrt(2 * g2 * (2.75 + rnd() * 0.6));   // about the same height, less time to get there
+      b.vx = U.clamp((b.x - nx) * 5.2 + g.vx * 0.4 + rss(2.2 + Math.min(4.4, g.score * 0.2)), -8.5, 8.5);   // it can fly off sideways, fast
       s.gesture('boop', true);
       beat('bounce');
       A.play('boing');
