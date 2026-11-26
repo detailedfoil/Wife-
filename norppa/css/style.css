@@ -547,6 +547,6 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 
 /* Lab 5: pull her out of the sauna (developer mode): the heat bar, laid over the 3D scene */
 .sx-layer { position: absolute; inset: 0; pointer-events: none; }
-.sx-bar { position: absolute; right: calc(14px + var(--sr)); top: 50%; transform: translateY(-50%); width: 30px; height: min(55vh, 380px); border-radius: 14px; background: rgba(255, 255, 255, .15); border: 3px solid #fff; }
+.sx-bar { position: absolute; right: calc(14px + var(--sr)); top: 15%; width: 36px; height: 52%; border-radius: 14px; background: rgba(255, 255, 255, .15); border: 3px solid #fff; }
 .sx-target { position: absolute; left: -7px; right: -7px; background: rgba(255, 220, 70, .92); border: 2px solid #fff; border-radius: 4px; z-index: 2; }
 .sx-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 0 0 10px 10px; background: linear-gradient(#ffd45c, #ff6a3c); opacity: .9; }
