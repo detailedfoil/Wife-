@@ -544,3 +544,25 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .lab-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(#ffd45c, #ff8a3c); opacity: .85; }
 @keyframes labpop { from { transform: scale(.2); } to { transform: scale(1); } }
 @keyframes labswat { 0% { opacity: 1; transform: rotate(-55deg); } 60% { opacity: 1; transform: rotate(22deg); } 100% { opacity: 0; transform: rotate(26deg); } }
+
+/* Lab 5: pull her out of the sauna (developer mode) */
+.sx-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background: linear-gradient(#1c2a4a, #3a2f48 55%, #6b4023); }
+.sx-cabin { position: absolute; background: #b9824d; border: 4px solid #72472b; border-radius: 10px; box-shadow: 0 6px 0 rgba(0, 0, 0, .35); }
+.sx-window { position: absolute; background: linear-gradient(#ffb866, #e8742c); border: 5px solid #72472b; border-radius: 8px; box-shadow: inset 0 0 26px rgba(255, 210, 130, .8); }
+.sx-door { position: absolute; background: #8a5a32; border: 4px solid #5a3a22; border-radius: 8px 8px 0 0; }
+.sx-door::after { content: ''; position: absolute; right: 12%; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: #e2b680; }
+.sx-tub { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(#8ed9f5, #3b8ed0); border: 5px solid #e8f6ff; }
+.sx-tub.need { animation: sxpulse .8s ease-in-out infinite; }
+.sx-tub.splash { animation: sxsplash .4s ease-out; }
+.sx-bar { position: absolute; right: calc(14px + var(--sr)); top: 50%; transform: translateY(-50%); width: 30px; height: min(55vh, 380px); border-radius: 14px; background: rgba(255, 255, 255, .15); border: 3px solid #fff; }
+.sx-target { position: absolute; left: -7px; right: -7px; background: rgba(255, 220, 70, .92); border: 2px solid #fff; border-radius: 4px; z-index: 2; }
+.sx-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 0 0 10px 10px; background: linear-gradient(#ffd45c, #ff6a3c); opacity: .9; }
+.sx-head, .sx-body { position: absolute; transform: translate(-50%, -50%); border: 3px solid rgba(255, 255, 255, .55); }
+.sx-head { width: 58px; height: 58px; border-radius: 50%; }
+.sx-head.held { transform: translate(-50%, -50%) scale(1.14); }
+.sx-head i { position: absolute; top: 20px; width: 7px; height: 9px; border-radius: 50%; background: #1b2a55; }
+.sx-head i:first-child { left: 15px; } .sx-head i:nth-child(2) { right: 15px; }
+.sx-head b { position: absolute; left: 22px; top: 31px; width: 10px; height: 7px; border-radius: 50%; background: #1b2a55; }
+.sx-body { width: 90px; height: 56px; border-radius: 50%; }
+@keyframes sxpulse { 50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 22px #8ed9f5; } }
+@keyframes sxsplash { 0% { transform: translate(-50%, -50%) scale(1); } 40% { transform: translate(-50%, -50%) scale(1.25); } 100% { transform: translate(-50%, -50%) scale(1); } }

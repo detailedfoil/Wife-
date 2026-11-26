@@ -2122,12 +2122,126 @@
     };
   })();
 
+
+  /* Lab 5 (developer mode only): pull her out of the sauna. A heat bar fills up the side with a gold line on it, like the swing bar in a golf game.
+     Hold her by the head and drag her out through the door when the bar is on the line; the bar stops the moment she is out. Dunk her in the tub to start the next round.
+     All plain HTML over a covered 3D stage, as basic as it gets. Five rounds, up to 3 points each. */
+  const pullOut = (() => {
+    const ROUNDS = 5, HINT = 'Hold her by the head and drag her out of the door when the bar is on the gold line. Then dunk her in the tub.';
+    let view = null, layer = null, ui = null, live = false, mode = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, drag = false, bob = 0;
+    let L = null;
+    const head = { x: 0, y: 0 }, bod = { x: 0, y: 0 };
+    const mk = (cls, parent, tag) => { const e = document.createElement(tag || 'div'); e.className = cls; (parent || layer).appendChild(e); return e; };
+    const box = (e, r) => { e.style.left = r.x + 'px'; e.style.top = r.y + 'px'; e.style.width = r.w + 'px'; e.style.height = r.h + 'px'; };
+    function layout() {
+      const w = window.innerWidth, h = window.innerHeight, x0 = w * 0.05, x1 = w * 0.78, y0 = h * 0.2, y1 = h * 0.6, cw = x1 - x0, ch = y1 - y0;
+      L = { w, h, x0, x1, y0, y1,
+        win: { x: x0 + 14, y: y0 + ch * 0.07, w: cw * 0.64, h: ch * 0.74 },
+        door: { x: x0 + cw * 0.74, y: y0 + ch * 0.32, w: cw * 0.22, h: ch * 0.68 - 4 },
+        tub: { x: w * 0.6, y: y1 + Math.min(110, h * 0.15), r: Math.min(w * 0.17, 84) } };
+      L.rest = { x: L.win.x + L.win.w * 0.5, y: L.win.y + L.win.h * 0.42 };
+      box(ui.cabin, { x: x0, y: y0, w: cw, h: ch }); box(ui.window, L.win); box(ui.door, L.door);
+      ui.tub.style.left = L.tub.x + 'px'; ui.tub.style.top = L.tub.y + 'px'; ui.tub.style.width = ui.tub.style.height = L.tub.r * 2 + 'px';
+    }
+    function heat() {
+      const c = 'hsl(' + (12 + (1 - bar) * 10) + ',' + Math.round(bar * 75) + '%,' + Math.round(72 - bar * 16) + '%)';
+      ui.head.style.background = ui.body.style.background = c;
+      ui.fill.style.height = bar * 100 + '%';
+    }
+    function newTarget() {
+      tol = Math.max(0.03, 0.07 - round * 0.01);
+      target = 0.5 + rnd() * 0.4;
+      ui.target.style.bottom = (target - tol) * 100 + '%'; ui.target.style.height = tol * 200 + '%';
+    }
+    function toRest() {
+      head.x = bod.x = L.rest.x; head.y = L.rest.y; bod.y = L.rest.y + 40;
+      bar = 0; mode = 'in'; drag = false; heat(); newTarget();
+      ui.tub.classList.remove('need'); K.hint(tr(HINT));
+    }
+    function judge() {
+      const d = Math.abs(bar - target);
+      const pts = d < tol * 0.4 ? 3 : d < tol ? 2 : d < tol * 2.2 ? 1 : 0;
+      score += pts; K.score(score);
+      K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.2);
+      A.play(pts ? 'match' : 'nope');
+      mode = 'out'; drag = false;
+      ui.tub.classList.add('need'); K.hint(tr('Dunk her in the tub!'));
+    }
+    function dunk() {
+      drag = false;
+      ui.tub.classList.remove('splash'); void ui.tub.offsetWidth; ui.tub.classList.add('splash');
+      A.play('bubble'); A.play('pop', 0.5);
+      round++;
+      if (round >= ROUNDS) { live = false; K.over(tr('All done!')); return; }
+      toRest();
+    }
+    function moveHead(x, y) {
+      if (mode === 'in') {
+        const ix0 = L.x0 + 34, ix1 = L.x1 - 34, iy0 = L.y0 + 34, iy1 = L.y1 - 24;
+        if (x > ix1 && y >= L.door.y && y <= L.y1 - 10) {   // through the door
+          head.x = x; head.y = y;
+          if (x > L.x1 + 14) judge();
+        } else { head.x = U.clamp(x, ix0, ix1); head.y = U.clamp(y, iy0, iy1); }
+      } else { head.x = U.clamp(x, 30, L.w - 30); head.y = U.clamp(y, 80, L.h - 30); }
+      if (mode === 'out' && Math.hypot(head.x - L.tub.x, head.y - L.tub.y) < L.tub.r + 6) dunk();
+    }
+    function build() {
+      view = stage('#1c2a4a', '#3a2f48', { ground: 0x3a2f48, hemi: 1, key: 1 });
+      view.camera.position.set(0, 1, 6);
+      layer = mk('sx-layer', document.getElementById('gamehud'));
+      const hud = document.getElementById('gamehud'); hud.insertBefore(layer, hud.firstChild);   // under the top bar, so Stop still works
+      ui = {};
+      ui.cabin = mk('sx-cabin'); ui.window = mk('sx-window'); ui.door = mk('sx-door'); ui.tub = mk('sx-tub');
+      ui.bar = mk('sx-bar'); ui.target = mk('sx-target', ui.bar); ui.fill = mk('sx-fill', ui.bar);
+      ui.body = mk('sx-body'); ui.head = mk('sx-head'); ui.head.innerHTML = '<i></i><i></i><b></b>';
+    }
+    return {
+      label: 'Points', hint: HINT,
+      view: () => view,
+      start() {
+        if (!view) build();
+        layer.hidden = false; layout();
+        live = false; round = 0; score = 0; bob = 0;
+        toRest();
+        document.getElementById('gScore').textContent = '0';
+      },
+      stop() { live = false; drag = false; if (layer) layer.hidden = true; },
+      go() { live = true; },
+      key() {},
+      pointer(type, x, y) {
+        if (!live) return;
+        if (type === 'down') { if (Math.hypot(x - head.x, y - head.y) < 64) { drag = true; moveHead(x, y); } }
+        else if (type === 'move') { if (drag) moveHead(x, y); }
+        else drag = false;
+      },
+      update(dt, playing) {
+        clock += dt; bob += dt;
+        if (L && (L.w !== window.innerWidth || L.h !== window.innerHeight)) { layout(); if (mode === 'in' && !drag) { head.x = L.rest.x; head.y = L.rest.y; } }
+        if (playing && live && mode === 'in') {
+          bar = Math.min(1, bar + (0.2 + round * 0.03) * dt);
+          if (bar >= 1) {   // cooked too long: she is thrown out of the door
+            drag = false; head.x = L.x1 + 60; head.y = L.door.y + L.door.h * 0.5;
+            judge();
+          }
+          heat();
+        }
+        // the body trails behind the head like a rag doll
+        const rest = mode === 'in' && !drag && Math.abs(head.x - L.rest.x) < 2 ? Math.sin(bob * 2) * 3 : 0, k = 1 - Math.exp(-dt * 9);
+        bod.x += (head.x - bod.x) * k; bod.y += (head.y + 40 - bod.y) * k;
+        const rot = U.clamp((head.x - bod.x) * 0.9, -55, 55);
+        ui.head.style.left = head.x + 'px'; ui.head.style.top = head.y + rest + 'px';
+        ui.body.style.left = bod.x + 'px'; ui.body.style.top = bod.y + rest + 'px'; ui.body.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+        ui.head.classList.toggle('held', drag);
+      },
+    };
+  })();
+
   /* Coffee Memory is all in coffee.js (its rules and its 3D cafe), which puts itself in G.ext. A phone can briefly hold an old copy of the
      page that does not ask for that file, or an old copy of the file itself; either way the new one is fetched here. */
   if (!(PN.Coffee && PN.Coffee.V >= 4)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=4'; document.head.appendChild(sc); }
 
   G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
-  G.ext.labwhack = lab.whack; G.ext.labscrub = lab.scrub; G.ext.labbeat = lab.beat; G.ext.labsteam = lab.steam;
+  G.ext.labwhack = lab.whack; G.ext.labscrub = lab.scrub; G.ext.labbeat = lab.beat; G.ext.labsteam = lab.steam; G.ext.labpull = pullOut;
 })(window.PN = window.PN || {});
 
 /* Seal Seat Shuffle: a roofless Three.js bus, viewed from above. */
