@@ -1472,6 +1472,12 @@
     A.play('sparkle'); FX.sparkle(head(), 8, 0xffc04a);
     UI.refresh(); UI.renderSheet(); save();
   };
+  G.devDirty = function () {
+    if (!state.dev) return;
+    state.stats.clean = 0;
+    syncDirt(); A.play('thud');
+    UI.refresh(); UI.renderSheet(); save();
+  };
   /* Developer pup tools: the whole baby cycle on demand, so it can be seen without waiting days. */
   function dressPup(p) {
     const ps = pups[p.id];

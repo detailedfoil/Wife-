@@ -836,6 +836,8 @@
     'Reset to before developer mode': 'Palauta tila ennen kehittäjätilaa',
     'Put back the save from just before developer mode was turned on.': 'Palauttaa tallennuksen, joka oli juuri ennen kehittäjätilan käynnistämistä.',
     'Fill energy': 'Täytä energia',
+    'Make her dirty': 'Tee hänestä likainen',
+    'Drop her cleanliness to zero, to test the sauna.': 'Pudota puhtaus nollaan saunan testaamista varten.',
     'Top up the energy bar whenever you like.': 'Täytä energiapalkki milloin haluat.',
     'Last updated {0}.': 'Viimeksi päivitetty {0}.',
     'Check for updates': 'Hae päivityksiä',
