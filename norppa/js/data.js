@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '26 Nov 2026, 10:58';
+  PN.UPDATED = '26 Nov 2026, 11:20';
   /* An update stamp as a number that sorts by time. Compared as text, "10 Dec" would come before "18 Nov". */
   PN.stampKey = function (s) {
     const m = /^\s*(\d{1,2}) ([A-Za-z]{3}) (\d{4}),? (\d{1,2}):(\d{2})\s*$/.exec(String(s || ''));
@@ -361,7 +361,7 @@
     labscrub: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 2: Scrub the dirt', icon: 'steam', tint: 'warm', text: 'Sauna idea: rub the vihta over the dirty patches until they are gone.', unit: 'patches' },
     labbeat: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 3: Ladle rhythm', icon: 'steam', tint: 'warm', text: 'Sauna idea: tap in time as the ring closes on the stones and keep the steam in the green.', unit: 'points' },
     labsteam: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 4: Whack plus steam', icon: 'steam', tint: 'warm', text: 'Sauna idea: whack the beads, and throw water so the steam swells them to pay double.', unit: 'points' },
-    labpull: { lab: true, dev: true, ext: true, len: 45, price: 0, muck: 0, title: 'Lab 5: Pull her out', icon: 'steam', tint: 'warm', text: 'Sauna idea: drag her out of the sauna when the heat bar is on the line, then dunk her in the tub. Five rounds.', unit: 'points out of 15' },
+    labpull: { lab: true, dev: true, ext: true, len: 45, price: 0, muck: 0, title: 'Lab 5: Pull her out', icon: 'steam', tint: 'warm', text: 'Sauna idea: drag her out of the sauna when the heat bar is on the line, then dunk her in the ice hole. Five rounds.', unit: 'points out of 15' },
     bj: { len: 90, price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'tokens won' },
   };
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four

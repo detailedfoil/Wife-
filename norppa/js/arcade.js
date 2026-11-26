@@ -2125,113 +2125,194 @@
 
   /* Lab 5 (developer mode only): pull her out of the sauna. A heat bar fills up the side with a gold line on it, like the swing bar in a golf game.
      Hold her by the head and drag her out through the door when the bar is on the line; the bar stops the moment she is out. Dunk her in the tub to start the next round.
-     All plain HTML over a covered 3D stage, as basic as it gets. Five rounds, up to 3 points each. */
+     She is a rag doll: held by the head she hangs from it like a pendulum (the pull of the drag swings her), let go and she falls, lands and flops flat.
+     The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const pullOut = (() => {
-    const ROUNDS = 5, HINT = 'Hold her by the head and drag her out of the door when the bar is on the gold line. Then dunk her in the tub.';
-    let view = null, layer = null, ui = null, live = false, mode = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, drag = false, bob = 0;
-    let L = null;
-    const head = { x: 0, y: 0 }, bod = { x: 0, y: 0 };
-    const mk = (cls, parent, tag) => { const e = document.createElement(tag || 'div'); e.className = cls; (parent || layer).appendChild(e); return e; };
-    const box = (e, r) => { e.style.left = r.x + 'px'; e.style.top = r.y + 'px'; e.style.width = r.w + 'px'; e.style.height = r.h + 'px'; };
-    function layout() {
-      const w = window.innerWidth, h = window.innerHeight, x0 = w * 0.05, x1 = w * 0.78, y0 = h * 0.2, y1 = h * 0.6, cw = x1 - x0, ch = y1 - y0;
-      L = { w, h, x0, x1, y0, y1,
-        win: { x: x0 + 14, y: y0 + ch * 0.07, w: cw * 0.64, h: ch * 0.74 },
-        door: { x: x0 + cw * 0.74, y: y0 + ch * 0.32, w: cw * 0.22, h: ch * 0.68 - 4 },
-        tub: { x: w * 0.6, y: y1 + Math.min(110, h * 0.15), r: Math.min(w * 0.17, 84) } };
-      L.rest = { x: L.win.x + L.win.w * 0.5, y: L.win.y + L.win.h * 0.42 };
-      box(ui.cabin, { x: x0, y: y0, w: cw, h: ch }); box(ui.window, L.win); box(ui.door, L.door);
-      ui.tub.style.left = L.tub.x + 'px'; ui.tub.style.top = L.tub.y + 'px'; ui.tub.style.width = ui.tub.style.height = L.tub.r * 2 + 'px';
+    const ROUNDS = 5, HINT = 'Hold her by the head and drag her out of the door when the bar is on the gold line. Then dunk her in the ice hole.';
+    const GRAV = 9.8, BENCH = 0.62, HALF = 0.23, ZIN = -1.0, TUB = { x: 0.95, z: 2.7, r: 0.78 }, ZOUT = TUB.z, OUTX = 1.25, LEN = 1.25;
+    let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
+    let live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
+    const com = { x: -0.45, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
+    let h0 = { x: 0.6, y: 0.1 }, ell = 0.6, tints = [], measured = false;
+    const ray = new T.Raycaster(), v3 = new T.Vector3(), v2 = new T.Vector2(), bx = new T.Box3();
+    const hvec = () => { const c = Math.cos(th), s = Math.sin(th); hv.x = h0.x * c - h0.y * s; hv.y = h0.x * s + h0.y * c; };
+    const floorY = (x) => (zone === 'in' ? (x > -1.15 && x < 0.3 ? BENCH : 0.05) : 0.05);
+    /* where a finger on the screen is, on the flat plane the seal is moving in */
+    function worldAt(x, y, plane) {
+      v2.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1); ray.setFromCamera(v2, view.camera);
+      const o = ray.ray.origin, d = ray.ray.direction, t = (plane - o.z) / d.z;
+      return { x: o.x + d.x * t, y: o.y + d.y * t };
     }
+    function fit() {
+      const c = view.camera; c.aspect = W.aspect; c.fov = W.camera.fov; c.updateProjectionMatrix();
+      const tv = Math.tan(c.fov * PI / 360), d = Math.max(2.45 / (tv * c.aspect), 1.9 / tv) + 0.5;
+      c.position.set(0.2, 2.9, d); c.lookAt(0.2, 0.85, 0.9); c.updateMatrixWorld(true);
+    }
+    function build() {
+      view = stage('#1c2a4a', '#4a3a58', { ground: 0xdfe9f2, hemi: 1.15, key: 0.9 });
+      const sc = view.scene, wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 }), snow = U.mat(0xeef4fa, { roughness: 1 });
+      sc.add(U.box(16, 0.3, 12, snow, 0, -0.15, 1));
+      // the front wall, with a big window and a door
+      [[-1.8, 1.25, 0.2, 2.5], [-0.8, 0.275, 1.8, 0.55], [-0.8, 2.3, 1.8, 0.4], [0.24, 1.25, 0.28, 2.5], [0.665, 2.25, 0.57, 0.5], [1.025, 1.25, 0.15, 2.5]].forEach((r) => sc.add(U.box(r[2], r[3], 0.14, wood, r[0], r[1], 0)));
+      sc.add(U.box(1.9, 0.06, 0.2, dark, -0.8, 0.57, 0.04));   // the window sill
+      sc.add(U.box(0.14, 2.5, 1.9, wood, -1.9, 1.25, -0.9), U.box(0.14, 2.5, 1.9, wood, 1.1, 1.25, -0.9), U.box(3.1, 2.5, 0.14, wood, -0.4, 1.25, -1.8));
+      sc.add(U.box(3.5, 0.16, 2.3, dark, -0.4, 2.58, -0.8), U.box(3.4, 0.14, 2.2, snow, -0.4, 2.73, -0.8));
+      sc.add(U.box(3, 0.06, 1.9, dark, -0.4, 0.03, -0.9));
+      sc.add(U.box(1.5, 0.1, 1.0, wood, -0.45, BENCH - 0.05, -1.2), U.box(1.5, 0.1, 0.5, wood, -0.45, 1.1, -1.55));
+      sc.add(U.box(0.5, 0.55, 0.5, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -1.5, 0.3, -1.0));
+      stonesMat = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
+      for (let i = 0; i < 6; i++) sc.add(U.ball(0.1 + rnd() * 0.04, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -1.5 + rs(0.15), 0.62 + rnd() * 0.04, -1.0 + rs(0.15), 1, 0.8, 1, 8, 6));
+      lamp = new T.PointLight(0xffa85a, 6, 6); lamp.position.set(-0.4, 1.9, -0.5); sc.add(lamp);
+      door = new T.Group(); door.position.set(0.95, 0, 0.09);
+      door.add(U.box(0.57, 2.0, 0.06, U.mat(0x8a5a32, { roughness: 0.9 }), -0.285, 1.0, 0), U.ball(0.035, U.mat(0xe2b680, { roughness: 0.4 }), -0.5, 1.0, 0.05));
+      sc.add(door);
+      // a hole in the ice to dunk her in
+      sc.add(U.cyl(0.86, 0.86, 0.02, U.mat(0xbfe0f2, { roughness: 0.3 }), TUB.x, 0.012, TUB.z, 32), U.cyl(0.68, 0.68, 0.025, U.mat(0x14507f, { roughness: 0.15 }), TUB.x, 0.022, TUB.z, 32));
+      rippleMat = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
+      ripple = U.torus(0.3, 0.02, rippleMat, TUB.x, 0.05, TUB.z, PI * 2, 24); ripple.rotation.x = PI / 2; sc.add(ripple);
+      const t1 = tree(1.3), t2 = tree(1.0); t1.position.set(-2.4, 0, -1.6); t2.position.set(2.5, 0, -1.4); sc.add(t1, t2);
+      steam = Puffs(sc, 60, 0xffffff, 0.4); splash = Puffs(sc, 60, 0x9cdef7, 0.85); sparks = Puffs(sc, 40, 0xffd45c, 1);
+      rag = new T.Group(); sc.add(rag);
+      layer = document.createElement('div'); layer.className = 'sx-layer'; document.getElementById('gamehud').appendChild(layer);
+      const bar = document.createElement('div'); bar.className = 'sx-bar'; layer.appendChild(bar);
+      targetEl = document.createElement('div'); targetEl.className = 'sx-target'; bar.appendChild(targetEl);
+      fillEl = document.createElement('div'); fillEl.className = 'sx-fill'; bar.appendChild(fillEl);
+    }
+    /* put the real seal on the rag doll: body centre at the pivot, in profile, scaled to a good size, and work out where her head is */
+    function dress() {
+      cast(view, 0.62, false);
+      if (actor.shadow.parent) actor.g.remove(actor.shadow);
+      rag.add(actor.g);
+      rag.position.set(0, 0, 0); rag.rotation.set(0, 0, 0); rag.scale.setScalar(1);
+      actor.g.position.set(0, 0, 0); actor.look = null; actor.heading = PI / 2; actor.g.rotation.y = PI / 2;
+      actor.update(0.001, clock, null); rag.updateMatrixWorld(true);
+      bx.setFromObject(actor.g);
+      const size = bx.getSize(v3), len = Math.max(size.x, size.z), s = LEN / len;
+      const ctr = bx.getCenter(new T.Vector3());
+      rag.scale.setScalar(s); actor.g.position.set(-ctr.x, -ctr.y, -ctr.z); rag.updateMatrixWorld(true);
+      actor.headP.getWorldPosition(v3);
+      h0 = { x: v3.x, y: v3.y }; ell = Math.hypot(h0.x, h0.y);
+      tints = [];
+      const seen = new Set();
+      actor.g.traverse((o) => { if (!o.isMesh || !o.material) return; [].concat(o.material).forEach((m) => { if (m.emissive && !seen.has(m) && m.color && m.color.getHex() > 0x606060) { seen.add(m); tints.push({ m, e: m.emissive.getHex(), i: m.emissiveIntensity }); } }); });
+    }
+    function untint() { tints.forEach((t) => { t.m.emissive.setHex(t.e); t.m.emissiveIntensity = t.i; }); }
     function heat() {
-      const c = 'hsl(' + (12 + (1 - bar) * 10) + ',' + Math.round(bar * 75) + '%,' + Math.round(72 - bar * 16) + '%)';
-      ui.head.style.background = ui.body.style.background = c;
-      ui.fill.style.height = bar * 100 + '%';
+      tints.forEach((t) => { t.m.emissive.setRGB(1, 0.25, 0.1); t.m.emissiveIntensity = bar * 0.5; });
+      fillEl.style.height = bar * 100 + '%';
+      lamp.intensity = 5 + bar * 9; stonesMat.emissiveIntensity = 0.6 + bar * 1.8;
     }
     function newTarget() {
-      tol = Math.max(0.03, 0.07 - round * 0.01);
-      target = 0.5 + rnd() * 0.4;
-      ui.target.style.bottom = (target - tol) * 100 + '%'; ui.target.style.height = tol * 200 + '%';
+      tol = Math.max(0.03, 0.07 - round * 0.01); target = 0.5 + rnd() * 0.4;
+      targetEl.style.bottom = (target - tol) * 100 + '%'; targetEl.style.height = tol * 200 + '%';
     }
     function toRest() {
-      head.x = bod.x = L.rest.x; head.y = L.rest.y; bod.y = L.rest.y + 40;
-      bar = 0; mode = 'in'; drag = false; heat(); newTarget();
-      ui.tub.classList.remove('need'); K.hint(tr(HINT));
+      zone = 'in'; mode = 'in'; held = false; grounded = true; z = ZIN; th = 0; om = 0; vel.x = vel.y = 0; gv.x = gv.y = acc.x = acc.y = 0;
+      com.x = -0.45; com.y = BENCH + HALF; bar = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+      K.hint(tr(HINT));
     }
     function judge() {
-      const d = Math.abs(bar - target);
-      const pts = d < tol * 0.4 ? 3 : d < tol ? 2 : d < tol * 2.2 ? 1 : 0;
+      const d = Math.abs(bar - target), pts = d < tol * 0.4 ? 3 : d < tol ? 2 : d < tol * 2.2 ? 1 : 0;
       score += pts; K.score(score);
-      K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.2);
-      A.play(pts ? 'match' : 'nope');
-      mode = 'out'; drag = false;
-      ui.tub.classList.add('need'); K.hint(tr('Dunk her in the tub!'));
+      K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.3);
+      A.play(pts ? 'match' : 'nope'); actor.gesture(pts >= 2 ? 'happy' : pts ? 'surprise' : 'sad', true);
+      if (pts === 3) sparks.emit(head.x, head.y, z + 0.3, 16, 2.2, 0.05, 0.8, 4);
+      mode = 'out'; zone = 'out'; outAt = clockT; K.hint(tr('Dunk her in the ice hole!'));
     }
     function dunk() {
-      drag = false;
-      ui.tub.classList.remove('splash'); void ui.tub.offsetWidth; ui.tub.classList.add('splash');
-      A.play('bubble'); A.play('pop', 0.5);
+      held = false; A.play('bubble'); A.play('pop', 0.5); actor.gesture('shake', true);
+      splash.emit(TUB.x, 0.12, TUB.z, 30, 2.4, 0.06, 1.0, 9); rippleT = 0.7;
       round++;
       if (round >= ROUNDS) { live = false; K.over(tr('All done!')); return; }
       toRest();
     }
-    function moveHead(x, y) {
-      if (mode === 'in') {
-        const ix0 = L.x0 + 34, ix1 = L.x1 - 34, iy0 = L.y0 + 34, iy1 = L.y1 - 24;
-        if (x > ix1 && y >= L.door.y && y <= L.y1 - 10) {   // through the door
-          head.x = x; head.y = y;
-          if (x > L.x1 + 14) judge();
-        } else { head.x = U.clamp(x, ix0, ix1); head.y = U.clamp(y, iy0, iy1); }
-      } else { head.x = U.clamp(x, 30, L.w - 30); head.y = U.clamp(y, 80, L.h - 30); }
-      if (mode === 'out' && Math.hypot(head.x - L.tub.x, head.y - L.tub.y) < L.tub.r + 6) dunk();
-    }
-    function build() {
-      view = stage('#1c2a4a', '#3a2f48', { ground: 0x3a2f48, hemi: 1, key: 1 });
-      view.camera.position.set(0, 1, 6);
-      layer = mk('sx-layer', document.getElementById('gamehud'));
-      const hud = document.getElementById('gamehud'); hud.insertBefore(layer, hud.firstChild);   // under the top bar, so Stop still works
-      ui = {};
-      ui.cabin = mk('sx-cabin'); ui.window = mk('sx-window'); ui.door = mk('sx-door'); ui.tub = mk('sx-tub');
-      ui.bar = mk('sx-bar'); ui.target = mk('sx-target', ui.bar); ui.fill = mk('sx-fill', ui.bar);
-      ui.body = mk('sx-body'); ui.head = mk('sx-head'); ui.head.innerHTML = '<i></i><i></i><b></b>';
+    function step(dt) {
+      if (held && ptr) {
+        const w = worldAt(ptr.x + offs.x, ptr.y + offs.y, z);   // the same spot of her stays under the finger, even as she moves toward the camera
+        let tx = w.x, ty = w.y;
+        if (zone === 'in') { if (tx > 0.3 && !(ty > 0.9 && ty < 1.95)) tx = 0.3; tx = Math.max(tx, -1.45); ty = Math.min(ty, 2.25); }
+        else { tx = U.clamp(tx, -1.9, 1.55); ty = U.clamp(ty, 0.4, 2.6); }
+        const px = head.x, py = head.y, k = 1 - Math.exp(-dt * 16);
+        head.x += (tx - head.x) * k; head.y += (ty - head.y) * k;
+        const nvx = (head.x - px) / dt, nvy = (head.y - py) / dt;
+        acc.x += (U.clamp((nvx - gv.x) / dt, -45, 45) - acc.x) * 0.35; acc.y += (U.clamp((nvy - gv.y) / dt, -45, 45) - acc.y) * 0.35;
+        gv.x = nvx; gv.y = nvy;
+        // she hangs from her head: a pendulum whose pivot is the finger, so the drag swings her
+        hvec();
+        const psi = Math.atan2(hv.y, hv.x), ux = -Math.cos(psi), uy = -Math.sin(psi);
+        om += ((-ux * (GRAV + acc.y) + uy * acc.x) / ell - 1.5 * om) * dt; th += om * dt; hvec();
+        com.x = head.x - hv.x; com.y = head.y - hv.y;
+        const fy = floorY(com.x) + HALF;
+        if (com.y < fy) { head.y += fy - com.y; com.y = fy; }
+        vel.x = gv.x; vel.y = gv.y; grounded = false;
+        if (zone === 'in' && head.x > OUTX && mode === 'in') judge();
+        if (mode === 'out' && clockT - outAt > 0.5 && head.y < 1.15 && Math.abs(head.x - TUB.x) < TUB.r) dunk();
+      } else {
+        vel.y -= GRAV * dt; com.x += vel.x * dt; com.y += vel.y * dt;
+        if (zone === 'in') com.x = U.clamp(com.x, -1.45, 0.3); else com.x = U.clamp(com.x, -1.9, 1.55);
+        const fy = floorY(com.x) + HALF; grounded = false;
+        if (com.y <= fy) { com.y = fy; vel.y = vel.y < -1.2 ? -vel.y * 0.25 : 0; grounded = true; vel.x *= Math.exp(-7 * dt); }
+        if (grounded) { const tt = Math.round(th / (2 * PI)) * 2 * PI; om += (-70 * (th - tt) - 10 * om) * dt; } else om *= Math.exp(-0.4 * dt);
+        th += om * dt; hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+        if (mode === 'out' && clockT - outAt > 0.5 && grounded && Math.abs(com.x - TUB.x) < TUB.r * 0.85) dunk();
+      }
     }
     return {
       label: 'Points', hint: HINT,
       view: () => view,
+      /* where things are on the screen, for tests */
+      dbg() {
+        const at = (x, y, zz) => { v3.set(x, y, zz).project(view.camera); return { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }; };
+        actor.headP.getWorldPosition(v3); v3.project(view.camera);
+        return { head: { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }, door: at(0.67, 1.45, 0), out: at(1.4, 1.45, ZOUT), tub: at(TUB.x, 1.0, ZOUT), mode, bar, target, tol, th, round, score };
+      },
       start() {
         if (!view) build();
-        layer.hidden = false; layout();
-        live = false; round = 0; score = 0; bob = 0;
-        toRest();
+        dress(); fit();
+        live = false; round = 0; score = 0; rippleT = 0; ptr = null; steam.clear(); splash.clear(); sparks.clear();
+        layer.hidden = false; toRest();
         document.getElementById('gScore').textContent = '0';
       },
-      stop() { live = false; drag = false; if (layer) layer.hidden = true; },
+      stop() { live = false; held = false; if (layer) layer.hidden = true; untint(); if (actor && !actor.shadow.parent) actor.g.add(actor.shadow); },
       go() { live = true; },
       key() {},
       pointer(type, x, y) {
         if (!live) return;
-        if (type === 'down') { if (Math.hypot(x - head.x, y - head.y) < 64) { drag = true; moveHead(x, y); } }
-        else if (type === 'move') { if (drag) moveHead(x, y); }
-        else drag = false;
+        if (type === 'down') {
+          actor.headP.getWorldPosition(v3); v3.project(view.camera);
+          const sx = (v3.x * 0.5 + 0.5) * window.innerWidth, sy = (-v3.y * 0.5 + 0.5) * window.innerHeight;
+          if (Math.hypot(x - sx, y - sy) < 90) {
+            held = true; ptr = { x, y }; offs.x = sx - x; offs.y = sy - y;
+            gv.x = gv.y = acc.x = acc.y = 0;
+            actor.gesture('surprise', true); A.play('squeak', 0.4);
+          }
+        } else if (type === 'move') { if (held) ptr = { x, y }; }
+        else if (held) { held = false; actor.gesture('wiggle', true); }
       },
       update(dt, playing) {
-        clock += dt; bob += dt;
-        if (L && (L.w !== window.innerWidth || L.h !== window.innerHeight)) { layout(); if (mode === 'in' && !drag) { head.x = L.rest.x; head.y = L.rest.y; } }
+        clock += dt; clockT += dt;
+        fit();
+        const d = Math.min(dt, 1 / 30);
         if (playing && live && mode === 'in') {
-          bar = Math.min(1, bar + (0.2 + round * 0.03) * dt);
-          if (bar >= 1) {   // cooked too long: she is thrown out of the door
-            drag = false; head.x = L.x1 + 60; head.y = L.door.y + L.door.h * 0.5;
-            judge();
+          bar = Math.min(1, bar + (0.2 + round * 0.03) * d);
+          if (bar >= 1) {   // cooked too long: she is flung out of the door
+            held = false; zone = 'out'; z = ZOUT; com.x = 1.45; com.y = 1.2; vel.x = 1.6; vel.y = 3; om = 7; head.x = com.x; head.y = com.y; judge();
           }
-          heat();
         }
-        // the body trails behind the head like a rag doll
-        const rest = mode === 'in' && !drag && Math.abs(head.x - L.rest.x) < 2 ? Math.sin(bob * 2) * 3 : 0, k = 1 - Math.exp(-dt * 9);
-        bod.x += (head.x - bod.x) * k; bod.y += (head.y + 40 - bod.y) * k;
-        const rot = U.clamp((head.x - bod.x) * 0.9, -55, 55);
-        ui.head.style.left = head.x + 'px'; ui.head.style.top = head.y + rest + 'px';
-        ui.body.style.left = bod.x + 'px'; ui.body.style.top = bod.y + rest + 'px'; ui.body.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
-        ui.head.classList.toggle('held', drag);
+        if (live || playing) { step(d * 0.5); step(d * 0.5); }
+        if (mode === 'in') heat();
+        // through the door she comes toward you; the door swings open for her
+        const zT = zone === 'out' ? ZOUT : head.x > 0.45 ? ZIN + (ZOUT - ZIN) * U.smooth(0.45, 1.15, head.x) : ZIN;
+        z += (zT - z) * (1 - Math.exp(-d * 9));
+        const dT = zone === 'in' ? (held && head.x > 0.0 ? 1 : 0) : (com.x < 1.55 ? 1 : 0);
+        doorOpen += (dT - doorOpen) * (1 - Math.exp(-d * 6)); door.rotation.y = doorOpen * 1.45;
+        actor.heading = PI / 2; actor.look = null; actor.update(dt, clock, null);
+        actor.g.rotation.y = PI / 2;
+        rag.position.set(com.x, com.y, z); rag.rotation.z = th;
+        // steam off the stones, thicker as she cooks; a ring on the water after a dunk
+        steamT -= dt; if (steamT <= 0) { steamT = 0.14 - bar * 0.08; steam.emit(-1.5, 0.75, -1.0, 1, 0.25, 0.08, 1.8, -0.25); }
+        steam.update(dt, 0, 0); splash.update(dt, 0, 0); sparks.update(dt, 0, 0);
+        if (rippleT > 0) { rippleT = Math.max(0, rippleT - dt); const k = 1 - rippleT / 0.7; ripple.scale.setScalar(1 + k * 1.6); rippleMat.opacity = (1 - k) * 0.8; } else rippleMat.opacity = 0;
       },
     };
   })();
