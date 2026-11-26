@@ -516,3 +516,18 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .sx-bar { position: absolute; right: calc(14px + var(--sr)); top: 15%; width: 36px; height: 52%; border-radius: 14px; background: rgba(255, 255, 255, .15); border: 3px solid #fff; }
 .sx-target { position: absolute; left: -7px; right: -7px; background: rgba(255, 220, 70, .92); border: 2px solid #fff; border-radius: 4px; z-index: 2; }
 .sx-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 0 0 10px 10px; background: linear-gradient(#ffd45c, #ff6a3c); opacity: .9; }
+
+/* online play (developer prototype): the room chip above the dock, the friend's score in a race, and the race result */
+.online-chip { flex: none; height: 26px; border-radius: 13px; padding: 0 11px 0 7px; display: flex; align-items: center; gap: 6px; font: 800 12.5px var(--body); color: var(--ink-soft); max-width: calc(100% - 24px); }
+.online-chip .ic { width: 18px; height: 18px; flex: none; }
+.online-chip .oc-who { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 9em; }
+.online-chip.on .oc-who { color: #2f7d55; }
+.g-vs { padding: 0 12px; gap: 5px; min-width: 0; }
+.g-vs .vs-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 5.5em; }
+.g-vs.ahead b { color: #2f7d55; }   /* green: you are ahead of them */
+.g-vs.behind b { color: #b3412f; }
+.g-vs .vs-done .ic { width: 16px; height: 16px; }
+.vs-board { display: flex; gap: 10px; justify-content: center; margin: 6px 0 10px; }
+.vs-board div { flex: 1; max-width: 140px; border-radius: 16px; background: rgba(60, 100, 150, .08); padding: 8px 6px; display: grid; gap: 2px; }
+.vs-board span { font-size: 13px; font-weight: 800; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-board b { font: 600 34px var(--display); color: var(--ink); }
