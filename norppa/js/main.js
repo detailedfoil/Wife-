@@ -611,7 +611,58 @@
     if (pupZ <= 0) pupZ = 3.1;
     Object.keys(pups).forEach((id) => pups[id].update(dt, t, W.groundY));
     updateVisitors(dt);
+    updateFriend(dt);
   }
+
+  /* ---------- a friend online (developer mode prototype, see online.js) ----------
+     Their seal, with their look and what she wears, swims up and sits beside ours while they are in the room. */
+  let friendSeal = null;
+  const FRIEND = G.friendSpot = { x: -1.4, z: 1.4, h: 0.7 };     // front left, in view on a portrait phone
+  G.friendCome = function (p) {
+    G.friendGo(true);
+    const fs = friendSeal = new PN.Seal({ stage: U.clamp(p.stage | 0, 0, 2), appearance: p.appearance });
+    ['head', 'neck', 'face', 'back'].forEach((slot) => { const id = p.wearing && p.wearing[slot]; if (id && PN.items[id]) fs.setWear(slot, id); });
+    W.scene.add(fs.g);
+    const e = holeEdge(fs, v2);
+    fs.place(e.x, W.groundY(e.x, e.z), e.z, 0);
+    fs.moveTo(FRIEND.x, FRIEND.z, { speed: 2.2, face: FRIEND.h });
+    fs.gesture('wave', true);
+  };
+  G.friendGo = function (now) {
+    const fs = friendSeal;
+    if (!fs) return;
+    friendSeal = null;
+    const gone = () => { W.scene.remove(fs.g); fs.dispose(); };
+    if (now || !fs.g.visible) { gone(); return; }
+    fs.leaving = true;
+    fs.gesture('wave', true);
+    wait(1).then(() => { const e = holeEdge(fs, v2).clone(); return fs.moveTo(e.x, e.z, { speed: 2.4 }); }).then(() => plunge(fs)).then(gone, gone);
+    fsLeaving.push(fs);
+  };
+  const fsLeaving = [];
+  function updateFriend(dt) {
+    for (let i = fsLeaving.length - 1; i >= 0; i--) { const fs = fsLeaving[i]; if (fs.g.parent) fs.update(dt, t, W.groundY); else fsLeaving.splice(i, 1); }
+    const fs = friendSeal;
+    if (!fs) return;
+    fs.g.visible = !PN.Games.active;
+    fs.setMood('happy');
+    fs.look = fs.move ? null : seal.g.position;
+    fs.update(dt, t, W.groundY);
+  }
+  /* true if she can race right now; otherwise why not (the same reasons as any game). */
+  G.raceReady = function () {
+    if (blocked() || bedBusy || PN.Games.active) return 'busy';
+    const c = S.canPlay(state);
+    return c.ok ? true : c.why;
+  };
+  G.raceRefuse = function (why) { if (why === 'busy') A.play('nope'); else refuse(why); };
+  G.raceStart = function (id, versus) {
+    if (G.raceReady() !== true) return false;
+    UI.closeSheet();
+    seal.halt();
+    PN.Games.start(id, versus);
+    return true;
+  };
 
   /* ---------- visiting pups ----------
      A grown pup that has been called home from the Family album. It climbs out of the ice hole, hangs about on the shore,
@@ -1131,6 +1182,7 @@
     seal.look = null;
     seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.2, face: W.HOME_HEADING });
     UI.refresh();
+    if (PN.Online) await PN.Online.verdict();     // an online race: who won, before what she earned
     if (!r) return;
     if (id === 'sauna') { await saunaResult(r); return; }
     const gm = PN.GAMES[id], lost = gm.low && !score;      // a timed game: the score is the seconds it took, and none means it was lost

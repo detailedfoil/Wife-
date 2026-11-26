@@ -187,8 +187,15 @@
   const GAME_LEN = 40;         // seconds of Fish Rain
   const FISH_W = [0, 64, 22, 8, 2.5, 0.7];
   const v1 = new T.Vector3(), look = new T.Vector3();
-  const rs = (k) => (Math.random() - 0.5) * 2 * k;
   let g = null;                // the game in play
+  /* Random numbers for what a game spawns. In an online race both players get the same seed, so the same things come in the same order. */
+  const rnd = Games.rnd = () => (g && g.rng ? g.rng() : Math.random());
+  const rs = (k) => (Math.random() - 0.5) * 2 * k;
+  const rss = (k) => (rnd() - 0.5) * 2 * k;  // the same, seeded in a race
+  function seeded(seed) {                    // mulberry32: small, quick and the same on every phone
+    let a = seed >>> 0;
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
   let bound = false;
   Object.defineProperty(Games, 'mumMode', { get: () => !!(g && g.mumMode) });
 
@@ -312,7 +319,7 @@
     const list = D.FISH;
     let total = 0;
     list.forEach((f) => { total += FISH_W[f.rarity]; });
-    let r = Math.random() * total;
+    let r = rnd() * total;
     for (let i = 0; i < list.length; i++) { r -= FISH_W[list[i].rarity]; if (r <= 0) return list[i]; }
     return list[0];
   }
@@ -335,14 +342,15 @@
     });
   }
 
-  Games.start = function (id) {
+  /* versus: an online race ({ seed, name }); no tutorial, no Mum Mode, and a seeded random so both players get the same game. */
+  Games.start = function (id, versus) {
     if (Games.active) return;
     bind();
     Games.active = id;
     UI.closeSheet();
     UI.setBubble(null);
     const seal = PN.Game.seal, ext = Games.ext[id];
-    const mumMode = PN.Game.state.settings.mumMode === true && id !== 'coffee' && id !== 'shuffle' && id !== 'stack';
+    const mumMode = !versus && PN.Game.state.settings.mumMode === true && id !== 'coffee' && id !== 'shuffle' && id !== 'stack';
     UI.showHud(false);
     $('gamehud').hidden = false;
     $('gScoreLabel').textContent = ext ? tr(ext.label) : tr(id === 'catch' ? 'label|Fish' : 'Bounces');
@@ -358,7 +366,8 @@
     $('gHint').textContent = tr(mumMode ? PN.MUM_GAME_TEXT?.[id] || hint : hint);
     if (ext) {
       g = { id, ext, seal, mumMode, phase: 'count', clock: 0, said: -1, score: 0, items: [], caught: {}, keyL: 0, keyR: 0, secs: 0 };
-      if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
+      if (versus) { g.versus = versus; g.rng = seeded(versus.seed); }
+      else if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
       ext.start();
       W.override = ext.view();
       return;
@@ -372,8 +381,11 @@
     g = { id, seal, mumMode, saves: mumMode ? 2 : 0, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
       keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null, secs: 0 };
     if (id === 'ball') { g.homeBallMaterial = W.ball.material; W.ball.material = matchBallMaterial(); }
-    if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
+    if (versus) { g.versus = versus; g.rng = seeded(versus.seed); }
+    else if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
   };
+  /* The score and seconds left right now, for the online race. */
+  Games.live = () => (g ? { score: g.score, time: Math.max(0, g.time != null ? g.time : 0), phase: g.phase } : null);
 
   /* A finger on the screen says where the seal should go. */
   Games.pointer = function (type, x, y) {
@@ -460,7 +472,7 @@
   /* ---------- Fish Rain ---------- */
   function spawnCatch(prog) {
     const snowballChance = (0.17 + 0.2 * prog) * (g.mumMode ? 0.3 : 1);
-    const isBall = g.clock > 3 && Math.random() < snowballChance;
+    const isBall = g.clock > 3 && rnd() < snowballChance;
     const holder = new T.Group();
     let it;
     if (isBall) {
@@ -469,13 +481,14 @@
     } else {
       const f = pickFish(), model = fishCopy(f.id);
       holder.add(model);
-      holder.rotation.z = -Math.PI / 2 + rs(0.35);          // nose down
+      holder.rotation.z = -Math.PI / 2 + rs(0.35);          // nose down (just for looks, so not seeded)
       holder.scale.setScalar(1.75);
-      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.9 + prog * 3.5 + Math.random() * 1.2, spin: rs(5), inner: model };
+      it = { m: holder, id: f.id, gold: f.rarity === 5, v: 3.9 + prog * 3.5 + rnd() * 1.2, spin: rs(5), inner: model };
       // Later on, some fish wriggle from side to side on the way down.
-      if (prog > 0.2 && Math.random() < 0.35 + 0.55 * prog) { it.sway = 0.4 + Math.random() * 0.7 * prog; it.swayF = 2 + Math.random() * 2.2; it.swayP = Math.random() * 6.3; }
+      if (prog > 0.2 && rnd() < 0.35 + 0.55 * prog) { it.sway = 0.4 + rnd() * 0.7 * prog; it.swayF = 2 + rnd() * 2.2; it.swayP = rnd() * 6.3; }
     }
-    const x = U.clamp(g.seal.g.position.x + rs(3.4), -HALF, HALF);
+    // Things fall near the seal; in a race they fall at the same spots for both players, wherever their seals are.
+    const x = g.versus ? rss(HALF) : U.clamp(g.seal.g.position.x + rs(3.4), -HALF, HALF);
     it.x0 = x;
     holder.position.set(x, skyTop(), g.z);
     W.scene.add(holder);
@@ -553,7 +566,7 @@
     if (g.bigAt != null && g.clock - g.bigAt > 0.7) { $('gBig').textContent = ''; g.bigAt = null; }
     g.spawn -= dt;
     if (g.spawn <= 0 && g.time > 1.2) {
-      g.spawn = U.lerp(0.85, 0.4, prog) * (0.75 + Math.random() * 0.5);
+      g.spawn = U.lerp(0.85, 0.4, prog) * (0.75 + rnd() * 0.5);
       spawnCatch(prog);
     }
     fall(dt, false);
@@ -609,6 +622,7 @@
   /* ---------- the end of any game ---------- */
   function finish(quit) {
     const id = g.id, score = g.score, caught = g.caught, secs = g.secs, frames = g.frames || 0, info = Games.lastInfo || null, mum = !!g.mumMode;
+    if (g.versus && PN.Online) PN.Online.myEnd(score, !!quit);
     if (g.tut && (!quit || g.tut.count > 1)) Games.tutorial.mark(id);   // leaving straight away from the first card does not count as having seen it
     tutHide(); g.gate = null;
     Games.lastInfo = null;
