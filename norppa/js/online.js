@@ -151,6 +151,14 @@
     if (m.kind === 'invite') return gotInvite(m);
     if (m.kind === 'answer') return gotAnswer(m);
     if (m.kind === 'go') { if (race && race.k === m.k && race.state === 'wait') startRace(); return; }
+    if (m.kind === 'frame') {                        // a small picture of the other player's screen
+      if (race && race.k === m.k && typeof m.f === 'string' && m.f.length < 60000) {
+        const th = race.them, img = th.frameImg || (th.frameImg = new Image());
+        img.onload = () => { th.frameOk = true; th.frameAt = performance.now(); th.fw = m.w || img.naturalWidth; th.fh = m.h || img.naturalHeight; };
+        img.src = 'data:image/jpeg;base64,' + m.f;
+      }
+      return;
+    }
     if (m.kind === 'seat') { if (race && race.k === m.k && PN.Games.netIn) PN.Games.netIn(m); return; }   // Seat Shuffle: where the other player sat
     if (m.kind === 'score' || m.kind === 'end') {
       if (!race || race.k !== m.k) return;
@@ -303,7 +311,7 @@
     if (!ok) { send('end', { k: race.k, s: 0, quit: true }); race = null; return; }
     PN.Games.net = { send: (kind, data) => send(kind, Object.assign({ k: race && race.k }, data)), tie: () => !!(friend && friend.p && String(oid) < String(friend.p.oid)) };
     paintRace();
-    let lastS = -1, lastAt = 0;
+    let lastS = -1, lastAt = 0, lastSnapAt = 0;
     clearInterval(sender);
     sender = setInterval(() => {
       if (!race || race.state !== 'on') { clearInterval(sender); return; }
@@ -312,10 +320,41 @@
       race.me.s = live.score;
       const now = Date.now();
       // with a live picture: 5 a second, small numbers only. Without: when the score changes, and once a second
-      if (live.snap || live.score !== lastS || now - lastAt > 1000) { lastS = live.score; lastAt = now; send('score', { k: race.k, s: live.score, t: live.time == null ? null : Math.ceil(live.time), n: live.snap || undefined }); }
+      const withSnap = live.snap && now - lastSnapAt > 450;       // the drawn backup, twice a second; the real picture is sent separately
+      if (withSnap || live.score !== lastS || now - lastAt > 1000) { lastS = live.score; lastAt = now; if (withSnap) lastSnapAt = now; send('score', { k: race.k, s: live.score, t: live.time == null ? null : Math.ceil(live.time), n: withSnap ? live.snap : undefined }); }
       paintRace();
     }, 200);
     startPip();
+    startFrames();
+  }
+
+  /* ---------- sending a small picture of my own screen ---------- */
+  let frameTimer = null, frameCv = null, lastFrameAt = 0, frameFails = 0;
+  const FRAME_EVERY = 83;                         // about 12 a second (change this one number to try more or fewer)
+  function sendFrame(source) {
+    if (!race || race.state !== 'on' || !friend || frameFails > 4) return;
+    const now = performance.now();
+    if (now - lastFrameAt < FRAME_EVERY) return;
+    lastFrameAt = now;
+    try {
+      const wide = source.width > source.height, w = wide ? 168 : 112, h = Math.max(24, Math.round(w * source.height / source.width));
+      const cv = frameCv || (frameCv = document.createElement('canvas'));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      cv.getContext('2d').drawImage(source, 0, 0, w, h);
+      const url = cv.toDataURL('image/jpeg', 0.5);
+      if (url.length > 40000) return;               // far too big for a small picture: skip this one
+      send('frame', { k: race.k, w, h, f: url.slice(url.indexOf(',') + 1) });
+    } catch (e) { frameFails++; }                   // a browser that will not give up the picture: the drawn view is used instead
+  }
+  function startFrames() {
+    stopFrames(); frameFails = 0;
+    if (race.game === 'piano') {                    // that game draws on its own flat canvas, which can be read at any time
+      frameTimer = setInterval(() => { const c = document.getElementById('pianoCanvas'); if (c && c.width && !document.getElementById('pianoBoard').hidden) sendFrame(c); }, FRAME_EVERY);
+    } else if (PN.World) PN.World.afterRender = (cv) => sendFrame(cv);
+  }
+  function stopFrames() {
+    clearInterval(frameTimer); frameTimer = null;
+    if (PN.World && PN.World.afterRender) PN.World.afterRender = null;
   }
 
   /* ---------- the picture in the corner ---------- */
@@ -333,6 +372,7 @@
     pipRaf = requestAnimationFrame(loop);
   }
   function stopPip() {
+    stopFrames();
     cancelAnimationFrame(pipRaf);
     if (pip) { pip.box.remove(); pip = null; }
   }
@@ -347,11 +387,19 @@
   function drawPip() {
     if (!pip || !race) return;
     const nowT = performance.now(); pip.dt = Math.min(0.1, (nowT - (pipT || nowT)) / 1000); pipT = nowT;
-    const wide = window.innerWidth > window.innerHeight, w = wide ? 132 : 96, h = wide ? 88 : 128, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const wide = window.innerWidth > window.innerHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const th0 = race.them, real = th0.frameOk && th0.frameImg && th0.fw && performance.now() - th0.frameAt < 1500;
+    let w = wide ? 132 : 96, h = wide ? 88 : 128;
+    if (real) { w = wide ? 160 : 108; h = Math.round(Math.min(w * th0.fh / th0.fw, window.innerHeight * 0.3)); }
     const cv = pip.cv;
     if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px'; }
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
     const th = race.them, n = th.snap, dt = th.snapAt ? Math.min(0.6, (performance.now() - th.snapAt) / 1000) : 0, id = race.game;
+    if (real) {                                       // their actual screen
+      c.drawImage(th0.frameImg, 0, 0, w, h);
+      if (th.done) { c.fillStyle = 'rgba(20,40,70,.55)'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(tr('Done'), w / 2, h / 2); }
+      return;
+    }
     const stale = th.snapAt && performance.now() - th.snapAt > 2000;
     c.globalAlpha = stale || th.done ? 0.55 : 1;
     const sky = c.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#a9d3ef'); sky.addColorStop(1, '#eaf5fb');
