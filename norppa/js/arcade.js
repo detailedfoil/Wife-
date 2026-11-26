@@ -2343,7 +2343,9 @@
     function splitY() { return (-v3.set(0, 0, 0.1).project(view.camera).y * 0.5 + 0.5) * window.innerHeight; }
     /* put her back in the sauna: she glides in through the door and settles on the bench, and the next round begins */
     function enter() {
-      held = false; zone = 'in'; mode = 'in'; armed = false; autoT = 0.9; doorT = 1.2; vel.x = vel.y = 0; om = 0; roll = 0;
+      const keep = held;   // still holding her: she stays in the hand, ready to be pulled straight back out; let go and she glides to the bench
+      zone = 'in'; mode = 'in'; armed = false; doorT = 1.2;
+      if (!keep) { held = false; autoT = 0.9; vel.x = vel.y = 0; om = 0; roll = 0; }
       A.play('squeak', 0.4); K.hint(tr(HINT));
       if (tutRound) { tutRound = false; K.beat('solo'); }
     }
@@ -2377,6 +2379,7 @@
         const fy = floorY(com.x) + HALF;
         if (com.y < fy) { head.y += fy - com.y; com.y = fy; }
         vel.x = U.clamp(gv.x, -4, 4); vel.y = U.clamp(gv.y, -2, 4); grounded = false;   // a fast drag must not turn into a slingshot on release
+        if (zone === 'in' && !armed && ptr.y < sp - 80) armed = true;   // she is well inside now, so pulling her out counts
         if (zone === 'in' && mode === 'in' && armed && ptr.y > sp) judge();   // dragged down across the line: out through the door she goes
         else if (zone === 'out' && mode === 'dunked' && ptr.y < sp - 6) enter();   // dragged back up over the line: back into the sauna
         if (mode === 'out' && clockT - outAt > 0.5 && com.y < 0.1 && Math.abs(com.x - TUB.x) < TUB.r) dunk();
