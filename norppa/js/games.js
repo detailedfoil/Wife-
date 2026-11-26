@@ -535,9 +535,15 @@
     $('gamehud').hidden = true;
     let reward = null;
     if (id === 'sauna') { if (!(quit && score === 0)) reward = S.saunaDone(PN.Game.state, score, (Games.opts && Games.opts.need) || 7); Games.opts = null; }
+    else if (PN.GAMES[id] && PN.GAMES[id].lab) Games.opts = null;      // Sauna lab prototypes: no coins, no tiredness, nothing saved
     else if (!(quit && score === 0)) { reward = S.gameReward(PN.Game.state, id, score, caught, null, secs, Date.now(), id === 'piano' && Games.opts ? Games.opts.pay : 1); Games.opts = null; }
     else Games.opts = null;
-    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info, mum);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
+    const lab = PN.GAMES[id] && PN.GAMES[id].lab;
+    if (PN.Track && !lab) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info, mum);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
     PN.Game.endGame(id, score, reward);
+    if (lab && !(quit && !score)) {
+      UI.modal({ title: tr(PN.GAMES[id].title), layout: 'game-result', html: '<div class="result-body"><div class="result-summary"><div class="bigscore">' + score + '</div><p>' + tr(PN.GAMES[id].unit) + '.</p><p class="note">' + tr('A rough prototype. Nothing was paid and nothing was saved.') + '</p></div></div>',
+        actions: [{ label: tr('Play again'), value: 1 }, { label: tr('Done'), value: 0 }] }).then((v) => { if (v === 1) PN.Game.startGame(id); });
+    }
   }
 })(window.PN = window.PN || {});
