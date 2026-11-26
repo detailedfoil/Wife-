@@ -2129,7 +2129,7 @@
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const pullOut = (() => {
     const ROUNDS = 5, HINT = 'Hold her by the head and drag her out of the door when the bar is on the gold line. Then dunk her in the ice hole.';
-    const GRAV = 8, BENCH = 0.5, HALF = 0.19, ZIN = -0.8, TUB = { x: 0.25, z: 2.0, r: 0.7 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.0, ROLL = -PI / 2;
+    const GRAV = 8, BENCH = 0.5, HALF = 0.19, ZIN = -0.8, TUB = { x: 0.25, z: 2.0, r: 0.7 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.0, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
     let rollG = null, roll = 0;
     let live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
@@ -2146,24 +2146,25 @@
     }
     function fit() {
       const c = view.camera; c.aspect = W.aspect; c.fov = W.camera.fov; c.updateProjectionMatrix();
-      const tv = Math.tan(c.fov * PI / 360), d = Math.max(1.75 / (tv * c.aspect), 1.45 / tv) + 0.4;
-      c.position.set(0.1, 2.3, d); c.lookAt(0.1, 0.8, 0.8); c.updateMatrixWorld(true);
+      const tv = Math.tan(c.fov * PI / 360), d = Math.max(1.75 / (tv * c.aspect), 2.0 / tv) + 0.4;
+      c.position.set(0.1, 2.9, d); c.lookAt(0.1, 1.2, 0.8); c.updateMatrixWorld(true);
     }
     function build() {
       view = stage('#1c2a4a', '#4a3a58', { ground: 0xdfe9f2, hemi: 1.15, key: 0.9 });
       const sc = view.scene, wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 }), snow = U.mat(0xeef4fa, { roughness: 1 });
       sc.add(U.box(16, 0.3, 12, snow, 0, -0.15, 1));
-      // a small cabin for one seal: the front wall has a big window and a door
-      [[-0.975, 1.05, 0.15, 2.1], [-0.35, 0.225, 1.1, 0.45], [-0.35, 1.875, 1.1, 0.45], [0.325, 1.05, 0.25, 2.1], [0.7, 1.925, 0.5, 0.35], [1.01, 1.05, 0.12, 2.1]].forEach((r) => sc.add(U.box(r[2], r[3], 0.12, wood, r[0], r[1], 0)));
+      // a small, tall cabin for one seal: the front wall has a big window and a door
+      const WT = 2.1, tw = CH - WT;   // the window runs from the sill up to WT; the wall above it fills the rest of the height
+      [[-0.975, CH / 2, 0.15, CH], [-0.35, 0.225, 1.1, 0.45], [-0.35, WT + tw / 2, 1.1, tw], [0.325, CH / 2, 0.25, CH], [0.7, (1.75 + CH) / 2, 0.5, CH - 1.75], [1.01, CH / 2, 0.12, CH]].forEach((r) => sc.add(U.box(r[2], r[3], 0.12, wood, r[0], r[1], 0)));
       sc.add(U.box(1.2, 0.05, 0.16, dark, -0.35, 0.47, 0.04));   // the window sill
-      sc.add(U.box(0.12, 2.1, 1.4, wood, -1.05, 1.05, -0.7), U.box(0.12, 2.1, 1.4, wood, 1.07, 1.05, -0.7), U.box(2.2, 2.1, 0.12, wood, 0.01, 1.05, -1.4));
-      sc.add(U.box(2.5, 0.14, 1.7, dark, 0.01, 2.17, -0.7), U.box(2.4, 0.12, 1.6, snow, 0.01, 2.3, -0.7));
+      sc.add(U.box(0.12, CH, 1.4, wood, -1.05, CH / 2, -0.7), U.box(0.12, CH, 1.4, wood, 1.07, CH / 2, -0.7), U.box(2.2, CH, 0.12, wood, 0.01, CH / 2, -1.4));
+      sc.add(U.box(2.5, 0.14, 1.7, dark, 0.01, CH + 0.07, -0.7), U.box(2.4, 0.12, 1.6, snow, 0.01, CH + 0.2, -0.7));
       sc.add(U.box(2.1, 0.06, 1.4, dark, 0.01, 0.03, -0.7));
       sc.add(U.box(0.96, 0.08, 0.8, wood, -0.13, BENCH - 0.04, -0.95), U.box(0.96, 0.08, 0.4, wood, -0.13, 0.95, -1.2));
       sc.add(U.box(0.34, 0.5, 0.34, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -0.82, 0.28, -0.75));
       stonesMat = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
       for (let i = 0; i < 5; i++) sc.add(U.ball(0.07 + rnd() * 0.03, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -0.82 + rs(0.1), 0.55 + rnd() * 0.03, -0.75 + rs(0.1), 1, 0.8, 1, 8, 6));
-      lamp = new T.PointLight(0xffa85a, 6, 5); lamp.position.set(-0.2, 1.7, -0.4); sc.add(lamp);
+      lamp = new T.PointLight(0xffa85a, 6, 5); lamp.position.set(-0.2, 2.1, -0.4); sc.add(lamp);
       door = new T.Group(); door.position.set(0.95, 0, 0.08);
       door.add(U.box(0.5, 1.75, 0.05, U.mat(0x8a5a32, { roughness: 0.9 }), -0.25, 0.875, 0), U.ball(0.03, U.mat(0xe2b680, { roughness: 0.4 }), -0.43, 0.9, 0.04));
       sc.add(door);
@@ -2233,11 +2234,11 @@
         let tx = w.x, ty = w.y;
         if (zone === 'in') {
           // forgiving: anything on the door side below the roof counts as the doorway, and the nearer she gets the more she is guided through it
-          if (tx > 0.36 && ty > 2.0) tx = 0.36;
-          tx = Math.max(tx, -0.85); ty = Math.min(ty, 2.0);
+          if (tx > 0.36 && ty > CH - 0.1) tx = 0.36;
+          tx = Math.max(tx, -0.85); ty = Math.min(ty, CH - 0.1);
           const g = U.smooth(0.2, 0.8, head.x);
           if (g > 0) { tx += (OUTX + 0.25 - tx) * g * 0.45; ty += (1.2 - ty) * g * 0.6; }
-        } else { tx = U.clamp(tx, -0.85, 1.05); ty = U.clamp(ty, 0.3, 2.4); }
+        } else { tx = U.clamp(tx, -0.85, 1.05); ty = U.clamp(ty, 0.3, CH - 0.1); }
         const px = head.x, py = head.y, k = 1 - Math.exp(-dt * 16);
         head.x += (tx - head.x) * k; head.y += (ty - head.y) * k;
         const nvx = (head.x - px) / dt, nvy = (head.y - py) / dt;
