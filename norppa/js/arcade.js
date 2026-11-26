@@ -13,6 +13,9 @@
   const T = THREE, U = PN.U, W = PN.World, A = PN.Audio, tr = PN.L, G = PN.Games, K = G.kit;
   const PI = Math.PI;
   const rs = (k) => (Math.random() - 0.5) * 2 * k, rnd = Math.random;
+  /* What decides how a game goes (where the gaps, the rocks, the wind are) uses grnd/grs, which are seeded in an online race so both players get the same game.
+     Scenery and sparkles keep using rnd/rs, which can be called a different number of times on each phone without anyone noticing. */
+  const grnd = () => PN.Games.rnd(), grs = (k) => (grnd() - 0.5) * 2 * k;
   let clock = 0;
 
   /* ---------- shared bits ---------- */
@@ -297,11 +300,11 @@
     }
     function place(o, x) {
       const gap = G.mumMode ? 3.2 : 2.45 - Math.min(0.55, score * 0.025);
-      const mid = G.mumMode ? rs(0.7) : U.clamp(lastGapY + rs(2.4), -2.2, 2.2);
+      const mid = G.mumMode ? grs(0.7) : U.clamp(lastGapY + grs(2.4), -2.2, 2.2);
       lastGapY = mid;
       o.x = x; o.mid = mid; o.top = mid + gap / 2; o.bot = mid - gap / 2; o.passed = false;
       o.ice.position.y = o.top; o.kelp.position.y = o.bot;
-      o.hasFish = rnd() < 0.45; o.fish.visible = o.hasFish;
+      o.hasFish = grnd() < 0.45; o.fish.visible = o.hasFish;
       o.g.position.x = x;
     }
     function flap() {
@@ -331,6 +334,7 @@
     /* a fresh stretch of water for the next go */
     function reset() {
       y = 0.3; vy = 0; dead = false; live = false; score = 0; lastGapY = 0;
+      G.reseed(go);
       bubbles.clear();
       halfW = H * W.aspect;
       used = need();
@@ -341,6 +345,7 @@
       K.time(go + '/' + goes); K.shown(0); K.hint(''); K.big('');
       live = true; flap();
     }
+    const speed0 = () => (dead ? 0 : live ? 2.7 + Math.min(1.5, score * 0.06) : 1.2);
     const tap = () => { if (dead) { if (go < goes && wait <= 0) nextGo(); } else flap(); };
     return {
       label: 'Gaps', label2: 'Go', hint: 'Tap to swim up. Three goes, and the average counts.',
@@ -355,6 +360,10 @@
         K.time(go + '/' + goes);
       },
       go() { live = true; flap(); },
+      snap() {                                      // the corner picture for an online race
+        const n = (v) => Math.round(U.clamp(v, -0.5, 1.5) * 100) / 100, span = CEIL - FLOOR;
+        return { y: n((y - FLOOR) / span), d: dead ? 1 : 0, o: obs.slice(0, used).filter((o) => o.x > -halfW - 1 && o.x < halfW + 1).map((o) => [n((o.x + halfW) / (2 * halfW)), n((o.top - FLOOR) / span), n((o.bot - FLOOR) / span)]), s: n((sx + halfW) / (2 * halfW)), v: Math.round(speed0() / (2 * halfW) * 1000) / 1000 };
+      },
       pointer(type) { if (type === 'down') tap(); },
       key(k) { if (k === ' ' || k === 'ArrowUp' || k === 'w') tap(); },
       update(dt, playing) {
@@ -385,10 +394,10 @@
         // ice above, kelp below
         let far = -99;
         for (let i = 0; i < used; i++) if (obs[i].x > far) far = obs[i].x;
-        for (const want = need(); used < want; used++) { const o = obs[used]; o.g.visible = true; place(o, far + spacing() - 0.25 + rnd() * 0.5); far = o.x; }   // the screen got wider
+        for (const want = need(); used < want; used++) { const o = obs[used]; o.g.visible = true; place(o, far + spacing() - 0.25 + grnd() * 0.5); far = o.x; }   // the screen got wider
         obs.slice(0, used).forEach((o) => {
           if (live) o.x -= dx;
-          if (o.x < -halfW - 1.6) { place(o, far + spacing() - 0.25 + rnd() * 0.5); far = o.x; }
+          if (o.x < -halfW - 1.6) { place(o, far + spacing() - 0.25 + grnd() * 0.5); far = o.x; }
           o.g.position.x = o.x;
           o.fronds.forEach((f) => { f.mesh.morphTargetInfluences[0] = 0.5 + 0.5 * Math.sin(clock * 1.5 + f.ph); });
           if (o.hasFish) { o.fish.position.y = o.mid + Math.sin(clock * 3 + o.x) * 0.12; o.fish.rotation.z = Math.sin(clock * 5 + o.x) * 0.15; }
@@ -619,7 +628,7 @@
     /* New wind, ready for the next throw. */
     function setUp() {
       dist = 5;   // the bucket never moves back
-      wind = Math.round((G.mumMode ? 3 : 10) * Math.pow(rnd(), 1.2) * 10) / 10 * (rnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
+      wind = Math.round((G.mumMode ? 3 : 10) * Math.pow(grnd(), 1.2) * 10) / 10 * (grnd() < 0.5 ? -1 : 1);   // anywhere from 0 to 10, but strong winds come up much less often than gentle ones
       bk.set(0, 0, SZ - dist);
       bucket.position.copy(bk);
       const width = G.mumMode ? 1.35 : 1;
@@ -897,8 +906,9 @@
     }
     function next() {
       n++;
-      target.x = n === 1 ? 0 : rs(G.mumMode ? 0.6 : 1.5);
-      target.z = n === 1 || G.mumMode ? -6.5 : -(5 + rnd() * 5);
+      G.reseed(n);
+      target.x = n === 1 ? 0 : grs(G.mumMode ? 0.6 : 1.5);
+      target.z = n === 1 || G.mumMode ? -6.5 : -(5 + grnd() * 5);
       rings.position.set(target.x, 0.012, target.z);
       const size = G.mumMode ? 1.4 : 1;
       rings.scale.set(size, size, 1);
@@ -907,7 +917,7 @@
       const count = G.mumMode ? 0 : n >= 6 ? 2 : n >= 3 ? 1 : 0;
       blocks.forEach((b, i) => {
         b.on = i < count; b.g.visible = b.on;
-        b.z = U.lerp(START_Z, target.z, i ? 0.72 : 0.42); b.ph = rnd() * 6; b.sp = 1.3 + rnd() * 0.9;
+        b.z = U.lerp(START_Z, target.z, i ? 0.72 : 0.42); b.ph = grnd() * 6; b.sp = 1.3 + grnd() * 0.9;
       });
       face(PI);
       if (count) K.beat('blocks');
@@ -1136,14 +1146,15 @@
       put('tree', (rows % 2 ? 1 : -1) * (track + 3.2 + rnd() * 4), z + rs(1.5), 0, 1.5 + rnd() * 1.2);
       if (rows < 3) return;
       // one lane is always open, and never far from the last open one
-      free = U.clamp(free + Math.round(rs(2.4)), 0, 4);
-      const count = G.mumMode ? 1 : 1 + (rnd() < 0.6 ? 1 : 0) + (dist > 150 && rnd() < 0.35 ? 1 : 0);
-      const lanes = [0, 1, 2, 3, 4].filter((i) => i !== free).sort(() => rnd() - 0.5).slice(0, count);
-      lanes.forEach((i) => {
-        if (rnd() < 0.65) put('tree', lane(i) + rs(0.22), z + rs(0.7), 0.4, 0.95 + rnd() * 0.3);
-        else put('rock', lane(i) + rs(0.22), z + rs(0.7), 0.36);
+      free = U.clamp(free + Math.round(grs(2.4)), 0, 4);
+      const count = G.mumMode ? 1 : 1 + (grnd() < 0.6 ? 1 : 0) + (dist > 150 && grnd() < 0.35 ? 1 : 0);
+      const lanes = [0, 1, 2, 3, 4].filter((i) => i !== free);
+      for (let i = lanes.length - 1; i > 0; i--) { const j = Math.floor(grnd() * (i + 1)); const t = lanes[i]; lanes[i] = lanes[j]; lanes[j] = t; }   // a shuffle that gives the same result on every browser
+      lanes.slice(0, count).forEach((i) => {
+        if (grnd() < 0.65) put('tree', lane(i) + grs(0.22), z + grs(0.7), 0.4, 0.95 + grnd() * 0.3);
+        else put('rock', lane(i) + grs(0.22), z + grs(0.7), 0.36);
       });
-      const r = rnd();
+      const r = grnd();
       if (r < 0.3) put('fish', lane(free), z, 0.45);
       else if (r < 0.4) put('ramp', lane(free), z, 0.5);
     }
@@ -1172,6 +1183,13 @@
         rowAt = 0;
       },
       go() { going = true; A.play('whoosh'); },
+      snap() {                                      // the corner picture for an online race
+        const r2 = (n) => Math.round(n * 100) / 100, items = [];
+        ['tree', 'rock', 'fish', 'ramp'].forEach((kind, k) => pool[kind].forEach((o) => {
+          if (o.live && o.r > 0 && o.z > -24 && o.z < 4 && Math.abs(o.x) <= track + 0.4) items.push([k, r2(o.x / track), r2(o.z)]);
+        }));
+        return { x: r2(x / track), it: items.slice(0, 24), v: dead ? 0 : going ? r2(9 + Math.min(9, dist / 60)) : 3, d: dead ? 1 : 0 };
+      },
       pointer(type, px) {
         if (type === 'up') { lastPx = null; return; }
         if (!wide) { tx = U.clamp((px / window.innerWidth * 2 - 1) * track * 1.15, -track, track); return; }
@@ -2022,6 +2040,7 @@
       try { lastSong = localStorage.getItem('pikkunorppa.kantele.lastSong') || lastSong; } catch (e) { /* storage is optional */ }
       const songs = Object.keys(PN.SONGS), fresh = songs.filter((id) => id !== lastSong);
       const choices = fresh.length ? fresh : songs;
+      if (G.seeded()) return PN.SONGS[songs.slice().sort()[Math.floor(grnd() * songs.length)]];   // an online race: the same tune for both, not the one remembered here
       const id = choices[Math.floor(Math.random() * choices.length)];
       lastSong = id;
       try { localStorage.setItem('pikkunorppa.kantele.lastSong', id); } catch (e) { /* keep the in-memory choice */ }

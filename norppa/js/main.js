@@ -659,6 +659,7 @@
   G.raceRefuse = function (why) { if (why === 'busy') A.play('nope'); else refuse(why); };
   G.raceStart = function (id, versus) {
     if (G.raceReady() !== true) return false;
+    if (!PN.GAMES[id] || !S.gameOwned(state, id) || (PN.GAMES[id].ext && !PN.Games.ext[id])) return false;
     UI.closeSheet();
     seal.halt();
     PN.Games.start(id, versus);
