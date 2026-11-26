@@ -227,9 +227,9 @@
   };
 
   /* ---------- fish ---------- */
-  function fishTexture(look) {
-    const r = U.rng((look.back ^ look.belly) | 0);
+  function fishTexture(look, pearly) {
     return U.tex(128, 64, (g, w, h) => {
+      const r = U.rng((look.back ^ look.belly) | 0);
       const grad = g.createLinearGradient(0, 0, 0, h);
       grad.addColorStop(0, U.hex(look.back)); grad.addColorStop(0.4, U.hex(look.back));
       grad.addColorStop(0.62, U.hex(look.belly)); grad.addColorStop(1, U.hex(look.belly));
@@ -247,6 +247,22 @@
           g.beginPath(); g.ellipse(r() * w, (0.06 + r() * 0.52) * h, 1 + r() * big, 1 + r() * big * 0.7, r() * 3, 0, TAU); g.fill();
         }
       }
+      if (pearly) {
+        // Both flanks catch the light as a falling fish rolls. Keep the markings
+        // above the iridescent stripe so each species keeps its own colours.
+        g.globalAlpha = 1;
+        const pearl = g.createLinearGradient(0, h * 0.42, 0, h * 0.68);
+        pearl.addColorStop(0, 'rgba(255,251,227,0)'); pearl.addColorStop(0.5, 'rgba(255,251,227,0.42)');
+        pearl.addColorStop(1, 'rgba(255,251,227,0)');
+        g.fillStyle = pearl; g.fillRect(0, h * 0.42, w, h * 0.26);
+        g.strokeStyle = 'rgba(255,249,226,0.42)'; g.lineWidth = 1.1;
+        for (const u of [0.25, 0.75]) for (let row = 0; row < 2; row++) {
+          for (let j = -2; j <= 2; j++) {
+            const x = w * u + j * 4 + row * 2, y = h * 0.48 + row * 3;
+            g.beginPath(); g.moveTo(x - 1.3, y); g.quadraticCurveTo(x, y + 1.8, x + 1.3, y); g.stroke();
+          }
+        }
+      }
     });
   }
 
@@ -259,7 +275,7 @@
   }
 
   /* A fish lying along x, nose to +x. look comes from the FISH table. */
-  P.fish = function (look) {
+  P.fish = function (look, pearly = false) {
     const b = look.tall, c = b * 0.55, snout = look.snout || 1;
     const geo = new T.SphereGeometry(1, 22, 14);
     const pos = geo.attributes.position;
@@ -270,7 +286,7 @@
     }
     geo.computeVertexNormals();
     const isGold = look.pattern === 'gold';
-    const body = new T.Mesh(geo, new T.MeshStandardMaterial({ map: fishTexture(look), roughness: 0.42,
+    const body = new T.Mesh(geo, new T.MeshStandardMaterial({ map: fishTexture(look, pearly), roughness: 0.42,
       emissive: isGold ? 0xb07a10 : 0x000000, emissiveIntensity: isGold ? 0.7 : 0 }));
     const finMat = new T.MeshStandardMaterial({ color: look.fin, roughness: 0.6, side: T.DoubleSide,
       emissive: isGold ? 0xb07a10 : 0x000000, emissiveIntensity: isGold ? 0.5 : 0 });

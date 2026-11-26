@@ -288,8 +288,14 @@
     for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
       const x = coord(i), z = coord(j) - 2, k = (j * (N + 1) + i) * 3;
       pos[k] = x; pos[k + 1] = terrainY(x, z); pos[k + 2] = z;
-      const d = landD(x, z), shade = 0.93 + 0.07 * n2(x * 0.7, z * 0.7) - 0.06 * (1 - U.smooth(0, 0.9, d));
-      col[k] = 0.80 * shade; col[k + 1] = 0.87 * shade; col[k + 2] = 0.985 * shade;
+      // A pale wind-packed lip and a cool hollow follow the actual bank around each inlet.
+      const d = landD(x, z), drift = n2(x * 0.46, z * 1.3);
+      const lip = Math.exp(-Math.pow((d - 0.58 - 0.25 * drift) / 0.50, 2));
+      const edge = 1 - U.smooth(0.05, 1.05, d);
+      const shade = 0.92 + 0.08 * drift;
+      col[k] = 0.81 * shade + 0.12 * lip - 0.16 * edge;
+      col[k + 1] = 0.87 * shade + 0.10 * lip - 0.065 * edge;
+      col[k + 2] = 0.96 * shade + 0.045 * lip;
       if (i < N && j < N) { const p = j * (N + 1) + i; idx.push(p, p + N + 1, p + 1, p + 1, p + N + 1, p + N + 2); }
     }
     const uv = new Float32Array((N + 1) * (N + 1) * 2);
@@ -307,16 +313,30 @@
     // lake ice
     const iceTex = U.tex(512, 512, (c, w, h) => {
       const r = U.rng(5);
-      c.fillStyle = '#c9dff0'; c.fillRect(0, 0, w, h);
-      for (let i = 0; i < 46; i++) {                        // wind-blown snow lying on the ice
-        c.fillStyle = 'rgba(255,255,255,' + (0.18 + r() * 0.3) + ')';
-        c.beginPath(); c.ellipse(r() * w, r() * h, 30 + r() * 80, 8 + r() * 22, r() * 0.5 - 0.25, 0, TAU); c.fill();
+      c.fillStyle = '#c4dce9'; c.fillRect(0, 0, w, h);
+      // Repeat each brush stroke across the tile seam. Wind scours long clear
+      // streaks in the ice and leaves softer powder along their upper edges.
+      for (let i = 0; i < 40; i++) {
+        const x = r() * w, y = r() * h, rx = 20 + r() * 74, ry = 4 + r() * 12;
+        const angle = -0.16 + 0.16 * r(), powder = i % 4 !== 0;
+        for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) {
+          c.save(); c.translate(x + dx, y + dy); c.rotate(angle); c.scale(rx, ry);
+          const wash = c.createRadialGradient(0, 0, 0, 0, 0, 1);
+          wash.addColorStop(0, powder ? 'rgba(255,251,241,0.48)' : 'rgba(98,149,175,0.23)');
+          wash.addColorStop(0.56, powder ? 'rgba(248,250,252,0.23)' : 'rgba(103,153,183,0.10)');
+          wash.addColorStop(1, 'rgba(225,241,250,0)');
+          c.fillStyle = wash; c.fillRect(-1, -1, 2, 2); c.restore();
+        }
       }
-      c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.2; c.lineJoin = 'round';
-      for (let i = 0; i < 9; i++) {                         // cracks
-        let x = r() * w, y = r() * h; c.beginPath(); c.moveTo(x, y);
-        for (let k = 0; k < 6; k++) { x += (r() - 0.5) * 130; y += (r() - 0.5) * 130; c.lineTo(x, y); }
-        c.stroke();
+      c.lineJoin = c.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const x = 12 + r() * (w - 148), y = 24 + r() * (h - 52);
+        const length = 45 + r() * 77, bend = r() * 15 - 7;
+        c.beginPath(); c.moveTo(x, y);
+        c.lineTo(x + length * 0.31, y + bend); c.lineTo(x + length * 0.63, y + bend - 5);
+        c.quadraticCurveTo(x + length * 0.84, y + bend - 6, x + length, y - 10);
+        c.strokeStyle = 'rgba(113,162,185,0.24)'; c.lineWidth = 1.8; c.stroke();
+        c.strokeStyle = 'rgba(250,253,255,0.65)'; c.lineWidth = 0.8; c.stroke();
       }
     });
     iceTex.wrapS = iceTex.wrapT = T.RepeatWrapping; iceTex.repeat.set(26, 26);

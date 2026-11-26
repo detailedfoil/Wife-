@@ -222,15 +222,91 @@
   /* One model of each fish is built once, then copied for every fish that falls. */
   const fishModels = {};
   function fishCopy(id) {
-    if (!fishModels[id]) fishModels[id] = PN.Props.fish(PN.items[id].look);
+    if (!fishModels[id]) fishModels[id] = PN.Props.fish(PN.items[id].look, true);
     return fishModels[id].clone();
   }
-  let snowGeo = null;
+  let snowModel;
   function snowball() {
-    if (!snowGeo) snowGeo = new T.SphereGeometry(0.27, 14, 10);
-    const m = new T.Mesh(snowGeo, U.mat(0xffffff, { roughness: 1 }));
-    m.castShadow = true;
-    return m;
+    if (!snowModel) {
+      const geo = new T.SphereGeometry(0.27, 24, 18);
+      const pos = geo.attributes.position, colors = [];
+      const shade = new T.Color(0xafc9dd), light = new T.Color(0xfff9f0), tint = new T.Color();
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const fold = Math.sin(19 * x + 6 * y) * Math.cos(15 * z - 9 * y);
+        const k = 1 + 0.045 * fold;
+        pos.setXYZ(i, x * k, y * k, z * k);
+        tint.copy(shade).lerp(light, U.clamp(0.62 + y + 0.18 * fold, 0, 1));
+        colors.push(tint.r, tint.g, tint.b);
+      }
+      geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+      snowModel = new T.Mesh(geo, U.mat(0xffffff, { vertexColors: true, roughness: 1 }));
+      snowModel.castShadow = true;
+    }
+    return snowModel.clone();
+  }
+
+  const shoreSets = {};
+  let matchBall;
+  function matchBallMaterial() {
+    if (matchBall) return matchBall;
+    const map = U.tex(384, 192, (c, w, h) => {
+      const panels = ['#e97559', '#fff1cd', '#397e97', '#fff1cd', '#e4a244', '#fff1cd'];
+      panels.forEach((col, i) => {
+        const left = i * w / 6;
+        c.fillStyle = col; c.fillRect(left, 0, w / 6 + 1, h);
+        const sheen = c.createLinearGradient(left, 0, left + w / 6, 0);
+        sheen.addColorStop(0, 'rgba(34,62,78,0.22)'); sheen.addColorStop(0.12, 'rgba(255,255,255,0.18)');
+        sheen.addColorStop(0.65, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(34,62,78,0.12)');
+        c.fillStyle = sheen; c.fillRect(left, 0, w / 6, h);
+      });
+      for (const y of [0, h - 17]) {
+        c.fillStyle = '#efcd91'; c.fillRect(0, y, w, 17);
+        c.fillStyle = '#fff2d5'; c.fillRect(0, y === 0 ? 0 : y + 3, w, 14);
+      }
+    });
+    matchBall = new T.MeshStandardMaterial({ map, roughness: 0.42 });
+    return matchBall;
+  }
+
+  function shoreSet(id) {
+    if (shoreSets[id]) return shoreSets[id];
+    const group = new T.Group(), cream = U.mat(0xffe7ba);
+    const wood = new T.MeshStandardMaterial({ color: 0xb88857, map: U.surfaceTex('wood'), roughness: 0.94 });
+    if (id === 'catch') {
+      // An enamel bait pail with a rolled lip, a dark open mouth and a bent wire handle.
+      const enamel = U.mat(0x5c9495, { roughness: 0.48 }), metal = U.mat(0xe3cfaa);
+      const pail = U.group(U.cyl(0.38, 0.29, 0.57, enamel, 0, 0.30, 0, 32),
+        U.cyl(0.35, 0.35, 0.015, U.mat(0x365657), 0, 0.588, 0, 32),
+        U.rot(U.torus(0.37, 0.027, metal, 0, 0.59, 0), Math.PI / 2, 0, 0),
+        U.torus(0.37, 0.019, metal, 0, 0.49, 0, Math.PI),
+        U.cyl(0.347, 0.339, 0.052, cream, 0, 0.34, 0, 32));
+      pail.rotation.y = -0.35;
+      pail.position.set(-2.85, W.groundY(-2.85, -0.25), -0.25);
+      group.add(pail);
+      const rod = U.group(U.cyl(0.024, 0.045, 1.34, wood, 0, 0.89, 0),
+        U.cyl(0.062, 0.055, 0.38, U.mat(0x996445), 0, 0.21, 0),
+        U.cyl(0.10, 0.10, 0.09, enamel, 0.06, 0.38, 0, 16));
+      rod.children[2].rotation.x = Math.PI / 2;
+      rod.position.copy(pail.position); rod.position.x -= 0.27; rod.position.z -= 0.22;
+      rod.rotation.z = 0.31; group.add(rod);
+    } else {
+      for (const side of [-1, 1]) {
+        const marker = U.group(U.cyl(0.035, 0.046, 0.92, wood, 0, 0.46, 0),
+          U.ball(0.065, cream, 0, 0.95, 0));
+        const flag = new T.Shape();
+        flag.moveTo(0, 0.90); flag.quadraticCurveTo(0.21, 0.93, 0.48, 0.83);
+        flag.quadraticCurveTo(0.23, 0.78, 0, 0.66); flag.closePath();
+        const cloth = U.mesh(new T.ShapeGeometry(flag), U.mat(side < 0 ? 0xdf7358 : 0x477e94, { side: T.DoubleSide }));
+        cloth.scale.x = side; marker.add(cloth);
+        marker.position.set(side * 2.87, W.groundY(side * 2.87, -0.3), -0.3);
+        group.add(marker);
+      }
+    }
+    U.shadows(group, true, true);
+    shoreSets[id] = group;
+    return group;
   }
   function pickFish() {
     const list = D.FISH;
@@ -290,10 +366,12 @@
     W.setCamMode('game');
     W.stage(true);
     W.ball.visible = false;
+    W.scene.add(shoreSet(id));
     seal.sulk = false; seal.petting = 0;
     seal.moveTo(0, LANE_Z, { speed: 3.2, face: 0 });
     g = { id, seal, mumMode, saves: mumMode ? 2 : 0, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
       keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null, secs: 0 };
+    if (id === 'ball') { g.homeBallMaterial = W.ball.material; W.ball.material = matchBallMaterial(); }
     if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
   };
 
@@ -535,6 +613,8 @@
     tutHide(); g.gate = null;
     Games.lastInfo = null;
     (g.items || []).forEach((it) => W.scene.remove(it.m));
+    if (shoreSets[id]) W.scene.remove(shoreSets[id]);
+    if (g.homeBallMaterial) W.ball.material = g.homeBallMaterial;
     if (g.ext && g.ext.stop) g.ext.stop();
     g = null;
     Games.active = null;

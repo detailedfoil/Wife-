@@ -145,53 +145,149 @@
     const need = () => U.clamp(Math.ceil((2 * halfW + 3.2 + 5) / spacing()) + 1, 5, N);
     let halfW = 2.2, sx = -1, y = 0, vy = 0, dead = false, lastGapY = 0, score = 0, live = false, go = 1, goes = 3, scores = [0], avg = 0, wait = 0;
 
-    function frond(mat, ph) {
-      const root = new T.Group(), joints = [];
-      let cur = root;
-      for (let i = 0; i < 12; i++) {
-        const j = new T.Group();
-        j.position.y = i ? 0.55 : 0;
-        j.add(U.ball(0.3, mat, 0, 0.28, 0, 0.5, 1.05, 0.22, 10));
-        cur.add(j); joints.push(j); cur = j;
+    // One folded ribbon per blade. The two sway shapes meet at the same tip,
+    // so the kelp can ripple without moving the edge of the playable gap.
+    function kelpBlade() {
+      const points = [], wave = [], colors = [], indices = [], rows = 30;
+      const dark = new T.Color(0x408676), bright = new T.Color(0xc2e797), tint = new T.Color();
+      for (let i = 0; i <= rows; i++) {
+        const t = i / rows, envelope = Math.sin(PI * t);
+        const width = 0.016 + 0.16 * Math.pow(envelope, 0.55) * (0.86 + 0.14 * Math.cos(t * PI * 9));
+        const x = 0.075 * Math.sin(t * PI * 5) * envelope;
+        for (const side of [-1, 0, 1]) {
+          const px = x + width * side, py = t * 6.6, pz = side === 0 ? 0.06 * envelope : 0;
+          points.push(px, py, pz);
+          wave.push(px + 0.12 * envelope * Math.sin(t * PI * 4 + 0.6), py, pz);
+          tint.copy(dark).lerp(bright, (side === 0 ? 0.37 : 0.08) + 0.44 * t);
+          colors.push(tint.r, tint.g, tint.b);
+        }
+        if (i < rows) for (let j = 0; j < 2; j++) {
+          const n = 3 * i + j;
+          indices.push(n, n + 1, n + 3, n + 1, n + 4, n + 3);
+        }
       }
-      return { root, joints, ph };
+      const geo = new T.BufferGeometry();
+      geo.setIndex(indices); geo.setAttribute('position', new T.Float32BufferAttribute(points, 3));
+      geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+      geo.morphAttributes.position = [new T.Float32BufferAttribute(wave, 3)];
+      geo.computeVertexNormals();
+      return geo;
     }
+
+    function lakeBackdrop() {
+      const map = U.tex(1536, 384, (c, w, h) => {
+        const r = U.rng(1087), water = c.createLinearGradient(0, 0, 0, h);
+        for (const [y, col] of [[0, '#b2e6db'], [0.25, '#7ec7c8'], [0.62, '#448ca5'], [1, '#234b70']]) water.addColorStop(y, col);
+        c.fillStyle = water; c.fillRect(0, 0, w, h);
+        for (let layer = 0; layer < 2; layer++) {
+          c.fillStyle = layer ? '#3b7287' : '#5792a1';
+          const base = h * (0.70 + layer * 0.12);
+          c.beginPath(); c.moveTo(0, h); c.lineTo(0, base);
+          for (let x = 0; x < w; x += 96) {
+            const crest = base - r() * 47;
+            c.bezierCurveTo(x + 28, base + 6, x + 52, crest - 14, x + 96, crest);
+          }
+          c.lineTo(w, h); c.closePath(); c.fill();
+        }
+        // Water weeds in the distance, painted together in a single draw.
+        c.fillStyle = 'rgba(46,108,119,0.57)';
+        for (let i = 0; i < 58; i++) {
+          const x = r() * w, y = h * (0.84 + r() * 0.15), length = 10 + r() * 33;
+          for (let j = -1; j <= 1; j++) {
+            const tip = x + j * 9, top = y - length * (1 - Math.abs(j) * 0.27);
+            c.beginPath(); c.moveTo(x - 2, y); c.quadraticCurveTo(tip - 4, top + 8, tip, top);
+            c.quadraticCurveTo(tip + 1, top + 13, x + 2, y); c.fill();
+          }
+        }
+      });
+      const plane = new T.Mesh(new T.PlaneGeometry(58, 15), new T.MeshBasicMaterial({ map, fog: false, toneMapped: false }));
+      plane.position.z = -4;
+      return plane;
+    }
+
+    function lakeBank(ceiling) {
+      // Round the exposed edge over the bank. Each row is a band of snow,
+      // blue ice or silt, so the cross-section reads even on a narrow screen.
+      const rows = ceiling
+        ? [[-2.5, 0.14, 0x80bfca], [-0.75, 0.02, 0xa3d9de], [0.35, 0.09, 0xc1e7e8],
+          [0.51, 0.20, 0x95ccda], [0.54, 0.31, 0xafdee4], [0.55, 0.44, 0xdeefee], [0.55, 8, 0xf1f8f6]]
+        : [[-2, -0.34, 0x416a76], [-0.8, -0.07, 0x668787], [0.35, -0.03, 0x86a49c],
+          [1.15, -0.12, 0x6d8c89], [1.58, -0.24, 0x547879], [1.68, -0.56, 0x4b6973], [1.68, -8, 0x345569]];
+      const pts = [], colors = [], idx = [], tint = new T.Color();
+      for (let i = 0; i <= 140; i++) {
+        const x = (i - 70) * 0.5, swell = 0.045 * Math.sin(x * 1.8) + 0.058 * Math.cos(x * 0.76 + 0.8);
+        rows.forEach(([z, y, col], j) => {
+          pts.push(x, (ceiling ? CEIL : FLOOR) + y + swell, z);
+          tint.setHex(col).multiplyScalar(0.97 + 0.04 * Math.cos(x * 0.65 + j * 0.3));
+          colors.push(tint.r, tint.g, tint.b);
+          if (i < 140 && j < rows.length - 1) {
+            const a = i * rows.length + j, b = a + rows.length;
+            idx.push(a, b, a + 1, b, b + 1, a + 1);
+          }
+        });
+      }
+      const geo = new T.BufferGeometry();
+      geo.setIndex(idx); geo.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
+      geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3)); geo.computeVertexNormals();
+      return new T.Mesh(geo, U.mat(0xffffff, { vertexColors: true, roughness: ceiling ? 0.54 : 1, side: T.DoubleSide }));
+    }
+
     function build() {
       view = stage('#86d6e4', '#0a2a55', { ground: 0x5f9fd0, hemi: 2.1, key: 1.3 });
       const sc = view.scene;
-      sc.fog = new T.Fog(0x1c5a8c, 9, 34);
-      const iceM = U.mat(0xe8f6ff, { roughness: 0.35 }), sandM = U.mat(0x2a4f73, { roughness: 1 }), rockM = U.mat(0x3a6288, { roughness: 1 });
-      sc.add(U.box(70, 12, 2.9, iceM, 0, CEIL + 6, -1), U.box(70, 12, 3.4, sandM, 0, FLOOR - 6, 0));
+      sc.add(lakeBackdrop());
+      sc.fog = new T.FogExp2(0x5799a9, 0.022);
+      const iceM = U.mat(0xb5dae1, { roughness: 0.44 }), rockM = U.mat(0x64828a, { roughness: 1 });
+      sc.add(lakeBank(true), lakeBank(false));
       for (let i = 0; i < 12; i++) {
         const bump = U.ball(1, iceM, 0, CEIL + 0.05, -0.6 + rs(0.4), 0.8 + rnd() * 0.9, 0.22 + rnd() * 0.25, 1.2, 12);
         const rock = U.ball(1, rockM, 0, FLOOR - 0.05, rs(0.8), 0.5 + rnd() * 0.8, 0.2 + rnd() * 0.3, 1, 10);
         bump.userData.x = i * 2.1 + rs(0.5); rock.userData.x = i * 2.1 + rs(0.8);
         sc.add(bump, rock); drift.push(bump, rock);
       }
-      const rayM = new T.MeshBasicMaterial({ color: 0xc8f2ff, transparent: true, opacity: 0.075, blending: T.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
+      const rayMap = U.tex(64, 128, (c, w, h) => {
+        const edge = c.createLinearGradient(0, 0, w, 0);
+        edge.addColorStop(0, 'transparent'); edge.addColorStop(0.48, '#eefff2'); edge.addColorStop(1, 'transparent');
+        c.fillStyle = edge; c.fillRect(0, 0, w, h);
+        const fade = c.createLinearGradient(0, 0, 0, h);
+        fade.addColorStop(0, '#fff'); fade.addColorStop(1, 'transparent');
+        c.globalCompositeOperation = 'destination-in'; c.fillStyle = fade; c.fillRect(0, 0, w, h);
+        c.globalCompositeOperation = 'source-over';
+      });
+      const rayM = new T.MeshBasicMaterial({ map: rayMap, color: 0xe7fff3, transparent: true, opacity: 0.27, blending: T.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
       for (let i = 0; i < 4; i++) {
         const r = new T.Mesh(new T.PlaneGeometry(1.1 + rnd() * 1.2, 15), rayM);
         r.position.set(-4 + i * 2.6, 0.5, -1.9); r.rotation.z = 0.3;
         r.userData.ph = rnd() * 6;
         sc.add(r); rays.push(r);
       }
-      const iceCol = new T.MeshStandardMaterial({ color: 0xd4efff, roughness: 0.2, flatShading: true, emissive: 0x1d4468 });
-      const iceGeo = new T.CylinderGeometry(0.62, 0.3, 9, 6), tipGeo = new T.ConeGeometry(0.3, 0.35, 6);
-      const k1 = U.mat(0x2f9160, { roughness: 0.8 }), k2 = U.mat(0x44ab6e, { roughness: 0.8 });
+      const profile = [[0.035, 0], [0.16, 0.10], [0.27, 0.32], [0.32, 0.62], [0.40, 1.35], [0.46, 2.8], [0.54, 5.2], [0.62, 9]];
+      const iceGeo = new T.LatheGeometry(profile.map(([r, y]) => new T.Vector2(r, y)), 14);
+      const facets = [], icePos = iceGeo.attributes.position;
+      const blue = new T.Color(0x72bfcf), white = new T.Color(0xe7fcf5), tint = new T.Color();
+      for (let i = 0; i < icePos.count; i++) {
+        const y = icePos.getY(i), angle = Math.atan2(icePos.getX(i), icePos.getZ(i));
+        const band = 0.12 * Math.cos(angle * 3 + y * 0.7) + 0.07 * Math.sin(y * 4 + angle);
+        tint.copy(blue).lerp(white, U.clamp(0.38 + 0.44 * Math.exp(-y * 1.7) + band, 0, 1));
+        facets.push(tint.r, tint.g, tint.b);
+      }
+      iceGeo.setAttribute('color', new T.Float32BufferAttribute(facets, 3));
+      const iceCol = U.mat(0xffffff, { vertexColors: true, roughness: 0.33 });
+      const blade = kelpBlade();
+      const k1 = U.mat(0x87b8a3, { vertexColors: true, side: T.DoubleSide });
+      const k2 = U.mat(0xe2ebc1, { vertexColors: true, side: T.DoubleSide });
       const fishLook = PN.items.muikku.look;
       for (let i = 0; i < N; i++) {
         const g = new T.Group();
-        const ice = new T.Group();
-        const tip = new T.Mesh(tipGeo, iceCol); tip.rotation.x = PI; tip.position.y = -0.17;
-        ice.add(U.mesh(iceGeo, iceCol, 0, 4.5, 0), tip);
+        const ice = new T.Mesh(iceGeo, iceCol);
         ice.rotation.y = rnd() * 3;
         const kelp = new T.Group(), fronds = [];
         [[-0.27, -0.45, k1], [0.02, 0, k2], [0.29, -0.3, k1]].forEach((d) => {
-          const f = frond(d[2], rnd() * 6);
-          f.root.position.set(d[0], d[1] - 6.6, rs(0.15));
-          kelp.add(f.root); fronds.push(f);
+          const mesh = new T.Mesh(blade, d[2]), ph = rnd() * 6;
+          mesh.position.set(d[0], d[1] - 6.6, rs(0.15));
+          kelp.add(mesh); fronds.push({ mesh, ph });
         });
-        const fish = PN.Props.fish(fishLook);
+        const fish = PN.Props.fish(fishLook, true);
         fish.scale.setScalar(0.32); fish.rotation.y = PI;
         g.add(ice, kelp, fish);
         sc.add(g);
@@ -294,7 +390,7 @@
           if (live) o.x -= dx;
           if (o.x < -halfW - 1.6) { place(o, far + spacing() - 0.25 + rnd() * 0.5); far = o.x; }
           o.g.position.x = o.x;
-          o.fronds.forEach((f) => f.joints.forEach((j, i) => { j.rotation.z = Math.sin(clock * 1.5 + i * 0.6 + f.ph) * 0.03; }));
+          o.fronds.forEach((f) => { f.mesh.morphTargetInfluences[0] = 0.5 + 0.5 * Math.sin(clock * 1.5 + f.ph); });
           if (o.hasFish) { o.fish.position.y = o.mid + Math.sin(clock * 3 + o.x) * 0.12; o.fish.rotation.z = Math.sin(clock * 5 + o.x) * 0.15; }
           if (!playing || dead) return;
           const ax = Math.abs(o.x - sx);
