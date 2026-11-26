@@ -272,21 +272,27 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .g-big.pop { animation: pop .5s cubic-bezier(.2, .9, .3, 1.4); }
 .g-big.too-slow { top: 38%; font-size: min(68px, 17vw); color: #ffd3d3; }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } }
-/* Ice Piano: four lanes of dark water with ice tiles sliding down them, drawn on a canvas. */
+/* Four brass strings on a stained-wood soundboard. Notes are drawn on the canvas. */
 .pt { position: absolute; left: 50%; top: 36%; bottom: 0; transform: translateX(-50%); width: min(100vw, 480px); pointer-events: auto; overflow: hidden; border-radius: 22px 22px 0 0;
-  background: #173a73; box-shadow: inset 0 0 0 3px #2a579f, 0 -6px 24px rgba(8, 20, 40, .35); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  background: repeating-linear-gradient(88deg, transparent 0 24px, rgba(227,188,141,.035) 26px, transparent 29px 57px), linear-gradient(100deg, #43363c, #684b47 36%, #543e40 72%, #41343b);
+  box-shadow: inset 0 0 0 3px #aa8568, inset 0 5px 0 #edd1a5, 0 -6px 24px rgba(31, 31, 47, .32); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
 .pt canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 /* Puffer Sweep: floes of ice on dark water. Opening a tile leaves the water, with a number on it. */
 .pf { position: absolute; left: 50%; bottom: calc(10px + var(--sb)); transform: translateX(-50%); width: max-content; pointer-events: auto; padding: 7px; border-radius: 22px;
-  background: #173a73; box-shadow: inset 0 0 0 3px #2a579f, 0 10px 30px rgba(8, 20, 40, .45); --board-size: 9; --t: min((100vw - 26px) / var(--board-size), (100vh - 290px) / var(--board-size), 50px);
+  background: linear-gradient(145deg, #265967, #204957 54%, #18374b);
+  box-shadow: inset 0 0 0 2px #7aafb5, inset 0 0 0 5px #335e69, 0 10px 30px rgba(8, 34, 48, .38); --board-size: 9; --t: min((100vw - 26px) / var(--board-size), (100vh - 290px) / var(--board-size), 50px);
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .pf-tip { position: absolute; left: -8px; right: -8px; bottom: calc(100% + 10px); width: fit-content; margin: 0 auto; padding: 4px 12px; border-radius: 14px; background: rgba(16, 43, 82, .6); text-align: center; font: 600 16px var(--display); color: #fff; text-shadow: 0 2px 0 rgba(13, 24, 60, .55), 0 0 12px rgba(13, 24, 60, .5); pointer-events: none; text-wrap: balance; }   /* a soft dark pill, so it reads over the white ice floes behind it */
 .pf-grid { display: grid; grid-template-columns: repeat(var(--board-size), var(--t)); grid-auto-rows: var(--t); touch-action: none; }
 .pf-c { margin: 1.5px; border-radius: calc(var(--t) * .22); display: grid; place-items: center; font: 600 calc(var(--t) * .56)/1 var(--display); color: #fff; touch-action: none;
-  background: linear-gradient(#fafdff, #c3e2fa); box-shadow: inset 0 2px 0 #fff, 0 2px 0 #6f9fd6; -webkit-tap-highlight-color: transparent; }
+  background: radial-gradient(ellipse at 29% 26%, rgba(255,255,255,.85) 0 6%, transparent 9%),
+    linear-gradient(153deg, transparent 44%, rgba(255,255,255,.33) 46%, transparent 52%),
+    linear-gradient(158deg, #f4f9ee, #cbe6e2 57%, #a6cdd2);
+  box-shadow: inset 0 2px 0 #fffdf3, inset 0 -2px 0 #92bdc4, 0 2px 0 #487d8b; -webkit-tap-highlight-color: transparent; }
 .pf-c:not(.open):active { transform: translateY(1px); box-shadow: inset 0 2px 0 #fff, 0 1px 0 #6f9fd6; }
 .pf-c svg { width: 72%; height: 72%; pointer-events: none; }
-.pf-c.open { background: rgba(255, 255, 255, .045); box-shadow: none; }
+.pf-c.open { background: rgba(7, 36, 49, .52); box-shadow: inset 0 1px 2px rgba(5,25,38,.22); }
+.pf-c.flag { background: linear-gradient(150deg, #fff6df, #efcfaa); }
 .pf-c.fresh { animation: pfopen .18s ease-out; }
 .pf-c.n1 { color: #8fd0ff; } .pf-c.n2 { color: #8ee6a4; } .pf-c.n3 { color: #ffa99a; } .pf-c.n4 { color: #cdb6ff; }
 .pf-c.n5 { color: #ffd27a; } .pf-c.n6 { color: #7fe3df; } .pf-c.n7 { color: #fff; } .pf-c.n8 { color: #c9d8ff; }

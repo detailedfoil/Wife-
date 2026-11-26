@@ -1443,7 +1443,8 @@
     const speedAt = (n) => Math.min(6, 2.6 + 0.085 * n);
     let view = null, bodyGeo = null, softGeo = null, puffs = null, circleGeo = null, scoopPoints = null, baseIce = null;
     let history = [], revealT = 0;
-    const flavours = [0xf7d5df, 0xffedc6, 0xc4e4cc, 0xd2b5a5, 0xd6cdf1, 0xf5d3a9];
+    const flavours = [0xedb0bd, 0xffe3a9, 0xb5d9b8, 0xc39882, 0xc4b6dc, 0xf1bb8f];
+    let cream, batchCream;
     const towerBounds = new T.Box3(), revealCentre = new T.Vector3(), revealSize = new T.Vector3();
     let blocks = [], cuts = [], cur = null, top = null;
     let score = 0, misses = 0, streak = 0, turn = 0, mode = 'idle', wait = 0, camY = 0, hopT = 1;
@@ -1451,7 +1452,7 @@
 
     function floe(w, d, n) {
       const g = new T.Group();
-      g.add(new T.Mesh(bodyGeo, U.mat(flavours[n % flavours.length], { roughness: 0.95 })));
+      g.add(new T.Mesh(bodyGeo, cream[n % flavours.length]));
       g.scale.set(w, 1, d);
       view.scene.add(g);
       return g;
@@ -1478,6 +1479,34 @@
     }
     function build() {
       view = stage('#efdff3', '#fff5e5', { ground: 0xe7d5cf, hemi: 2.1, key: 1.6 });
+      // A soft fold follows the scoop around its equator. Painting in UV space
+      // lets the same detail follow the corners as a landed scoop rounds off.
+      const ribbons = U.tex(256, 128, (c, w, h) => {
+        const wash = c.createLinearGradient(0, 0, 0, h);
+        wash.addColorStop(0, '#fffef8'); wash.addColorStop(0.38, '#fffdf9');
+        wash.addColorStop(0.8, '#f2e5e0'); wash.addColorStop(1, '#dfccca');
+        c.fillStyle = wash; c.fillRect(0, 0, w, h);
+        for (let band = 0; band < 3; band++) {
+          c.beginPath();
+          for (let x = 0; x <= w; x += 2) {
+            const a = x / w * 2 * PI, y = 30 + band * 30 + 8 * Math.sin(a + band) + 4 * Math.cos(2 * a - band);
+            if (x) c.lineTo(x, y); else c.moveTo(x, y);
+          }
+          for (let x = w; x >= 0; x -= 2) {
+            const a = x / w * 2 * PI;
+            c.lineTo(x, 34 + band * 30 + 11 * Math.sin(a + band) + 4 * Math.cos(2 * a - band));
+          }
+          c.closePath(); c.fillStyle = 'rgba(177,138,134,0.22)'; c.fill();
+        }
+        const r = U.rng(945);
+        c.fillStyle = 'rgba(144,109,103,0.26)';
+        for (let i = 0; i < 44; i++) {
+          c.beginPath(); c.ellipse(3 + r() * (w - 6), 8 + r() * (h - 16), 0.7 + r() * 1.3, 0.7, r() * PI, 0, 2 * PI); c.fill();
+        }
+      });
+      ribbons.wrapS = T.RepeatWrapping;
+      cream = flavours.map(color => new T.MeshStandardMaterial({ color, map: ribbons, roughness: 0.87 }));
+      batchCream = new T.MeshStandardMaterial({ map: ribbons, vertexColors: true, roughness: 0.87 });
       bodyGeo = new T.BoxGeometry(1, BH, 1); bodyGeo.translate(0, BH / 2, 0);
       // Visual rounding spreads the cream; logical slab dimensions stay unchanged.
       softGeo = new T.SphereGeometry(1, 24, 16);
@@ -1491,16 +1520,28 @@
       circleGeo.computeVertexNormals();
       const sc = view.scene;
       const waffle = U.tex(256, 256, (c, w, h) => {
-        c.fillStyle = '#dbad78'; c.fillRect(0, 0, w, h);
-        c.strokeStyle = 'rgba(145,92,45,0.24)'; c.lineWidth = 3;
-        for (let x = -w; x < w * 2; x += 32) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + w, h); c.moveTo(x, 0); c.lineTo(x - w, h); c.stroke(); }
+        const toast = c.createLinearGradient(0, 0, 0, h);
+        toast.addColorStop(0, '#d59c61'); toast.addColorStop(0.5, '#edbc80'); toast.addColorStop(1, '#d59c61');
+        c.fillStyle = toast; c.fillRect(0, 0, w, h);
+        // Offset light and shadow on each crossing makes the lattice look baked in.
+        for (const [dy, width, col] of [[2, 4, '#c08a56'], [0, 3.5, '#e8b67a'], [-1, 1.5, '#f8d59b']]) {
+          c.strokeStyle = col; c.lineWidth = width; c.beginPath();
+          for (let x = -w - 32; x <= w * 2 + 32; x += 32) {
+            c.moveTo(x, dy - 4); c.lineTo(x + w + 8, h + dy + 4);
+            c.moveTo(x, dy - 4); c.lineTo(x - w - 8, h + dy + 4);
+          }
+          c.stroke();
+        }
       });
-      waffle.wrapS = waffle.wrapT = T.RepeatWrapping; waffle.repeat.set(3, 2);
+      waffle.wrapS = waffle.wrapT = T.RepeatWrapping; waffle.repeat.set(2, 1);
       const cone = U.cyl(CONE_RADIUS, 0.025, 4, new T.MeshStandardMaterial({ map: waffle, roughness: 0.95 }), 0, -2.1, 0, 48);
       const rim = U.rot(U.torus(CONE_RADIUS - 0.05, 0.075, U.mat(0xe4b884), 0, -0.10, 0, PI * 2, 48), PI / 2);
-      const base = baseIce = U.mesh(softGeo.clone(), U.mat(flavours[1], { roughness: 0.95 }), 0, -BH, 0); base.scale.set(S0, 1, S0);
-      const plate = U.cyl(3.0, 2.85, 0.16, U.mat(0xfff8ef), 0, -4.20, 0, 48);
-      sc.add(cone, rim, base, plate);
+      const base = baseIce = U.mesh(softGeo.clone(), cream[1], 0, -BH, 0); base.scale.set(S0, 1, S0);
+      const china = U.mat(0xfff5e1, { roughness: 0.42 }), glaze = U.mat(0x7db7b6, { roughness: 0.32 });
+      const plate = U.cyl(3.0, 2.85, 0.16, china, 0, -4.20, 0, 64);
+      const band = U.rot(U.torus(2.87, 0.035, glaze, 0, -4.12, 0, PI * 2, 64), PI / 2);
+      const hairline = U.rot(U.torus(2.69, 0.013, glaze, 0, -4.118, 0, PI * 2, 64), PI / 2);
+      sc.add(cone, rim, base, plate, band, hairline);
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
     function hopTo() { from.copy(at); hopT = 0; }
@@ -1548,7 +1589,14 @@
           parts.push({ geo: circleGeo, m: old.children[0].matrixWorld.clone(), c: old.children[0].material.color }); view.scene.remove(old);
           if (old.children[0].geometry !== circleGeo) old.children[0].geometry.dispose();
         }
-        const batch = new T.Mesh(U.merge(parts), U.mat(0xffffff, { vertexColors: true, roughness: 0.95 }));
+        const geometry = U.merge(parts), uv = geometry.attributes.uv, source = circleGeo.attributes.uv;
+        // U.merge generates world-space UVs for terrain. Restore the scoop UVs
+        // in its expanded vertex order so tall towers keep the same cream folds.
+        for (let i = 0; i < uv.count; i++) {
+          const j = circleGeo.index.getX(i % circleGeo.index.count);
+          uv.setXY(i, source.getX(j), source.getY(j));
+        }
+        const batch = new T.Mesh(geometry, batchCream);
         history.push(batch); view.scene.add(batch);
       }
       score++; K.score(score); K.hint('');
@@ -1657,6 +1705,59 @@
     };
   })();
 
+  // The two lake games share a quiet sheet of water. The ripple tile and the
+  // frosted cross-section of each floe are made once, including after replays.
+  let poolWater, floeGeometry, floeMaterial;
+  function lakeStage(seed, dusk = false) {
+    const view = stage(dusk ? '#b1acc9' : '#a3ccdc', dusk ? '#ffdfc9' : '#faedde',
+      { ground: dusk ? 0xb6a4bf : 0xbacfd9, hemi: 1.9, key: 1.45 });
+    const sc = view.scene;
+    sc.fog = new T.Fog(0xd4e3e4, 16, 58);
+    fellBackdrop(sc);
+    if (!poolWater) {
+      const water = U.tex(256, 256, (c, w, h) => {
+        const r = U.rng(562);
+        c.fillStyle = '#548e9e'; c.fillRect(0, 0, w, h);
+        for (let i = 0; i < 46; i++) {
+          const x = r() * w, y = r() * h, len = 8 + r() * 38, bow = 2 + r() * 3;
+          c.fillStyle = i % 4 ? 'rgba(195,230,225,0.28)' : 'rgba(46,99,123,0.23)';
+          for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) {
+            c.beginPath(); c.moveTo(x + dx, y + dy);
+            c.quadraticCurveTo(x + dx + len * 0.45, y + dy - bow, x + dx + len, y + dy);
+            c.quadraticCurveTo(x + dx + len * 0.55, y + dy - bow + 3, x + dx, y + dy); c.fill();
+          }
+        }
+      });
+      water.wrapS = water.wrapT = T.RepeatWrapping; water.repeat.set(24, 24);
+      poolWater = new T.MeshStandardMaterial({ map: water, roughness: 0.42 });
+      const profile = [[0.01, -0.31, 0x829eaf], [0.86, -0.31, 0x769eae], [0.99, -0.22, 0x8bb6c5],
+        [1.0, -0.09, 0xafcdd0], [1.025, -0.04, 0xd1e1e0], [1.025, 0.005, 0xeef2ef],
+        [0.94, 0.03, 0xf9f8ef], [0.01, 0.03, 0xf2f5ee], [0, 0.03, 0xf2f5ee]];
+      floeGeometry = new T.LatheGeometry(profile.map(([radius, y]) => new T.Vector2(radius, y)), 24);
+      const pos = floeGeometry.attributes.position, col = [], tint = new T.Color();
+      for (let j = 0; j < pos.count; j++) {
+        const x = pos.getX(j), z = pos.getZ(j), a = Math.atan2(x, z);
+        const edge = 1 + 0.034 * Math.cos(3 * a) + 0.017 * Math.sin(5 * a);
+        pos.setXYZ(j, x * edge, pos.getY(j), z * edge);
+        tint.setHex(profile[j % profile.length][2]); col.push(tint.r, tint.g, tint.b);
+      }
+      floeGeometry.setAttribute('color', new T.Float32BufferAttribute(col, 3)); floeGeometry.computeVertexNormals();
+      floeMaterial = U.mat(0xffffff, { vertexColors: true, roughness: 0.76 });
+    }
+    const surface = dusk ? poolWater.clone() : poolWater;
+    if (dusk) surface.color.set(0xffc9dc);
+    const lake = U.mesh(new T.PlaneGeometry(160, 160), surface, 0, -0.2, 0);
+    lake.rotation.x = -PI / 2;
+    sc.add(lake, new T.Mesh(floeGeometry, floeMaterial));
+    const r = U.rng(seed);
+    for (let i = 0; i < 16; i++) {
+      const a = r() * PI * 2, d = 3.2 + r() * 16, k = 0.4 + r() * 1.3;
+      const f = U.mesh(floeGeometry, floeMaterial, Math.cos(a) * d, -0.12, Math.sin(a) * d - 4);
+      f.scale.set(k, 0.38, k * (0.79 + 0.12 * Math.cos(i))); f.rotation.y = r() * 3; sc.add(f);
+    }
+    return view;
+  }
+
   /* ================= Puffer Sweeper ================= */
   /* Minesweeper under the ice: nine by nine tiles with ten pufferfish under them. Tap a tile to open it; a number says how many
      pufferfish touch it. The first tap is always safe and opens a patch, and the pufferfish are only placed after it, on a board
@@ -1666,46 +1767,44 @@
   const puff = (() => {
     const HOLD = 140, Sw = PN.Sweep;
     let size = 9, mineCount = 10, saves = 0;
-    const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21V4" stroke="#17264d" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M8.6 4.4l10.4 3.7-10.4 4z" fill="#f2683c" stroke="#f2683c" stroke-width="1.2" stroke-linejoin="round"/></svg>';
-    const FISH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M19.2 4.8l-2.4 2.4M4.8 19.2l2.4-2.4M19.2 19.2l-2.4-2.4" stroke="#c9822a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
-      + '<circle cx="12" cy="12" r="7.2" fill="#f6c443"/><path d="M5.4 14.6a7.2 7.2 0 0 0 13.2 0z" fill="#fff1c9"/><circle cx="9.2" cy="10.4" r="1.5" fill="#17264d"/><circle cx="14.8" cy="10.4" r="1.5" fill="#17264d"/>'
-      + '<path d="M10.5 14.3h3" stroke="#17264d" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>';
+    const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21V3.5" stroke="#233d55" stroke-width="2.3" stroke-linecap="round"/><path d="M8 4q5-2 12 1l-3.4 2.6 2.5 2.8q-6-2-11 .5z" fill="#e87956" stroke="#b65a48" stroke-width=".8"/><circle cx="7" cy="3.5" r="1.5" fill="#ffe3a4"/></svg>';
+    const FISH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.8 8-2.5-1 .8 3-2 2 2.5 1.1-.4 3.3 3-1.1m12.5-6.8 2.8-1.3-.8 3.5 2.1 2.2-2.8 1.2.1 3.2-2.6-1.3M7 5.9l.1-3 2.3 1.4L12 1.6l1.8 2.6 3-1.3-.3 3.3" fill="#e9a346"/>'
+      + '<ellipse cx="12" cy="12.5" rx="8.8" ry="8.2" fill="#efbe5e"/><path d="M4.4 14q7.7-3.7 15.1 0-1.4 6.2-7.5 6.6-6.3-.4-7.6-6.6" fill="#fff0c9"/>'
+      + '<g fill="#293b49"><ellipse cx="8.8" cy="11.5" rx="1.45" ry="1.9"/><ellipse cx="15.2" cy="11.5" rx="1.45" ry="1.9"/><ellipse cx="12" cy="15" rx="1" ry=".8"/></g><g fill="white"><circle cx="8.5" cy="11" r=".48"/><circle cx="14.9" cy="11" r=".48"/></g><path d="M5.4 14h1.8m9.6 0h1.8" stroke="#df987c" stroke-width="1.2" stroke-linecap="round"/></svg>';
     let view = null, el = null, cells = [], prizeEl = null, modeEl = null, tipEl = null, fish = [];
     let mines = null, num = null, open = null, mark = null, left = 0, flags = 0, t = 0, mode = 'idle', flagging = false, wait = 0, press = null, shownT = -1, shownP = -1;
 
     /* A round little pufferfish for the water beside her. */
     function puffer() {
-      const g = new T.Group(), skin = U.mat(0xf2c14e, { roughness: 0.6 }), thorn = U.mat(0xc98a2b, { roughness: 0.6 }), dark = U.mat(0x17264d, { roughness: 0.4 });
-      const up = new T.Vector3(0, 1, 0), v = new T.Vector3();
-      g.add(U.ball(0.3, skin, 0, 0, 0, 1, 1, 1, 20));
-      g.add(U.ball(0.27, U.mat(0xfff1c9, { roughness: 0.7 }), 0, -0.05, 0.03, 1, 0.95, 1, 18));
-      for (let i = 0; i < 34; i++) {
-        const y = 1 - (i + 0.5) / 17, r = Math.sqrt(1 - y * y), a = i * 2.39996, x = Math.cos(a) * r, z = Math.sin(a) * r;
-        if (z > 0.5 && y > -0.35 && y < 0.65) continue;                 // keep the face clear
-        const c = U.cone(0.034, 0.12, thorn, x * 0.32, y * 0.32, z * 0.32, 6);
-        c.quaternion.setFromUnitVectors(up, v.set(x, y, z));
-        g.add(c);
+      const g = new T.Group(), dark = U.mat(0x263647, { roughness: 0.34 }), gold = U.mat(0xd99a48);
+      const body = new T.SphereGeometry(0.3, 28, 20), colors = [], p = body.attributes.position;
+      const belly = new T.Color(0xffedcb), top = new T.Color(0xedb45d), tint = new T.Color();
+      for (let i = 0; i < p.count; i++) {
+        const t = U.smooth(-0.12, 0.03, p.getY(i) + 0.012 * Math.cos(p.getX(i) * 28));
+        tint.copy(belly).lerp(top, t); colors.push(tint.r, tint.g, tint.b);
       }
-      [-1, 1].forEach((sd) => {
-        g.add(U.ball(0.075, U.mat(0xffffff, { roughness: 0.3 }), sd * 0.115, 0.09, 0.245, 1, 1, 0.7, 12), U.ball(0.038, dark, sd * 0.12, 0.09, 0.3, 1, 1, 0.6, 10));
-        const fin = U.ball(0.09, thorn, sd * 0.31, -0.03, 0, 0.5, 1, 1.1, 10); fin.rotation.z = sd * 0.5; g.add(fin);
-      });
-      g.add(U.ball(0.045, dark, 0, -0.035, 0.292, 1, 0.5, 0.5, 10));
-      const tail = U.cone(0.12, 0.2, thorn, 0, 0, -0.38, 8); tail.rotation.x = PI / 2; tail.scale.x = 0.35; g.add(tail);
+      body.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+      g.add(new T.Mesh(body, U.mat(0xffffff, { vertexColors: true, roughness: 0.75 })));
+      const up = new T.Vector3(0, 1, 0), v = new T.Vector3(), spine = new T.ConeGeometry(0.030, 0.076, 8);
+      for (let i = 0; i < 28; i++) {
+        const y = 1 - (i + 0.5) / 14, r = Math.sqrt(1 - y * y), a = i * 2.39996, x = Math.cos(a) * r, z = Math.sin(a) * r;
+        if (z > 0.47 && y > -0.38 && y < 0.72) continue;
+        const m = U.mesh(spine, gold, x * 0.316, y * 0.316, z * 0.316);
+        m.quaternion.setFromUnitVectors(up, v.set(x, y, z)); g.add(m);
+      }
+      for (const side of [-1, 1]) {
+        g.add(U.ball(0.052, dark, side * 0.111, 0.063, 0.266, 0.91, 1.17, 0.58),
+          U.ball(0.014, U.glow(0xfffdf3), side * 0.111 - 0.012, 0.084, 0.293),
+          U.ball(0.04, U.mat(0xe39a80), side * 0.163, -0.015, 0.251, 1, 0.46, 0.3));
+        const fin = U.ball(0.091, gold, side * 0.293, -0.026, 0, 0.82, 0.42, 0.9); fin.rotation.z = side * 0.45; g.add(fin);
+      }
+      g.add(U.ball(0.030, dark, 0, -0.040, 0.298, 0.82, 0.66, 0.35));
+      const tail = U.ball(0.105, gold, 0, 0, -0.327, 0.44, 1.1, 1.2); tail.rotation.x = -0.28; g.add(tail);
       return g;
     }
     function build() {
-      view = stage('#86bdf0', '#eef7ff', { ground: 0xbfdcff, hemi: 2.0, key: 1.7 });
-      const sc = view.scene, snow = U.mat(0xffffff, { roughness: 1 }), ice = U.mat(0xa9d6f5, { roughness: 0.45 });
-      const lake = U.mesh(new T.CircleGeometry(80, 40), U.mat(0x2b68b3, { roughness: 0.3 }), 0, -0.2, 0);
-      lake.rotation.x = -PI / 2;
-      sc.add(lake, U.cyl(1.02, 0.9, 0.32, ice, 0, -0.18, 0, 9), U.cyl(1.06, 1.02, 0.06, snow, 0, 0, 0, 9));
-      const r = U.rng(81);
-      for (let i = 0; i < 16; i++) {
-        const a = r() * PI * 2, d = 3.2 + r() * 16, k = 0.4 + r() * 1.3;
-        const f = U.cyl(k, k * 0.92, 0.12, snow, Math.cos(a) * d, -0.16, Math.sin(a) * d - 4, 7);
-        f.rotation.y = r() * 3; sc.add(f);
-      }
+      view = lakeStage(81);
+      const sc = view.scene;
       [[-1.42, 0.35, 0.45], [1.45, -0.1, -0.4]].forEach((p, i) => { const g = puffer(); g.position.set(p[0], -0.12, p[1]); g.rotation.y = p[2]; sc.add(g); fish.push({ g, big: 1, y: -0.12, ph: i * 2.1 }); });
       view.camera.position.set(0, 2.5, 7.2);
       el = document.getElementById('puffBoard');
@@ -1961,8 +2060,17 @@
       if (!W) return;
       const lw = W / LANES, u = unit(), line = H * LINE;
       g2.clearRect(0, 0, W, H);
-      g2.fillStyle = 'rgba(255,255,255,.07)';
-      for (let l = 1; l < LANES; l++) g2.fillRect(l * lw - 1, 0, 2, H);
+      for (let lane = 0; lane < LANES; lane++) {
+        const cx = (lane + 0.5) * lw, ringing = lastLane === lane ? bop : 0;
+        if (lane) {
+          g2.fillStyle = 'rgba(30,21,28,.46)'; g2.fillRect(lane * lw - 1, 0, 2, H);
+          g2.fillStyle = 'rgba(255,226,171,.12)'; g2.fillRect(lane * lw + 1, 0, 1, H);
+        }
+        g2.fillStyle = 'rgba(26,24,31,.45)'; g2.fillRect(cx + 1, 0, 2, H);
+        g2.strokeStyle = ringing ? '#ffe3a6' : '#bd9b70'; g2.lineWidth = 1.4;
+        g2.beginPath(); g2.moveTo(cx, 0);
+        g2.quadraticCurveTo(cx + ringing * Math.sin(ringing * PI * 4) * 6, H * 0.55, cx, H); g2.stroke();
+      }
       if (bad >= 0) { g2.fillStyle = 'rgba(226,80,58,.55)'; g2.fillRect(bad * lw, 0, lw, H); }
       const first = Math.max(0, next - 6);
       for (let i = first; i < first + 40; i++) {
@@ -1974,12 +2082,21 @@
         if (i === badTile) g2.fillStyle = '#e2503a';
         else {
           const gr = g2.createLinearGradient(0, y, 0, y + hh), guided = G.mumMode && i === next;
-          gr.addColorStop(0, guided ? '#edffed' : '#fafdff');
-          gr.addColorStop(1, guided ? '#8edba9' : '#bfe0fa');
+          gr.addColorStop(0, guided ? '#e9ffe6' : '#fffae9');
+          gr.addColorStop(0.73, guided ? '#a1ddb2' : '#f0dcb9');
+          gr.addColorStop(1, guided ? '#7abb97' : '#d5b48f');
           g2.fillStyle = gr;
         }
         box(x, y, w, hh, rad); g2.fill();
-        if (i !== badTile) { g2.fillStyle = 'rgba(255,255,255,.9)'; box(x + 5, y + 4, w - 10, Math.min(5, hh / 3), 2.5); g2.fill(); }
+        if (i !== badTile) {
+          g2.fillStyle = 'rgba(255,255,250,.72)'; box(x + 5, y + 3, w - 10, Math.min(3, hh / 4), 1.5); g2.fill();
+          if (hh > 21 && (i !== 0 || mode !== 'ready')) {
+            const cx = x + w / 2, cy = y + hh / 2;
+            g2.beginPath(); g2.moveTo(cx - 4.5, cy); g2.lineTo(cx, cy - 3);
+            g2.lineTo(cx + 4.5, cy); g2.lineTo(cx, cy + 3); g2.closePath();
+            g2.fillStyle = 'rgba(124,99,74,.52)'; g2.fill();
+          }
+        }
         if (i === 0 && mode === 'ready') {
           g2.fillStyle = '#17264d'; g2.font = '600 ' + Math.round(Math.min(20, lw * 0.24)) + 'px DynaPuff, sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
           g2.fillText(tr('Start'), x + w / 2, y + hh / 2 + 1);
@@ -2005,17 +2122,7 @@
       if (n === 1) K.beat('go');
     }
     function build() {
-      view = stage('#86bdf0', '#eef7ff', { ground: 0xbfdcff, hemi: 2.0, key: 1.7 });
-      const sc = view.scene, snow = U.mat(0xffffff, { roughness: 1 }), ice = U.mat(0xa9d6f5, { roughness: 0.45 });
-      const lake = U.mesh(new T.CircleGeometry(80, 40), U.mat(0x2b68b3, { roughness: 0.3 }), 0, -0.2, 0);
-      lake.rotation.x = -PI / 2;
-      sc.add(lake, U.cyl(1.02, 0.9, 0.32, ice, 0, -0.18, 0, 9), U.cyl(1.06, 1.02, 0.06, snow, 0, 0, 0, 9));
-      const r = U.rng(33);
-      for (let i = 0; i < 16; i++) {
-        const a = r() * PI * 2, d = 3.2 + r() * 16, k = 0.4 + r() * 1.3;
-        const f = U.cyl(k, k * 0.92, 0.12, snow, Math.cos(a) * d, -0.16, Math.sin(a) * d - 4, 7);
-        f.rotation.y = r() * 3; sc.add(f);
-      }
+      view = lakeStage(33, true);
       // A small five-string kantele: tapered wooden soundbox, bridge and tuning pins.
       // Attached to the seal's squash rig so pups and adults hold the same proportions.
       kantele = new T.Group();
@@ -2024,12 +2131,13 @@
       outline.quadraticCurveTo(0.76, -0.12, 0.69, 0.02);
       outline.lineTo(0.32, 0.32); outline.quadraticCurveTo(0.26, 0.37, 0.15, 0.34);
       outline.lineTo(-0.68, 0.10); outline.quadraticCurveTo(-0.76, 0.02, -0.68, -0.22);
-      const wood = U.mat(0xdba361, { roughness: 0.8 });
+      const wood = new T.MeshStandardMaterial({ color: 0xd9aa74, map: U.surfaceTex('wood'), roughness: 0.65 });
       const body = new T.Mesh(new T.ExtrudeGeometry(outline, { depth: 0.09, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.035, bevelThickness: 0.025, curveSegments: 12 }), wood);
       kantele.add(body);
       const dark = U.mat(0x805331, { roughness: 0.85 });
       const hole = U.mesh(new T.CircleGeometry(0.065, 24), dark, -0.05, 0, 0.117);
-      kantele.add(hole);
+      kantele.add(hole, U.torus(0.079, 0.008, U.mat(0xb3794d), -0.05, 0, 0.118),
+        U.torus(0.099, 0.005, U.mat(0xf3cb92), -0.05, 0, 0.118));
       const stringMat = U.mat(0xffedbb, { roughness: 0.35, metalness: 0.3 });
       function bar(x1, y1, x2, y2, radius, material, z) {
         const d = new T.Vector3(x2 - x1, y2 - y1, 0);
