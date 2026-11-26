@@ -38,6 +38,7 @@
     L.push('OPENING THE GAME (' + v(N.visits) + ' visits): average tummy ' + v(N.avg_food, '%') + ', happiness ' + v(N.avg_joy, '%') + ', energy ' + v(N.avg_energy, '%') + ', clean ' + v(N.avg_clean, '%') + '. Started hungry ' + v(N.pct_hungry, '%') + ', glum ' + v(N.pct_sad, '%') + ', mucky ' + v(N.pct_dirty, '%') + ', low energy ' + v(N.pct_low_energy, '%') + ', full happiness ' + v(N.pct_full_joy, '%') + '. Plays blocked: ' + v(d.blocked_total) + ' (' + ((d.blocked || []).map(function (x) { return x.why + ' ' + x.n; }).join(', ') || 'none') + ').');
     L.push('COFFEE MEMORY failures by step (share of each player\'s failures, averaged): ' + ((d.coffee_fails || []).map(function (x) { return x.step + ' ' + x.share + '% (~' + v(x.avg_served) + ' drinks served)'; }).join(', ') || 'none') + '.');
     L.push('DEVICES: installed as app ' + v(D.installed_pct, '%') + ', fps average ' + v(D.fps_avg) + ' (slowest 10% ' + v(D.fps_p10) + '). Screen widths (<360,360-399,400-479,480-767,768+): ' + [1, 2, 3, 4, 5].map(function (b) { var f = (D.screens || []).filter(function (x) { return x.bucket === b; })[0]; return f ? f.players : 0; }).join('/') + '. Errors: ' + v(E.total) + ' (' + v(E.per_100_visits) + ' per 100 visits)' + ((E.top || []).length ? ', top: ' + E.top.slice(0, 3).map(function (x) { return x.msg + ' x' + x.n; }).join(' | ') : '') + '.');
+    if (d.mum_plays) L.push('Mum Mode plays, left out of every game number above: ' + d.mum_plays);
     L.push('', 'RAW per_game JSON:', JSON.stringify(d.per_game || []));
     return L.join('\n');
   }

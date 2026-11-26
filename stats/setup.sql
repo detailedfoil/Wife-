@@ -21,6 +21,7 @@ alter table events add column if not exists n_clean int;
 alter table events add column if not exists fps int;
 alter table events add column if not exists screen text;
 alter table events add column if not exists installed int;
+alter table events add column if not exists mum int;   -- 1 when the play was in Mum Mode (easier games): kept out of the balancing numbers
 
 -- Limits on what the game can add (stops junk being sent in)
 alter table events drop constraint if exists events_sane;
@@ -48,6 +49,7 @@ alter table events add constraint events_sane check (
   and (n_clean is null or n_clean between 0 and 100)
   and (fps is null or fps between 0 and 1000)
   and (installed is null or installed in (0, 1))
+  and (mum is null or mum in (0, 1))
 );
 
 -- The old passcode is gone (this is safe to run on a database that had one)
@@ -72,15 +74,16 @@ begin
     'sessions', (select count(distinct session_id) from events),
     'avg_session_secs', (select round(avg(s)) from (select sum(duration_sec) s from events where event = 'session_end' group by session_id) x),
     'returning_players', (select count(*) from (select player_id from events group by player_id having count(distinct (created_at at time zone 'Europe/London')::date) > 1) x),
-    'games_played', (select count(*) from events where event in ('game_end','game_quit')),
-    'avg_play_secs_per_player', (select round(avg(t)) from (select sum(duration_sec) t from events where event in ('game_end','game_quit') group by player_id) x),
-    'avg_earned_per_player', (select round(avg(t)) from (select sum(coins) t from events where event in ('game_end','game_quit') group by player_id) x),
+    'games_played', (select count(*) from events where coalesce(mum, 0) = 0 and event in ('game_end','game_quit')),
+    'mum_plays', (select count(*) from events where mum = 1 and event in ('game_end','game_quit')),
+    'avg_play_secs_per_player', (select round(avg(t)) from (select sum(duration_sec) t from events where coalesce(mum, 0) = 0 and event in ('game_end','game_quit') group by player_id) x),
+    'avg_earned_per_player', (select round(avg(t)) from (select sum(coins) t from events where coalesce(mum, 0) = 0 and event in ('game_end','game_quit') group by player_id) x),
     'coins', (select json_build_object('avg', round(avg(coins)), 'median', round((percentile_cont(0.5) within group (order by coins))::numeric), 'max', max(coins))
               from (select distinct on (player_id) coins from events where event = 'session_end' and coins is not null order by player_id, created_at desc) x),
-    'coins_per_min_all', (select round(avg(c), 1) from (select sum(coins)::numeric / nullif(sum(duration_sec), 0) * 60 as c from events where event = 'game_end' and game is not null and game <> 'sauna' group by player_id) x),
+    'coins_per_min_all', (select round(avg(c), 1) from (select sum(coins)::numeric / nullif(sum(duration_sec), 0) * 60 as c from events where coalesce(mum, 0) = 0 and event = 'game_end' and game is not null and game <> 'sauna' group by player_id) x),
     'mix', (select json_build_object('players', count(*), 'coins_per_min', round(avg(c), 1), 'joy_per_min', round(avg(j), 1), 'energy_per_min', round(avg(e), 1))
             from (select sum(coins)::numeric / nullif(sum(duration_sec), 0) * 60 as c, sum(joy)::numeric / nullif(sum(duration_sec), 0) * 60 as j, sum(energy)::numeric / nullif(sum(duration_sec), 0) * 60 as e
-                  from events where event = 'game_end' and game is not null and game <> 'sauna' group by player_id) x),
+                  from events where coalesce(mum, 0) = 0 and event = 'game_end' and game is not null and game <> 'sauna' group by player_id) x),
     'per_game', coalesce((select json_agg(g order by g.players desc, g.plays desc) from (
         select game,
                sum(n_all) as plays,
@@ -128,7 +131,7 @@ begin
                      avg(bonus) filter (where event = 'game_end') as abonus,
                      avg(muck) filter (where event = 'game_end') as amuck,
                      avg(fps) filter (where event = 'game_end') as afps
-              from events where event in ('game_end','game_quit') and game is not null group by game, player_id) pg
+              from events where coalesce(mum, 0) = 0 and event in ('game_end','game_quit') and game is not null group by game, player_id) pg
         group by game) g), '[]'::json),
     'visits_per_active_day', (select round(avg(c), 1) from (select count(distinct session_id) c from events where event = 'session_start' group by player_id, (created_at at time zone 'Europe/London')::date) x),
     'retention', (select json_build_object('d1_eligible', count(*) filter (where d0 <= t - 1), 'd1', count(*) filter (where d0 <= t - 1 and r1),
@@ -153,7 +156,7 @@ begin
         select info as item, game as kind, count(*) as n, count(distinct player_id) as players, coalesce(sum(coins), 0) as total
         from events where event = 'purchase' group by info, game order by count(*) desc limit 15) p), '[]'::json),
     'coins_spent', (select coalesce(sum(coins), 0) from events where event in ('purchase', 'unlock')),
-    'coins_earned_games', (select coalesce(sum(coins), 0) from events where event = 'game_end'),
+    'coins_earned_games', (select coalesce(sum(coins), 0) from events where coalesce(mum, 0) = 0 and event = 'game_end'),
     'levels', coalesce((select json_agg(l order by l.level) from (
         select v.level,
                (select count(distinct player_id) from events where events.level >= v.level) as reached,
@@ -166,17 +169,17 @@ begin
     'levels_now', coalesce((select json_agg(json_build_object('level', lvl, 'players', c) order by lvl) from (
         select lvl, count(*) as c from (select max(level) as lvl from events where level is not null group by player_id) m group by lvl) x), '[]'::json),
     'coffee_fails', coalesce((select json_agg(f order by f.share desc) from (
-        select info as step, count(*) as players, sum(c) as n, round(100 * sum(c::numeric / tot) / (select count(distinct player_id) from events where event = 'game_end' and game = 'coffee' and info is not null)) as share, round(avg(s), 1) as avg_served
+        select info as step, count(*) as players, sum(c) as n, round(100 * sum(c::numeric / tot) / (select count(distinct player_id) from events where coalesce(mum, 0) = 0 and event = 'game_end' and game = 'coffee' and info is not null)) as share, round(avg(s), 1) as avg_served
         from (select info, player_id, c, s, sum(c) over (partition by player_id) as tot
-              from (select info, player_id, count(*) as c, avg(score) as s from events where event = 'game_end' and game = 'coffee' and info is not null group by info, player_id) a) b
+              from (select info, player_id, count(*) as c, avg(score) as s from events where coalesce(mum, 0) = 0 and event = 'game_end' and game = 'coffee' and info is not null group by info, player_id) a) b
         group by info) f), '[]'::json),
     'devices', (select json_build_object(
         'installed_pct', (select round(100.0 * avg(installed)) from (select distinct on (player_id) installed from events where event = 'session_start' and installed is not null order by player_id, created_at desc) i),
         'screens', coalesce((select json_agg(json_build_object('bucket', b, 'players', c) order by b) from (
             select case when w < 360 then 1 when w < 400 then 2 when w < 480 then 3 when w < 768 then 4 else 5 end as b, count(*) as c
             from (select distinct on (player_id) split_part(screen, 'x', 1)::int as w from events where event = 'session_start' and screen is not null order by player_id, created_at desc) s group by 1) q), '[]'::json),
-        'fps_avg', (select round(avg(a)) from (select avg(fps) as a from events where event = 'game_end' and fps is not null group by player_id) x),
-        'fps_p10', (select round((percentile_cont(0.1) within group (order by a))::numeric) from (select avg(fps) as a from events where event = 'game_end' and fps is not null group by player_id) x))),
+        'fps_avg', (select round(avg(a)) from (select avg(fps) as a from events where coalesce(mum, 0) = 0 and event = 'game_end' and fps is not null group by player_id) x),
+        'fps_p10', (select round((percentile_cont(0.1) within group (order by a))::numeric) from (select avg(fps) as a from events where coalesce(mum, 0) = 0 and event = 'game_end' and fps is not null group by player_id) x))),
     'errors', (select json_build_object(
         'total', (select count(*) from events where event = 'error'),
         'per_100_visits', (select round(100.0 * count(*) filter (where event = 'error') / nullif(count(*) filter (where event = 'session_start'), 0), 1) from events),
@@ -188,7 +191,7 @@ begin
                (select count(distinct session_id) from events e where (e.created_at at time zone 'Europe/London')::date = day) as sessions
         from (select (now() at time zone 'Europe/London')::date - n as day from generate_series(0, 29) n) days) d), '[]'::json),
     'hours', coalesce((select json_agg(json_build_object('hour', h, 'plays', c) order by h) from (
-        select extract(hour from created_at at time zone 'Europe/London')::int as h, count(*) as c from events where event in ('game_end','game_quit') group by 1) x), '[]'::json),
+        select extract(hour from created_at at time zone 'Europe/London')::int as h, count(*) as c from events where coalesce(mum, 0) = 0 and event in ('game_end','game_quit') group by 1) x), '[]'::json),
     'langs', coalesce((select json_agg(json_build_object('lang', lang, 'players', c)) from (
         select lang, count(distinct player_id) as c from events where lang is not null group by lang) x), '[]'::json)
   ) into res;
