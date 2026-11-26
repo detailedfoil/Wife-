@@ -508,6 +508,7 @@
         + (st.dev ? '<label class="dev-find"><span class="ic-wrap">' + ic('search') + '</span><input type="search" class="dev-search" placeholder="' + tr('Search developer options') + '" aria-label="' + tr('Search developer options') + '"></label><p class="note dev-none" hidden>' + tr('No developer options match.') + '</p>'
           + '<button class="row dev-row" data-do="devcreate"><span class="ic-wrap">' + ic('seal') + '</span><span class="txt"><b>' + tr('Try the seal creator') + '</b><span class="d">' + tr('Open the new-seal creator with a random kuutti, just to test it. Nothing is saved and your seal stays as she is.') + '</span></span></button>' : '')
         + (st.dev && st.settings.medicine ? '<button class="row dev-row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
+        + (st.dev ? '<button class="row dev-row" data-do="online"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Play online (test)') + '</b><span class="d">' + tr('Make or join a room with a friend: both seals on the shore, and a Fish Rain race. Still a prototype.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devdirty"><span class="ic-wrap">' + ic('drop') + '</span><span class="txt"><b>' + tr('Make her dirty') + '</b><span class="d">' + tr('Drop her cleanliness to zero, to test the sauna.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devtut"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset tutorials') + '</b><span class="d">' + tr('Show the first-time game tutorials again, for testing.') + '</span></span></button>' : '')
@@ -563,7 +564,11 @@
     else if (act === 'devtap') game.devTap();
     else if (act === 'devtoggle') game.devToggle();
     else if (act === 'devreset') game.devReset();
+<<<<<<< HEAD
     else if (act === 'online') { UI.closeSheet(); if (PN.Online) PN.Online.open(); }
+=======
+    else if (act === 'online') { UI.closeSheet(); if (PN.Online && game.state.dev) PN.Online.open(); }
+>>>>>>> eb9095b92e1b42cb375b79aaa776f6f02c2bdf6a
     else if (act === 'devenergy') game.devEnergy();
     else if (act === 'devdirty') game.devDirty();
     else if (act === 'devtut') game.devTutorials();
