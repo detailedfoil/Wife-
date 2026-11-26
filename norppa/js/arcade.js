@@ -410,6 +410,123 @@
     };
   })();
 
+  // Three silhouettes share one material. Each fir is a single mesh, including
+  // the bent trunk, shadowed needles and rounded overhang of the snow.
+  const winterFirs = [];
+  let firNumber = 0, firShadow;
+  function winterFir(scale) {
+    const variant = firNumber++ % 3;
+    if (!winterFirs[variant]) {
+      const coords = [], colors = [], triangles = [];
+      const shade = new T.Color();
+      function tier(rows, phase, branches, lean, dx = 0, dz = 0) {
+        const steps = branches === 3 ? 10 : 18;
+        const first = coords.length / 3;
+        rows.forEach(([y, radius, dip, col], row) => {
+          for (let j = 0; j < steps; j++) {
+            const a = j * 2 * PI / steps;
+            const lobe = (1 + Math.cos(branches * a + phase + 0.28 * Math.sin(2 * a))) * 0.5;
+            const r = radius * (0.86 + 0.14 * lobe + 0.025 * Math.sin(3 * a + phase));
+            const lift = row / (rows.length - 1);
+            const pocket = Math.sin(a + phase) * 0.45 + 0.20 * Math.sin(2 * a - phase);
+            coords.push(r * Math.sin(a) + lean * y + dx * (1 - lift), y - dip * (lobe + pocket), r * Math.cos(a) + dz * (1 - lift));
+            shade.setHex(col).multiplyScalar(0.93 + 0.07 * lobe);
+            colors.push(shade.r, shade.g, shade.b);
+            if (row) {
+              const lo = first + (row - 1) * steps, n = (j + 1) % steps;
+              triangles.push(lo + j, lo + n, lo + j + steps, lo + n, lo + n + steps, lo + j + steps);
+            }
+          }
+        });
+      }
+      const lean = (variant - 1) * 0.052;
+      tier([[0, 0.085, 0, 0x604d46], [0.39, 0.066, 0, 0x896b50]], 0, 3, lean);
+      for (let i = 0; i < 4; i++) {
+        const base = 0.28 + i * (0.335 + 0.016 * variant), h = 0.72 - i * 0.038;
+        const width = (0.53 - i * 0.087) * (1 + (1 - variant) * 0.10);
+        const row = (y, r, dip, col) => [base + y * h, r * width, dip * h, col];
+        tier([row(0.02, 0.1, 0, 0x2c504c), row(0.12, 0.9, 0.1, 0x335853),
+          row(0.23, 1, 0.19, 0x426e60), row(0.36, 0.92, 0.18, 0x527f6d),
+          row(0.41, 0.94, 0.18, 0xb8d4dc), row(0.49, 0.87, 0.15, 0xe5efed),
+          row(0.69, 0.54, 0.07, 0xf2f6f2), row(0.91, 0.19, 0.02, 0xf7f7f1),
+          row(1, 0.012, 0, 0xf6f6ef)], 1.3 * i + variant, 5 + variant % 2, lean);
+        // Side boughs taper back into the crown. Only some carry a full cap.
+        if (i < 3) for (let j = 0; j < 2; j++) {
+          const az = variant + 2.25 * i + 2.8 * j, off = width * (j ? 0.67 : 0.77);
+          tier([row(0.13, 0.13, 0.04, 0x355d52), row(0.20, 0.38, 0.09, 0x487461),
+            row(0.28, 0.39, 0.075, j ? 0x779687 : 0xbfdbde),
+            row(0.41, 0.34, 0.06, j ? 0x94b0a1 : 0xe6efeb),
+            row(0.64, 0.12, 0.02, 0xd7e6de), row(0.74, 0.01, 0, 0xe4efe7)],
+          az, 3, lean, off * Math.sin(az), off * Math.cos(az));
+        }
+      }
+      const g = new T.BufferGeometry();
+      g.setIndex(triangles); g.setAttribute('position', new T.Float32BufferAttribute(coords, 3));
+      g.setAttribute('color', new T.Float32BufferAttribute(colors, 3)); g.computeVertexNormals();
+      winterFirs[variant] = g;
+    }
+    const fir = new T.Mesh(winterFirs[variant], U.mat(0xffffff, { vertexColors: true, roughness: 1 }));
+    if (!firShadow) {
+      const map = U.tex(64, 64, (c) => {
+        const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+        g.addColorStop(0, 'rgba(81,113,133,0.29)'); g.addColorStop(0.5, 'rgba(107,137,151,0.18)');
+        g.addColorStop(1, 'rgba(134,160,169,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+      });
+      firShadow = new T.Mesh(new T.PlaneGeometry(1.5, 1.32), new T.MeshBasicMaterial({ map, transparent: true, depthWrite: false }));
+      firShadow.rotation.x = -PI / 2; firShadow.position.y = 0.018;
+    }
+    fir.add(firShadow.clone());
+    fir.scale.setScalar(scale); fir.rotation.y = firNumber * 2.39996;
+    return fir;
+  }
+
+  // One seamless tile painted at startup. Each scene has its own repeat and scroll.
+  let powder;
+  function powderMap(across, along) {
+    if (!powder) powder = U.tex(256, 256, (c, w, h) => {
+      const r = U.rng(6482);
+      c.fillStyle = '#e4edf4'; c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 24; i++) {
+        const x = r() * w, y = r() * h, length = 18 + r() * 45, depth = 3 + r() * 10;
+        const angle = -0.27 + r() * 0.17;
+        for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) {
+          c.save(); c.translate(x + dx, y + dy); c.rotate(angle); c.scale(length, depth);
+          const brush = c.createRadialGradient(0, 0, 0, 0, 0, 1);
+          brush.addColorStop(0, i % 3 ? 'rgba(255,251,242,0.6)' : 'rgba(151,185,207,0.34)');
+          brush.addColorStop(1, 'rgba(223,235,242,0)');
+          c.fillStyle = brush; c.fillRect(-1, -1, 2, 2); c.restore();
+        }
+      }
+    });
+    const map = powder.clone();
+    map.wrapS = map.wrapT = T.RepeatWrapping; map.repeat.set(across, along);
+    return map;
+  }
+
+  // A continuous silhouette sits beyond the tree line at all three camera angles.
+  let fellMap;
+  function fellBackdrop(scene) {
+    if (!fellMap) fellMap = U.tex(1024, 128, (c, w, h) => {
+      const r = U.rng(624);
+      for (let layer = 0; layer < 2; layer++) {
+        c.fillStyle = layer ? '#bcd2dc' : '#d5e1e8'; c.beginPath(); c.moveTo(0, h);
+        for (let x = 0; x <= w; x += 4) {
+          const y = 47 + 24 * layer + 11 * Math.sin(x * 0.017 + layer) + 7 * Math.cos(x * 0.029 - 2 * layer);
+          c.lineTo(x, y);
+        }
+        c.lineTo(w, h); c.fill();
+      }
+      c.fillStyle = '#abc8d4'; c.beginPath(); c.moveTo(0, h);
+      for (let x = 0; x <= w; x += 3) {
+        const foot = 93 + 6 * Math.sin(x * 0.022);
+        c.lineTo(x, foot); c.lineTo(x + 1.5, foot - 2 - 4 * r());
+      }
+      c.lineTo(w, h); c.fill();
+    });
+    const fell = new T.Mesh(new T.PlaneGeometry(136, 15), new T.MeshBasicMaterial({ map: fellMap, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+    fell.position.set(0, 5.1, -62); fell.renderOrder = -1; scene.add(fell);
+  }
+
   /* ================= Snowball Toss =================
      Like the old Paper Toss: flick the snowball at a bucket. The wind is shown, the arc is not.
      New wind every throw; the bucket stays where it is. Keep throwing until the third miss. Every basket counts. */
@@ -423,38 +540,77 @@
     function build() {
       view = stage('#8cc4f3', '#fff0de', { ground: 0xdde8ff, hemi: 2.2, key: 1.5 });
       const sc = view.scene;
+      fellBackdrop(sc);
       sc.fog = new T.Fog(0xeef3fa, 24, 64);
-      const ground = new T.Mesh(new T.PlaneGeometry(140, 140), U.mat(0xf6f9ff, { roughness: 1 }));
+      const ground = new T.Mesh(new T.PlaneGeometry(140, 140), new T.MeshStandardMaterial({ map: powderMap(19, 19), roughness: 1 }));
       ground.rotation.x = -PI / 2;
       sc.add(ground);
       for (let i = 0; i < 26; i++) {
-        const t = tree(1.6 + rnd() * 1.6);
+        const t = winterFir(1.6 + rnd() * 1.6);
         const side = i < 16 ? 0 : i % 2 ? 1 : -1;
         if (!side) t.position.set(-16 + i * 2 + rs(0.8), 0, -16 - rnd() * 8);
         else t.position.set(side * (5 + rnd() * 6), 0, -12 + rnd() * 12);
         sc.add(t);
       }
-      // a tin bucket, open at the top
-      const tin = new T.MeshStandardMaterial({ color: 0x9fb0c2, metalness: 0.55, roughness: 0.35, side: T.DoubleSide });
-      bucket = new T.Group();
-      bucket.add(U.mesh(new T.CylinderGeometry(RIM, RIM * 0.78, RIM_Y, 24, 1, true), tin, 0, RIM_Y / 2, 0));
-      bucket.add(U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 24), tin, 0, 0.02, 0), -PI / 2));
-      bucket.add(U.rot(U.torus(RIM, 0.025, U.mat(0xc7d3df, { metalness: 0.6, roughness: 0.3 }), 0, RIM_Y, 0, PI * 2, 32), PI / 2));
-      bucket.add(U.rot(U.torus(RIM * 0.92, 0.012, U.mat(0x7d8b99, { metalness: 0.6, roughness: 0.4 }), 0, RIM_Y + 0.18, 0, PI, 24), 0, 0, 0));
-      bucket.add(U.mesh(new T.CircleGeometry(1.16, 24), new T.MeshBasicMaterial({ color: 0x8aa0bb, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0));
-      bucket.children[bucket.children.length - 1].rotation.x = -PI / 2;
+      // A lake-blue enamel pail. The handle folds back behind the opening so
+      // the bright lip stays visible throughout the throw.
+      const enamel = U.tex(512, 128, (c, w, h) => {
+        const body = c.createLinearGradient(0, 0, 0, h);
+        body.addColorStop(0, '#447f8a'); body.addColorStop(0.18, '#73abb0');
+        body.addColorStop(0.57, '#5c9ba3'); body.addColorStop(1, '#37707b');
+        c.fillStyle = body; c.fillRect(0, 0, w, h);
+        c.fillStyle = '#f9e4bb'; c.fillRect(0, 13, w, 4); c.fillRect(0, h - 19, w, 3);
+        for (let j = 0; j < 10; j++) {
+          c.save(); c.translate((j + 0.5) * w / 10, h * 0.51); c.scale(0.52, 1);
+          c.strokeStyle = '#ffefd4'; c.lineWidth = 3; c.lineCap = 'round';
+          for (let k = 0; k < 6; k++) {
+            c.rotate(PI / 3); c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -17);
+            c.moveTo(-4, -9); c.lineTo(0, -13); c.lineTo(4, -9); c.stroke();
+          }
+          c.restore();
+        }
+      });
+      const tin = new T.MeshStandardMaterial({ map: enamel, roughness: 0.42, metalness: 0.08 });
+      const lining = U.mat(0x3b6874, { side: T.BackSide, roughness: 0.65 });
+      const rim = U.mat(0xffdead, { roughness: 0.38, metalness: 0.09 });
+      const shell = new T.CylinderGeometry(RIM, RIM * 0.78, RIM_Y, 36, 1, true);
+      bucket = U.group(U.mesh(shell, tin, 0, RIM_Y / 2, 0), U.mesh(shell, lining, 0, RIM_Y / 2, 0),
+        U.rot(U.mesh(new T.CircleGeometry(RIM * 0.78, 32), U.mat(0x335865), 0, 0.025, 0), -PI / 2),
+        U.rot(U.torus(RIM, 0.033, rim, 0, RIM_Y, 0, 2 * PI, 36), PI / 2),
+        U.rot(U.torus(RIM * 0.79, 0.024, rim, 0, 0.046, 0), PI / 2));
+      const bail = U.torus(RIM * 0.96, 0.021, U.mat(0x61757b), 0, RIM_Y * 0.80, 0, PI, 28);
+      bail.rotation.x = -0.88;
+      bucket.add(bail);
+      for (const side of [-1, 1]) bucket.add(U.ball(0.044, rim, side * RIM * 0.95, bail.position.y, 0));
+      const shadow = U.mesh(new T.CircleGeometry(1.04, 36), new T.MeshBasicMaterial({ color: 0x8196ac, transparent: true, opacity: 0.18, depthWrite: false }), 0, 0.01, 0);
+      shadow.rotation.x = -PI / 2; shadow.scale.y = 0.83; bucket.add(shadow);
       sc.add(bucket);
       // a little flag shows which way the wind blows
       flag = new T.Group();
       flag.add(U.cyl(0.025, 0.025, 1.7, U.mat(PN.COL.woodDark), 0, 0.85, 0, 6));
       cloth = new T.Group();
-      const c = U.mesh(new T.PlaneGeometry(0.55, 0.32, 6, 1), new T.MeshStandardMaterial({ color: PN.COL.red, side: T.DoubleSide, roughness: 0.8 }), 0.275, 0, 0);
+      const pennant = new T.Shape();
+      pennant.moveTo(-0.275, 0.16); pennant.quadraticCurveTo(0, 0.19, 0.275, 0.11);
+      pennant.lineTo(0.15, -0.015); pennant.lineTo(0.275, -0.12);
+      pennant.quadraticCurveTo(0.01, -0.09, -0.275, -0.16); pennant.closePath();
+      const c = U.mesh(new T.ShapeGeometry(pennant), U.mat(0xc65040, { side: T.DoubleSide, roughness: 0.86 }), 0.275, 0, 0);
+      flag.add(U.ball(0.054, rim, 0, 1.71, 0));
       cloth.add(c); cloth.userData.mesh = c;
       cloth.position.y = 1.5;
       flag.add(cloth);
       sc.add(flag);
       sealSpot = new T.Vector3();
-      ball = new T.Mesh(new T.SphereGeometry(BR, 14, 10), U.mat(0xffffff, { roughness: 1 }));
+      const packed = new T.SphereGeometry(BR, 28, 20), verts = packed.attributes.position;
+      const colors = [], cool = new T.Color(0xb4cfdf), warm = new T.Color(0xfffbef), tint = new T.Color();
+      for (let i = 0; i < verts.count; i++) {
+        const x = verts.getX(i) / BR, y = verts.getY(i) / BR, z = verts.getZ(i) / BR;
+        const fold = Math.sin(5 * x - 2 * z) * Math.cos(4 * y + 3 * z), r = BR * (1 + 0.035 * fold);
+        verts.setXYZ(i, x * r, y * r, z * r);
+        tint.copy(cool).lerp(warm, U.clamp(0.54 + 0.26 * y + 0.18 * fold, 0, 1));
+        colors.push(tint.r, tint.g, tint.b);
+      }
+      packed.setAttribute('color', new T.Float32BufferAttribute(colors, 3)); packed.computeVertexNormals();
+      ball = new T.Mesh(packed, U.mat(0xffffff, { vertexColors: true, roughness: 1 }));
       sc.add(ball);
       puffs = Puffs(sc, 40, 0xffffff, 1);
     }
@@ -659,22 +815,49 @@
     function build() {
       view = stage('#9cc8f6', '#f4f8ff', { ground: 0xdde8ff, hemi: 2.2, key: 1.5 });
       const sc = view.scene;
+      fellBackdrop(sc);
       sc.fog = new T.Fog(0xeef4fb, 26, 70);
-      const snow = new T.Mesh(new T.PlaneGeometry(140, 140), U.mat(0xf6f9ff, { roughness: 1 }));
+      const snow = new T.Mesh(new T.PlaneGeometry(140, 140), new T.MeshStandardMaterial({ map: powderMap(19, 19), roughness: 1 }));
       snow.rotation.x = -PI / 2; snow.position.y = -0.03;
-      const ice = new T.Mesh(new T.PlaneGeometry(BANK * 2 + 0.6, 26), U.mat(0xcfe6fa, { roughness: 0.28 }));
+      const rink = U.tex(384, 1024, (c, w, h) => {
+        const r = U.rng(487), sheet = c.createLinearGradient(0, 0, w, 0);
+        sheet.addColorStop(0, '#afcdd8'); sheet.addColorStop(0.12, '#c4e0e7');
+        sheet.addColorStop(0.54, '#d5e8eb'); sheet.addColorStop(0.90, '#c1dce5'); sheet.addColorStop(1, '#abcbd7');
+        c.fillStyle = sheet; c.fillRect(0, 0, w, h);
+        c.lineCap = 'round';
+        for (let i = 0; i < 95; i++) {
+          const x = r() * w, y = r() * h, len = 10 + r() * 62, bend = r() * 20 - 10;
+          c.strokeStyle = i % 4 ? 'rgba(255,255,251,0.34)' : 'rgba(119,170,186,0.20)';
+          c.lineWidth = 0.7 + r() * 1.3;
+          c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + bend, y + len * 0.6, x + bend * 1.6, y + len); c.stroke();
+        }
+        for (const side of [0.045, 0.955]) {
+          c.fillStyle = '#9abdc9'; c.fillRect(w * side - 1, 0, 2, h);
+          for (let y = 36; y < h; y += 32) c.fillRect(w * side + (side < 0.5 ? 0 : -7), y, 7, 1.5);
+        }
+      });
+      const ice = new T.Mesh(new T.PlaneGeometry(BANK * 2 + 0.6, 26), new T.MeshStandardMaterial({ map: rink, roughness: 0.36 }));
       ice.rotation.x = -PI / 2; ice.position.z = -4;
       sc.add(snow, ice);
       const bankM = U.mat(0xffffff, { roughness: 1 });
       [-1, 1].forEach((sd) => {
         sc.add(U.ball(1, bankM, sd * (BANK + 0.95), -0.1, -4, 0.9, 0.55, 14, 16));
-        for (let i = 0; i < 9; i++) { const t = tree(1.4 + rnd() * 1.4); t.position.set(sd * (BANK + 2.2 + rnd() * 5), 0, 5 - i * 2.6 + rs(0.8)); sc.add(t); }
+        for (let i = 0; i < 9; i++) { const t = winterFir(1.4 + rnd() * 1.4); t.position.set(sd * (BANK + 2.2 + rnd() * 5), 0, 5 - i * 2.6 + rs(0.8)); sc.add(t); }
       });
-      for (let i = 0; i < 12; i++) { const t = tree(1.8 + rnd() * 1.5); t.position.set(-11 + i * 2 + rs(0.6), 0, -19 - rnd() * 6); sc.add(t); }
+      for (let i = 0; i < 12; i++) { const t = winterFir(1.8 + rnd() * 1.5); t.position.set(-11 + i * 2 + rs(0.6), 0, -19 - rnd() * 6); sc.add(t); }
       sc.add(U.box(BANK * 2, 0.012, 0.09, U.glow(0xd8382f), 0, 0.006, START_Z - 0.9));
       const tex = U.tex(256, 256, (c) => {
         const ring = (r, col) => { c.fillStyle = col; c.beginPath(); c.arc(128, 128, r * 126 / 2.0, 0, PI * 2); c.fill(); };
-        ring(2.0, '#2f63c9'); ring(1.6, '#ffffff'); ring(1.2, '#d8382f'); ring(0.85, '#ffffff'); ring(0.55, '#f0b429'); ring(0.12, '#24262b');
+        ring(2.0, '#315c8b'); ring(1.96, '#477cac'); ring(1.60, '#f7f4e9');
+        ring(1.20, '#bb5348'); ring(1.16, '#ce6859'); ring(0.85, '#f7f4e9');
+        ring(0.55, '#edba64'); ring(0.12, '#354d62');
+        // Fine registration marks stay inside the printed house as it moves and scales.
+        c.strokeStyle = 'rgba(255,251,229,0.8)'; c.lineWidth = 2;
+        for (let i = 0; i < 16; i++) {
+          const a = i * PI / 8, inner = i % 4 ? 119 : 114;
+          c.beginPath(); c.moveTo(128 + inner * Math.cos(a), 128 + inner * Math.sin(a));
+          c.lineTo(128 + 123 * Math.cos(a), 128 + 123 * Math.sin(a)); c.stroke();
+        }
       });
       rings = new T.Mesh(new T.CircleGeometry(2.0, 48), new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.92, toneMapped: false }));
       rings.rotation.x = -PI / 2; rings.position.y = 0.012;
@@ -687,9 +870,25 @@
       arrow.add(sh, tipA); arrow.userData.sh = sh;
       arrow.position.y = 0.04; arrow.visible = false;
       sc.add(arrow);
+      // Bevel the slab inside its existing collision footprint. Its blue sides
+      // stand out from the flat sheet, with a pale frost line beneath the cap.
+      const blockFace = new T.Shape();
+      blockFace.moveTo(-0.62, 0.04); blockFace.lineTo(0.60, 0.04); blockFace.lineTo(0.62, 0.43);
+      blockFace.lineTo(0.47, 0.55); blockFace.lineTo(-0.43, 0.57); blockFace.lineTo(-0.62, 0.48);
+      blockFace.closePath();
+      const blockGeo = new T.ExtrudeGeometry(blockFace, { depth: 0.43, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.025, bevelThickness: 0.025 });
+      blockGeo.translate(0, 0, -0.215);
+      const frost = new T.Color(0xc5e6e8), deep = new T.Color(0x6399b7), tone = new T.Color(), iceColors = [];
+      const faces = blockGeo.attributes.position;
+      for (let i = 0; i < faces.count; i++) {
+        const y = faces.getY(i), x = faces.getX(i);
+        const vein = 0.15 * Math.exp(-Math.pow((y - 0.28 - 0.05 * x) / 0.07, 2));
+        tone.copy(deep).lerp(frost, U.clamp(y * 1.25 + vein, 0, 1)); iceColors.push(tone.r, tone.g, tone.b);
+      }
+      blockGeo.setAttribute('color', new T.Float32BufferAttribute(iceColors, 3));
       for (let i = 0; i < 2; i++) {
-        const b = U.group(U.box(1.3, 0.6, 0.5, new T.MeshStandardMaterial({ color: 0x9fd0f5, roughness: 0.2, flatShading: true }), 0, 0.3, 0),
-          U.ball(1, bankM, 0, 0.6, 0, 0.66, 0.14, 0.27, 12));
+        const b = U.group(U.mesh(blockGeo, U.mat(0xffffff, { vertexColors: true, roughness: 0.38 })),
+          U.ball(1, bankM, 0, 0.565, 0, 0.62, 0.075, 0.24, 18));
         b.visible = false;
         sc.add(b);
         blocks.push({ g: b, on: false, x: 0, z: 0, ph: 0, sp: 1.6 });
@@ -822,56 +1021,98 @@
     function build() {
       view = stage('#84bcf0', '#f7fbff', { ground: 0xdde8ff, hemi: 2.2, key: 1.5 });
       const sc = view.scene;
+      fellBackdrop(sc);
       sc.fog = new T.Fog(0xf1f6fd, 24, 54);
-      // A quiet snow wash replaces the busy, dark repeating oval pattern.
-      gtex = U.tex(256, 256, (c, w, h) => {
-        c.fillStyle = '#f8fbff'; c.fillRect(0, 0, w, h);
-        const wash = c.createLinearGradient(0, 0, w, 0);
-        wash.addColorStop(0, 'rgba(177,201,224,0)'); wash.addColorStop(0.5, 'rgba(177,201,224,0.055)'); wash.addColorStop(1, 'rgba(177,201,224,0)');
-        c.fillStyle = wash; c.fillRect(0, 0, w, h);
-      });
-      gtex.wrapS = gtex.wrapT = T.RepeatWrapping; gtex.repeat.set(9, REP);
+      gtex = powderMap(9, REP);
       const ground = new T.Mesh(new T.PlaneGeometry(90, LEN), new T.MeshStandardMaterial({ map: gtex, roughness: 1 }));
       ground.rotation.x = -PI / 2; ground.position.z = -LEN / 2 + 12;
       sc.add(ground);
-      // The broad packed trail blends softly into the banks, without painted lanes.
-      const trailTex = U.tex(256, 16, (c, w, h) => {
+      // Long, faint runner grooves give the snow a sense of motion. Their
+      // curves close at the tile seam so the trail can scroll continuously.
+      const trailTex = U.tex(256, 512, (c, w, h) => {
         const gr = c.createLinearGradient(0, 0, w, 0);
-        gr.addColorStop(0, 'rgba(184,207,229,0)'); gr.addColorStop(0.12, 'rgba(184,207,229,0.32)');
-        gr.addColorStop(0.3, 'rgba(220,233,245,0.26)'); gr.addColorStop(0.5, 'rgba(239,246,252,0.16)');
-        gr.addColorStop(0.7, 'rgba(220,233,245,0.26)'); gr.addColorStop(0.88, 'rgba(184,207,229,0.32)'); gr.addColorStop(1, 'rgba(184,207,229,0)');
+        gr.addColorStop(0, 'rgba(163,188,206,0)'); gr.addColorStop(0.11, 'rgba(163,188,206,0.34)');
+        gr.addColorStop(0.28, 'rgba(216,230,238,0.52)'); gr.addColorStop(0.68, 'rgba(234,239,239,0.46)');
+        gr.addColorStop(0.9, 'rgba(173,198,213,0.35)'); gr.addColorStop(1, 'rgba(173,198,213,0)');
         c.fillStyle = gr; c.fillRect(0, 0, w, h);
+        for (const base of [76, 95, 169, 188]) {
+          for (const highlight of [false, true]) {
+            c.lineWidth = highlight ? 1.3 : 2.4;
+            c.strokeStyle = highlight ? 'rgba(255,252,242,0.55)' : 'rgba(142,169,188,0.24)';
+            c.beginPath();
+            for (let y = 0; y <= h; y += 4) {
+              const t = y / h * 2 * PI, x = base + (base < 128 ? 11 * Math.sin(t) : 8 * Math.cos(t + 0.6)) + (highlight ? 1.8 : 0);
+              if (y) c.lineTo(x, y); else c.moveTo(x, y);
+            }
+            c.stroke();
+          }
+        }
       });
+      trailTex.wrapT = T.RepeatWrapping; trailTex.repeat.y = 8;
       piste = U.mesh(new T.PlaneGeometry(1, LEN), new T.MeshStandardMaterial({ map: trailTex, transparent: true, depthWrite: false, roughness: 1 }), 0, 0.012, -LEN / 2 + 12);
       piste.rotation.x = -PI / 2; sc.add(piste);
-      // Smooth rolled snowbanks keep the route legible without hiding obstacles.
-      const profile = [[0, 0], [0.4, 0.08], [1.1, 0.27], [2.4, 0.48], [5, 0.27], [18, 0.10]];
-      [-1, 1].forEach((side) => {
-        const points = [], indices = [];
-        for (let j = 0; j <= 8; j++) for (const p of profile) points.push(side * p[0], p[1], 12 - j * LEN / 8);
-        for (let j = 0; j < 8; j++) for (let i = 0; i < profile.length - 1; i++) {
-          const a = j * profile.length + i, b = a + profile.length;
-          if (side > 0) indices.push(a, a + 1, b, a + 1, b + 1, b);
-          else indices.push(a, b, a + 1, a + 1, b, b + 1);
+      const profile = [[0, 0, 0xc9dce6], [0.4, 0.08, 0xd5e3ea], [1.1, 0.27, 0xeaf0f2], [2.4, 0.48, 0xf5f5ee], [5, 0.27, 0xd9e6ec], [18, 0.10, 0xe2ecf2]];
+      for (const side of [-1, 1]) {
+        const points = [], colors = [], indices = [], tint = new T.Color();
+        for (let j = 0; j <= 80; j++) {
+          const phase = j * PI / 8 + side * 0.9;
+          for (const [radius, height, color] of profile) {
+            const swell = 1 + 0.21 * Math.sin(phase) + 0.10 * Math.sin(phase * 2 + 0.5);
+            points.push(side * radius * (0.78 + 0.22 * swell), height * swell, 25 - j * 1.5);
+            tint.setHex(color); colors.push(tint.r, tint.g, tint.b);
+          }
+          if (j === 80) break;
+          for (let i = 0; i < profile.length - 1; i++) {
+            const a = j * profile.length + i, b = a + profile.length;
+            if (side > 0) indices.push(a, a + 1, b, a + 1, b + 1, b);
+            else indices.push(a, b, a + 1, a + 1, b, b + 1);
+          }
         }
-        const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(points, 3)); geo.setIndex(indices); geo.computeVertexNormals();
-        const bank = U.mesh(geo, U.mat(0xf4f8ff, { roughness: 1 })); bank.userData.side = side; banks.push(bank); sc.add(bank);
-      });
-      const wood = U.mat(PN.COL.woodLight, { roughness: 0.7 });
-      board = U.group(U.box(0.62, 0.06, 1.5, wood, 0, 0.05, 0.05), U.rot(U.box(0.62, 0.06, 0.4, wood, 0, 0.16, -0.82), 0.7), U.box(0.5, 0.03, 0.06, U.mat(PN.COL.red), 0, 0.09, -0.4));
+        const geo = new T.BufferGeometry();
+        geo.setAttribute('position', new T.Float32BufferAttribute(points, 3)); geo.setIndex(indices);
+        geo.setAttribute('color', new T.Float32BufferAttribute(colors, 3)); geo.computeVertexNormals();
+        const bank = U.mesh(geo, U.mat(0xffffff, { vertexColors: true, roughness: 1 }));
+        bank.userData.side = side; banks.push(bank); sc.add(bank);
+      }
+
+      const birch = new T.MeshStandardMaterial({ color: 0xd6a069, map: U.surfaceTex('wood'), roughness: 0.7 });
+      const runner = U.mat(0x825a47), paint = U.mat(0xbc5546);
+      board = new T.Group();
+      // Five birch slats and two bent runners follow the same upturned nose.
+      for (let i = -2; i <= 2; i++) {
+        const x = i * 0.126;
+        board.add(U.box(0.118, 0.054, 1.46, birch, x, 0.074, 0.06),
+          U.rot(U.box(0.118, 0.054, 0.38, birch, x, 0.163, -0.83), 0.55));
+      }
+      for (const x of [-0.22, 0.22]) {
+        const points = [[0.80, 0.01], [0.30, 0.012], [-0.50, 0.013], [-0.76, 0.045], [-0.95, 0.17], [-0.98, 0.30]];
+        const rail = new T.CatmullRomCurve3(points.map(([z, y]) => new T.Vector3(x, y, z)));
+        board.add(new T.Mesh(new T.TubeGeometry(rail, 20, 0.027, 8, false), runner));
+      }
+      board.add(U.box(0.63, 0.035, 0.10, paint, 0, 0.117, 0.64),
+        U.rot(U.box(0.63, 0.035, 0.085, paint, 0, 0.244, -0.92), 0.55));
       sc.add(board);
       const rockM = U.mat(0x7f8894, { roughness: 1 }), capM = U.mat(0xffffff, { roughness: 1 });
-      for (let i = 0; i < 64; i++) pool.tree.push({ m: tree(1), kind: 'tree' });
+      for (let i = 0; i < 64; i++) pool.tree.push({ m: winterFir(1), kind: 'tree' });
       for (let i = 0; i < 12; i++) pool.rock.push({ m: U.group(U.ball(0.42, rockM, 0, 0.2, 0, 1, 0.7, 0.9, 10), U.ball(0.36, capM, 0, 0.36, 0, 1, 0.4, 0.85, 10)), kind: 'rock' });
       const look = PN.items.ahven.look;
       for (let i = 0; i < 6; i++) {
-        const f = PN.Props.fish(look);
+        const f = PN.Props.fish(look, true);
         f.scale.setScalar(0.6);
         pool.fish.push({ m: U.group(f), kind: 'fish', inner: f });
       }
-      const rampM = U.mat(0xdcecff, { roughness: 0.5 });
+      const rampTex = U.tex(128, 128, (c, w, h) => {
+        c.fillStyle = '#d8e8ed'; c.fillRect(0, 0, w, h);
+        c.fillStyle = '#99b9c9'; c.fillRect(0, 0, 5, h); c.fillRect(w - 5, 0, 5, h);
+        c.strokeStyle = '#ca7057'; c.lineWidth = 6; c.lineJoin = 'round'; c.lineCap = 'round';
+        for (const y of [51, 81]) {
+          c.beginPath(); c.moveTo(39, y); c.lineTo(64, y - 14); c.lineTo(89, y); c.stroke();
+        }
+      });
+      const rampM = new T.MeshStandardMaterial({ map: rampTex, roughness: 0.65 });
       for (let i = 0; i < 3; i++) {
-        const r = U.group(U.rot(U.box(1.1, 0.08, 1.3, rampM, 0, 0.22, 0), 0.34), U.rot(U.box(1.12, 0.09, 0.14, U.mat(PN.COL.red), 0, 0.4, -0.52), 0.34));
+        const r = U.group(U.rot(U.box(1.1, 0.08, 1.3, rampM, 0, 0.22, 0), 0.34),
+          U.rot(U.box(1.12, 0.09, 0.14, paint, 0, 0.4, -0.52), 0.34));
         pool.ramp.push({ m: r, kind: 'ramp' });
       }
       Object.keys(pool).forEach((k) => pool[k].forEach((it) => { it.m.visible = false; it.live = false; sc.add(it.m); }));
@@ -944,9 +1185,11 @@
         view.camera.position.set(0, 4.6, 9); view.camera.lookAt(0, 0.5, -7);
         const speed = dead ? 0 : going ? (G.mumMode ? 5.5 + Math.min(2, dist / 100) : 9 + Math.min(9, dist / 60)) : 3;
         const dz = speed * dt;
-        gtex.offset.y += dz * REP / LEN;
+        gtex.offset.y = (gtex.offset.y + dz * REP / LEN) % 1;
+        const trailMap = piste.material.map;
+        trailMap.offset.y = (trailMap.offset.y + dz * trailMap.repeat.y / LEN) % 1;
         piste.scale.x = track * 2 + 1.4;
-        banks.forEach((bank) => { bank.position.x = bank.userData.side * (track + 0.55); });
+        banks.forEach((bank) => { bank.position.x = bank.userData.side * (track + 0.55); bank.position.z = (bank.position.z + dz) % 24; });
         if (going && !dead) {
           dist += dz;
           const key = K.keys();
