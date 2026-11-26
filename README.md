@@ -34,7 +34,7 @@ On a phone, open the link and tap **Add to Home Screen** on the first screen to 
 
 ## Saving
 
-The seal is kept in the browser's own storage on the device, so there is no account. Clearing the browser's site data clears the seal.
+The seal is kept in the browser's own storage on the device, so there is no account. Clearing the browser's site data clears the seal. The game asks the browser to keep its data when space runs short (`askPersist` in main.js), which does not protect against clearing site data by hand. To keep a copy safe, Settings has Get save code (copy it, or Save as a file) and Use a save code (paste it, or choose the file) (26 Nov 2026).
 
 ## Play stats
 

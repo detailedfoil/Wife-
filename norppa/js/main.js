@@ -139,6 +139,7 @@
     UI.title.hide();
     W.setCamMode('home');
     started = true;
+    askPersist();
     if (isNew) { await intro(); state.pupPointsSeen = 1; }
     else {
       UI.showHud(true); UI.refresh();
@@ -1289,12 +1290,26 @@
     state.name = name;
     UI.renderSheet(); UI.refresh(); save();
   };
+  /* Ask the browser not to clear the save when it is short of space. It cannot stop someone clearing site data by hand. */
+  function askPersist() {
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { /* the browser said no: nothing to do */ }); } catch (e) { /* not supported */ }
+  }
   G.exportSave = async function () {
     save();
     const code = S.exportCode(state);
     const v = await UI.modal({ title: tr('Your save code'), html: '<p>' + tr('Copy this somewhere safe. On another phone or browser, open Settings and choose Use a save code.') + '</p><textarea class="field" id="codeOut" readonly style="margin-top:12px">' + code + '</textarea>',
-      actions: [{ label: tr('Copy the code'), value: 'copy' }, { label: tr('Close'), value: 0 }],
+      actions: [{ label: tr('Copy the code'), value: 'copy' }, { label: tr('Save as a file'), value: 'file', cls: 'ghost' }, { label: tr('Close'), value: 0 }],
       result(val, card) {
+        if (val === 'file') {
+          try {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
+            a.download = 'pikku-norppa-save-' + new Date().toISOString().slice(0, 10) + '.txt';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+            return 'filed';
+          } catch (e) { return 'failed'; }
+        }
         if (val !== 'copy') return val;
         const ta = card.querySelector('#codeOut');
         ta.select();
@@ -1304,10 +1319,20 @@
         return ok || navigator.clipboard ? 'copied' : 'failed';
       } });
     if (v === 'copied') UI.toast(tr('Save code copied.'), 'check');
+    else if (v === 'filed') UI.toast(tr('Save file downloaded.'), 'check');
     else if (v === 'failed') UI.toast(tr('Could not copy here. Press and hold the code to copy it.'), 'book', 'bad', 4500);
   };
   G.importSave = async function () {
-    const code = await UI.modal({ title: tr('Use a save code'), html: '<p>' + tr('Paste a code from another device. It replaces the seal on this one.') + '</p><textarea class="field" id="codeIn" placeholder="PN1..." autocomplete="off" spellcheck="false" style="margin-top:12px"></textarea>',
+    const code = await UI.modal({ title: tr('Use a save code'), html: '<p>' + tr('Paste a code from another device. It replaces the seal on this one.') + '</p><textarea class="field" id="codeIn" placeholder="PN1..." autocomplete="off" spellcheck="false" style="margin-top:12px"></textarea><p style="margin-top:10px">' + tr('Or choose a save file:') + ' <input type="file" id="codeFile" accept=".txt,text/plain"></p>',
+      onOpen(card) {
+        card.querySelector('#codeFile').addEventListener('change', (e) => {
+          const f = e.target.files && e.target.files[0];
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = () => { card.querySelector('#codeIn').value = String(r.result || '').trim(); };
+          r.readAsText(f);
+        });
+      },
       actions: [{ label: tr('Bring this seal over'), value: 'ok' }, { label: tr('Cancel'), value: 0 }],
       result(val, card) { return val === 'ok' ? card.querySelector('#codeIn').value : null; } });
     if (code == null) return;
