@@ -92,7 +92,7 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
 {
  const J=(o)=>JSON.stringify(PN_KEYS.map(k=>o[k])), PN_KEYS=['water','sport','brain','care'];
  const T=S.T, mum=S.newState(now); mum.stage=2; mum.name='Emo'; mum.stats.joy=55; mum.stats.clean=100;
- ctx.PN.GAME_ORDER.filter(g=>!ctx.PN.GAMES[g].lab).forEach(g=>assert.ok(ctx.PN.skillOf(g),'every coin game belongs to a skill: '+g));
+ ctx.PN.GAME_ORDER.forEach(g=>assert.ok(ctx.PN.skillOf(g),'every coin game belongs to a skill: '+g));
  const pup=S.addPup(mum,now,'Aino'); pup.xp=0; S.drain();
  assert.equal(J(pup.pts),J({water:0,sport:0,brain:0,care:0})); assert.equal(S.pupLevel(pup),0); assert.equal(S.spendPoint(mum,0,'water').ok,false,'no level, no point');
  S.pupXp(mum,T.pupXpStep-1); assert.equal(S.pupLevel(pup),0); S.pupXp(mum,1); assert.equal(S.pupLevel(pup),1);

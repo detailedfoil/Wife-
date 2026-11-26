@@ -3,7 +3,7 @@
    Snowball Toss: flick the snowball into a bucket, Paper Toss style. Mind the wind.
    Curling Seal: slide across the ice and stop on the rings.
    Sled Run: steer down the hill between the trees.
-   Blackjack: beat the dealer for tokens. Löyly: keep the sauna heat just right.
+   Blackjack: beat the dealer for tokens. Sauna: how she gets clean.
    Ice Stack: set sliding floes down on a tower; the overhang breaks off.
    Puffer Sweeper: minesweeper with pufferfish, one board against the clock.
    Ice Piano: piano tiles; tap the tiles of a tune in order as it speeds up.
@@ -1094,134 +1094,6 @@
     };
   })();
 
-  /* ---------- Löyly: the sauna game ----------
-     Played like the fishing in Stardew Valley. A needle (how hot she feels) wanders up and down the thermometer.
-     Hold to throw water on the stones and the green band rises; let go and it sinks. Keep the needle in the green
-     to fill the calm meter. Fill it and the round is won, then the next one is harder. Let it run dry and it is over. */
-  const sauna = (() => {
-    let ladle, water, stream, pour = 0;
-    const stoveX = -0.95, lip = new T.Vector3(), target = new T.Vector3(stoveX, 0.03, 1.0), up = new T.Vector3(0, 1, 0), delta = new T.Vector3();
-    let view = null, steam = null, stones = null, el = null, zoneEl = null, pinEl = null, calmEl = null, padEl = null;
-    let goal = 7, lvl = 0, band = 0, bandV = 0, size = 0.3, pin = 0.4, pinT = 0.5, pinV = 0, hop = 0, calm = 0.35, round = 0, hold = false, live = false, rest = 0, splash = 0;
-    function build() {
-      view = stage('#3a2114', '#6b4023', { ground: 0x5a3a22, hemi: 1.7, key: 1.3 });
-      const sc = view.scene;
-      const wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 });
-      sc.add(U.box(9, 6, 0.2, wood, 0, 1.6, -1.7));
-      for (let i = -5; i <= 5; i++) sc.add(U.box(0.035, 6, 0.03, dark, i * 0.8, 1.6, -1.58));
-      sc.add(U.box(9, 0.2, 6, dark, 0, -1.05, 0.6));
-      sc.add(U.box(5.2, 0.16, 1.5, wood, -0.4, -0.08, -0.85));            // the bench she sits on
-      sc.add(U.box(5.2, 0.14, 0.9, wood, -0.4, -0.6, 0.25));              // the step below it
-      sc.add(U.box(1.0, 0.95, 0.9, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), stoveX, -0.62, 1.0));   // the stove
-      stones = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
-      for (let i = 0; i < 9; i++) sc.add(U.ball(0.17 + rnd() * 0.06, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stones, stoveX + rs(0.3), -0.1 + rnd() * 0.08, 1.0 + rs(0.26), 1, 0.8, 1, 8, 6));
-      const lamp = new T.PointLight(0xffa85a, 6, 9); lamp.position.set(stoveX, 0.5, 1.7); sc.add(lamp);
-      steam = Puffs(sc, 50, 0xffffff, 0.5);
-      // Pivot at the bowl: the long wooden handle tips as water runs over its left lip.
-      ladle = new T.Group(); ladle.position.set(stoveX + 0.3, 1.0, 1.25);
-      const ladleWood = U.mat(0xc7945b, { roughness: 0.8 });
-      ladle.add(U.mesh(new T.SphereGeometry(0.19, 24, 12, 0, PI * 2, PI / 2, PI / 2), ladleWood, 0, 0, 0));
-      const rim = U.torus(0.19, 0.025, ladleWood, 0, 0, 0, PI * 2, 24); rim.rotation.x = PI / 2; ladle.add(rim);
-      ladle.add(U.rod([0.15, -0.03, 0], [0.78, 0.22, 0], 0.035, ladleWood, 16));
-      water = U.cyl(0.155, 0.155, 0.012, U.mat(0x8ed9f5, { transparent: true, opacity: 0.85 }), 0, -0.035, 0, 24); ladle.add(water); sc.add(ladle);
-      stream = U.cyl(0.018, 0.025, 1, U.mat(0x9cdef7, { transparent: true, opacity: 0.8 }), 0, 0, 0, 12); stream.visible = false; sc.add(stream);
-
-      view.camera.position.set(0, 0.9, 5.6);
-      el = document.getElementById('saunaGauge'); zoneEl = document.getElementById('sgZone'); pinEl = document.getElementById('sgPin'); calmEl = document.getElementById('sgCalm'); padEl = document.getElementById('saunaPad');
-      padEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); padEl.setPointerCapture(e.pointerId); if (live) hold = true; });
-      const release = () => { hold = false; };
-      padEl.addEventListener('pointerup', release); padEl.addEventListener('pointercancel', release); padEl.addEventListener('lostpointercapture', release);
-      padEl.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (live) hold = true; } });
-      padEl.addEventListener('keyup', release); padEl.addEventListener('blur', release); window.addEventListener('blur', release);
-
-    }
-    function newRound() {
-      lvl = round * 2 / 7;                       // a gentle increase across the whole visit
-      size = G.mumMode ? 0.66 : Math.max(0.32, 0.42 - lvl * 0.018);
-      band = 0.2; bandV = 0; pin = 0.3; pinT = 0.4; pinV = 0; hop = 0.9; calm = G.mumMode ? 0.62 : 0.5; rest = 0;
-    }
-    function paint() {
-      zoneEl.style.height = (size * 100) + '%'; zoneEl.style.bottom = (band * 100) + '%';
-      pinEl.style.top = ((1 - pin) * 100) + '%';
-      calmEl.style.height = (calm * 100) + '%';
-      zoneEl.classList.toggle('out', !(pin >= band && pin <= band + size));
-    }
-    return {
-      label: 'Rounds', hint: 'Hold the ladle to pour water. Keep the needle in the green.',
-      view: () => view,
-      start() {
-        if (!view) build();
-        cast(view, 0.62, true);
-        actor.g.position.set(-0.5, 0, -0.75);
-        face(0.25);
-        goal = (PN.Games.opts && PN.Games.opts.need) || 7;
-        round = 0; live = false; hold = false; pour = 0; splash = 0; stream.visible = false; ladle.rotation.z = 0; steam.clear();
-        newRound();
-        el.hidden = false; padEl.hidden = false; padEl.classList.remove('on'); paint();
-        document.getElementById('gScore').textContent = '0/' + goal;
-      },
-      stop() { live = false; hold = false; stream.visible = false; el.hidden = true; padEl.hidden = true; },
-      go() { live = true; },
-      pointer(type, x, y) { if (type === 'up') hold = false; else if (type === 'down') { const r = padEl.getBoundingClientRect(); hold = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; } },
-      key() {},
-      update(dt, playing) {
-        clock += dt;
-        lens(view);
-        view.camera.lookAt(0, -0.15, 0);
-        actor.update(dt, clock, null);
-        steam.update(dt, 0, 0);
-        stones.emissiveIntensity = 0.6 + pin * 1.6;
-        const pressing = playing && live && rest <= 0 && (hold || K.keys() !== 0);
-        pour = U.damp(pour, pressing ? 1 : 0, 12, dt);
-        ladle.rotation.z = pour * 0.95;
-        water.visible = pour < 0.8;
-        stream.visible = pressing && pour > 0.25;
-        if (stream.visible) {
-          ladle.updateMatrixWorld(true); lip.set(-0.17, 0, 0); ladle.localToWorld(lip);
-          delta.subVectors(lip, target); stream.position.copy(lip).add(target).multiplyScalar(0.5);
-          stream.quaternion.setFromUnitVectors(up, delta.clone().normalize()); stream.scale.y = delta.length();
-          stream.scale.x = stream.scale.z = 0.85 + 0.15 * Math.sin(clock * 32);
-        }
-        padEl.classList.toggle('on', pressing);
-        if (!playing || !live) return;
-        if (rest > 0) { rest -= dt; if (rest <= 0) newRound(); paint(); return; }
-        // the green band: water lifts it, and it sinks back on its own, with a small bounce off the bottom
-        bandV += (pressing ? 1.9 : -1.6) * dt;
-        const bandSpeed = G.mumMode ? 0.46 : 0.85;
-        bandV = U.clamp(bandV, -bandSpeed, bandSpeed);
-        band += bandV * dt;
-        if (band < 0) { band = 0; bandV = Math.abs(bandV) * 0.15; }
-        if (band > 1 - size) { band = 1 - size; bandV = 0; }
-        if (pressing) { splash -= dt; if (splash <= 0) { splash = 0.16; steam.emit(stoveX, 0.2, 1.0, 2, 0.5, 0.16, 1.3, -1.6); if (rnd() < 0.25) A.play('bubble', 0.25); } }
-        // the needle: wanders towards a spot, then picks another; the later the round, the jumpier
-        const k = 1 + lvl * 0.12;
-        hop -= dt;
-        if (hop <= 0) {
-          hop = (0.55 + rnd() * 1.15) / Math.sqrt(k) * (G.mumMode ? 1.5 : 1);
-          pinT = G.mumMode ? U.clamp(pin + rs(0.19), 0.18, 0.82) : U.clamp(pin + rs(0.36 + 0.035 * lvl), 0.04, 0.96);
-        }
-        pinV += ((pinT - pin) * 9 * k - pinV * 4.6) * dt;
-        pin = U.clamp(pin + pinV * dt, 0, 1);
-        const inside = pin >= band && pin <= band + size;
-        calm = U.clamp(calm + (inside ? (G.mumMode ? 0.21 : 0.16) : (G.mumMode ? -0.035 : -0.08)) * dt, 0, 1);
-        paint();
-        if (calm >= 1) {
-          round++; K.score(round, true); document.getElementById('gScore').textContent = round + '/' + goal;
-          A.play(round >= goal ? 'award' : 'match'); actor.gesture('happy', true);
-          steam.emit(stoveX, 0.25, 1.0, 14, 1.1, 0.2, 1.6, -1.4);
-          if (round >= goal) { live = false; hold = false; stream.visible = false; el.hidden = true; padEl.hidden = true; K.over(tr('Squeaky clean!')); return; }
-          K.big(tr('Lovely!'));
-          rest = 1.3;
-        } else if (calm <= 0) {
-          live = false; hold = false; stream.visible = false;
-          A.play('nope'); actor.gesture(pin > band ? 'shake' : 'no', true);
-          el.hidden = true; padEl.hidden = true;
-          K.over(tr(pin > band + size ? 'Too hot!' : 'Too cold!'));
-        }
-      },
-    };
-  })();
-
   /* ================= Ice Cream Stack ================= */
   /* Stack ice cream: a layer slides across, tap to set it down. Whatever hangs over the edge breaks off, so the tower narrows.
      Miss the tower altogether and the game is over. */
@@ -1899,236 +1771,15 @@
   })();
 
 
-  /* ---------- Sauna lab (developer mode only) ----------
-     Four rough ideas for replacing Löyly, to try and compare. They pay nothing, cost no energy and save nothing (see `lab` in data.js and finish() in games.js).
-     1 whack the sweat beads with the vihta, 2 scrub the dirt off with it, 3 ladle rhythm, 4 whack the beads while the steam makes them swell.
-     The 3D room is shared; the beads, dirt, rings and meter are plain HTML laid over it, placed by projecting the seal and the stones onto the screen. */
-  const lab = (() => {
-    const stoveX = -0.95, STEAMY = 0.35, ZONE = [0.4, 0.7], LEN = 30;
-    let view = null, steam = null, stones = null, ladle = null, layer = null, meterFill = null, vihta = null, padBtn = null;
-    let kind = '', live = false, time = LEN, score = 0, steamLvl = 0, spawn = 0, rectT = 0, throwT = 0, cool = 0, zoneT = 0, hits = 0, nextBeat = 0, beatN = 0, touching = false, last = null;
-    let body = { x0: 100, y0: 200, x1: 300, y1: 400 }, stone = { x: 100, y: 500 };
-    let beads = [], patches = [], beats = [];
-    const box = new T.Box3(), pv = new T.Vector3();
-    const px = () => Math.max(34, Math.min(window.innerWidth, window.innerHeight) * 0.085);
-    const html = (tag, cls, parent) => { const e = document.createElement(tag); e.className = cls; (parent || layer).appendChild(e); return e; };
-
-    function build() {
-      view = stage('#3a2114', '#6b4023', { ground: 0x5a3a22, hemi: 1.7, key: 1.3 });
-      const sc = view.scene;
-      const wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 });
-      sc.add(U.box(9, 6, 0.2, wood, 0, 1.6, -1.7));
-      for (let i = -5; i <= 5; i++) sc.add(U.box(0.035, 6, 0.03, dark, i * 0.8, 1.6, -1.58));
-      sc.add(U.box(9, 0.2, 6, dark, 0, -1.05, 0.6));
-      sc.add(U.box(5.2, 0.16, 1.5, wood, -0.4, -0.08, -0.85));
-      sc.add(U.box(5.2, 0.14, 0.9, wood, -0.4, -0.6, 0.25));
-      sc.add(U.box(1.0, 0.95, 0.9, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), stoveX, -0.62, 1.0));
-      stones = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
-      for (let i = 0; i < 9; i++) sc.add(U.ball(0.17 + rnd() * 0.06, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stones, stoveX + rs(0.3), -0.1 + rnd() * 0.08, 1.0 + rs(0.26), 1, 0.8, 1, 8, 6));
-      const lamp = new T.PointLight(0xffa85a, 6, 9); lamp.position.set(stoveX, 0.5, 1.7); sc.add(lamp);
-      steam = Puffs(sc, 50, 0xffffff, 0.5);
-      ladle = new T.Group(); ladle.position.set(stoveX + 0.3, 1.0, 1.25);
-      const lw = U.mat(0xc7945b, { roughness: 0.8 });
-      ladle.add(U.mesh(new T.SphereGeometry(0.19, 24, 12, 0, PI * 2, PI / 2, PI / 2), lw, 0, 0, 0));
-      ladle.add(U.rod([0.15, -0.03, 0], [0.78, 0.22, 0], 0.035, lw, 16));
-      sc.add(ladle);
-      view.camera.position.set(-0.5, 0.9, 5.6);   // centred on the seal, so the stove is on the screen too
-      layer = document.createElement('div'); layer.className = 'lab-layer'; document.getElementById('gamehud').appendChild(layer);
-    }
-    /* Where the seal and the stones are on the screen right now. */
-    function measure() {
-      view.camera.updateMatrixWorld(true); view.rig.updateMatrixWorld(true);
-      box.setFromObject(actor.g);
-      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      for (let i = 0; i < 8; i++) {
-        pv.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(view.camera);
-        const x = (pv.x * 0.5 + 0.5) * window.innerWidth, y = (-pv.y * 0.5 + 0.5) * window.innerHeight;
-        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-      }
-      const w = x1 - x0, h = y1 - y0;
-      body = { x0: x0 + w * 0.15, x1: x1 - w * 0.15, y0: Math.max(90, y0 + h * 0.15), y1: Math.min(window.innerHeight - 140, y1 - h * 0.1) };
-      pv.set(stoveX, 0.1, 1.0).project(view.camera);
-      stone = { x: (pv.x * 0.5 + 0.5) * window.innerWidth, y: (-pv.y * 0.5 + 0.5) * window.innerHeight };
-    }
-    const inBody = () => ({ x: body.x0 + rnd() * (body.x1 - body.x0), y: body.y0 + rnd() * (body.y1 - body.y0) });
-    function swat(x, y) {
-      vihta.style.left = x + 'px'; vihta.style.top = y + 'px';
-      vihta.classList.remove('swat'); void vihta.offsetWidth; vihta.classList.add('swat');
-    }
-    function setScore(n, quiet) { score = Math.max(0, n); K.score(score, quiet); }
-
-    /* the steam meter (rhythm and whack plus steam) */
-    function meter(lo, hi) {
-      const m = html('div', 'lab-meter');
-      const z = html('i', 'lab-zone', m); z.style.bottom = lo * 100 + '%'; z.style.height = (hi - lo) * 100 + '%';
-      meterFill = html('b', 'lab-fill', m);
-    }
-    function ladleThrow(amount) {
-      throwT = 0.35; steamLvl = Math.min(1, steamLvl + amount);
-      steam.emit(stoveX, 0.2, 1.0, 8, 0.9, 0.18, 1.5, -1.5); A.play('bubble', 0.5);
-    }
-
-    /* whack the beads */
-    function addBead(clean) {
-      const e = html('i', 'lab-bead' + (clean ? ' clean' : '')), p = inBody(), s = px();
-      e.style.setProperty('--s', s + 'px'); e.style.left = p.x + 'px'; e.style.top = p.y + 'px';
-      beads.push({ e, x: p.x, y: p.y, s, life: kind === 'steam' ? 1.9 : 1.5, clean });
-    }
-    function whack(x, y) {
-      let pick = null, best = 1e9;
-      beads.forEach((b) => { const d = Math.hypot(b.x - x, b.y - y), reach = b.s * (b.e.classList.contains('swollen') ? 0.72 : 0.5) + 16; if (d < reach && d < best) { best = d; pick = b; } });
-      swat(x, y);
-      if (!pick) return;
-      beads.splice(beads.indexOf(pick), 1);
-      pick.e.classList.add('hit'); setTimeout(() => pick.e.remove(), 220);
-      if (pick.clean) { setScore(score - 1); A.play('nope'); return; }
-      setScore(score + (pick.e.classList.contains('swollen') ? 2 : 1)); A.play('pop');
-    }
-    function tickBeads(dt) {
-      const rate = kind === 'steam' ? 1 + steamLvl * 1.2 : 1;
-      spawn -= dt * rate;
-      if (spawn <= 0) { spawn = Math.max(0.38, 0.85 - (LEN - time) * 0.015); addBead(rnd() < 0.2); }
-      beads = beads.filter((b) => {
-        b.life -= dt;
-        if (kind === 'steam') b.e.classList.toggle('swollen', steamLvl > STEAMY && !b.clean);
-        b.e.style.opacity = b.life < 0.4 ? Math.max(0, b.life / 0.4) : 1;
-        if (b.life <= 0) { b.e.remove(); return false; }
-        return true;
-      });
-    }
-
-    /* scrub the dirt */
-    function scrubTo(x, y) {
-      vihta.style.left = x + 'px'; vihta.style.top = y + 'px'; vihta.classList.add('on');
-      if (!last) { last = { x, y }; return; }
-      const moved = Math.hypot(x - last.x, y - last.y);
-      patches.forEach((p) => {
-        if (p.dirt <= 0) return;
-        // how close the stroke from the last point to this one came to the middle of the patch
-        const dx = x - last.x, dy = y - last.y, len2 = dx * dx + dy * dy || 1;
-        const t = U.clamp(((p.x - last.x) * dx + (p.y - last.y) * dy) / len2, 0, 1);
-        if (Math.hypot(last.x + dx * t - p.x, last.y + dy * t - p.y) < p.r + 10) {
-          p.dirt -= moved / (p.r * 4.5);
-          p.e.style.opacity = Math.max(0, p.dirt);
-          if (p.dirt <= 0) { p.e.remove(); setScore(score + 1); A.play('chirp', 0.5); steam.emit(stoveX, 0.2, 1.0, 3, 0.6, 0.15, 1.2, -1.5); }
-        }
-      });
-      last = { x, y };
-      if (live && score >= patches.length) { live = false; K.over(tr('Squeaky clean!')); A.play('award'); actor.gesture('happy', true); }
-    }
-
-    /* ladle rhythm */
-    const APPROACH = 0.9;
-    function tickBeat(dt) {
-      nextBeat -= dt;
-      if (nextBeat <= 0) {
-        nextBeat = Math.max(0.78, 1.15 - beatN * 0.012); beatN++;
-        const e = html('i', 'lab-ring'); e.style.left = stone.x + 'px'; e.style.top = stone.y + 'px';
-        beats.push({ e, age: 0, done: false });
-      }
-      steamLvl = Math.max(0, steamLvl - 0.07 * dt);
-      if (steamLvl >= ZONE[0] && steamLvl <= ZONE[1]) { zoneT += dt; }
-      setScore(hits + Math.floor(zoneT), true);
-      beats = beats.filter((b) => {
-        b.age += dt;
-        const k = Math.min(1, b.age / APPROACH);
-        b.e.style.transform = 'scale(' + (1 + 2.4 * (1 - k)) + ')';
-        b.e.style.opacity = b.done ? 0 : b.age > APPROACH + 0.1 ? Math.max(0, 1 - (b.age - APPROACH - 0.1) / 0.2) : 1;
-        if (!b.done && b.age > APPROACH + 0.25) { b.done = true; steamLvl = Math.max(0, steamLvl - 0.08); K.big(tr('Missed'), 0.5); }
-        if (b.age > APPROACH + 0.45) { b.e.remove(); return false; }
-        return true;
-      });
-    }
-    function tapBeat() {
-      let pick = null, best = 9;
-      beats.forEach((b) => { const d = Math.abs(b.age - APPROACH); if (!b.done && d < 0.35 && d < best) { best = d; pick = b; } });
-      if (!pick) { steamLvl = Math.max(0, steamLvl - 0.04); A.play('nope', 0.5); return; }
-      pick.done = true; pick.e.classList.add('hit');
-      if (best < 0.11) { hits += 2; ladleThrow(0.22); K.big(tr('Perfect!'), 0.5); A.play('match'); }
-      else if (best < 0.25) { hits += 1; ladleThrow(0.12); K.big(tr('Good'), 0.5); A.play('tap'); }
-      else { steamLvl = Math.max(0, steamLvl - 0.03); K.big(tr(pick.age < APPROACH ? 'Early' : 'Late'), 0.5); A.play('nope', 0.5); }
-    }
-
-    function clearLayer() { while (layer.firstChild) layer.removeChild(layer.firstChild); beads = []; patches = []; beats = []; meterFill = null; padBtn = null; }
-    function begin(k) {
-      if (!view) build();
-      kind = k;
-      cast(view, 0.62, true); actor.g.position.set(-0.5, 0, -0.75); face(0.25);
-      steam.clear(); clearLayer(); layer.hidden = false;
-      live = false; time = LEN; score = 0; steamLvl = k === 'beat' ? 0.5 : 0; spawn = 0.5; throwT = 0; cool = 0; zoneT = 0; hits = 0; nextBeat = 1; beatN = 0; touching = false; last = null; rectT = 0;
-      lens(view); view.camera.lookAt(-0.5, -0.15, 0); actor.update(0.001, clock, null); measure();
-      vihta = html('div', 'lab-vihta');
-      vihta.innerHTML = '<svg viewBox="0 0 60 100" aria-hidden="true"><rect x="25" y="56" width="10" height="42" rx="5" fill="#8a5a32"/><g fill="#4f9a3d" stroke="#2f6a26" stroke-width="2"><ellipse cx="30" cy="22" rx="11" ry="20"/><ellipse cx="16" cy="34" rx="10" ry="19" transform="rotate(-24 16 34)"/><ellipse cx="44" cy="34" rx="10" ry="19" transform="rotate(24 44 34)"/><ellipse cx="22" cy="46" rx="9" ry="14" transform="rotate(-40 22 46)"/><ellipse cx="38" cy="46" rx="9" ry="14" transform="rotate(40 38 46)"/></g></svg>';
-      if (k === 'scrub') {
-        const cells = [];
-        for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) cells.push([r, c]);
-        cells.sort(() => rnd() - 0.5);
-        const w = (body.x1 - body.x0) / 3, h = (body.y1 - body.y0) / 3, rad = U.clamp(h * 0.42, 26, 54);
-        cells.slice(0, 7).forEach(([r, c]) => {
-          const e = html('i', 'lab-dirt'), x = body.x0 + w * (c + 0.5) + rs(w * 0.18), y = body.y0 + h * (r + 0.5) + rs(h * 0.18);
-          e.style.width = e.style.height = rad * 2 + 'px'; e.style.left = x + 'px'; e.style.top = y + 'px';
-          patches.push({ e, x, y, r: rad, dirt: 1 });
-        });
-      }
-      if (k === 'beat') meter(ZONE[0], ZONE[1]);
-      if (k === 'steam') {
-        meter(STEAMY, 1);
-        padBtn = html('button', 'sg-pad'); padBtn.type = 'button'; padBtn.textContent = tr('Löyly');
-        padBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (live && cool <= 0) { ladleThrow(0.26); cool = 0.35; } });
-      }
-      if (k === 'beat') { const t = html('i', 'lab-target'); t.style.left = stone.x + 'px'; t.style.top = stone.y + 'px'; }
-      K.time(LEN);
-      document.getElementById('gScore').textContent = '0';
-    }
-    function make(k, hint) {
-      return {
-        label: k === 'scrub' ? 'Patches' : 'Score', label2: 'Time', hint,
-        view: () => view,
-        start() { begin(k); },
-        stop() { live = false; if (layer) { clearLayer(); layer.hidden = true; } },
-        go() { live = true; },
-        key() {},
-        pointer(type, x, y) {
-          if (!live) return;
-          if (k === 'scrub') { if (type === 'down') { touching = true; last = null; scrubTo(x, y); } else if (type === 'move' && touching) scrubTo(x, y); else if (type === 'up') { touching = false; last = null; vihta.classList.remove('on'); } return; }
-          if (type !== 'down') return;
-          if (k === 'beat') { tapBeat(); return; }
-          whack(x, y);
-        },
-        update(dt, playing) {
-          clock += dt;
-          lens(view); view.camera.lookAt(-0.5, -0.15, 0);
-          actor.update(dt, clock, null);
-          steam.update(dt, 0, 0);
-          stones.emissiveIntensity = 0.6 + steamLvl * 1.6 + (k === 'scrub' ? 0.6 : 0);
-          rectT -= dt; if (rectT <= 0) { rectT = 0.5; measure(); }
-          if (throwT > 0) { throwT = Math.max(0, throwT - dt); ladle.rotation.z = Math.sin((1 - throwT / 0.35) * PI) * 0.95; } else ladle.rotation.z = 0;
-          if (meterFill) meterFill.style.height = steamLvl * 100 + '%';
-          if (padBtn) padBtn.classList.toggle('on', cool > 0);
-          if (!playing || !live) return;
-          cool -= dt;
-          time -= dt; K.time(Math.max(0, Math.ceil(time)));
-          if (k === 'whack' || k === 'steam') { if (k === 'steam') steamLvl = Math.max(0, steamLvl - 0.1 * dt); tickBeads(dt); }
-          if (k === 'beat') tickBeat(dt);
-          if (time <= 0) { live = false; K.over(tr('Time!')); A.play('go'); }
-        },
-      };
-    }
-    return {
-      whack: make('whack', 'Tap the sweat beads to whack them with the vihta. Leave the clear drops alone.'),
-      scrub: make('scrub', 'Rub the vihta over the dirty patches until they are gone.'),
-      beat: make('beat', 'Tap when the ring closes on the stones. Keep the steam in the green.'),
-      steam: make('steam', 'Whack the beads. Tap Löyly for steam: swollen beads pay double.'),
-    };
-  })();
-
-
-  /* Lab 5 (developer mode only): pull her out of the sauna. A heat bar fills up the side with a gold line on it, like the swing bar in a golf game.
-     Hold her by the head and drag her out through the door when the bar is on the line; the bar stops the moment she is out. Dunk her in the tub to start the next round.
+  /* ---------- Sauna: how she gets clean ----------
+     Not a game for coins: a go is a run of rounds, and every round that goes well scrubs a share of the dirt away (see Sim.saunaDone).
+     A heat bar fills up the side with a gold line on it, like the swing bar in a golf game. Hold her by the head and pull her out of the sauna
+     when the bar is on the line; the bar stops the moment she is out. Then dunk her in the ice hole to start the next round.
      She is a rag doll: held by the head she hangs from it like a pendulum (the pull of the drag swings her), let go and she falls, lands and flops flat.
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
-  const pullOut = (() => {
-    const ROUNDS = 5, HINT = 'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.';
+  const sauna = (() => {
+    let need = 5;   // rounds in this go
+    const HINT = 'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.';
     const GRAV = 8, GP = 3.2, BENCH = 0.5, HALF = 0.29, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, HEADOUT = 0.2, LEN = 1.5, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
     let rollG = null, roll = 0, phi = 0, phiV = 0;   // phi: how far her head is tilted off her body, in the screen plane
@@ -2323,7 +1974,7 @@
     function judge() {
       const d = Math.abs(bar - target), pts = tutRound ? 3 : d < tol * 0.4 ? 3 : d < tol ? 2 : d < tol * 2.2 ? 1 : 0;
       tutHold = false;
-      if (!tutRound) { score += pts; K.score(score); }
+      if (!tutRound && pts > 0) { score++; K.score(score, true); document.getElementById('gScore').textContent = score + '/' + need; }   // a round counts if she came out near enough
       K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.3);
       A.play(pts ? 'match' : 'nope'); actor.gesture(pts >= 2 ? 'happy' : pts ? 'surprise' : 'sad', true);
       if (pts === 3) sparks.emit(head.x, head.y, z + 0.3, 16, 2.2, 0.05, 0.8, 4);
@@ -2334,7 +1985,7 @@
       A.play('bubble'); A.play('pop', 0.5); actor.gesture('shake', true);
       splash.emit(TUB.x, 0.12, TUB.z, 30, 2.4, 0.06, 1.0, 9); rippleT = 0.7;
       if (!tutRound) round++;
-      if (round >= ROUNDS) { held = false; live = false; K.over(tr('All done!')); return; }
+      if (round >= need) { held = false; live = false; mode = 'done'; K.over(tr(score >= need ? 'Squeaky clean!' : 'All done!')); return; }
       // she stays in the water, cooled off: pull her out again and put her back in the sauna when you like
       mode = 'dunked'; draining = true; newTarget(); heat();   // the bar runs down on its own, not all at once K.hint(tr('Cooled! Drag her back up into the sauna.'));
       if (tutRound) K.beat('cool');
@@ -2395,7 +2046,7 @@
       }
     }
     return {
-      label: 'Points', hint: HINT,
+      label: 'Rounds', hint: HINT,
       view: () => view,
       /* tutorial: point at her head, and only grabbing it ends the pause */
       tutSpot(step) {
@@ -2413,10 +2064,11 @@
       start() {
         if (!view) build();
         dress(); fit();
+        need = (PN.Games.opts && PN.Games.opts.need) || 5;
         live = false; round = 0; score = 0; rippleT = 0; ptr = null; steam.clear(); splash.clear(); sparks.clear();
         tutRound = K.tutoring(); tutHold = false;   // the first time, round one is a guided practice that does not count
         layer.hidden = false; toRest();
-        document.getElementById('gScore').textContent = '0';
+        document.getElementById('gScore').textContent = '0/' + need;
       },
       stop() { live = false; held = false; if (layer) layer.hidden = true; untint(); if (actor && !actor.shadow.parent) actor.g.add(actor.shadow); },
       go() { live = true; },
@@ -2489,7 +2141,6 @@
   if (!(PN.Coffee && PN.Coffee.V >= 4)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=4'; document.head.appendChild(sc); }
 
   G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
-  G.ext.labwhack = lab.whack; G.ext.labscrub = lab.scrub; G.ext.labbeat = lab.beat; G.ext.labsteam = lab.steam; G.ext.labpull = pullOut;
 })(window.PN = window.PN || {});
 
 /* Seal Seat Shuffle: a roofless Three.js bus, viewed from above. */

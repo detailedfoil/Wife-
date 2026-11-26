@@ -40,11 +40,11 @@
     famBonusEach: 1, famBonusMax: 10, pupMaxPoints: 10, pupSkillMax: 6, pupXpStep: 30, pointBonus: 1, carePoint: 5, diveSulkCut: 1,
     stageAge: [2 * DAY, 6 * DAY], stageLevel: [6, 10], pupLevel: 10,   // a pup can come once she has the xp it takes to reach level 10 (1009)
     diveCooldown: 25 * 60e3,
-    // The sauna is how she gets clean: a round of Löyly scrubs a seventh of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
+    // The sauna is how she gets clean: a good round of the sauna scrubs a fifth of the dirt away, so saunaRounds in a go is a full clean. It is free, costs no
     // energy, and pays a bonus in proportion to how much of a clean it did. She will not take one when she is already cleaner than saunaClean, unless she is angry and still wants her sauna.
     ballJoy: 1, ballJoyGoes: 6,   // a bounce on the nose lifts happiness by a point (a quarter of that if it is quick after the last), and only the first six an hour
     petJoy: 0.2, petJoyPats: 10,   // a pat lifts happiness by only a fifth of a point, and only the first ten an hour
-    saunaRounds: 7, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
+    saunaRounds: 5, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
     gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
     catchKeepChance: 0.1,
     playEnergy: 0.14, playEnergyMin: 2, playEnergyMax: 20, playEnergyNeed: 6,   // a game tires her by how long it lasted: 6 for a 43 second round of Fish Rain (halved, by request)
@@ -834,7 +834,7 @@
     return away;
   }
 
-  /* The sauna: how she gets clean. A go is a run of rounds of the Löyly game; each scrubs a seventh of the dirt away, so seven rounds in one go
+  /* The sauna: how she gets clean. A go is a run of sauna rounds; each good one scrubs a fifth of the dirt away, so five rounds in one go
      is a full clean from filthy and fewer rounds take more goes. A go asks for just as many rounds as it takes to finish her. */
   const saunaNeed = (state) => Math.max(1, Math.ceil((100 - state.stats.clean) * T.saunaRounds / 100 - 1e-9));
   function canSauna(state) {

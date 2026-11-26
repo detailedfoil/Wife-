@@ -1014,21 +1014,7 @@
     UI.closeSheet(); UI.refresh();
   };
 
-  /* The sauna is how she gets clean: the Löyly game, free, for as many rounds as it takes to finish the job. */
-  /* What Löyly is, shown before the first few goes: people tried to swipe the stones, so it says what to press and what to watch. */
-  function saunaHowTo(rounds) {
-    const gauge = '<svg class="how-gauge" viewBox="0 0 64 130" aria-hidden="true"><defs><linearGradient id="howHeat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2503a"/><stop offset=".32" stop-color="#f3a13c"/><stop offset=".55" stop-color="#f4dc8a"/><stop offset=".8" stop-color="#8fc7f2"/><stop offset="1" stop-color="#4f8fe0"/></linearGradient></defs>'
-      + '<rect x="3" y="3" width="36" height="124" rx="18" fill="url(#howHeat)" stroke="#fff" stroke-width="3"/>'
-      + '<rect x="7" y="42" width="28" height="46" rx="11" fill="rgba(62,200,120,.9)" stroke="#1f9a5a" stroke-width="3"/>'
-      + '<rect x="3" y="60" width="36" height="8" rx="4" fill="#17264d" stroke="#fff" stroke-width="2"/>'
-      + '<rect x="47" y="3" width="12" height="124" rx="6" fill="#fff" stroke="#cfd8ec" stroke-width="2"/><rect x="47" y="68" width="12" height="59" rx="6" fill="#2fbf71"/></svg>';
-    return '<div class="how"><div class="how-hold"><span class="how-pad">' + tr('Hold') + '</span><p><b>' + tr('Press and hold the ladle') + '</b> ' + tr('to pour water on the stones. Release to stop pouring.') + '</p></div>'
-      + '<div class="how-gauge-row">' + gauge + '<ul class="how-legend">'
-      + '<li>' + tr('The <b>green bar</b> rises while you hold and sinks when you let go.') + '</li>'
-      + '<li>' + tr('The dark <b>needle</b> drifts about on its own. Keep it inside the green.') + '</li>'
-      + '<li>' + tr('The thin <b>calm bar</b> fills while it is, and drains while it is not.') + '</li></ul></div>'
-      + '<p class="how-end">' + tr('Fill the calm bar to finish a round. {0} rounds make her squeaky clean. If it runs dry the go ends, and what she managed still counts.', rounds) + '</p></div>';
-  }
+  /* The sauna is how she gets clean: free, for as many rounds as it takes to finish the job. Its first-time tutorial is in games.js. */
   G.sauna = async function (again) {   // again: straight after a go, so there is no need to explain it once more
     if (blocked() || bedBusy || PN.Games.active) return;
     const c = S.canSauna(state);
@@ -1038,12 +1024,6 @@
       return;
     }
     seal.halt();
-    if (!again && state.counters.saunas < 8) {
-      G.busy = true;
-      const v = await UI.modal({ title: tr('How Löyly works'), html: saunaHowTo(S.saunaNeed(state)), actions: [{ label: tr("Let's go"), value: 1 }, { label: tr('Not now'), value: 0 }] });
-      G.busy = false;
-      if (v !== 1 || blocked() || bedBusy || PN.Games.active) return;
-    }
     PN.Games.opts = { need: S.saunaNeed(state) };
     PN.Games.start('sauna');
   };
@@ -1189,7 +1169,7 @@
     let html = '<div class="bigscore">' + r.clean + '%</div><p>' + tr('Cleanliness') + '.</p>' + (r.coins > 0 ? '<div class="loot">' + coinChip(r.coins) + '</div>' : '');
     html += '<p class="note ' + (r.rounds ? 'up' : 'down') + '">' + (r.full ? tr('Ahh. Warm, clean and happy.') : r.rounds ? tr('Cleaner, but not spotless. Another go will finish the job.') : tr('The heat got away before a single round. No clean this time.')) + '</p>';
     const again = !r.full && S.canSauna(state).ok;
-    const v = await UI.modal({ title: tr('Löyly'), layout: 'game-result', html: '<div class="result-body"><div class="result-summary">' + html + '</div></div>', actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
+    const v = await UI.modal({ title: tr('Sauna'), layout: 'game-result', html: '<div class="result-body"><div class="result-summary">' + html + '</div></div>', actions: (again ? [{ label: tr('Another go'), value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
     save();
     if (v === 1) G.sauna(true);
   }

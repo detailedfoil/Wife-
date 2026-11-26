@@ -24,7 +24,7 @@
      a game can also point at a spot on its canvas through ext.tutSpot(step). A step without `do` is a tip: it shows for a few seconds while play goes on.
      'start' runs when play begins (after the 3-2-1); the rest when the game calls K.beat(name) at that moment.
      demo: the little hand in the card (swipe, tap, drag, flick); at: top or bottom, so the card does not cover the action.
-     Seal Seat Shuffle has its own two-bus tutorial in arcade.js, and Löyly has its how-to sheet. */
+     Seal Seat Shuffle has its own two-bus tutorial in arcade.js. */
   const TUTORIALS = {
     ball: {
       start: { do: 'swipe', demo: 'swipe', at: 'top', lines: ['Slide your finger left or right to move the seal.', 'Get under the ball and keep it bouncing on her nose!'] },
@@ -73,12 +73,12 @@
       settled: { at: 'top', lines: ['Win and you get your bet back and more. Lose and it is gone.', 'Tap Cash out whenever you like to take your tokens home.'] },
       slide: { do: 'tap', target: '.bj-slide', demo: 'swipe', at: 'top', lines: ['You can bet more now! Slide to choose how much to bet.', 'The most you can bet is a third of your tokens.'] },
     },
-    labpull: {
+    sauna: {
       start: { at: 'top', lines: ['Welcome to the sauna! Watch the heat bar fill up on the right.', 'She cooks as it rises. Get her out when the bar is on the gold line.'] },
       gold: { do: 'drag', demo: 'drag', at: 'bottom', lines: ['Perfect temperature! The bar stops the moment she leaves the sauna.', 'Hold her by the head and drag her down out of it.'] },
       out: { at: 'top', lines: ['Well done!', 'Now dunk her in the ice water to cool her down and reset the bar.'] },
       cool: { at: 'top', lines: ['Lovely and cool! Drag her back up into the sauna for the next round.'] },
-      solo: { at: 'top', lines: ["That's the guide done. From now on you're on your own.", 'Pull her out on the gold line, dunk her to reset, and go again. Five rounds, up to 3 points each.'] },
+      solo: { at: 'top', lines: ["That's the guide done. From now on you're on your own.", 'Pull her out on the gold line, dunk her to reset, and go again until she is squeaky clean.'] },
     },
     coffee: {
       start: { at: 'top', lines: ['Customers leave their order on a receipt.', 'Remember it, then make the drink from memory.'] },
@@ -541,16 +541,10 @@
     W.override = null;
     $('gamehud').hidden = true;
     let reward = null;
-    if (id === 'sauna') { if (!(quit && score === 0)) reward = S.saunaDone(PN.Game.state, score, (Games.opts && Games.opts.need) || 7); Games.opts = null; }
-    else if (PN.GAMES[id] && PN.GAMES[id].lab) Games.opts = null;      // Sauna lab prototypes: no coins, no tiredness, nothing saved
+    if (id === 'sauna') { if (!(quit && score === 0)) reward = S.saunaDone(PN.Game.state, score, (Games.opts && Games.opts.need) || 5); Games.opts = null; }
     else if (!(quit && score === 0)) { reward = S.gameReward(PN.Game.state, id, score, caught, null, secs, Date.now(), id === 'piano' && Games.opts ? Games.opts.pay : 1); Games.opts = null; }
     else Games.opts = null;
-    const lab = PN.GAMES[id] && PN.GAMES[id].lab;
-    if (PN.Track && !lab) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info, mum);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
+    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info, mum);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
     PN.Game.endGame(id, score, reward);
-    if (lab && !(quit && !score)) {
-      UI.modal({ title: tr(PN.GAMES[id].title), layout: 'game-result', html: '<div class="result-body"><div class="result-summary"><div class="bigscore">' + score + '</div><p>' + tr(PN.GAMES[id].unit) + '.</p><p class="note">' + tr('A rough prototype. Nothing was paid and nothing was saved.') + '</p></div></div>',
-        actions: [{ label: tr('Play again'), value: 1 }, { label: tr('Done'), value: 0 }] }).then((v) => { if (v === 1) PN.Game.startGame(id); });
-    }
   }
 })(window.PN = window.PN || {});

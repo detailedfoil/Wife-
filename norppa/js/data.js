@@ -2,7 +2,7 @@
    Fish, food, things to wear, things for the shore, finds, Finnish words, awards. */
 (function (PN) {
   /* When the game was last changed. Stamped by hand each time the game is updated. */
-  PN.UPDATED = '26 Nov 2026, 13:25';
+  PN.UPDATED = '26 Nov 2026, 13:50';
   /* An update stamp as a number that sorts by time. Compared as text, "10 Dec" would come before "18 Nov". */
   PN.stampKey = function (s) {
     const m = /^\s*(\d{1,2}) ([A-Za-z]{3}) (\d{4}),? (\d{1,2}):(\d{2})\s*$/.exec(String(s || ''));
@@ -352,16 +352,10 @@
     puff: { len: 45, price: 650, muck: 5, title: 'Puffer Sweeper', icon: 'puff', tint: 'warm', text: 'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.', best: 'best_puff', pay: [60.5, -0.3], low: true, quick: 10, unit: 'to clear the ice' },
     piano: { len: 75, price: 775, muck: 3, title: 'Kantele Tiles', icon: 'piano', tint: 'sky', text: 'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.', best: 'best_piano', pay: [0.2, 1], unit: 'tiles played' },
     toss: { len: 60, price: 700, muck: 10, title: 'Snowball Toss', icon: 'ball', tint: 'rose', text: 'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.', best: 'best_toss', pay: [3.2, 1], unit: 'baskets' },
-    sauna: { price: 0, muck: 0, title: 'Löyly', icon: 'steam', tint: 'warm', text: 'Hold to throw water on the stones. Keep the heat just right.', unit: 'rounds' },   // not a game to play for coins: it is how she gets clean (see Sim.saunaDone), so it is not in GAME_ORDER
+    sauna: { price: 0, muck: 0, title: 'Sauna', icon: 'steam', tint: 'warm', text: 'Pull her out of the sauna when the heat is just right, then dunk her in the ice hole to cool off.', unit: 'rounds' },   // not a game to play for coins: it is how she gets clean (see Sim.saunaDone), so it is not in GAME_ORDER
     curl: { len: 45, price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
     sled: { len: 40, price: 1250, muck: 12, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
     coffee: { len: 120, ext: true, price: 850, muck: 3, title: 'Coffee Memory', icon: 'steam', tint: 'warm', text: 'Remember each customer\'s order and make the drink from memory. Every two drinks add one more thing to remember, and one wrong drink ends it.', best: 'best_coffee', pay: [0.77, 1.85], unit: 'drinks served' },   // ext: its rules live in coffee.js; 850 coins, between Puffer Sweeper and Curling Seal; tuned for a player who reaches 11 drinks fairly often in about two minutes (65 coins, 31 a minute with the boost): 4 drinks pay 10, 6 pay 21, 9 pay 46, 12 pay 76, 14 pay 100, and the 150 cap is reached around 18 drinks, just after the orders stop growing at ten things
-    // Sauna lab: rough prototypes of a new sauna game, shown in developer mode only. They pay nothing and save nothing (lab: true, see finish() in games.js).
-    labwhack: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 1: Whack the beads', icon: 'steam', tint: 'warm', text: 'Sauna idea: whack the sweat beads with the vihta. Leave the clear drops alone.', unit: 'points' },
-    labscrub: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 2: Scrub the dirt', icon: 'steam', tint: 'warm', text: 'Sauna idea: rub the vihta over the dirty patches until they are gone.', unit: 'patches' },
-    labbeat: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 3: Ladle rhythm', icon: 'steam', tint: 'warm', text: 'Sauna idea: tap in time as the ring closes on the stones and keep the steam in the green.', unit: 'points' },
-    labsteam: { lab: true, dev: true, ext: true, len: 30, price: 0, muck: 0, title: 'Lab 4: Whack plus steam', icon: 'steam', tint: 'warm', text: 'Sauna idea: whack the beads, and throw water so the steam swells them to pay double.', unit: 'points' },
-    labpull: { lab: true, dev: true, ext: true, len: 45, price: 0, muck: 0, title: 'Lab 5: Pull her out', icon: 'steam', tint: 'warm', text: 'Sauna idea: drag her out of the sauna when the heat bar is on the line, then dunk her in the ice hole. Five rounds.', unit: 'points out of 15' },
     bj: { len: 90, price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'tokens won' },
   };
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
@@ -400,7 +394,7 @@
   /* muck: how mucky a game leaves her, in cleanliness points a minute of play (sim.js: a mucky seal earns less). Sledging and
      snowballs are the muckiest; the piano, the card table and anything in the water the least. */
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
-  PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'sled', 'bj', 'labwhack', 'labscrub', 'labbeat', 'labsteam', 'labpull'];
+  PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
   PN.MUM_GAME_TEXT = {
     swim: 'Tap to swim up and slip through the gaps. You get one go.',
