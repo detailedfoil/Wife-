@@ -48,8 +48,8 @@
     '{0} did not send a final score, so this uses the last one heard.': '{0} ei lähettänyt lopullisia pisteitä, joten käytetään viimeisimpiä.',
     '{0} stopped the game early.': '{0} lopetti pelin kesken.',
     '{0} wins': '{0} voitti',
-    'Play online (test)': 'Pelaa verkossa (testi)',
-    'Make or join a room with a friend: both seals on the shore, and a Fish Rain race. Still a prototype.': 'Tee huone tai liity kaverin huoneeseen: molemmat norpat rannalla ja Kalasade-kisa. Vielä kokeiluversio.',
+    'Online trial': 'Verkkopelin kokeilu',
+    'Make or join a room with a friend: both seals on the shore, and a Fish Rain race. Still being tried out.': 'Tee huone tai liity kaverin huoneeseen: molemmat norpat rannalla ja Kalasade-kisa. Vielä kokeilussa.',
     /* ---------- pup skills (18 Nov 2026) ---------- */
     '{0} and {1}': '{0} ja {1}',
     'No skill can have more than {0} points.': 'Yhdessä taidossa voi olla enintään {0} pistettä.',

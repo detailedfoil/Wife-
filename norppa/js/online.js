@@ -1,4 +1,4 @@
-/* Pikku Norppa: playing with a friend online (developer mode only, a first prototype).
+/* Pikku Norppa: playing with a friend online (the Online trial in Settings, a first prototype).
    One player makes a room and reads out its four-letter code; the other types it in. Both seals then stand on each other's shore,
    and either player can ask the other to race at a game. Both play the same game on their own screen, with the same random seed so the
    same things fall in the same order, and each sends its score a few times a second so the other sees it live in a corner.
@@ -124,7 +124,6 @@
       paint();
       send('hello', { p: profile() });
       pinger = setInterval(() => {
-        if (!PN.Game.state.dev) { leave(true); return; }          // developer mode was turned off: the prototype closes
         send('ping');
         if (friend && Date.now() - heardAt > 15000) friendGone(tr('Lost touch with <b>{0}</b>.', fname()));
       }, 4000);
@@ -300,10 +299,10 @@
     get friend() { return friend ? friend.p : null; },
     racing: () => !!(race && (race.state === 'on' || race.state === 'over')),
     myEnd, verdict,
-    join: (code) => { if (PN.Game.state && PN.Game.state.dev) join(String(code || '').toUpperCase()); },
+    join: (code) => join(String(code || '').toUpperCase()),
     leave,
     async open() {
-      if (!PN.Game.state || !PN.Game.state.dev) return;           // developer mode only, for now
+      if (!PN.Game.state) return;
       if (!room) {
         const v = await UI().modal({ title: tr('Play online'), html: '<p>' + tr('Make a room and tell a friend its code, or type in the code a friend gave you.') + '</p>' + (local ? '<p class="note">' + tr('Test mode: rooms only reach other tabs in this browser.') + '</p>' : ''),
           actions: [{ label: tr('Make a room'), value: 'make' }, { label: tr('Join a room'), value: 'join', cls: 'ghost' }, { label: tr('Not now'), value: 0 }] });
