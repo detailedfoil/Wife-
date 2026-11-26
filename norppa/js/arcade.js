@@ -2129,11 +2129,13 @@
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const pullOut = (() => {
     const ROUNDS = 5, HINT = 'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.';
-    const GRAV = 8, BENCH = 0.5, HALF = 0.25, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.3, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
+    const GRAV = 8, GP = 3.2, BENCH = 0.5, HALF = 0.29, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.5, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
-    let rollG = null, roll = 0;
+    let rollG = null, roll = 0, phi = 0, phiV = 0;   // phi: how far her head is tilted off her body, in the screen plane
+    const qa = new T.Quaternion(), qb = new T.Quaternion(), qc = new T.Quaternion(), qt = new T.Quaternion(), zax = new T.Vector3(0, 0, 1), fdir = new T.Vector3(), fup = new T.Vector3(), zero = new T.Vector3(), fm = new T.Matrix4();
+    let faceW = 0;   // how much her face is turned to the camera (while she is held)
     let armed = true, autoT = 0, doorT = 0, live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
-    const com = { x: -0.25, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
+    const com = { x: -0.35, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
     let h0 = { x: 0.6, y: 0.1 }, ell = 0.6, tints = [], measured = false;
     const ray = new T.Raycaster(), v3 = new T.Vector3(), v2 = new T.Vector2(), bx = new T.Box3();
     const hvec = () => { const c = Math.cos(th), s = Math.sin(th); hv.x = h0.x * c - h0.y * s; hv.y = h0.x * s + h0.y * c; };
@@ -2166,9 +2168,9 @@
       sc.add(U.box(3.05, 0.14, 1.7, dark, -0.07, CH + 0.07, -0.7), U.box(2.95, 0.12, 1.6, snow, -0.07, CH + 0.2, -0.7));
       sc.add(U.box(2.6, 0.06, 1.4, dark, -0.04, 0.03, -0.7));
       sc.add(U.box(1.3, 0.08, 0.8, wood, -0.3, BENCH - 0.04, -0.95), U.box(1.3, 0.08, 0.4, wood, -0.3, 1.05, -1.2));
-      sc.add(U.box(0.34, 0.5, 0.34, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -1.1, 0.28, -0.75));
+      sc.add(U.box(0.34, 0.5, 0.34, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -1.18, 0.28, -0.75));
       stonesMat = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
-      for (let i = 0; i < 5; i++) sc.add(U.ball(0.07 + rnd() * 0.03, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -1.1 + rs(0.1), 0.55 + rnd() * 0.03, -0.75 + rs(0.1), 1, 0.8, 1, 8, 6));
+      for (let i = 0; i < 5; i++) sc.add(U.ball(0.07 + rnd() * 0.03, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -1.18 + rs(0.1), 0.55 + rnd() * 0.03, -0.75 + rs(0.1), 1, 0.8, 1, 8, 6));
       lamp = new T.PointLight(0xffa85a, 6, 5); lamp.position.set(-0.3, 2.1, -0.4); sc.add(lamp);
       door = new T.Group(); door.position.set(1.15, 0, 0.08);
       door.add(U.box(0.75, DH, 0.05, U.mat(0x8a5a32, { roughness: 0.9 }), -0.375, DH / 2, 0), U.ball(0.035, U.mat(0xe2b680, { roughness: 0.4 }), -0.65, 1.2, 0.04));
@@ -2217,8 +2219,8 @@
       targetEl.style.bottom = (target - tol) * 100 + '%'; targetEl.style.height = tol * 200 + '%';
     }
     function toRest() {
-      zone = 'in'; mode = 'in'; held = false; grounded = true; z = ZIN; th = 0; om = 0; vel.x = vel.y = 0; gv.x = gv.y = acc.x = acc.y = 0;
-      com.x = -0.25; com.y = BENCH + HALF; armed = true; autoT = 0; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+      phi = phiV = 0; zone = 'in'; mode = 'in'; held = false; grounded = true; z = ZIN; th = 0; om = 0; vel.x = vel.y = 0; gv.x = gv.y = acc.x = acc.y = 0;
+      com.x = -0.35; com.y = BENCH + HALF; armed = true; autoT = 0; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
       K.hint(tr(HINT));
     }
     function judge() {
@@ -2247,7 +2249,7 @@
     function step(dt) {
       if (autoT > 0) {   // being carried in: slide to the bench with the door held open
         autoT -= dt; const k = 1 - Math.exp(-dt * 6);
-        com.x += (-0.25 - com.x) * k; com.y += (BENCH + HALF + 0.12 - com.y) * k; th += (Math.round(th / (2 * PI)) * 2 * PI - th) * k; om = 0; vel.x = vel.y = 0; hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+        com.x += (-0.35 - com.x) * k; com.y += (BENCH + HALF + 0.12 - com.y) * k; th += (Math.round(th / (2 * PI)) * 2 * PI - th) * k; om = 0; vel.x = vel.y = 0; hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
         if (autoT <= 0) armed = true;
         return;
       }
@@ -2269,7 +2271,7 @@
         // she hangs from her head: a pendulum whose pivot is the finger, so the drag swings her
         hvec();
         const psi = Math.atan2(hv.y, hv.x), ux = -Math.cos(psi), uy = -Math.sin(psi);
-        om += ((-ux * (GRAV + acc.y) + uy * acc.x) / ell - 1.5 * om) * dt; th += om * dt; hvec();
+        om += ((-ux * (GP + acc.y * 1.3) + uy * acc.x * 1.3) / ell - 0.55 * om) * dt; th += om * dt; hvec();
         com.x = head.x - hv.x; com.y = head.y - hv.y;
         const fy = floorY(com.x) + HALF;
         if (com.y < fy) { head.y += fy - com.y; com.y = fy; }
@@ -2330,7 +2332,11 @@
             held = false; zone = 'out'; z = ZOUT; com.x = 1.15; com.y = 1.0; vel.x = 1.2; vel.y = 2.6; om = 7; head.x = com.x; head.y = com.y; judge();
           }
         }
+        const om0 = om;
         if (live || playing) { step(d * 0.5); step(d * 0.5); }
+        // her head is a second, looser part: it lags behind when her body is flung round, then springs back
+        const alpha = U.clamp((om - om0) / d, -70, 70);
+        phiV += (-alpha * 0.9 - 38 * phi - 3.2 * phiV) * d; phi = U.clamp(phi + phiV * d, -0.95, 0.95);
         if (mode !== 'out') heat();
         // through the door she comes toward you; the door swings open for her
         const zT = zone === 'out' ? ZOUT : ZIN;
@@ -2342,6 +2348,15 @@
         actor.heading = PI / 2; actor.look = held ? view.camera.position : null; actor.update(dt, clock, null);
         actor.g.rotation.y = PI / 2;
         rag.position.set(com.x, com.y, z); rag.rotation.z = th;
+        rag.updateMatrixWorld(true); actor.headP.parent.getWorldQuaternion(qa); qc.copy(qa).invert();
+        faceW += ((held ? 1 : 0) - faceW) * (1 - Math.exp(-d * 8));
+        if (faceW > 0.01) {   // held: turn her face to the camera, with the top of her head pointing away from her body
+          actor.headP.getWorldPosition(v3); fdir.copy(view.camera.position).sub(v3).normalize(); fup.set(hv.x, hv.y, 0).normalize();
+          fm.lookAt(fdir, zero, fup); qt.setFromRotationMatrix(fm); qt.premultiply(qc);
+          actor.headP.quaternion.slerp(qt, faceW);
+        }
+        qb.setFromAxisAngle(zax, phi);
+        actor.headP.quaternion.premultiply(qc.multiply(qb).multiply(qa));   // turn the head about its own centre, in the screen plane
         // steam off the stones, thicker as she cooks; a ring on the water after a dunk
         steamT -= dt; if (steamT <= 0) { steamT = 0.14 - bar * 0.08; steam.emit(-1.75, 0.75, -1.0, 1, 0.25, 0.08, 1.8, -0.25); }
         steam.update(dt, 0, 0); splash.update(dt, 0, 0); sparks.update(dt, 0, 0);
