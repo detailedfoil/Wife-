@@ -733,6 +733,10 @@
     }
     return {
       label: 'Baskets', back: true, nocount: true, hint: 'Flick the snowball into the bucket. Three misses and it is over.',
+      snap() {                                        // the corner picture for an online race: the pail, the snowball and the wind, from above
+        const r = (n) => Math.round(n * 100) / 100;
+        return { b: ball && ball.visible ? [r(ball.position.x), r(ball.position.z), r(ball.position.y)] : null, k: [r(bk.x), r(bk.z)], w: wind, m: mode === 'fly' ? 1 : mode === 'in' ? 2 : mode === 'out' ? 3 : 0, t: tries, l: lives() };
+      },
       view: () => view,
       start() {
         if (!view) build();
@@ -934,6 +938,10 @@
     }
     return {
       label: 'Points', label2: 'Slides', hint: 'Pull back and let go to slide.',
+      snap() {                                        // the corner picture for an online race: the ice from above
+        const r = (n) => Math.round(n * 100) / 100;
+        return { p: [r(pos.x), r(pos.z)], g: [r(target.x), r(target.z)], bl: blocks.filter((b) => b.on).map((b) => [r(b.x), r(b.z)]), n, m: mode === 'slide' ? 1 : 0 };
+      },
       view: () => view,
       start() {
         if (!view) build();
@@ -1623,6 +1631,10 @@
     }
     return {
       label: 'Scoops', hint: 'Tap to stack the ice cream. Keep your cone balanced!',
+      snap() {                                        // the corner picture for an online race: the tower and the sliding scoop, from above
+        const r = (n) => Math.round(n * 100) / 100;
+        return top ? { t: [r(top.x), r(top.z), r(top.w), r(top.d)], c: cur ? [r(cur.g.position.x), r(cur.g.position.z), r(cur.w), r(cur.d)] : null, n: score } : null;
+      },
       view: () => view,
       peek: () => (cur && mode === 'slide' ? cur.p : null),
       start() {
@@ -2046,6 +2058,7 @@
       try { localStorage.setItem('pikkunorppa.kantele.lastSong', id); } catch (e) { /* keep the in-memory choice */ }
       return PN.SONGS[id];
     }
+    let snapPos = null, snapAt = 0;
     const tile = (i) => chart[i % chart.length];
     const startOf = (i) => Math.floor(i / chart.length) * total + tile(i).at;
     // The speed-up steps come every half of Ievan's tiles (REF), counted in this tune's sixteenths, so the climb is the same whichever tune it is
@@ -2187,6 +2200,14 @@
     }
     return {
       label: 'Tiles', nocount: true, hint: 'Tap the Start tile, then every tile in order.',
+      snap() {                                        // the corner picture for an online race: the next tiles sliding down the four lanes
+        if (!chart.length) return null;
+        const now = performance.now(), v = snapPos === null || now <= snapAt ? 0 : (pos - snapPos) * unit() / H / ((now - snapAt) / 1000);
+        snapPos = pos; snapAt = now;
+        const tiles = [];
+        for (let i = Math.max(0, next - 1); i < next + 7; i++) tiles.push([tile(i).lane, Math.round((startOf(i) - pos) * unit() / H * 100) / 100]);
+        return { t: tiles, v: Math.round(Math.max(0, v) * 100) / 100, n, m: mode === 'fail' ? 1 : 0, l: LANES };
+      },
       /* tutorial: point at the Start tile, and only a tap in its lane begins */
       tutSpot(step) {
         if (step !== 'start' || !cv || !W) return null;
@@ -2618,6 +2639,9 @@
   const position = new T.Vector3(), scale = new T.Vector3(), rotation = new T.Quaternion();
   let view = null, bus, scenery, cushions, seatBacks, pickSeats, player, playerRig;
   let round = 0, total = 0, seats = [], phase = 'done', elapsed = 0, deadline = 0, best = 0, chosen = -1, hold = 0;
+  /* Online race: both players ride the same bus (same seats, same passengers). Each taps a seat and tells the other which; if it is the same seat,
+     whoever tapped first keeps it and the other is moved to the nearest free seat. pending is my pick for this bus until that is settled. */
+  let pending = null, theirPicks = {}, chooseAt = 0, myRing = null, friendRing = null;
   let busWidth = 0, busExtra = 0, travel = 0, clock = 0, lastWidth = 0, lastHeight = 0, departFrom = 0;
   /* First-time tutorial: tutStep 1 is a bus that shows where to tap, 2 is a bus with no help, 0 is the real game. These two buses stand still, have no time limit and score nothing. */
   let tutStep = 0, guide = null;
@@ -2948,7 +2972,8 @@
   }
   function next() {
     round = tutStep ? 1 : round + 1; seats = layout(round);
-    populateSeats(seats, round);
+    PN.Games.reseed(round); pending = null; myRing = friendRing = null;
+    populateSeats(seats, round, PN.Games.seeded() ? PN.Games.rnd : undefined);
     best = evaluate(seats); chosen = -1; phase = 'arrive'; elapsed = 0;
     if (tutStep === 1) say('Tap the seat furthest from any other seal. Try the one with the arrow!');
     else if (tutStep === 2) say('Your turn! Tap the seat furthest from the seals.');
@@ -2973,6 +2998,52 @@
     player.g.position.set(-center.x, -bounds.min.y, -center.z); playerRig.scale.setScalar(k);
     const ring = new T.Mesh(geometry.marker, materials.mint);
     ring.rotation.x = -Math.PI / 2; ring.position.set(s.worldX, 0.94, s.z); ring.scale.set(1.04, 1.14, 1); bus.add(ring);
+    if (myRing) bus.remove(myRing);
+    myRing = ring;
+  }
+  /* The other player's seat, shown once I have chosen: a gold ring and an arrow. */
+  function showFriendSeat(i) {
+    if (!bus || i < 0 || !seats[i]) return;
+    if (friendRing) bus.remove(friendRing);
+    const s = seats[i], ring = new T.Mesh(geometry.marker, materials.gold), arrow = new T.Mesh(geometry.arrow, materials.gold), grp = new T.Group();
+    ring.rotation.x = -Math.PI / 2; ring.position.set(s.worldX, 1.0, s.z); ring.scale.set(1.2, 1.3, 1);
+    arrow.rotation.x = Math.PI; arrow.position.set(s.worldX, 1.9, s.z);
+    grp.add(ring, arrow); bus.add(grp); friendRing = grp;
+  }
+  const pointsOf = (i) => {
+    const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
+    return i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
+  };
+  const nearestFree = (from, taken) => {
+    let pick = -1, d = Infinity;
+    seats.forEach((st, i) => {
+      if (st.occupied || taken.indexOf(i) >= 0) return;
+      const q = (st.x - seats[from].x) ** 2 + (st.y - seats[from].y) ** 2;
+      if (q < d - 1e-9) { d = q; pick = i; }
+    });
+    return pick;
+  };
+  /* Work out who gets which seat now that both picks are known (or the other player's never came), then score mine. */
+  function settle(force) {
+    if (!pending || pending.done) return;
+    const theirs = theirPicks[pending.round], net = PN.Games.net;
+    if (!theirs && !force) return;
+    pending.done = true;
+    const mine = pending.i, t = theirs ? theirs.s : -1;
+    let myFinal = mine, theirFinal = t, lost = false;
+    if (mine >= 0 && t === mine) {
+      const iWin = pending.t < theirs.t || (pending.t === theirs.t && net && net.tie());
+      if (iWin) theirFinal = nearestFree(t, [mine]); else { myFinal = nearestFree(mine, [t]); lost = true; }
+    }
+    pending.final = myFinal; pending.theirsFinal = theirFinal; pending.theirsKnown = !!theirs;
+    const points = pointsOf(myFinal);
+    total += points; K.score(total);
+    chosen = myFinal;
+    if (myFinal !== mine && myFinal >= 0) seatPlayer(seats[myFinal]);
+    if (theirFinal >= 0) showFriendSeat(theirFinal);
+    paintSeats();
+    if (lost) { K.big(tr('Taken!'), 1.1, 'too-slow'); K.hint(tr('They got there first. You moved to the next seat · +{0} points', points)); }
+    else if (mine >= 0) K.hint(tr('+{0} points · Green = best · Red = worst', points));
   }
   function choose(i) {
     if (phase !== 'choose') return;
@@ -2980,6 +3051,18 @@
     if (i >= 0 && seats[i].occupied) return;
     if (tutStep === 1 && i >= 0 && seats[i].distance < best - 1e-7) return;   // the first bus only takes the best seat
     chosen = i;
+    if (PN.Games.seeded()) {                                                    // an online race: the points wait for the other player's pick
+      pending = { round, i, t: Math.round(performance.now() - chooseAt) };
+      if (PN.Games.net) PN.Games.net.send('seat', { r: round, s: i, t: pending.t });
+      hold = i < 0 ? 0.55 : Math.max(0, (deadline - performance.now()) / 1000);
+      phase = 'reveal'; elapsed = 0;
+      if (i >= 0) seatPlayer(seats[i]);
+      paintSeats();
+      if (i < 0) { K.big(tr('Too slow!'), 1.3, 'too-slow'); K.hint(tr('You missed the bus! · 0 points')); }
+      PN.Audio.play(i < 0 ? 'tick' : 'tap');
+      settle(i < 0);                                                    // settles at once if their pick is already here (or mine is a miss)
+      return;
+    }
     // Points run from the worst free seat (0) to the best (100). Measured from nothing, a seat tapped without looking still scored about 56.
     const free = seats.filter((s) => !s.occupied), worst = Math.min(...free.map((s) => s.distance));
     const points = i < 0 ? 0 : best > worst ? Math.max(0, Math.min(100, Math.round(100 * (seats[i].distance - worst) / (best - worst)))) : 100;
@@ -3005,9 +3088,21 @@
       const st = PN.Game.state;
       player.setStage(st.stage); player.grow = PN.Game.seal.grow; player.applyScale();
       ['head', 'neck', 'face', 'back'].forEach(slot => player.setWear(slot, st.wearing[slot]));
-      round = 0; total = 0; clock = 0; tutStep = PN.Games.tutorial.seen('shuffle') ? 0 : 1; next();
+      round = 0; total = 0; clock = 0; theirPicks = {}; pending = null; tutStep = (PN.Games.seeded() || PN.Games.tutorial.seen('shuffle')) ? 0 : 1; next();
     },
     go() { K.score(0, true); },
+    remote(m) {                                      // the other player's pick for a bus, from the online race
+      if (m.kind !== 'seat' || typeof m.r !== 'number') return;
+      theirPicks[m.r] = { s: m.s | 0, t: m.t | 0 };
+      if (pending && pending.round === m.r) {
+        if (!pending.done) settle(false);
+        else if (!pending.theirsKnown) {            // late: my seat stands, and I can still see where they sat
+          const t = m.s | 0; pending.theirsKnown = true;
+          if (t >= 0 && t !== pending.final) showFriendSeat(t);
+          else if (t >= 0) showFriendSeat(nearestFree(t, [pending.final]));
+        }
+      }
+    },
     pointer(type, x, y) {
       if (type === 'down' && tutStep && phase === 'reveal' && elapsed > 0.45) { PN.Audio.play('tap'); advance(); return; }
       if (type !== 'down' || phase !== 'choose') return;
@@ -3039,13 +3134,13 @@
         // Ease from a fast arrival to the same nonzero speed as the crawl.
         bus.position.z = CRAWL_START + CRAWL * (ARRIVE - t)
           + (travel - CRAWL_START - CRAWL * ARRIVE) * Math.pow(1 - u, 3);
-        if (elapsed >= ARRIVE) { phase = 'choose'; deadline = tutStep ? Infinity : performance.now() + 1100; elapsed = 0; }
+        if (elapsed >= ARRIVE) { phase = 'choose'; chooseAt = performance.now(); deadline = tutStep ? Infinity : chooseAt + 1100; elapsed = 0; }
       } else if (phase === 'choose') {
         if (!tutStep) bus.position.z -= CRAWL * dt;   // the tutorial buses wait where they stopped
         if (performance.now() >= deadline) choose(-1);
       } else if (phase === 'reveal') {
         if (!tutStep) bus.position.z -= CRAWL * dt;
-        if (elapsed >= REVEAL + hold) { phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
+        if (elapsed >= REVEAL + hold) { if (PN.Games.seeded()) settle(true); phase = 'depart'; departFrom = bus.position.z; elapsed = 0; }
       } else if (phase === 'depart') {
         const t = Math.min(elapsed, DEPART);
         // Accelerate out of the crawl without a position or speed jump.

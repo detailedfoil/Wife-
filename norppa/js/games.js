@@ -194,6 +194,8 @@
   const rss = Games.rs = (k) => (rnd() - 0.5) * 2 * k;  // the same, seeded in a race
   /* A game with several goes or rounds calls this at the start of each, so every round is the same for both players however many random numbers the last one used. */
   Games.seeded = () => !!(g && g.versus);
+  Games.net = null;                                   // set by online.js during a race: { send(kind, data), tie() }
+  Games.netIn = (m) => { if (g && g.ext && g.ext.remote) g.ext.remote(m); };   // a message from the other player, for games that talk to each other
   Games.reseed = (n) => { if (g && g.versus) g.rng = seeded((g.versus.seed + Math.imul(n | 0, 7919)) >>> 0); };
   function seeded(seed) {                    // mulberry32: small, quick and the same on every phone
     let a = seed >>> 0;

@@ -49,6 +49,8 @@
     '{0} stopped the game early.': '{0} lopetti pelin kesken.',
     '{0} wins': '{0} voitti',
     'Online trial': 'Verkkopelin kokeilu',
+    'Taken!': 'Varattu!',
+    'They got there first. You moved to the next seat · +{0} points': 'Toinen ehti ensin. Siirryit seuraavalle paikalle · +{0} pistettä',
     '<b>{0}</b> has not unlocked that game yet.': '<b>{0}</b> ei ole vielä avannut sitä peliä.',
     'Playing...': 'Pelaa...',
     '{0} is still playing. Score so far: <b>{1}</b>.': '{0} pelaa vielä. Pisteet tähän mennessä: <b>{1}</b>.',
