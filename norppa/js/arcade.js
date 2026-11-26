@@ -2154,7 +2154,41 @@
     }
     function build() {
       view = stage('#1c2a4a', '#4a3a58', { ground: 0xdfe9f2, hemi: 1.15, key: 0.9 });
-      const sc = view.scene, wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 }), snow = U.mat(0xeef4fa, { roughness: 1 });
+      const sc = view.scene;
+      const snow = new T.MeshStandardMaterial({ color: 0xe3eef9, map: U.surfaceTex('snow'), roughness: 1 });
+      const timber = U.tex(512, 256, (g, w, h) => {
+        const grain = U.rng(521);
+        for (let row = 0; row < 4; row++) {
+          const y = row * 64, wash = g.createLinearGradient(0, y, 0, y + 64);
+          wash.addColorStop(0, ['#dfb385', '#deb084', '#e8bb8c', '#d9ab81'][row]);
+          wash.addColorStop(0.78, '#d7a678'); wash.addColorStop(1, '#c69770');
+          g.fillStyle = wash; g.fillRect(0, y, w, h / 4);
+          g.lineCap = 'round'; g.lineWidth = 1.6;
+          for (let n = 0; n < 9; n++) {
+            const x = grain() * w, line = y + 6 + grain() * 52, len = 24 + grain() * 115;
+            g.strokeStyle = n % 2 ? 'rgba(105,63,43,.12)' : 'rgba(255,230,194,.25)';
+            g.beginPath(); g.moveTo(x, line); g.bezierCurveTo(x + len * .4, line - 4, x + len * .7, line + 3, x + len, line); g.stroke();
+          }
+          g.strokeStyle = 'rgba(119,72,43,.18)'; g.beginPath();
+          g.ellipse(75 + grain() * 355, y + 31, 13, 3, 0, 0, PI * 2); g.stroke();
+          g.fillStyle = '#b68a69'; g.fillRect(0, y + 62, w, 2);
+        }
+      });
+      timber.wrapS = timber.wrapT = T.RepeatWrapping;
+      const wood = new T.MeshStandardMaterial({ color: 0xffedcf, map: timber, roughness: .9 });
+      const dark = new T.MeshStandardMaterial({ color: 0xbd937a, map: timber, roughness: .9 });
+      // Map planks in cabin units so a narrow post and a broad wall show the same grain size.
+      function board(w, h, d, material, x, y, z, vertical = false) {
+        const mesh = U.box(w, h, d, material, x, y, z), geo = mesh.geometry;
+        const { position, normal, uv } = geo.attributes;
+        for (let i = 0; i < uv.count; i++) {
+          const top = Math.abs(normal.getY(i)) > .5, side = Math.abs(normal.getX(i)) > .5;
+          const along = side ? position.getZ(i) + z : position.getX(i) + x;
+          const across = top ? position.getZ(i) + z : position.getY(i) + y;
+          uv.setXY(i, (vertical ? across : along) / 2.1, (vertical ? along : across) / .92);
+        }
+        return mesh;
+      }
       // the snow is a slab with a real hole in it, so she can go right down into the water
       const gs = new T.Shape(); gs.moveTo(-8, -7); gs.lineTo(8, -7); gs.lineTo(8, 5); gs.lineTo(-8, 5); gs.closePath();
       const hp = new T.Path(); hp.absarc(TUB.x, -TUB.z, 1.0, 0, PI * 2, true); gs.holes.push(hp);
@@ -2162,24 +2196,87 @@
       ground.rotation.x = -PI / 2; ground.position.y = -0.3; sc.add(ground);
       // a small, tall cabin for one seal: the front wall has a big window and a door
       const WT = 2.9, tw = CH - WT, DH = 2.5;   // the window runs from the sill up to WT; the door is DH tall
-      [[-1.275, CH / 2, 0.15, CH], [-0.475, 0.15, 1.45, 0.3], [-0.475, WT + tw / 2, 1.45, tw], [0.325, CH / 2, 0.15, CH], [0.775, (DH + CH) / 2, 0.75, CH - DH], [1.21, CH / 2, 0.12, CH]].forEach((r) => sc.add(U.box(r[2], r[3], 0.12, wood, r[0], r[1], 0)));
-      sc.add(U.box(1.55, 0.05, 0.16, dark, -0.475, 0.32, 0.04));   // the window sill
-      sc.add(U.box(0.12, CH, 1.4, wood, -1.35, CH / 2, -0.7), U.box(0.12, CH, 1.4, wood, 1.27, CH / 2, -0.7), U.box(2.76, CH, 0.12, wood, -0.04, CH / 2, -1.4));
-      sc.add(U.box(3.05, 0.14, 1.7, dark, -0.07, CH + 0.07, -0.7), U.box(2.95, 0.12, 1.6, snow, -0.07, CH + 0.2, -0.7));
-      sc.add(U.box(2.6, 0.06, 1.4, dark, -0.04, 0.03, -0.7));
-      sc.add(U.box(1.3, 0.08, 0.8, wood, -0.3, BENCH - 0.04, -0.95), U.box(1.3, 0.08, 0.4, wood, -0.3, 1.05, -1.2));
-      sc.add(U.box(0.34, 0.5, 0.34, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -1.18, 0.28, -0.75));
+      [[-1.275, CH / 2, 0.15, CH], [-0.475, 0.15, 1.45, 0.3], [-0.475, WT + tw / 2, 1.45, tw], [0.325, CH / 2, 0.15, CH], [0.775, (DH + CH) / 2, 0.75, CH - DH], [1.21, CH / 2, 0.12, CH]].forEach((r) => sc.add(board(r[2], r[3], 0.12, wood, r[0], r[1], 0)));
+      sc.add(board(1.55, 0.05, 0.16, dark, -0.475, 0.32, 0.04));   // the window sill
+      sc.add(board(0.12, CH, 1.4, wood, -1.35, CH / 2, -0.7), board(0.12, CH, 1.4, wood, 1.27, CH / 2, -0.7), board(2.76, CH, 0.12, wood, -0.04, CH / 2, -1.4));
+      // A shallow pitched roof, capped in snow with a little overhang at the eaves.
+      for (const side of [-1, 1]) {
+        const slope = -side * 0.23;
+        const eave = board(1.68, .12, 1.83, dark, -.04 + side * .80, CH + .18, -.70);
+        eave.rotation.z = slope; sc.add(eave);
+        const cap = U.box(1.73, .13, 1.88, snow, eave.position.x, CH + .29, -.70);
+        cap.rotation.z = slope; sc.add(cap);
+      }
+      const gable = new T.Shape();
+      gable.moveTo(-1.46, CH); gable.lineTo(-.04, CH + .37); gable.lineTo(1.38, CH); gable.closePath();
+      sc.add(new T.Mesh(new T.ExtrudeGeometry(gable, { depth: .09, bevelEnabled: false }), wood));
+      const chimney = U.mat(0x575a64, { roughness: .85 });
+      sc.add(U.box(.23, .54, .26, chimney, .80, CH + .47, -.99),
+        U.box(.30, .065, .32, chimney, .80, CH + .75, -.99));
+      sc.add(board(2.6, 0.06, 1.4, dark, -0.04, 0.03, -0.7));
+      sc.add(board(1.3, 0.08, 0.8, wood, -0.3, BENCH - 0.04, -0.95), board(1.3, 0.08, 0.4, wood, -0.3, 1.05, -1.2));
+      sc.add(board(0.34, 0.5, 0.34, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -1.18, 0.28, -0.75));
       stonesMat = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
       for (let i = 0; i < 5; i++) sc.add(U.ball(0.07 + rnd() * 0.03, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -1.18 + rs(0.1), 0.55 + rnd() * 0.03, -0.75 + rs(0.1), 1, 0.8, 1, 8, 6));
       lamp = new T.PointLight(0xffa85a, 6, 5); lamp.position.set(-0.3, 2.1, -0.4); sc.add(lamp);
       door = new T.Group(); door.position.set(1.15, 0, 0.08);
-      door.add(U.box(0.75, DH, 0.05, U.mat(0x8a5a32, { roughness: 0.9 }), -0.375, DH / 2, 0), U.ball(0.035, U.mat(0xe2b680, { roughness: 0.4 }), -0.65, 1.2, 0.04));
+      door.add(board(0.75, DH, 0.05, dark, -0.375, DH / 2, 0, true), U.ball(0.035, U.mat(0xe2b680, { roughness: 0.4 }), -0.65, 1.2, 0.04));
+      // A warm wall lamp gives the point light a visible source above the bench.
+      const bronze = U.mat(0x6f5346, { roughness: .75 });
+      sc.add(U.box(.29, .36, .09, bronze, -.78, 2.12, -1.28),
+        U.box(.21, .24, .10, U.mat(0xffda95, { emissive: 0xffba65, emissiveIntensity: .75 }), -.78, 2.12, -1.22));
+      for (const y of [2.02, 2.12, 2.22]) sc.add(U.box(.27, .025, .035, bronze, -.78, y, -1.16));
+      // Snow-dusted birch rounds stacked beside the wall.
+      const bark = U.mat(0xc4b7a2, { roughness: .94 }), cut = U.mat(0xe6c598);
+      for (const [x, y] of [[1.52, .13], [1.76, .13], [1.64, .32]]) {
+        const log = U.cyl(.13, .13, .54, bark, x, y, -.48, 14);
+        log.rotation.x = PI / 2;
+        const end = U.cyl(.106, .106, .012, cut, x, y, -.202, 14);
+        end.rotation.x = PI / 2; sc.add(log, end);
+      }
       sc.add(door);
       // a hole in the ice to dunk her in
-      const rim = new T.Mesh(new T.RingGeometry(0.98, 1.16, 48), U.mat(0xbfe0f2, { roughness: 0.3 })); rim.rotation.x = -PI / 2; rim.position.set(TUB.x, 0.012, TUB.z); sc.add(rim);
+      // One continuous rolled edge blends submerged blue ice into the soft snow shelf.
+      const rings = [[.966, -.23, 0x81b9cd], [.970, -.066, 0xaddce6], [.987, .009, 0xc9e8ee],
+        [1.035, .047, 0xe7f3f6], [1.10, .053, 0xf3f8fb], [1.21, .022, 0xeaf2f8], [1.30, -.008, 0xe3eef9]];
+      const positions = [], colors = [], indices = [], segments = 80;
+      rings.forEach(([radius, height, tint], row) => {
+        const color = new T.Color(tint);
+        for (let n = 0; n < segments; n++) {
+          const a = n * PI * 2 / segments, variation = .55 * Math.sin(3*a) + .3 * Math.cos(5*a) + .15 * Math.sin(8*a);
+          const r = radius + variation * (.009 + .008 * row);
+          positions.push(r * Math.cos(a), height + .009 * variation, r * Math.sin(a));
+          colors.push(color.r, color.g, color.b);
+          if (row) {
+            const here = row * segments + n, next = row * segments + (n + 1) % segments;
+            indices.push(here - segments, next, here, here - segments, next - segments, next);
+          }
+        }
+      });
+      const ice = new T.BufferGeometry();
+      ice.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+      ice.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+      ice.setIndex(indices); ice.computeVertexNormals();
+      const lip = new T.Mesh(ice, new T.MeshStandardMaterial({ vertexColors: true, roughness: .73 }));
+      lip.position.set(TUB.x, 0, TUB.z); sc.add(lip);
       const shaft = new T.Mesh(new T.CylinderGeometry(1.0, 1.0, 1.5, 48, 1, true), new T.MeshStandardMaterial({ color: 0x0d4a7a, side: T.BackSide, roughness: 0.4 })); shaft.position.set(TUB.x, -0.75, TUB.z); sc.add(shaft);
       const bottom = new T.Mesh(new T.CircleGeometry(1.0, 48), new T.MeshStandardMaterial({ color: 0x082c4d, roughness: 0.6 })); bottom.rotation.x = -PI / 2; bottom.position.set(TUB.x, -1.45, TUB.z); sc.add(bottom);
-      const water = new T.Mesh(new T.CircleGeometry(1.0, 48), new T.MeshStandardMaterial({ color: 0x2a8fd0, transparent: true, opacity: 0.55, roughness: 0.1, depthWrite: false })); water.rotation.x = -PI / 2; water.position.set(TUB.x, -0.1, TUB.z); sc.add(water);
+      const lake = U.tex(256, 256, (g, w, h) => {
+        const depth = g.createRadialGradient(120, 111, 18, 128, 128, 132);
+        depth.addColorStop(0, '#205471'); depth.addColorStop(.68, '#357990'); depth.addColorStop(1, '#80bfc9');
+        g.fillStyle = depth; g.fillRect(0, 0, w, h);
+        const rand = U.rng(517);
+        g.lineCap = 'round';
+        for (let i = 0; i < 26; i++) {
+          const x = rand()*w, y = rand()*h, length = 5 + rand()*22;
+          g.lineWidth = 1 + rand()*2; g.strokeStyle = 'rgba(196,236,240,.23)';
+          g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + length*.5, y + 2, x + length, y); g.stroke();
+        }
+      });
+      const water = new T.Mesh(new T.CircleGeometry(1, 80), new T.MeshStandardMaterial({
+        map: lake, transparent: true, opacity: .78, roughness: .35, depthWrite: false
+      }));
+      water.rotation.x = -PI / 2; water.position.set(TUB.x, -.10, TUB.z); sc.add(water);
       rippleMat = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
       ripple = U.torus(0.3, 0.02, rippleMat, TUB.x, 0.05, TUB.z, PI * 2, 24); ripple.rotation.x = PI / 2; sc.add(ripple);
       const t1 = tree(1.2), t2 = tree(0.9); t1.position.set(-2.1, 0, -1.2); t2.position.set(2.2, 0, -1.2); sc.add(t1, t2);
