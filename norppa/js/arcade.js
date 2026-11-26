@@ -2129,14 +2129,15 @@
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const pullOut = (() => {
     const ROUNDS = 5, HINT = 'Hold her by the head and drag her out of the door when the bar is on the gold line. Then dunk her in the ice hole.';
-    const GRAV = 9.8, BENCH = 0.62, HALF = 0.23, ZIN = -1.0, TUB = { x: 0.95, z: 2.7, r: 0.78 }, ZOUT = TUB.z, OUTX = 1.25, LEN = 1.25;
+    const GRAV = 8, BENCH = 0.5, HALF = 0.19, ZIN = -0.8, TUB = { x: 0.25, z: 2.0, r: 0.7 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.0, ROLL = -PI / 2;
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
+    let rollG = null, roll = 0;
     let live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
-    const com = { x: -0.45, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
+    const com = { x: -0.1, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
     let h0 = { x: 0.6, y: 0.1 }, ell = 0.6, tints = [], measured = false;
     const ray = new T.Raycaster(), v3 = new T.Vector3(), v2 = new T.Vector2(), bx = new T.Box3();
     const hvec = () => { const c = Math.cos(th), s = Math.sin(th); hv.x = h0.x * c - h0.y * s; hv.y = h0.x * s + h0.y * c; };
-    const floorY = (x) => (zone === 'in' ? (x > -1.15 && x < 0.3 ? BENCH : 0.05) : 0.05);
+    const floorY = (x) => (zone === 'in' ? (x > -0.6 && x < 0.36 ? BENCH : 0.05) : 0.05);
     /* where a finger on the screen is, on the flat plane the seal is moving in */
     function worldAt(x, y, plane) {
       v2.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1); ray.setFromCamera(v2, view.camera);
@@ -2145,34 +2146,34 @@
     }
     function fit() {
       const c = view.camera; c.aspect = W.aspect; c.fov = W.camera.fov; c.updateProjectionMatrix();
-      const tv = Math.tan(c.fov * PI / 360), d = Math.max(2.45 / (tv * c.aspect), 1.9 / tv) + 0.5;
-      c.position.set(0.2, 2.9, d); c.lookAt(0.2, 0.85, 0.9); c.updateMatrixWorld(true);
+      const tv = Math.tan(c.fov * PI / 360), d = Math.max(1.75 / (tv * c.aspect), 1.45 / tv) + 0.4;
+      c.position.set(0.1, 2.3, d); c.lookAt(0.1, 0.8, 0.8); c.updateMatrixWorld(true);
     }
     function build() {
       view = stage('#1c2a4a', '#4a3a58', { ground: 0xdfe9f2, hemi: 1.15, key: 0.9 });
       const sc = view.scene, wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 }), snow = U.mat(0xeef4fa, { roughness: 1 });
       sc.add(U.box(16, 0.3, 12, snow, 0, -0.15, 1));
-      // the front wall, with a big window and a door
-      [[-1.8, 1.25, 0.2, 2.5], [-0.8, 0.275, 1.8, 0.55], [-0.8, 2.3, 1.8, 0.4], [0.24, 1.25, 0.28, 2.5], [0.665, 2.25, 0.57, 0.5], [1.025, 1.25, 0.15, 2.5]].forEach((r) => sc.add(U.box(r[2], r[3], 0.14, wood, r[0], r[1], 0)));
-      sc.add(U.box(1.9, 0.06, 0.2, dark, -0.8, 0.57, 0.04));   // the window sill
-      sc.add(U.box(0.14, 2.5, 1.9, wood, -1.9, 1.25, -0.9), U.box(0.14, 2.5, 1.9, wood, 1.1, 1.25, -0.9), U.box(3.1, 2.5, 0.14, wood, -0.4, 1.25, -1.8));
-      sc.add(U.box(3.5, 0.16, 2.3, dark, -0.4, 2.58, -0.8), U.box(3.4, 0.14, 2.2, snow, -0.4, 2.73, -0.8));
-      sc.add(U.box(3, 0.06, 1.9, dark, -0.4, 0.03, -0.9));
-      sc.add(U.box(1.5, 0.1, 1.0, wood, -0.45, BENCH - 0.05, -1.2), U.box(1.5, 0.1, 0.5, wood, -0.45, 1.1, -1.55));
-      sc.add(U.box(0.5, 0.55, 0.5, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -1.5, 0.3, -1.0));
+      // a small cabin for one seal: the front wall has a big window and a door
+      [[-0.975, 1.05, 0.15, 2.1], [-0.35, 0.225, 1.1, 0.45], [-0.35, 1.875, 1.1, 0.45], [0.325, 1.05, 0.25, 2.1], [0.7, 1.925, 0.5, 0.35], [1.01, 1.05, 0.12, 2.1]].forEach((r) => sc.add(U.box(r[2], r[3], 0.12, wood, r[0], r[1], 0)));
+      sc.add(U.box(1.2, 0.05, 0.16, dark, -0.35, 0.47, 0.04));   // the window sill
+      sc.add(U.box(0.12, 2.1, 1.4, wood, -1.05, 1.05, -0.7), U.box(0.12, 2.1, 1.4, wood, 1.07, 1.05, -0.7), U.box(2.2, 2.1, 0.12, wood, 0.01, 1.05, -1.4));
+      sc.add(U.box(2.5, 0.14, 1.7, dark, 0.01, 2.17, -0.7), U.box(2.4, 0.12, 1.6, snow, 0.01, 2.3, -0.7));
+      sc.add(U.box(2.1, 0.06, 1.4, dark, 0.01, 0.03, -0.7));
+      sc.add(U.box(0.96, 0.08, 0.8, wood, -0.13, BENCH - 0.04, -0.95), U.box(0.96, 0.08, 0.4, wood, -0.13, 0.95, -1.2));
+      sc.add(U.box(0.34, 0.5, 0.34, U.mat(0x33363d, { roughness: 0.6, metalness: 0.4 }), -0.82, 0.28, -0.75));
       stonesMat = new T.MeshStandardMaterial({ color: 0x6a3a24, emissive: 0xff5a1a, roughness: 1 });
-      for (let i = 0; i < 6; i++) sc.add(U.ball(0.1 + rnd() * 0.04, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -1.5 + rs(0.15), 0.62 + rnd() * 0.04, -1.0 + rs(0.15), 1, 0.8, 1, 8, 6));
-      lamp = new T.PointLight(0xffa85a, 6, 6); lamp.position.set(-0.4, 1.9, -0.5); sc.add(lamp);
-      door = new T.Group(); door.position.set(0.95, 0, 0.09);
-      door.add(U.box(0.57, 2.0, 0.06, U.mat(0x8a5a32, { roughness: 0.9 }), -0.285, 1.0, 0), U.ball(0.035, U.mat(0xe2b680, { roughness: 0.4 }), -0.5, 1.0, 0.05));
+      for (let i = 0; i < 5; i++) sc.add(U.ball(0.07 + rnd() * 0.03, i % 3 ? U.mat(0x55524f, { roughness: 1 }) : stonesMat, -0.82 + rs(0.1), 0.55 + rnd() * 0.03, -0.75 + rs(0.1), 1, 0.8, 1, 8, 6));
+      lamp = new T.PointLight(0xffa85a, 6, 5); lamp.position.set(-0.2, 1.7, -0.4); sc.add(lamp);
+      door = new T.Group(); door.position.set(0.95, 0, 0.08);
+      door.add(U.box(0.5, 1.75, 0.05, U.mat(0x8a5a32, { roughness: 0.9 }), -0.25, 0.875, 0), U.ball(0.03, U.mat(0xe2b680, { roughness: 0.4 }), -0.43, 0.9, 0.04));
       sc.add(door);
       // a hole in the ice to dunk her in
-      sc.add(U.cyl(0.86, 0.86, 0.02, U.mat(0xbfe0f2, { roughness: 0.3 }), TUB.x, 0.012, TUB.z, 32), U.cyl(0.68, 0.68, 0.025, U.mat(0x14507f, { roughness: 0.15 }), TUB.x, 0.022, TUB.z, 32));
+      sc.add(U.cyl(0.78, 0.78, 0.02, U.mat(0xbfe0f2, { roughness: 0.3 }), TUB.x, 0.012, TUB.z, 32), U.cyl(0.6, 0.6, 0.025, U.mat(0x14507f, { roughness: 0.15 }), TUB.x, 0.022, TUB.z, 32));
       rippleMat = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
       ripple = U.torus(0.3, 0.02, rippleMat, TUB.x, 0.05, TUB.z, PI * 2, 24); ripple.rotation.x = PI / 2; sc.add(ripple);
-      const t1 = tree(1.3), t2 = tree(1.0); t1.position.set(-2.4, 0, -1.6); t2.position.set(2.5, 0, -1.4); sc.add(t1, t2);
+      const t1 = tree(1.2), t2 = tree(0.9); t1.position.set(-1.9, 0, -1.2); t2.position.set(2.1, 0, -1.2); sc.add(t1, t2);
       steam = Puffs(sc, 60, 0xffffff, 0.4); splash = Puffs(sc, 60, 0x9cdef7, 0.85); sparks = Puffs(sc, 40, 0xffd45c, 1);
-      rag = new T.Group(); sc.add(rag);
+      rag = new T.Group(); sc.add(rag); rollG = new T.Group(); rag.add(rollG);
       layer = document.createElement('div'); layer.className = 'sx-layer'; document.getElementById('gamehud').appendChild(layer);
       const bar = document.createElement('div'); bar.className = 'sx-bar'; layer.appendChild(bar);
       targetEl = document.createElement('div'); targetEl.className = 'sx-target'; bar.appendChild(targetEl);
@@ -2182,7 +2183,7 @@
     function dress() {
       cast(view, 0.62, false);
       if (actor.shadow.parent) actor.g.remove(actor.shadow);
-      rag.add(actor.g);
+      rollG.add(actor.g); rollG.rotation.set(0, 0, 0); roll = 0;
       rag.position.set(0, 0, 0); rag.rotation.set(0, 0, 0); rag.scale.setScalar(1);
       actor.g.position.set(0, 0, 0); actor.look = null; actor.heading = PI / 2; actor.g.rotation.y = PI / 2;
       actor.update(0.001, clock, null); rag.updateMatrixWorld(true);
@@ -2208,7 +2209,7 @@
     }
     function toRest() {
       zone = 'in'; mode = 'in'; held = false; grounded = true; z = ZIN; th = 0; om = 0; vel.x = vel.y = 0; gv.x = gv.y = acc.x = acc.y = 0;
-      com.x = -0.45; com.y = BENCH + HALF; bar = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+      com.x = -0.1; com.y = BENCH + HALF; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
       K.hint(tr(HINT));
     }
     function judge() {
@@ -2230,8 +2231,13 @@
       if (held && ptr) {
         const w = worldAt(ptr.x + offs.x, ptr.y + offs.y, z);   // the same spot of her stays under the finger, even as she moves toward the camera
         let tx = w.x, ty = w.y;
-        if (zone === 'in') { if (tx > 0.3 && !(ty > 0.9 && ty < 1.95)) tx = 0.3; tx = Math.max(tx, -1.45); ty = Math.min(ty, 2.25); }
-        else { tx = U.clamp(tx, -1.9, 1.55); ty = U.clamp(ty, 0.4, 2.6); }
+        if (zone === 'in') {
+          // forgiving: anything on the door side below the roof counts as the doorway, and the nearer she gets the more she is guided through it
+          if (tx > 0.36 && ty > 2.0) tx = 0.36;
+          tx = Math.max(tx, -0.85); ty = Math.min(ty, 2.0);
+          const g = U.smooth(0.2, 0.8, head.x);
+          if (g > 0) { tx += (OUTX + 0.25 - tx) * g * 0.45; ty += (1.2 - ty) * g * 0.6; }
+        } else { tx = U.clamp(tx, -0.85, 1.05); ty = U.clamp(ty, 0.3, 2.4); }
         const px = head.x, py = head.y, k = 1 - Math.exp(-dt * 16);
         head.x += (tx - head.x) * k; head.y += (ty - head.y) * k;
         const nvx = (head.x - px) / dt, nvy = (head.y - py) / dt;
@@ -2249,7 +2255,7 @@
         if (mode === 'out' && clockT - outAt > 0.5 && head.y < 1.15 && Math.abs(head.x - TUB.x) < TUB.r) dunk();
       } else {
         vel.y -= GRAV * dt; com.x += vel.x * dt; com.y += vel.y * dt;
-        if (zone === 'in') com.x = U.clamp(com.x, -1.45, 0.3); else com.x = U.clamp(com.x, -1.9, 1.55);
+        if (zone === 'in') com.x = U.clamp(com.x, -0.8, 0.36); else com.x = U.clamp(com.x, -0.85, 1.05);
         const fy = floorY(com.x) + HALF; grounded = false;
         if (com.y <= fy) { com.y = fy; vel.y = vel.y < -1.2 ? -vel.y * 0.25 : 0; grounded = true; vel.x *= Math.exp(-7 * dt); }
         if (grounded) { const tt = Math.round(th / (2 * PI)) * 2 * PI; om += (-70 * (th - tt) - 10 * om) * dt; } else om *= Math.exp(-0.4 * dt);
@@ -2264,7 +2270,7 @@
       dbg() {
         const at = (x, y, zz) => { v3.set(x, y, zz).project(view.camera); return { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }; };
         actor.headP.getWorldPosition(v3); v3.project(view.camera);
-        return { head: { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }, door: at(0.67, 1.45, 0), out: at(1.4, 1.45, ZOUT), tub: at(TUB.x, 1.0, ZOUT), mode, bar, target, tol, th, round, score };
+        return { head: { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }, door: at(0.7, 1.2, 0), out: at(1.0, 1.2, ZOUT), tub: at(TUB.x, 0.9, ZOUT), mode, bar, target, tol, th, round, score };
       },
       start() {
         if (!view) build();
@@ -2294,19 +2300,20 @@
         fit();
         const d = Math.min(dt, 1 / 30);
         if (playing && live && mode === 'in') {
-          bar = Math.min(1, bar + (0.2 + round * 0.03) * d);
+          bar = Math.min(1, bar + (0.09 + round * 0.012) * (1 + 2.2 * U.smooth(Math.max(0, target - 0.4), target, bar)) * d);   // slow at first, then it picks up as it nears the line
           if (bar >= 1) {   // cooked too long: she is flung out of the door
-            held = false; zone = 'out'; z = ZOUT; com.x = 1.45; com.y = 1.2; vel.x = 1.6; vel.y = 3; om = 7; head.x = com.x; head.y = com.y; judge();
+            held = false; zone = 'out'; z = ZOUT; com.x = 1.15; com.y = 1.0; vel.x = 1.2; vel.y = 2.6; om = 7; head.x = com.x; head.y = com.y; judge();
           }
         }
         if (live || playing) { step(d * 0.5); step(d * 0.5); }
         if (mode === 'in') heat();
         // through the door she comes toward you; the door swings open for her
-        const zT = zone === 'out' ? ZOUT : head.x > 0.45 ? ZIN + (ZOUT - ZIN) * U.smooth(0.45, 1.15, head.x) : ZIN;
+        const zT = zone === 'out' ? ZOUT : head.x > 0.3 ? ZIN + (ZOUT - ZIN) * U.smooth(0.3, 0.98, head.x) : ZIN;
         z += (zT - z) * (1 - Math.exp(-d * 9));
-        const dT = zone === 'in' ? (held && head.x > 0.0 ? 1 : 0) : (com.x < 1.55 ? 1 : 0);
+        const dT = zone === 'in' ? (held && head.x > -0.1 ? 1 : 0) : (com.x < 1.0 ? 1 : 0);
         doorOpen += (dT - doorOpen) * (1 - Math.exp(-d * 6)); door.rotation.y = doorOpen * 1.45;
-        actor.heading = PI / 2; actor.look = null; actor.update(dt, clock, null);
+        roll += ((held ? ROLL : 0) - roll) * (1 - Math.exp(-d * 8)); rollG.rotation.x = roll;
+        actor.heading = PI / 2; actor.look = held ? view.camera.position : null; actor.update(dt, clock, null);
         actor.g.rotation.y = PI / 2;
         rag.position.set(com.x, com.y, z); rag.rotation.z = th;
         // steam off the stones, thicker as she cooks; a ring on the water after a dunk
