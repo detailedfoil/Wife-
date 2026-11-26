@@ -1,0 +1,1012 @@
+{
+ "generated": "2026-11-26T09:50:12.673502+00:00",
+ "players": 217,
+ "players_24h": 56,
+ "players_7d": 178,
+ "sessions": 597,
+ "avg_session_secs": 362,
+ "returning_players": 46,
+ "games_played": 2084,
+ "mum_plays": 0,
+ "avg_play_secs_per_player": 450,
+ "avg_earned_per_player": 241,
+ "coins": {
+  "avg": 223,
+  "median": 161,
+  "max": 2892
+ },
+ "coins_per_min_all": 28,
+ "mix": {
+  "players": 142,
+  "coins_per_min": 28,
+  "joy_per_min": 11.9,
+  "energy_per_min": 9.3
+ },
+ "per_game": [
+  {
+   "game": "ball",
+   "plays": 638,
+   "completed": 634,
+   "quits": 4,
+   "players": 121,
+   "quit_pct": 1,
+   "avg_secs": 25,
+   "median_secs": 20,
+   "p10_secs": 9,
+   "p90_secs": 46,
+   "coins_per_min": 23,
+   "avg_coins": 11.6,
+   "avg_joy": 4.2,
+   "joy_per_min": 9.8,
+   "avg_energy": 3.8,
+   "energy_per_min": 10.2,
+   "avg_score": 13.8,
+   "best_score": 169,
+   "avg_taste": 2.9,
+   "avg_bonus": 3.2,
+   "avg_muck": 0,
+   "score_p10": 3,
+   "score_p50": 9.6,
+   "score_p90": 28.1,
+   "cpm_p10": 13.3,
+   "cpm_p50": 24.1,
+   "cpm_p90": 32,
+   "avg_fps": 67
+  },
+  {
+   "game": "sauna",
+   "plays": 364,
+   "completed": 361,
+   "quits": 3,
+   "players": 105,
+   "quit_pct": 1,
+   "avg_secs": 20,
+   "median_secs": 18,
+   "p10_secs": 7,
+   "p90_secs": 34,
+   "coins_per_min": 6.4,
+   "avg_coins": 3.1,
+   "avg_joy": null,
+   "joy_per_min": null,
+   "avg_energy": null,
+   "energy_per_min": null,
+   "avg_score": 2.4,
+   "best_score": 7,
+   "avg_taste": null,
+   "avg_bonus": null,
+   "avg_muck": null,
+   "score_p10": 1,
+   "score_p50": 2,
+   "score_p90": 5,
+   "cpm_p10": 0,
+   "cpm_p50": 0,
+   "cpm_p90": 18.3,
+   "avg_fps": 67
+  },
+  {
+   "game": "catch",
+   "plays": 380,
+   "completed": 379,
+   "quits": 1,
+   "players": 87,
+   "quit_pct": 1,
+   "avg_secs": 43,
+   "median_secs": 43,
+   "p10_secs": 43,
+   "p90_secs": 43,
+   "coins_per_min": 39.1,
+   "avg_coins": 27.7,
+   "avg_joy": 7.7,
+   "joy_per_min": 10.9,
+   "avg_energy": 5.9,
+   "energy_per_min": 8.4,
+   "avg_score": 30.5,
+   "best_score": 67,
+   "avg_taste": 4,
+   "avg_bonus": 3.4,
+   "avg_muck": 0.2,
+   "score_p10": 13.6,
+   "score_p50": 30,
+   "score_p90": 46.4,
+   "cpm_p10": 17.2,
+   "cpm_p50": 37.7,
+   "cpm_p90": 61.2,
+   "avg_fps": 68
+  },
+  {
+   "game": "shuffle",
+   "plays": 389,
+   "completed": 385,
+   "quits": 4,
+   "players": 81,
+   "quit_pct": 3,
+   "avg_secs": 57,
+   "median_secs": 53,
+   "p10_secs": 48,
+   "p90_secs": 72,
+   "coins_per_min": 30.3,
+   "avg_coins": 28,
+   "avg_joy": 11.3,
+   "joy_per_min": 11.9,
+   "avg_energy": 8,
+   "energy_per_min": 8.3,
+   "avg_score": 1176.3,
+   "best_score": 1817,
+   "avg_taste": 5.3,
+   "avg_bonus": 3.1,
+   "avg_muck": 0,
+   "score_p10": 963.5,
+   "score_p50": 1229,
+   "score_p90": 1435.7,
+   "cpm_p10": 19.8,
+   "cpm_p50": 31.9,
+   "cpm_p90": 39.5,
+   "avg_fps": 71
+  },
+  {
+   "game": "swim",
+   "plays": 128,
+   "completed": 126,
+   "quits": 2,
+   "players": 16,
+   "quit_pct": 0,
+   "avg_secs": 56,
+   "median_secs": 41,
+   "p10_secs": 26,
+   "p90_secs": 109,
+   "coins_per_min": 22.2,
+   "avg_coins": 25.3,
+   "avg_joy": 9.1,
+   "joy_per_min": 11.6,
+   "avg_energy": 6.5,
+   "energy_per_min": 8,
+   "avg_score": 19.5,
+   "best_score": 166,
+   "avg_taste": 5.2,
+   "avg_bonus": 3.7,
+   "avg_muck": 0,
+   "score_p10": 3.8,
+   "score_p50": 11.1,
+   "score_p90": 50.9,
+   "cpm_p10": 12.6,
+   "cpm_p50": 22.6,
+   "cpm_p90": 31.5,
+   "avg_fps": 64
+  },
+  {
+   "game": "stack",
+   "plays": 85,
+   "completed": 84,
+   "quits": 1,
+   "players": 8,
+   "quit_pct": 2,
+   "avg_secs": 35,
+   "median_secs": 35,
+   "p10_secs": 28,
+   "p90_secs": 41,
+   "coins_per_min": 34.5,
+   "avg_coins": 20.3,
+   "avg_joy": 3.7,
+   "joy_per_min": 5,
+   "avg_energy": 4.9,
+   "energy_per_min": 8.6,
+   "avg_score": 26.4,
+   "best_score": 206,
+   "avg_taste": 0.2,
+   "avg_bonus": 4.1,
+   "avg_muck": 0,
+   "score_p10": 18.6,
+   "score_p50": 26.1,
+   "score_p90": 35.5,
+   "cpm_p10": 28.4,
+   "cpm_p50": 34.7,
+   "cpm_p90": 39.1,
+   "avg_fps": 71
+  },
+  {
+   "game": "puff",
+   "plays": 26,
+   "completed": 26,
+   "quits": 0,
+   "players": 5,
+   "quit_pct": 0,
+   "avg_secs": 57,
+   "median_secs": 36,
+   "p10_secs": 22,
+   "p90_secs": 102,
+   "coins_per_min": 26.9,
+   "avg_coins": 13.5,
+   "avg_joy": 13.4,
+   "joy_per_min": 12.5,
+   "avg_energy": 8,
+   "energy_per_min": 8.9,
+   "avg_score": 31.7,
+   "best_score": 179,
+   "avg_taste": 6.5,
+   "avg_bonus": 3.7,
+   "avg_muck": 0,
+   "score_p10": 4.8,
+   "score_p50": 29.5,
+   "score_p90": 64.1,
+   "cpm_p10": 2.3,
+   "cpm_p50": 33.4,
+   "cpm_p90": 47.9,
+   "avg_fps": 67
+  },
+  {
+   "game": "piano",
+   "plays": 35,
+   "completed": 32,
+   "quits": 3,
+   "players": 4,
+   "quit_pct": 6,
+   "avg_secs": 44,
+   "median_secs": 45,
+   "p10_secs": 42,
+   "p90_secs": 46,
+   "coins_per_min": 51,
+   "avg_coins": 37.7,
+   "avg_joy": 2.5,
+   "joy_per_min": 3.3,
+   "avg_energy": 6.3,
+   "energy_per_min": 8.6,
+   "avg_score": 144.7,
+   "best_score": 410,
+   "avg_taste": -0.6,
+   "avg_bonus": 4,
+   "avg_muck": 0,
+   "score_p10": 105,
+   "score_p50": 165.5,
+   "score_p90": 167.7,
+   "cpm_p10": 36.4,
+   "cpm_p50": 55.9,
+   "cpm_p90": 61.7,
+   "avg_fps": 59
+  },
+  {
+   "game": "coffee",
+   "plays": 20,
+   "completed": 20,
+   "quits": 0,
+   "players": 2,
+   "quit_pct": 0,
+   "avg_secs": 67,
+   "median_secs": 67,
+   "p10_secs": 61,
+   "p90_secs": 74,
+   "coins_per_min": 19.7,
+   "avg_coins": 22.4,
+   "avg_joy": 11.7,
+   "joy_per_min": 10.8,
+   "avg_energy": 9.2,
+   "energy_per_min": 8.2,
+   "avg_score": 5.6,
+   "best_score": 10,
+   "avg_taste": 4.7,
+   "avg_bonus": 3.1,
+   "avg_muck": 0,
+   "score_p10": 5.1,
+   "score_p50": 5.6,
+   "score_p90": 6,
+   "cpm_p10": 17.8,
+   "cpm_p50": 19.7,
+   "cpm_p90": 21.6,
+   "avg_fps": 60
+  },
+  {
+   "game": "curl",
+   "plays": 11,
+   "completed": 11,
+   "quits": 0,
+   "players": 2,
+   "quit_pct": 0,
+   "avg_secs": 52,
+   "median_secs": 52,
+   "p10_secs": 45,
+   "p90_secs": 60,
+   "coins_per_min": 41.4,
+   "avg_coins": 34.7,
+   "avg_joy": 14.5,
+   "joy_per_min": 16.3,
+   "avg_energy": 7.5,
+   "energy_per_min": 8.6,
+   "avg_score": 15.9,
+   "best_score": 27,
+   "avg_taste": 8.5,
+   "avg_bonus": 2.7,
+   "avg_muck": 0.1,
+   "score_p10": 15.7,
+   "score_p50": 15.9,
+   "score_p90": 16,
+   "cpm_p10": 34.6,
+   "cpm_p50": 41.4,
+   "cpm_p90": 48.2,
+   "avg_fps": 64
+  },
+  {
+   "game": "bj",
+   "plays": 4,
+   "completed": 4,
+   "quits": 0,
+   "players": 1,
+   "quit_pct": 0,
+   "avg_secs": 34,
+   "median_secs": 34,
+   "p10_secs": 34,
+   "p90_secs": 34,
+   "coins_per_min": 24.5,
+   "avg_coins": 14,
+   "avg_joy": 4.8,
+   "joy_per_min": 8.3,
+   "avg_energy": 5,
+   "energy_per_min": 8.8,
+   "avg_score": 25,
+   "best_score": 50,
+   "avg_taste": 4.5,
+   "avg_bonus": 4,
+   "avg_muck": 0,
+   "score_p10": 25,
+   "score_p50": 25,
+   "score_p90": 25,
+   "cpm_p10": 24.5,
+   "cpm_p50": 24.5,
+   "cpm_p90": 24.5,
+   "avg_fps": 60
+  },
+  {
+   "game": "sled",
+   "plays": 2,
+   "completed": 2,
+   "quits": 0,
+   "players": 1,
+   "quit_pct": 0,
+   "avg_secs": 40,
+   "median_secs": 40,
+   "p10_secs": 40,
+   "p90_secs": 40,
+   "coins_per_min": 45.8,
+   "avg_coins": 30.5,
+   "avg_joy": 9,
+   "joy_per_min": 13.5,
+   "avg_energy": 5.5,
+   "energy_per_min": 8.3,
+   "avg_score": 678,
+   "best_score": 688,
+   "avg_taste": 6,
+   "avg_bonus": 3.5,
+   "avg_muck": 0,
+   "score_p10": 678,
+   "score_p50": 678,
+   "score_p90": 678,
+   "cpm_p10": 45.8,
+   "cpm_p50": 45.8,
+   "cpm_p90": 45.8,
+   "avg_fps": 96
+  },
+  {
+   "game": "toss",
+   "plays": 2,
+   "completed": 2,
+   "quits": 0,
+   "players": 1,
+   "quit_pct": 0,
+   "avg_secs": 31,
+   "median_secs": 31,
+   "p10_secs": 31,
+   "p90_secs": 31,
+   "coins_per_min": 56.1,
+   "avg_coins": 28.5,
+   "avg_joy": 5,
+   "joy_per_min": 9.8,
+   "avg_energy": 4,
+   "energy_per_min": 7.9,
+   "avg_score": 7.5,
+   "best_score": 11,
+   "avg_taste": 3.5,
+   "avg_bonus": 4,
+   "avg_muck": 0,
+   "score_p10": 7.5,
+   "score_p50": 7.5,
+   "score_p90": 7.5,
+   "cpm_p10": 56.1,
+   "cpm_p50": 56.1,
+   "cpm_p90": 56.1,
+   "avg_fps": 62
+  }
+ ],
+ "visits_per_active_day": 1.7,
+ "retention": {
+  "d1_eligible": 214,
+  "d1": 43,
+  "d7_eligible": 78,
+  "d7": 9
+ },
+ "needs": {
+  "visits": 470,
+  "players": 216,
+  "avg_food": 60,
+  "avg_joy": 65,
+  "avg_energy": 85,
+  "avg_clean": 85,
+  "pct_hungry": 4,
+  "pct_sad": 7,
+  "pct_dirty": 4,
+  "pct_low_energy": 1,
+  "pct_full_joy": 1
+ },
+ "blocked_total": 13,
+ "blocked": [
+  {
+   "why": "sulk",
+   "n": 9,
+   "players": 5
+  },
+  {
+   "why": "sick",
+   "n": 4,
+   "players": 1
+  }
+ ],
+ "unlocks": [
+  {
+   "game": "swim",
+   "n": 16,
+   "players": 15,
+   "median_age_days": 0,
+   "price": 450
+  },
+  {
+   "game": "stack",
+   "n": 8,
+   "players": 8,
+   "median_age_days": 1,
+   "price": 575
+  },
+  {
+   "game": "puff",
+   "n": 3,
+   "players": 3,
+   "median_age_days": 1,
+   "price": 650
+  },
+  {
+   "game": "piano",
+   "n": 2,
+   "players": 2,
+   "median_age_days": 3,
+   "price": 775
+  },
+  {
+   "game": "coffee",
+   "n": 1,
+   "players": 1,
+   "median_age_days": 7,
+   "price": 850
+  },
+  {
+   "game": "curl",
+   "n": 1,
+   "players": 1,
+   "median_age_days": 1,
+   "price": 1000
+  }
+ ],
+ "purchases": [
+  {
+   "item": "muikku",
+   "kind": "fish",
+   "n": 250,
+   "players": 29,
+   "total": 2000
+  },
+  {
+   "item": "siika",
+   "kind": "fish",
+   "n": 152,
+   "players": 38,
+   "total": 3496
+  },
+  {
+   "item": "ahven",
+   "kind": "fish",
+   "n": 136,
+   "players": 27,
+   "total": 1768
+  },
+  {
+   "item": "katkarapu",
+   "kind": "food",
+   "n": 104,
+   "players": 35,
+   "total": 1040
+  },
+  {
+   "item": "kalakukko",
+   "kind": "food",
+   "n": 89,
+   "players": 32,
+   "total": 4005
+  },
+  {
+   "item": "lohikeitto",
+   "kind": "food",
+   "n": 67,
+   "players": 30,
+   "total": 4020
+  },
+  {
+   "item": "redseal",
+   "kind": "food",
+   "n": 40,
+   "players": 12,
+   "total": 1200
+  },
+  {
+   "item": "lakkamehu",
+   "kind": "med",
+   "n": 34,
+   "players": 20,
+   "total": 1700
+  },
+  {
+   "item": "sealsius",
+   "kind": "food",
+   "n": 20,
+   "players": 8,
+   "total": 1000
+  },
+  {
+   "item": "pipo_red",
+   "kind": "wear",
+   "n": 13,
+   "players": 12,
+   "total": 2210
+  },
+  {
+   "item": "kraken",
+   "kind": "food",
+   "n": 11,
+   "players": 7,
+   "total": 935
+  },
+  {
+   "item": "pipo_blue",
+   "kind": "wear",
+   "n": 10,
+   "players": 9,
+   "total": 1700
+  },
+  {
+   "item": "kahvi",
+   "kind": "food",
+   "n": 8,
+   "players": 5,
+   "total": 3200
+  },
+  {
+   "item": "pipo_green",
+   "kind": "wear",
+   "n": 6,
+   "players": 5,
+   "total": 1020
+  },
+  {
+   "item": "lights",
+   "kind": "decor",
+   "n": 6,
+   "players": 6,
+   "total": 3480
+  }
+ ],
+ "coins_spent": 61974,
+ "coins_earned_games": 39303,
+ "levels": [
+  {
+   "level": 3,
+   "reached": 47,
+   "median_age_days": 0
+  },
+  {
+   "level": 6,
+   "reached": 13,
+   "median_age_days": 1
+  },
+  {
+   "level": 10,
+   "reached": 4,
+   "median_age_days": 6.5
+  }
+ ],
+ "levels_now": [
+  {
+   "level": 1,
+   "players": 94
+  },
+  {
+   "level": 2,
+   "players": 76
+  },
+  {
+   "level": 3,
+   "players": 19
+  },
+  {
+   "level": 4,
+   "players": 5
+  },
+  {
+   "level": 5,
+   "players": 10
+  },
+  {
+   "level": 6,
+   "players": 3
+  },
+  {
+   "level": 7,
+   "players": 4
+  },
+  {
+   "level": 8,
+   "players": 2
+  },
+  {
+   "level": 11,
+   "players": 1
+  },
+  {
+   "level": 21,
+   "players": 1
+  },
+  {
+   "level": 27,
+   "players": 1
+  },
+  {
+   "level": 28,
+   "players": 1
+  }
+ ],
+ "coffee_fails": [
+  {
+   "step": "unknown",
+   "players": 2,
+   "n": 19,
+   "share": 100,
+   "avg_served": 5.1
+  }
+ ],
+ "devices": {
+  "installed_pct": 5,
+  "screens": [
+   {
+    "bucket": 1,
+    "players": 5
+   },
+   {
+    "bucket": 2,
+    "players": 69
+   },
+   {
+    "bucket": 3,
+    "players": 45
+   },
+   {
+    "bucket": 4,
+    "players": 5
+   },
+   {
+    "bucket": 5,
+    "players": 92
+   }
+  ],
+  "fps_avg": 68,
+  "fps_p10": 48
+ },
+ "errors": {
+  "total": 4,
+  "per_100_visits": 0.9,
+  "top": [
+   {
+    "msg": "promise Failed to start the audio device",
+    "n": 3,
+    "players": 3
+   },
+   {
+    "msg": "Script error. :0",
+    "n": 1,
+    "players": 1
+   }
+  ]
+ },
+ "daily": [
+  {
+   "day": "2026-10-28",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-10-29",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-10-30",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-10-31",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-01",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-02",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-03",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-04",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-05",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-06",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-07",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-08",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-09",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-10",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-11",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-12",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-13",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-14",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-15",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-16",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-17",
+   "players": 0,
+   "new_players": 0,
+   "sessions": 0
+  },
+  {
+   "day": "2026-11-18",
+   "players": 29,
+   "new_players": 29,
+   "sessions": 49
+  },
+  {
+   "day": "2026-11-19",
+   "players": 56,
+   "new_players": 51,
+   "sessions": 104
+  },
+  {
+   "day": "2026-11-20",
+   "players": 15,
+   "new_players": 6,
+   "sessions": 40
+  },
+  {
+   "day": "2026-11-21",
+   "players": 10,
+   "new_players": 5,
+   "sessions": 26
+  },
+  {
+   "day": "2026-11-22",
+   "players": 8,
+   "new_players": 3,
+   "sessions": 25
+  },
+  {
+   "day": "2026-11-23",
+   "players": 3,
+   "new_players": 0,
+   "sessions": 19
+  },
+  {
+   "day": "2026-11-24",
+   "players": 81,
+   "new_players": 77,
+   "sessions": 124
+  },
+  {
+   "day": "2026-11-25",
+   "players": 73,
+   "new_players": 45,
+   "sessions": 183
+  },
+  {
+   "day": "2026-11-26",
+   "players": 21,
+   "new_players": 1,
+   "sessions": 40
+  }
+ ],
+ "hours": [
+  {
+   "hour": 0,
+   "plays": 64
+  },
+  {
+   "hour": 1,
+   "plays": 51
+  },
+  {
+   "hour": 2,
+   "plays": 51
+  },
+  {
+   "hour": 3,
+   "plays": 43
+  },
+  {
+   "hour": 4,
+   "plays": 36
+  },
+  {
+   "hour": 5,
+   "plays": 94
+  },
+  {
+   "hour": 6,
+   "plays": 88
+  },
+  {
+   "hour": 7,
+   "plays": 98
+  },
+  {
+   "hour": 8,
+   "plays": 120
+  },
+  {
+   "hour": 9,
+   "plays": 51
+  },
+  {
+   "hour": 10,
+   "plays": 59
+  },
+  {
+   "hour": 11,
+   "plays": 58
+  },
+  {
+   "hour": 12,
+   "plays": 95
+  },
+  {
+   "hour": 13,
+   "plays": 122
+  },
+  {
+   "hour": 14,
+   "plays": 99
+  },
+  {
+   "hour": 15,
+   "plays": 99
+  },
+  {
+   "hour": 16,
+   "plays": 73
+  },
+  {
+   "hour": 17,
+   "plays": 173
+  },
+  {
+   "hour": 18,
+   "plays": 113
+  },
+  {
+   "hour": 19,
+   "plays": 171
+  },
+  {
+   "hour": 20,
+   "plays": 127
+  },
+  {
+   "hour": 21,
+   "plays": 85
+  },
+  {
+   "hour": 22,
+   "plays": 69
+  },
+  {
+   "hour": 23,
+   "plays": 45
+  }
+ ],
+ "langs": [
+  {
+   "lang": "en",
+   "players": 148
+  },
+  {
+   "lang": "fi",
+   "players": 79
+  }
+ ]
+}
