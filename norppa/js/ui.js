@@ -564,11 +564,7 @@
     else if (act === 'devtap') game.devTap();
     else if (act === 'devtoggle') game.devToggle();
     else if (act === 'devreset') game.devReset();
-<<<<<<< HEAD
     else if (act === 'online') { UI.closeSheet(); if (PN.Online) PN.Online.open(); }
-=======
-    else if (act === 'online') { UI.closeSheet(); if (PN.Online && game.state.dev) PN.Online.open(); }
->>>>>>> eb9095b92e1b42cb375b79aaa776f6f02c2bdf6a
     else if (act === 'devenergy') game.devEnergy();
     else if (act === 'devdirty') game.devDirty();
     else if (act === 'devtut') game.devTutorials();
