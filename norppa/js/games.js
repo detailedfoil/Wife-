@@ -73,6 +73,13 @@
       settled: { at: 'top', lines: ['Win and you get your bet back and more. Lose and it is gone.', 'Tap Cash out whenever you like to take your tokens home.'] },
       slide: { do: 'tap', target: '.bj-slide', demo: 'swipe', at: 'top', lines: ['You can bet more now! Slide to choose how much to bet.', 'The most you can bet is a third of your tokens.'] },
     },
+    labpull: {
+      start: { at: 'top', lines: ['Welcome to the sauna! Watch the heat bar fill up on the right.', 'She cooks as it rises. Get her out when the bar is on the gold line.'] },
+      gold: { do: 'drag', demo: 'drag', at: 'bottom', lines: ['Perfect temperature! The bar stops the moment she leaves the sauna.', 'Hold her by the head and drag her down out of it.'] },
+      out: { at: 'top', lines: ['Well done!', 'Now dunk her in the ice water to cool her down and reset the bar.'] },
+      cool: { at: 'top', lines: ['Lovely and cool! Drag her back up into the sauna for the next round.'] },
+      solo: { at: 'top', lines: ["That's the guide done. From now on you're on your own.", 'Pull her out on the gold line, dunk her to reset, and go again. Five rounds, up to 3 points each.'] },
+    },
     coffee: {
       start: { at: 'top', lines: ['Customers leave their order on a receipt.', 'Remember it, then make the drink from memory.'] },
       read: { do: 'tap', at: 'top', lines: ['Read the order, then tap the receipt.', 'Once you tap, it goes away, so take your time.'] },

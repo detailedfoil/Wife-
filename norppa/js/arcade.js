@@ -2134,7 +2134,7 @@
     let rollG = null, roll = 0, phi = 0, phiV = 0;   // phi: how far her head is tilted off her body, in the screen plane
     const qa = new T.Quaternion(), qb = new T.Quaternion(), qc = new T.Quaternion(), qt = new T.Quaternion(), zax = new T.Vector3(0, 0, 1), fdir = new T.Vector3(), fup = new T.Vector3(), zero = new T.Vector3(), fm = new T.Matrix4();
     let faceW = 0;   // how much her face is turned to the camera (while she is held)
-    let armed = true, autoT = 0, doorT = 0, live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
+    let draining = false, tutRound = false, tutHold = false, armed = true, autoT = 0, doorT = 0, live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
     const com = { x: -0.35, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
     let h0 = { x: 0.6, y: 0.1 }, ell = 0.6, tints = [], measured = false;
     const ray = new T.Raycaster(), v3 = new T.Vector3(), v2 = new T.Vector2(), bx = new T.Box3();
@@ -2317,31 +2317,35 @@
     }
     function toRest() {
       phi = phiV = 0; zone = 'in'; mode = 'in'; held = false; grounded = true; z = ZIN; th = 0; om = 0; vel.x = vel.y = 0; gv.x = gv.y = acc.x = acc.y = 0;
-      com.x = -0.35; com.y = BENCH + HALF; armed = true; autoT = 0; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+      com.x = -0.35; com.y = BENCH + HALF; armed = true; autoT = 0; draining = false; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
       K.hint(tr(HINT));
     }
     function judge() {
-      const d = Math.abs(bar - target), pts = d < tol * 0.4 ? 3 : d < tol ? 2 : d < tol * 2.2 ? 1 : 0;
-      score += pts; K.score(score);
+      const d = Math.abs(bar - target), pts = tutRound ? 3 : d < tol * 0.4 ? 3 : d < tol ? 2 : d < tol * 2.2 ? 1 : 0;
+      tutHold = false;
+      if (!tutRound) { score += pts; K.score(score); }
       K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.3);
       A.play(pts ? 'match' : 'nope'); actor.gesture(pts >= 2 ? 'happy' : pts ? 'surprise' : 'sad', true);
       if (pts === 3) sparks.emit(head.x, head.y, z + 0.3, 16, 2.2, 0.05, 0.8, 4);
       mode = 'out'; zone = 'out'; doorT = 1.2; outAt = clockT; K.hint(tr('Down into the ice hole with her!'));
+      if (tutRound) K.beat('out');
     }
     function dunk() {
       A.play('bubble'); A.play('pop', 0.5); actor.gesture('shake', true);
       splash.emit(TUB.x, 0.12, TUB.z, 30, 2.4, 0.06, 1.0, 9); rippleT = 0.7;
-      round++;
+      if (!tutRound) round++;
       if (round >= ROUNDS) { held = false; live = false; K.over(tr('All done!')); return; }
       // she stays in the water, cooled off: pull her out again and put her back in the sauna when you like
-      mode = 'dunked'; bar = 0; newTarget(); heat(); K.hint(tr('Cooled! Drag her back up into the sauna.'));
+      mode = 'dunked'; draining = true; newTarget(); heat();   // the bar runs down on its own, not all at once K.hint(tr('Cooled! Drag her back up into the sauna.'));
+      if (tutRound) K.beat('cool');
     }
     /* the screen is split in two: above this line (the foot of the cabin) she is inside the sauna, below it she is outside. Crossing it takes her through the door by itself. */
     function splitY() { return (-v3.set(0, 0, 0.1).project(view.camera).y * 0.5 + 0.5) * window.innerHeight; }
     /* put her back in the sauna: she glides in through the door and settles on the bench, and the next round begins */
     function enter() {
-      held = false; zone = 'in'; mode = 'in'; armed = false; autoT = 0.9; doorT = 1.2; bar = 0; vel.x = vel.y = 0; om = 0; roll = 0;
+      held = false; zone = 'in'; mode = 'in'; armed = false; autoT = 0.9; doorT = 1.2; vel.x = vel.y = 0; om = 0; roll = 0;
       A.play('squeak', 0.4); K.hint(tr(HINT));
+      if (tutRound) { tutRound = false; K.beat('solo'); }
     }
     function step(dt) {
       if (autoT > 0) {   // being carried in: slide to the bench with the door held open
@@ -2390,6 +2394,13 @@
     return {
       label: 'Points', hint: HINT,
       view: () => view,
+      /* tutorial: point at her head, and only grabbing it ends the pause */
+      tutSpot(step) {
+        if (step !== 'gold' || !view) return null;
+        actor.headP.getWorldPosition(v3); v3.project(view.camera);
+        const sx = (v3.x * 0.5 + 0.5) * window.innerWidth, sy = (-v3.y * 0.5 + 0.5) * window.innerHeight;
+        return { spot: { x: sx, y: sy }, where: (px, py) => Math.hypot(px - sx, py - sy) < 90 };
+      },
       /* where things are on the screen, for tests */
       dbg() {
         const at = (x, y, zz) => { v3.set(x, y, zz).project(view.camera); return { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }; };
@@ -2400,6 +2411,7 @@
         if (!view) build();
         dress(); fit();
         live = false; round = 0; score = 0; rippleT = 0; ptr = null; steam.clear(); splash.clear(); sparks.clear();
+        tutRound = K.tutoring(); tutHold = false;   // the first time, round one is a guided practice that does not count
         layer.hidden = false; toRest();
         document.getElementById('gScore').textContent = '0';
       },
@@ -2423,8 +2435,10 @@
         clock += dt; clockT += dt;
         fit();
         const d = Math.min(dt, 1 / 30);
-        if (playing && live && mode === 'in') {
-          bar = Math.min(1, bar + (0.09 + round * 0.012) * (1 + 2.2 * U.smooth(Math.max(0, target - 0.4), target, bar)) * d);   // slow at first, then it picks up as it nears the line
+        if (draining && mode !== 'out') { bar = Math.max(0, bar - 0.55 * d); if (bar <= 0) draining = false; }   // cooling off in the water
+        if (playing && live && mode === 'in' && !draining) {
+          if (tutRound && bar >= target) { bar = target; if (!tutHold) { tutHold = true; K.beat('gold'); } }
+          else if (!tutHold) bar = Math.min(1, bar + (0.09 + round * 0.012) * (1 + 2.2 * U.smooth(Math.max(0, target - 0.4), target, bar)) * d);   // slow at first, then it picks up as it nears the line
           if (bar >= 1) {   // cooked too long: she is flung out of the door
             held = false; zone = 'out'; z = ZOUT; com.x = 1.15; com.y = 1.0; vel.x = 1.2; vel.y = 2.6; om = 7; head.x = com.x; head.y = com.y; judge();
           }
