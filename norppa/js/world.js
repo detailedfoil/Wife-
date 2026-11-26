@@ -865,5 +865,6 @@
 
   /* An arcade game shows a stage of its own in place of the lake. */
   W.override = null;
-  W.render = function () { const o = W.override; W.renderer.render(o ? o.scene : W.scene, o ? o.camera : W.camera); };
+  W.afterRender = null;           // online.js sets this during a race, to copy the finished picture while it is still there
+  W.render = function () { const o = W.override; W.renderer.render(o ? o.scene : W.scene, o ? o.camera : W.camera); if (W.afterRender) W.afterRender(W.renderer.domElement); };
 })(window.PN = window.PN || {});
