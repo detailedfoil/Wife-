@@ -23,12 +23,42 @@
   const tr = PN.L, $ = (id) => document.getElementById(id);
   const URL = 'wss://kmkmtkjjlebqdmhsfewx.supabase.co/realtime/v1/websocket';
   const KEY = 'sb_publishable_55XiQN6TSodc2KOTab49Yg_g96sKZeC';
-  const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';           // no I or O, so a code read aloud cannot be mistaken
+  /* Room codes are Finnish four-letter words, plain a to z (no ä, ö or å, so anyone can type them). */
+  const WORDS = ('aika aita auto hame hiha hiki ilta jalo jano joki juna kala kana kapu kari kasa katu kota koti kuha kuka kuva laji lama lapa loma luku lumi lupa maja mato mela meri muna noki oksa onni '
+    + 'paja pata peli pesa pipo poro puku pulu puro raha rata reki ruis saha sana sata savi soma sopu sora susi taka talo tuli tupa uuni vene vesi yksi').split(' ').filter((w) => /^[a-z]{4}$/.test(w)).map((w) => w.toUpperCase());
   const RACE_GAMES = { catch: 'Fish Rain' };
   const local = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname) || /[?&]mp=local\b/.test(location.search);
 
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const me = uid();
+  const me = uid();                                   // this visit
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private browsing: nothing is kept */ } },
+  };
+  let oid = store.get('pikkunorppa.oid');             // this seal, for good: so a friend met twice is the same friend
+  if (!oid) { oid = uid(); store.set('pikkunorppa.oid', oid); }
+
+  /* Seals met online are kept on this device (name, look, what she wears), newest first, so they are not lost when the room closes. */
+  const FRIENDS = 'pikkunorppa.friends', MAXF = 12;
+  function savedFriends() { try { const l = JSON.parse(store.get(FRIENDS) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+  function saveFriend(p) {
+    if (!p || !p.oid || p.oid === oid) return;
+    const list = savedFriends().filter((f) => f.oid !== p.oid);
+    list.unshift({ oid: p.oid, name: p.name, stage: p.stage, appearance: p.appearance, wearing: p.wearing, met: Date.now() });
+    store.set(FRIENDS, JSON.stringify(list.slice(0, MAXF)));
+  }
+
+  /* A shared link looks like  .../norppa/?room=ABCD  and is picked up here, before anything else can lose it. */
+  let pending = null;
+  try {
+    const q = new URLSearchParams(location.search).get('room');
+    if (q && /^[A-Za-z]{4}$/.test(q)) {
+      pending = q.toUpperCase();
+      const u = new window.URL(location.href); u.searchParams.delete('room');
+      history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);   // so a reload does not join again
+    }
+  } catch (e) { /* an old browser: no link joining */ }
+  const linkFor = (code) => location.origin + location.pathname + '?room=' + code;
 
   /* ---------- the wire ---------- */
   /* Both transports: open(room, onMsg, onState) -> { send(obj), close() }. onState('ok' | 'fail' | 'lost'). */
@@ -81,7 +111,7 @@
 
   const profile = () => {
     const st = PN.Game.state;
-    return { name: String(st.name || '').slice(0, 24), stage: st.stage, appearance: st.appearance, wearing: st.wearing };
+    return { oid, name: String(st.name || '').slice(0, 24), stage: st.stage, appearance: st.appearance, wearing: st.wearing };
   };
   const send = (kind, extra) => { if (wire) wire.send(Object.assign({ kind, from: me }, extra || {})); };
   const fname = () => UI().esc(friend ? friend.p.name || tr('Your friend') : tr('Your friend'));
@@ -89,14 +119,19 @@
 
   function onMsg(m) {
     if (!m || m.from === me || !wire) return;
-    if (friend && m.from !== friend.id) { if (m.kind === 'hello') send('full', { to: m.from }); return; }
+    if (friend && m.from !== friend.id) {
+      // the same seal back from a minimised app or a reload has a new visit id: it is the friend, not a third player
+      if (m.kind === 'hello' && m.p && m.p.oid && friend.p && friend.p.oid === m.p.oid) friend.id = m.from;
+      else { if (m.kind === 'hello') send('full', { to: m.from }); return; }
+    }
     if (m.kind === 'full') { if (m.to === me && !friend) { PN.Audio.play('nope'); UI().toast(tr('That room already has two seals.'), 'seal', 'bad', 4200); leave(true); } return; }
     if (m.kind === 'hello' && m.p) {
       const first = !friend;
       friend = { id: m.from, p: m.p };
       heardAt = Date.now();
+      if (first) saveFriend(m.p);
+      if (!m.ack) send('hello', { p: profile(), ack: true });      // answer a hello once (an answer is not answered, so there is no echo)
       if (first) {
-        send('hello', { p: profile() });
         PN.Audio.play('chirp');
         UI().toast(tr('<b>{0}</b> joined your room!', fname()), 'seal', '', 4200);
         if (PN.Game.friendCome) PN.Game.friendCome(friend.p);
@@ -119,20 +154,47 @@
     }
   }
 
+  /* The connection can drop when the phone is put away, so the room stays open and the game reconnects by itself, for a few minutes. */
+  const LOSS_LIMIT = 5 * 60 * 1000, FRIEND_QUIET = 25000;
+  let wireGen = 0, everUp = false, lostAt = 0, retryN = 0, retryT = null;
+  const ROOM_KEY = 'pikkunorppa.room';
+  const remember = (code) => { if (code) store.set(ROOM_KEY, JSON.stringify({ code, at: Date.now() })); else store.set(ROOM_KEY, ''); };
+
+  function connect() {
+    if (!room) return;
+    clearTimeout(retryT);
+    if (wire) { try { wire.close(); } catch (e) { /* already shut */ } wire = null; }
+    const gen = ++wireGen;
+    wire = (local ? openLocal : openRealtime)(room, (m) => { if (gen === wireGen) onMsg(m); }, (st) => { if (gen === wireGen) onWire(st); });
+  }
+  function retryLater() {
+    if (!room) return;
+    wire = null;
+    if (!lostAt) lostAt = Date.now();
+    if (Date.now() - lostAt > LOSS_LIMIT) { PN.Audio.play('nope'); UI().toast(tr('The connection dropped, so you left the room.'), 'seal', 'bad', 4200); leave(true); return; }
+    clearTimeout(retryT);
+    retryT = setTimeout(connect, Math.min(8000, 1000 * Math.pow(2, retryN++)));
+  }
   function onWire(state) {
     if (state === 'ok') {
+      everUp = true; lostAt = 0; retryN = 0;
+      if (friend) heardAt = Date.now();
       paint();
       send('hello', { p: profile() });
-      pinger = setInterval(() => {
+      if (!pinger) pinger = setInterval(() => {
         send('ping');
-        if (friend && Date.now() - heardAt > 15000) friendGone(tr('Lost touch with <b>{0}</b>.', fname()));
+        if (friend && Date.now() - heardAt > FRIEND_QUIET) friendGone(tr('Lost touch with <b>{0}</b>.', fname()));
       }, 4000);
-    } else if (state === 'fail') {
+    } else if (state === 'fail' && !everUp) {
       PN.Audio.play('nope'); UI().toast(tr('Could not reach the room. Are you online?'), 'seal', 'bad', 4200); leave(true);
-    } else if (state === 'lost') {
-      PN.Audio.play('nope'); UI().toast(tr('The connection dropped, so you left the room.'), 'seal', 'bad', 4200); leave(true);
-    }
+    } else retryLater();           // 'lost', or a failed try while reconnecting
   }
+  /* Back from another app: reconnect at once if the line went, and say hello again so a friend who has gone quiet is found. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !room) return;
+    if (friend) heardAt = Date.now();             // a pause while both were away is not a lost friend
+    if (!wire) { retryN = 0; connect(); } else send('hello', { p: profile() });
+  });
 
   function friendGone(msg) {
     if (!friend) return;
@@ -145,13 +207,15 @@
 
   function join(code) {
     leave(true);
-    room = code;
-    wire = (local ? openLocal : openRealtime)(code, onMsg, onWire);
+    room = code; everUp = false; lostAt = 0; retryN = 0;
+    remember(code);
+    connect();
     paint();
   }
   function leave(quiet) {
     if (wire) { send('bye'); wire.close(); }
-    wire = null; room = null;
+    wireGen++; clearTimeout(retryT);
+    wire = null; room = null; remember('');
     clearInterval(pinger); pinger = null;
     if (friend && PN.Game.friendGo) PN.Game.friendGo();
     friend = null; askedK = null;
@@ -159,7 +223,7 @@
     if (!quiet) PN.Audio.play('tap');
     paint();
   }
-  window.addEventListener('pagehide', () => { if (wire) send('bye'); });
+  // No goodbye when the page goes away: putting the app down is not leaving. A friend who really has gone is dropped after a quiet spell.
 
   /* ---------- the chip on the shore ---------- */
   function paint() {
@@ -293,12 +357,41 @@
     await UI().modal({ title: head, html, actions: [{ label: tr('OK'), value: 1 }] });
   }
 
+  async function share() {
+    const url = linkFor(room), text = tr('Come and play with my seal! Open this link to join my room.');
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Pikku Norppa', text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    let ok = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); ok = true; } } catch (e) { ok = false; }
+    if (ok) UI().toast(tr('Link copied. Send it to your friend.'), 'check');
+    else await UI().modal({ title: tr('Your invite link'), html: '<p>' + tr('Press and hold the link to copy it.') + '</p><textarea class="field" readonly style="margin-top:12px">' + url + '</textarea>', actions: [{ label: tr('Close'), value: 0 }] });
+  }
+
   /* ---------- the menu ---------- */
   const Online = PN.Online = {
     get room() { return room; },
     get friend() { return friend ? friend.p : null; },
     racing: () => !!(race && (race.state === 'on' || race.state === 'over')),
     myEnd, verdict,
+    /* Called once the game is up: if the page was opened from a shared link, go into that room. */
+    joinPending() {
+      if (room) return;
+      if (pending) {
+        const code = pending; pending = null;
+        join(code);
+        UI().toast(tr('Joining room <b>{0}</b>...', code), 'globe', '', 3600);
+        return;
+      }
+      try {                                          // the app was closed or reloaded a moment ago: go back into the room
+        const r = JSON.parse(store.get(ROOM_KEY) || 'null');
+        if (r && /^[A-Z]{4}$/.test(r.code) && Date.now() - r.at < 20 * 60 * 1000) {
+          join(r.code);
+          UI().toast(tr('Back in room <b>{0}</b>.', r.code), 'globe', '', 3200);
+        }
+      } catch (e) { /* nothing saved */ }
+    },
+    friends: savedFriends,
     join: (code) => join(String(code || '').toUpperCase()),
     leave,
     async open() {
@@ -307,11 +400,11 @@
         const v = await UI().modal({ title: tr('Play online'), html: '<p>' + tr('Make a room and tell a friend its code, or type in the code a friend gave you.') + '</p>' + (local ? '<p class="note">' + tr('Test mode: rooms only reach other tabs in this browser.') + '</p>' : ''),
           actions: [{ label: tr('Make a room'), value: 'make' }, { label: tr('Join a room'), value: 'join', cls: 'ghost' }, { label: tr('Not now'), value: 0 }] });
         if (v === 'make') {
-          let code = ''; for (let i = 0; i < 4; i++) code += LETTERS[Math.floor(Math.random() * LETTERS.length)];
+          const code = WORDS[Math.floor(Math.random() * WORDS.length)];
           join(code);
           UI().toast(tr('Your room code is <b>{0}</b>. Tell your friend!', code), 'seal', '', 6000);
         } else if (v === 'join') {
-          const code = await UI().modal({ title: tr('Join a room'), html: '<p>' + tr('Type the four letters your friend sees.') + '</p><input class="field" id="roomIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-top:12px;text-transform:uppercase;letter-spacing:.3em;text-align:center;font-size:22px">',
+          const code = await UI().modal({ title: tr('Join a room'), html: '<p>' + tr('Type the four-letter word your friend sees.') + '</p><input class="field" id="roomIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-top:12px;text-transform:uppercase;letter-spacing:.3em;text-align:center;font-size:22px">',
             actions: [{ label: tr('Join'), value: 1 }, { label: tr('Cancel'), value: 0 }],
             onOpen(card) { const i = card.querySelector('#roomIn'); if (i) setTimeout(() => i.focus(), 250); },
             result(val, card) { return val ? String(card.querySelector('#roomIn').value || '').toUpperCase().replace(/[^A-Z]/g, '') : ''; } });
@@ -322,9 +415,13 @@
       }
       const games = Object.keys(RACE_GAMES);
       const acts = friend && !race ? games.map((id) => ({ label: tr('Race at {0}', tr(RACE_GAMES[id])), value: 'race:' + id })) : [];
-      const text = friend ? tr('<b>{0}</b> is on your shore.', fname()) : tr('Waiting for a friend. Your room code is <b>{0}</b>.', room);
+      acts.push({ label: tr('Share invite link'), value: 'share', cls: friend ? 'ghost' : '' });
+      const met = savedFriends().filter((f) => !friend || f.oid !== (friend.p && friend.p.oid)).slice(0, 5).map((f) => UI().esc(f.name)).join(', ');
+      const text = (friend ? tr('<b>{0}</b> is on your shore.', fname()) : tr('Waiting for a friend. Your room code is <b>{0}</b>.', room))
+        + (met ? '</p><p class="note">' + tr('Seals you have met: {0}.', met) : '');
       const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>', actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
       if (v === 'leave') leave();
+      else if (v === 'share') share();
       else if (typeof v === 'string' && v.indexOf('race:') === 0) {
         const why = canRace();
         if (why !== true) { PN.Game.raceRefuse(why); return; }
