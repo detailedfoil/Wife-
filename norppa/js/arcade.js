@@ -2129,7 +2129,7 @@
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const pullOut = (() => {
     const ROUNDS = 5, HINT = 'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.';
-    const GRAV = 8, GP = 3.2, BENCH = 0.5, HALF = 0.29, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.5, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
+    const GRAV = 8, GP = 3.2, BENCH = 0.5, HALF = 0.29, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, HEADOUT = 0.2, LEN = 1.5, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
     let rollG = null, roll = 0, phi = 0, phiV = 0;   // phi: how far her head is tilted off her body, in the screen plane
     const qa = new T.Quaternion(), qb = new T.Quaternion(), qc = new T.Quaternion(), qt = new T.Quaternion(), zax = new T.Vector3(0, 0, 1), fdir = new T.Vector3(), fup = new T.Vector3(), zero = new T.Vector3(), fm = new T.Matrix4();
@@ -2345,6 +2345,7 @@
         const dT = autoT > 0 || doorT > 0 || (zone === 'in' && held && ptr && ptr.y > splitY() - 150) ? 1 : 0;
         doorOpen += (dT - doorOpen) * (1 - Math.exp(-d * 6)); door.rotation.y = doorOpen * 1.45;
         roll += ((held ? ROLL : 0) - roll) * (1 - Math.exp(-d * 8)); rollG.rotation.x = roll;
+        actor.headP.position.x = 0; actor.headP.position.z = 0.82;   // undo last frame's push before the model sets her pose
         actor.heading = PI / 2; actor.look = held ? view.camera.position : null; actor.update(dt, clock, null);
         actor.g.rotation.y = PI / 2;
         rag.position.set(com.x, com.y, z); rag.rotation.z = th;
@@ -2354,6 +2355,10 @@
           actor.headP.getWorldPosition(v3); fdir.copy(view.camera.position).sub(v3).normalize(); fup.set(hv.x, hv.y, 0).normalize();
           fm.lookAt(fdir, zero, fup); qt.setFromRotationMatrix(fm); qt.premultiply(qc);
           actor.headP.quaternion.slerp(qt, faceW);
+        }
+        if (faceW > 0.01) {   // and while she is held, her head floats out a little from her body so it does not sink into it
+          actor.headP.getWorldPosition(v3); fup.set(hv.x, hv.y, 0).normalize().multiplyScalar(HEADOUT * faceW).add(v3);
+          actor.headP.parent.worldToLocal(fup); actor.headP.position.copy(fup);
         }
         qb.setFromAxisAngle(zax, phi);
         actor.headP.quaternion.premultiply(qc.multiply(qb).multiply(qa));   // turn the head about its own centre, in the screen plane
