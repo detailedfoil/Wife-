@@ -2128,16 +2128,16 @@
      She is a rag doll: held by the head she hangs from it like a pendulum (the pull of the drag swings her), let go and she falls, lands and flops flat.
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const pullOut = (() => {
-    const ROUNDS = 5, HINT = 'Hold her by the head and drag her out of the door when the bar is on the gold line. Then dunk her in the ice hole.';
+    const ROUNDS = 5, HINT = 'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.';
     const GRAV = 8, BENCH = 0.5, HALF = 0.25, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, LEN = 1.3, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
     let rollG = null, roll = 0;
-    let armed = true, atDoor = false, live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
+    let armed = true, autoT = 0, doorT = 0, live = false, mode = 'in', zone = 'in', round = 0, score = 0, bar = 0, target = 0.7, tol = 0.07, held = false, grounded = true, th = 0, om = 0, z = ZIN, doorOpen = 0, rippleT = 0, steamT = 0, ptr = null, clockT = 0, outAt = 0;
     const com = { x: -0.25, y: BENCH + HALF }, vel = { x: 0, y: 0 }, head = { x: 0, y: 0 }, hv = { x: 0, y: 0 }, gv = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, offs = { x: 0, y: 0 };   // offs: where on the screen she was grabbed, relative to the finger
     let h0 = { x: 0.6, y: 0.1 }, ell = 0.6, tints = [], measured = false;
     const ray = new T.Raycaster(), v3 = new T.Vector3(), v2 = new T.Vector2(), bx = new T.Box3();
     const hvec = () => { const c = Math.cos(th), s = Math.sin(th); hv.x = h0.x * c - h0.y * s; hv.y = h0.x * s + h0.y * c; };
-    const floorY = (x) => (zone === 'in' ? (x > -0.9 && x < 0.4 ? BENCH : 0.05) : (Math.abs(x - TUB.x) < TUB.r * 0.8 ? 0.0 : 0.05));
+    const floorY = (x) => (zone === 'in' ? (x > -0.9 && x < 0.4 ? BENCH : 0.05) : (Math.abs(x - TUB.x) < TUB.r * 0.85 ? -0.8 : 0.05));
     /* where a finger on the screen is, on the flat plane the seal is moving in */
     function worldAt(x, y, plane) {
       v2.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1); ray.setFromCamera(v2, view.camera);
@@ -2153,7 +2153,11 @@
     function build() {
       view = stage('#1c2a4a', '#4a3a58', { ground: 0xdfe9f2, hemi: 1.15, key: 0.9 });
       const sc = view.scene, wood = U.mat(0xb9824d, { roughness: 0.85 }), dark = U.mat(0x8a5a32, { roughness: 0.9 }), snow = U.mat(0xeef4fa, { roughness: 1 });
-      sc.add(U.box(16, 0.3, 12, snow, 0, -0.15, 1));
+      // the snow is a slab with a real hole in it, so she can go right down into the water
+      const gs = new T.Shape(); gs.moveTo(-8, -7); gs.lineTo(8, -7); gs.lineTo(8, 5); gs.lineTo(-8, 5); gs.closePath();
+      const hp = new T.Path(); hp.absarc(TUB.x, -TUB.z, 1.0, 0, PI * 2, true); gs.holes.push(hp);
+      const ground = new T.Mesh(new T.ExtrudeGeometry(gs, { depth: 0.3, bevelEnabled: false, curveSegments: 48 }), snow);
+      ground.rotation.x = -PI / 2; ground.position.y = -0.3; sc.add(ground);
       // a small, tall cabin for one seal: the front wall has a big window and a door
       const WT = 2.9, tw = CH - WT, DH = 2.5;   // the window runs from the sill up to WT; the door is DH tall
       [[-1.275, CH / 2, 0.15, CH], [-0.475, 0.15, 1.45, 0.3], [-0.475, WT + tw / 2, 1.45, tw], [0.325, CH / 2, 0.15, CH], [0.775, (DH + CH) / 2, 0.75, CH - DH], [1.21, CH / 2, 0.12, CH]].forEach((r) => sc.add(U.box(r[2], r[3], 0.12, wood, r[0], r[1], 0)));
@@ -2170,7 +2174,10 @@
       door.add(U.box(0.75, DH, 0.05, U.mat(0x8a5a32, { roughness: 0.9 }), -0.375, DH / 2, 0), U.ball(0.035, U.mat(0xe2b680, { roughness: 0.4 }), -0.65, 1.2, 0.04));
       sc.add(door);
       // a hole in the ice to dunk her in
-      sc.add(U.cyl(1.1, 1.1, 0.02, U.mat(0xbfe0f2, { roughness: 0.3 }), TUB.x, 0.012, TUB.z, 32), U.cyl(0.92, 0.92, 0.025, U.mat(0x14507f, { roughness: 0.15 }), TUB.x, 0.022, TUB.z, 32));
+      const rim = new T.Mesh(new T.RingGeometry(0.98, 1.16, 48), U.mat(0xbfe0f2, { roughness: 0.3 })); rim.rotation.x = -PI / 2; rim.position.set(TUB.x, 0.012, TUB.z); sc.add(rim);
+      const shaft = new T.Mesh(new T.CylinderGeometry(1.0, 1.0, 1.5, 48, 1, true), new T.MeshStandardMaterial({ color: 0x0d4a7a, side: T.BackSide, roughness: 0.4 })); shaft.position.set(TUB.x, -0.75, TUB.z); sc.add(shaft);
+      const bottom = new T.Mesh(new T.CircleGeometry(1.0, 48), new T.MeshStandardMaterial({ color: 0x082c4d, roughness: 0.6 })); bottom.rotation.x = -PI / 2; bottom.position.set(TUB.x, -1.45, TUB.z); sc.add(bottom);
+      const water = new T.Mesh(new T.CircleGeometry(1.0, 48), new T.MeshStandardMaterial({ color: 0x2a8fd0, transparent: true, opacity: 0.55, roughness: 0.1, depthWrite: false })); water.rotation.x = -PI / 2; water.position.set(TUB.x, -0.1, TUB.z); sc.add(water);
       rippleMat = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
       ripple = U.torus(0.3, 0.02, rippleMat, TUB.x, 0.05, TUB.z, PI * 2, 24); ripple.rotation.x = PI / 2; sc.add(ripple);
       const t1 = tree(1.2), t2 = tree(0.9); t1.position.set(-2.1, 0, -1.2); t2.position.set(2.2, 0, -1.2); sc.add(t1, t2);
@@ -2211,7 +2218,7 @@
     }
     function toRest() {
       zone = 'in'; mode = 'in'; held = false; grounded = true; z = ZIN; th = 0; om = 0; vel.x = vel.y = 0; gv.x = gv.y = acc.x = acc.y = 0;
-      com.x = -0.25; com.y = BENCH + HALF; armed = true; atDoor = false; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+      com.x = -0.25; com.y = BENCH + HALF; armed = true; autoT = 0; bar = 0; roll = 0; newTarget(); heat(); hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
       K.hint(tr(HINT));
     }
     function judge() {
@@ -2220,7 +2227,7 @@
       K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.3);
       A.play(pts ? 'match' : 'nope'); actor.gesture(pts >= 2 ? 'happy' : pts ? 'surprise' : 'sad', true);
       if (pts === 3) sparks.emit(head.x, head.y, z + 0.3, 16, 2.2, 0.05, 0.8, 4);
-      mode = 'out'; zone = 'out'; outAt = clockT; K.hint(tr('Dunk her in the ice hole!'));
+      mode = 'out'; zone = 'out'; doorT = 1.2; outAt = clockT; K.hint(tr('Down into the ice hole with her!'));
     }
     function dunk() {
       A.play('bubble'); A.play('pop', 0.5); actor.gesture('shake', true);
@@ -2228,19 +2235,32 @@
       round++;
       if (round >= ROUNDS) { held = false; live = false; K.over(tr('All done!')); return; }
       // she stays in the water, cooled off: pull her out again and put her back in the sauna when you like
-      mode = 'dunked'; atDoor = false; bar = 0; newTarget(); heat(); K.hint(tr('Cooled! Carry her back through the door.'));
+      mode = 'dunked'; bar = 0; newTarget(); heat(); K.hint(tr('Cooled! Drag her back up into the sauna.'));
+    }
+    /* the screen is split in two: above this line (the foot of the cabin) she is inside the sauna, below it she is outside. Crossing it takes her through the door by itself. */
+    function splitY() { return (-v3.set(0, 0, 0.1).project(view.camera).y * 0.5 + 0.5) * window.innerHeight; }
+    /* put her back in the sauna: she glides in through the door and settles on the bench, and the next round begins */
+    function enter() {
+      held = false; zone = 'in'; mode = 'in'; armed = false; autoT = 0.9; doorT = 1.2; bar = 0; vel.x = vel.y = 0; om = 0; roll = 0;
+      A.play('squeak', 0.4); K.hint(tr(HINT));
     }
     function step(dt) {
+      if (autoT > 0) {   // being carried in: slide to the bench with the door held open
+        autoT -= dt; const k = 1 - Math.exp(-dt * 6);
+        com.x += (-0.25 - com.x) * k; com.y += (BENCH + HALF + 0.12 - com.y) * k; th += (Math.round(th / (2 * PI)) * 2 * PI - th) * k; om = 0; vel.x = vel.y = 0; hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
+        if (autoT <= 0) armed = true;
+        return;
+      }
       if (held && ptr) {
-        const w = worldAt(ptr.x + offs.x, ptr.y + offs.y, z);   // the same spot of her stays under the finger, even as she moves toward the camera
+        const sp = splitY();
+        let fy0 = ptr.y;
+        if (zone === 'out' && mode === 'out') fy0 = Math.max(fy0, sp + 10);   // once she is out she stays out until she has been dunked
+        if (zone === 'in' && !armed) fy0 = Math.min(fy0, sp - 10);
+        const w = worldAt(ptr.x + offs.x, fy0 + offs.y, z);   // the same spot of her stays under the finger, even as she moves toward the camera
         let tx = w.x, ty = w.y;
         if (zone === 'in') {
-          // forgiving: anything on the door side below the roof counts as the doorway, and the nearer she gets the more she is guided through it
-          if (tx > 0.36 && ty > CH - 0.1) tx = 0.36;
-          tx = Math.max(tx, -0.55); ty = Math.min(ty, CH - 0.1);
-          const g = U.smooth(0.2, 0.8, head.x);
-          if (g > 0 && armed) { tx += (OUTX + 0.25 - tx) * g * 0.45; ty += (1.2 - ty) * g * 0.6; }
-        } else { tx = U.clamp(tx, -0.75, 1.1); ty = U.clamp(ty, 0.3, CH - 0.1); }
+          tx = U.clamp(tx, -0.55, 0.9); ty = Math.min(ty, CH - 0.1);
+        } else { tx = U.clamp(tx, -0.75, 1.1); ty = U.clamp(ty, Math.abs(tx - TUB.x) < TUB.r * 0.9 ? -1.2 : 0.3, CH - 0.1); }
         const px = head.x, py = head.y, k = 1 - Math.exp(-dt * 16);
         head.x += (tx - head.x) * k; head.y += (ty - head.y) * k;
         const nvx = (head.x - px) / dt, nvy = (head.y - py) / dt;
@@ -2254,13 +2274,9 @@
         const fy = floorY(com.x) + HALF;
         if (com.y < fy) { head.y += fy - com.y; com.y = fy; }
         vel.x = U.clamp(gv.x, -4, 4); vel.y = U.clamp(gv.y, -2, 4); grounded = false;   // a fast drag must not turn into a slingshot on release
-        if (zone === 'out' && mode === 'dunked') {   // bring her to the door, then back in through it
-          if (head.x > 0.9) atDoor = true;
-          else if (atDoor && head.x < 0.7) { zone = 'in'; mode = 'in'; armed = false; atDoor = false; K.hint(tr(HINT)); }
-        } else if (zone === 'in' && !armed && head.x > 0.85) { zone = 'out'; mode = 'dunked'; bar = 0; atDoor = true; }   // back through the door: the next round begins
-        if (zone === 'in' && !armed && head.x < 0.3) armed = true;
-        if (zone === 'in' && head.x > OUTX && mode === 'in' && armed) judge();
-        if (mode === 'out' && clockT - outAt > 0.5 && head.y < 1.4 && Math.abs(head.x - TUB.x) < TUB.r) dunk();
+        if (zone === 'in' && mode === 'in' && armed && ptr.y > sp) judge();   // dragged down across the line: out through the door she goes
+        else if (zone === 'out' && mode === 'dunked' && ptr.y < sp - 6) enter();   // dragged back up over the line: back into the sauna
+        if (mode === 'out' && clockT - outAt > 0.5 && com.y < 0.1 && Math.abs(com.x - TUB.x) < TUB.r) dunk();
       } else {
         vel.y -= GRAV * dt; com.x += vel.x * dt; com.y += vel.y * dt;
         if (zone === 'in') com.x = U.clamp(com.x, -0.55, 0.36); else com.x = U.clamp(com.x, -0.75, 1.1);
@@ -2268,7 +2284,8 @@
         if (com.y <= fy) { com.y = fy; vel.y = vel.y < -1.2 ? -vel.y * 0.25 : 0; grounded = true; vel.x *= Math.exp(-7 * dt); }
         if (grounded) { const tt = Math.round(th / (2 * PI)) * 2 * PI; om += (-70 * (th - tt) - 10 * om) * dt; } else om *= Math.exp(-0.4 * dt);
         th += om * dt; hvec(); head.x = com.x + hv.x; head.y = com.y + hv.y;
-        if (mode === 'out' && clockT - outAt > 0.5 && grounded && Math.abs(com.x - TUB.x) < TUB.r * 0.85) dunk();
+        const inHole = Math.abs(com.x - TUB.x) < TUB.r * 0.85 && zone === 'out';
+        if (inHole && com.y < 0.1) { vel.y *= Math.exp(-3 * dt); vel.x *= Math.exp(-3 * dt); if (mode === 'out' && clockT - outAt > 0.5) dunk(); }
       }
     }
     return {
@@ -2278,7 +2295,7 @@
       dbg() {
         const at = (x, y, zz) => { v3.set(x, y, zz).project(view.camera); return { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }; };
         actor.headP.getWorldPosition(v3); v3.project(view.camera);
-        return { head: { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }, door: at(0.7, 1.2, 0), out: at(1.0, 1.2, ZOUT), tub: at(TUB.x, 0.9, ZOUT), bench: at(-0.45, 1.3, ZIN), hx: head.x, atDoor, com: { x: com.x, y: com.y }, zone, mode, bar, target, tol, th, round, score };
+        return { head: { x: (v3.x * 0.5 + 0.5) * window.innerWidth, y: (-v3.y * 0.5 + 0.5) * window.innerHeight }, door: at(0.7, 1.2, 0), out: at(1.0, 1.2, ZOUT), tub: at(TUB.x, 0.2, ZOUT), cabin: at(-0.4, 1.8, 0), bench: at(-0.45, 1.3, ZIN), hx: head.x, com: { x: com.x, y: com.y }, zone, mode, bar, target, tol, th, round, score };
       },
       start() {
         if (!view) build();
@@ -2316,9 +2333,10 @@
         if (live || playing) { step(d * 0.5); step(d * 0.5); }
         if (mode !== 'out') heat();
         // through the door she comes toward you; the door swings open for her
-        const zT = zone === 'out' ? ZOUT : head.x > 0.3 ? ZIN + (ZOUT - ZIN) * U.smooth(0.3, 0.98, head.x) : ZIN;
+        const zT = zone === 'out' ? ZOUT : ZIN;
         z += (zT - z) * (1 - Math.exp(-d * 9));
-        const dT = zone === 'in' ? (held && head.x > -0.1 ? 1 : 0) : (com.x < 1.0 ? 1 : 0);
+        doorT = Math.max(0, doorT - dt);
+        const dT = autoT > 0 || doorT > 0 || (zone === 'in' && held && ptr && ptr.y > splitY() - 150) ? 1 : 0;
         doorOpen += (dT - doorOpen) * (1 - Math.exp(-d * 6)); door.rotation.y = doorOpen * 1.45;
         roll += ((held ? ROLL : 0) - roll) * (1 - Math.exp(-d * 8)); rollG.rotation.x = roll;
         actor.heading = PI / 2; actor.look = held ? view.camera.position : null; actor.update(dt, clock, null);
