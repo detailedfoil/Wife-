@@ -523,7 +523,7 @@
 
   /* ---------- the end of any game ---------- */
   function finish(quit) {
-    const id = g.id, score = g.score, caught = g.caught, secs = g.secs, frames = g.frames || 0, info = Games.lastInfo || null;
+    const id = g.id, score = g.score, caught = g.caught, secs = g.secs, frames = g.frames || 0, info = Games.lastInfo || null, mum = !!g.mumMode;
     if (g.tut && (!quit || g.tut.count > 1)) Games.tutorial.mark(id);   // leaving straight away from the first card does not count as having seen it
     tutHide(); g.gate = null;
     Games.lastInfo = null;
@@ -537,7 +537,7 @@
     if (id === 'sauna') { if (!(quit && score === 0)) reward = S.saunaDone(PN.Game.state, score, (Games.opts && Games.opts.need) || 7); Games.opts = null; }
     else if (!(quit && score === 0)) { reward = S.gameReward(PN.Game.state, id, score, caught, null, secs, Date.now(), id === 'piano' && Games.opts ? Games.opts.pay : 1); Games.opts = null; }
     else Games.opts = null;
-    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
+    if (PN.Track) PN.Track.game(id, !!quit && !score, secs, score, reward, secs > 2 ? frames / secs : null, info, mum);   // 'gave up' = stopped with nothing; leaving after a finished game is a normal play
     PN.Game.endGame(id, score, reward);
   }
 })(window.PN = window.PN || {});
