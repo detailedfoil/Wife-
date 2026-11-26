@@ -713,11 +713,12 @@
      (or sours it) in proportion; a very short go gives a small share. No seconds given (old callers) means the plain amount. */
   const joyScale = (secs) => (secs > 0 ? Math.min(T.joyLongMax, Math.pow(secs / T.joyRef, T.joyLongPow)) : 1);
   const gameJoy = (taste, skipped) => Math.round(skipped ? Math.min(0, taste) * T.joyPer : T.gameJoy + taste * T.joyPer);
+  const joyMul = (id) => (PN.GAMES[id] && PN.GAMES[id].joyMul) || 1;   // a game's own happiness multiplier, set by tools/balance.js so every game gives about the same happiness a minute
   /* What the Play menu shows: each game's taste, whether it is left out, and the muck loss, all in whole percent. */
   function gameMoods(state, now) {
     tasteSync(state, now);
     const out = { muck: Math.round(muckLoss(state) * 100), happy: happyBonus(state), games: {}, skips: state.skip.length, skipMax: T.skipMax };
-    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: Math.round(gameJoy(tasteOf(state, id), state.skip.indexOf(id) >= 0) * joyScale(PN.GAMES[id].len)), skip: state.skip.indexOf(id) >= 0 }; });
+    PN.GAME_ORDER.forEach((id) => { if (gameOwned(state, id)) out.games[id] = { taste: Math.round(tasteOf(state, id)), joy: Math.round(gameJoy(tasteOf(state, id), state.skip.indexOf(id) >= 0) * joyScale(PN.GAMES[id].len) * joyMul(id)), skip: state.skip.indexOf(id) >= 0 }; });
     return out;
   }
   /* Leave a game out of her tastes, or put it back. A game left out never pays over the odds, but still wears out if played. */
@@ -762,7 +763,7 @@
     // Friendship and happiness go by how long she played, a point of friendship per 3 seconds up to the usual 8 (losing on purpose at once
     // used to count as a full game). No seconds given (old callers) means a full game.
     const part = secs > 0 ? clamp(secs / T.gameFull, 0, 1) : 1;
-    const joy = Math.round(gameJoy(taste, state.skip.indexOf(game) >= 0) * joyScale(secs));
+    const joy = Math.round(gameJoy(taste, state.skip.indexOf(game) >= 0) * joyScale(secs) * joyMul(game));
     // Games never push her over the edge: a disliked game or a muddy romp stops at the sulk line, so only neglect can make her angry.
     const calm = T.neglectLine + T.gameCalm;
     s.joy = pct(joy < 0 ? Math.max(s.joy + joy, Math.min(s.joy, calm)) : s.joy + joy);

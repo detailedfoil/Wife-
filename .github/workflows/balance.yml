@@ -1,0 +1,44 @@
+name: Balance games
+
+# Once a week (and on demand from the Actions tab): reads stats/latest.json, works out small changes to what each game pays and
+# how much happiness it gives, and opens a pull request for the owner to look at and merge. Nothing changes in the live game
+# until the pull request is merged. See tools/balance.js for the aims and the safety rules.
+on:
+  schedule:
+    - cron: '47 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: balance
+  cancel-in-progress: false
+
+jobs:
+  balance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Work out the changes
+        id: balance
+        run: node tools/balance.js --apply
+      - name: Open a pull request
+        if: steps.balance.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="balance/$(date -u +%F-%H%M)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add norppa/js/data.js norppa/sw.js tools/balance-state.json stats/balance-report.md
+          git commit -m "Balance: nudge game pay and happiness towards the aims"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Balance: weekly nudge to game pay and happiness" \
+            --body-file stats/balance-report.md
