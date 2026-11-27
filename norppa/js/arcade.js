@@ -2433,22 +2433,22 @@
     function fishMesh(id) {
       const m = new T.Group(), f = PN.Props.fish(PN.items[id].look, true);
       f.scale.setScalar(1); f.rotation.y = PI; m.add(f); m.visible = false;
-      return { m, f, s: 0.6 };
+      return { m, f, s: 0.22 };
     }
     /* A little keyboard in front of her: three rows of keys and a space bar, in her own space so it grows with her. The fins smash the key that was typed. */
     function keyboard() {
       kb = new T.Group();
-      const base = U.mesh(new T.BoxGeometry(1.78, 0.05, 0.78), U.mat(0x3b4660, { roughness: 0.6 }), 0, 0.02, 1.43);
+      const base = U.mesh(new T.BoxGeometry(1.5, 0.05, 0.6), U.mat(0x3b4660, { roughness: 0.6 }), 0, 0.1, 1.2);
       kb.add(base);
-      const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], sp = 0.165, geo = new T.BoxGeometry(0.135, 0.06, 0.135);
+      const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], sp = 0.13, geo = new T.BoxGeometry(0.108, 0.06, 0.108);
       function key(ch, x, z, w) {
-        const mat = U.mat(0xf6f1e6, { roughness: 0.5 }), mesh = new T.Mesh(w ? new T.BoxGeometry(w, 0.06, 0.135) : geo, mat);
-        mesh.position.set(x, 0.075, z); mesh.castShadow = true; kb.add(mesh);
-        const k = { x, z, y: 0.075, mesh, mat, press: 0, ok: 1 };
+        const mat = U.mat(0xf6f1e6, { roughness: 0.5 }), mesh = new T.Mesh(w ? new T.BoxGeometry(w, 0.06, 0.108) : geo, mat);
+        mesh.position.set(x, 0.145, z); mesh.castShadow = true; kb.add(mesh);
+        const k = { x, z, y: 0.145, mesh, mat, press: 0, ok: 1 };
         keyList.push(k); return k;
       }
-      rows.forEach((row, ri) => row.split('').forEach((ch, i) => { keys[ch] = key(ch, (i - (row.length - 1) / 2) * sp, 1.2 + ri * sp); }));
-      space = key(' ', 0, 1.2 + 3 * sp, 0.82);
+      rows.forEach((row, ri) => row.split('').forEach((ch, i) => { keys[ch] = key(ch, (i - (row.length - 1) / 2) * sp, 1.0 + (3 - ri) * sp); }));
+      space = key(' ', 0, 1.0, 0.65);
       keyList.pop();   // the space bar is not one of the keys a wrong letter lands on
     }
     function build() {
@@ -2539,12 +2539,12 @@
         });
         // the fish comes in from off screen to her mouth
         if (fish && flight > 0) {
-          flight += dt / 0.5;
+          flight += dt / 1.2;
           const q = Math.min(1, flight);
           actor.mouthA.getWorldPosition(mp);
-          const sx = camX + halfW + 1.2, sy = mp.y + 1.6;
-          fish.m.position.set(U.lerp(sx, mp.x, q), U.lerp(sy, mp.y, q) + Math.sin(q * PI) * 1.1, mp.z);
-          fish.m.rotation.z = q * 9;
+          const sx = camX + halfW + 1.2, sy = mp.y + 0.25;
+          fish.m.position.set(U.lerp(sx, mp.x, q), U.lerp(sy, mp.y, q) + Math.sin(q * PI) * 0.35, mp.z);
+          fish.m.rotation.z = q * 3;
           if (q >= 1) {
             fish.m.visible = false; flight = 0;
             actor.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.5);
