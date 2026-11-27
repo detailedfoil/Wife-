@@ -240,6 +240,10 @@
         cell((x.avg_bonus == null ? '-' : '+' + x.avg_bonus + '%') + ' / ' + (x.avg_muck == null ? '-' : '-' + x.avg_muck + '%'), 'happy bonus / muck penalty') +
         '</div></details>';
     }).join('') : '<span class="sub">No games played yet.</span>';
+    var unplayed = Object.keys(NAMES).filter(function (id) { return id !== 'sauna' && !g.some(function (x) { return x.game === id; }); });
+    if (unplayed.length) $('cards').innerHTML += unplayed.map(function (id) {
+      return '<div class="gcard" style="padding:12px 14px;display:flex;justify-content:space-between;opacity:.7"><b>' + esc(name(id)) + '</b><small>no plays yet</small></div>';
+    }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('#cards details'), function (el) { el.addEventListener('toggle', function () { OPEN[el.getAttribute('data-game')] = el.open; }); });
 
     var days = d.daily || [], dmax = days.reduce(function (m, x) { return Math.max(m, x.players); }, 1);
