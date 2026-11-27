@@ -67,11 +67,11 @@
     { id: 'lohikeitto', fi: 'Lohikeitto', en: 'Salmon soup', food: 48, joy: 14, price: 24,
       note: 'Creamy, warm, with plenty of dill.' },
     /* The energy drinks, three sizes of can. Their names are the same in Finnish and English. The id stays 'sealsius' so saves keep their cans. */
-    { id: 'redseal', fi: 'Red Seal', en: 'Red Seal energy drink', food: 2, joy: 4, energy: 22, price: 12,
-      note: 'The slim red can that promises to give you flippers. A small lift of energy, hardly any dinner.' },
-    { id: 'sealsius', fi: 'Sealcius', en: 'Sealcius energy drink', food: 4, joy: 6, energy: 35, price: 20,
+    { id: 'redseal', fi: 'Zippy Seal', en: 'Zippy Seal energy drink', food: 2, joy: 4, energy: 22, price: 12,
+      note: 'The slim red can with a cheeky seal on it. A small lift of energy, hardly any dinner.' },
+    { id: 'sealsius', fi: 'Frostfizz', en: 'Frostfizz energy drink', food: 4, joy: 6, energy: 35, price: 20,
       note: 'Zero sugar, seven vitamins and a very high squeak content. A burst of energy, but only a sip of dinner.' },
-    { id: 'kraken', fi: 'Kraken Energy', en: 'Kraken Energy drink', food: 6, joy: 8, energy: 60, price: 34,
+    { id: 'kraken', fi: 'Giant Squid', en: 'Giant Squid energy drink', food: 6, joy: 8, energy: 60, price: 34,
       note: 'A huge black can with a tentacle on it. A big lift of energy, but not much of a dinner.' },
     /* full: fills tummy, happiness and energy at once (not cleanliness). Dear on purpose: it is for a visit with no time to play. */
     { id: 'kahvi', fi: 'Kahvi', en: 'Coffee', full: true, food: 0, price: 160,
