@@ -61,6 +61,8 @@
   .list small { color: var(--dim); }
   .chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; }
   .chart.top { margin-top: 18px; }
+  .chart.top2 { margin-top: 34px; }
+  .chart .v.r { writing-mode: vertical-rl; transform: translateX(-50%) rotate(180deg); padding: 0 0 3px; }
   .chart .v { position: absolute; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--ink, #fff); line-height: 1; padding-bottom: 2px; white-space: nowrap; }
   .dlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 12px; margin-top: 12px; font-size: 13px; color: var(--dim); }
   .dlist b { color: #fff; }
@@ -139,7 +141,7 @@
 
     <h2>When games are played (UK time)</h2>
     <div class="card">
-      <div class="chart" id="hours"></div>
+      <div class="chart top2" id="hours"></div>
       <div class="axis"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div>
     </div>
 
@@ -251,7 +253,7 @@
     var hrs = []; for (var h = 0; h < 24; h++) hrs.push(0);
     (d.hours || []).forEach(function (x) { hrs[x.hour] = x.plays; });
     var hmax = Math.max.apply(null, hrs.concat(1));
-    $('hours').innerHTML = hrs.map(function (c, i) { return '<div class="col" title="' + i + ':00 ' + c + ' plays"><div class="a" style="height:' + (100 * c / hmax) + '%"></div></div>'; }).join('');
+    $('hours').innerHTML = hrs.map(function (c, i) { return '<div class="col" title="' + i + ':00 ' + c + ' plays">' + (c ? '<span class="v r" style="bottom:' + (100 * c / hmax) + '%">' + c + '</span>' : '') + '<div class="a" style="height:' + (100 * c / hmax) + '%"></div></div>'; }).join('');
 
     var L = d.langs || [], lt = L.reduce(function (s, x) { return s + x.players; }, 0) || 1;
     $('langs').innerHTML = L.map(function (x) {
