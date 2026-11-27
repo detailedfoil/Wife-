@@ -518,6 +518,7 @@
           + '<button class="row dev-row" data-do="devcreate"><span class="ic-wrap">' + ic('seal') + '</span><span class="txt"><b>' + tr('Try the seal creator') + '</b><span class="d">' + tr('Open the new-seal creator with a random kuutti, just to test it. Nothing is saved and your seal stays as she is.') + '</span></span></button>' : '')
         + (st.dev && st.settings.medicine ? '<button class="row dev-row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="online"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Play online (test)') + '</b><span class="d">' + tr('Make or join a room with a friend: both seals on the shore, and games against each other. Still a prototype.') + '</span></span></button>' : '')
+        + (st.dev ? '<button class="row dev-row" data-do="geezer"><span class="ic-wrap">' + ic('star') + '</span><span class="txt"><b>' + tr('Geezer home (prototype)') + '</b><span class="d">' + tr('Swap the seal and the shore for a big bloke in his lounge, to see how it looks. Only the look changes.') + '</span></span><span class="toggle' + (PN.Geezer && PN.Geezer.on() ? ' on' : '') + '"></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devdirty"><span class="ic-wrap">' + ic('drop') + '</span><span class="txt"><b>' + tr('Make her dirty') + '</b><span class="d">' + tr('Drop her cleanliness to zero, to test the sauna.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devtut"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset tutorials') + '</b><span class="d">' + tr('Show the first-time game tutorials again, for testing.') + '</span></span></button>' : '')
@@ -574,6 +575,7 @@
     else if (act === 'devtoggle') game.devToggle();
     else if (act === 'devreset') game.devReset();
     else if (act === 'online') { UI.closeSheet(); if (PN.Online) PN.Online.open(); }
+    else if (act === 'geezer') { PN.Audio.play('tap'); if (PN.Geezer) PN.Geezer.toggle(); }
     else if (act === 'devenergy') game.devEnergy();
     else if (act === 'tiredcard') { UI.closeSheet(); game.tiredCard('sheet'); }
     else if (act === 'devdirty') game.devDirty();
