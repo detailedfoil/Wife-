@@ -2343,8 +2343,8 @@
     function layout() {
       const hpx = window.innerHeight, a = W.aspect, half = Math.tan(W.camera.fov * PI / 360), PXU = 107, dz = hpx / (2 * half * PXU);
       const short = hpx <= 520, st = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--st')) || 0;
-      const cy = 0.35 + dz * 0.28, ytarget = short ? hpx * 0.74 : 214 + st - 95, ndcY = 1 - 2 * ytarget / hpx;
-      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(short ? -0.78 : -0.3) * dz * half * a;
+      const cy = 0.35 + dz * 0.28, ytarget = short ? hpx * 0.68 : 214 + st - 95, ndcY = 1 - 2 * ytarget / hpx;
+      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(short ? -0.62 : -0.3) * dz * half * a;
       camX = cx; halfW = dz * half * a;
       view.camera.position.set(cx, cy, dz);
       view.camera.lookAt(cx, cy - dz * Math.tan(theta), 0);
