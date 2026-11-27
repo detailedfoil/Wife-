@@ -2285,7 +2285,7 @@
 
 
   /* ================= Typing Seal ================= */
-  /* How fast can you type? A word comes up with a quick 3, 2, 1 (removed by request: the clock now starts as the word appears), then a window to type it in
+  /* How fast can you type? A word comes up with a quick 3, 2, 1 (1.5 seconds in all, so it can be read before the clock starts), then a window to type it in
      that shrinks as the run goes on (PN.typeWindow). Every letter is checked as it is typed, no Enter. A wrong letter, or running out of time, costs a heart;
      three hearts and it is over. A word with no typo adds to the streak, and the streak makes the floes drift faster. The score is the words typed.
      Words are in data.js (PN.TYPE_WORDS). In an online race both players get the same words, in the same language, from the shared seed.
@@ -2349,19 +2349,19 @@
     function focus() { try { inEl.focus({ preventScroll: true }); } catch (e) { /* the browser said no: a tap will do it */ } }
 
     function nextWord() {
-      word = pick(); typed = 0; typo = false; mode = 'type'; t = 0; said = -1;
+      word = pick(); typed = 0; typo = false; mode = 'show'; t = 0; said = -1;
       win = PN.typeWindow(n, word.length, mum);
-      cardEl.className = 'ty-card'; countEl.className = 'ty-count'; countEl.textContent = '';
+      cardEl.className = 'ty-card show'; countEl.className = 'ty-count'; countEl.textContent = '';
       barEl.style.width = '100%'; barEl.className = '';
       inEl.value = '';
       wordEl.innerHTML = ''; paintWord(); setPh();
       fishNow = fishes[fishI++ % fishes.length]; fishNow.m.visible = true; fishNow.x = 6.2; fishNow.eat = 0; fishNow.m.scale.setScalar(fishNow.s);
-      startTyping();   // no 3, 2, 1: the clock starts as the word appears
     }
     function startTyping() {
       mode = 'type'; t = 0;
       cardEl.className = 'ty-card';
-      countEl.className = 'ty-count'; countEl.textContent = '';
+      countEl.className = 'ty-count go pop'; countEl.textContent = tr('Go!');
+      A.play('go');
       paintWord(); setPh();
       if (document.activeElement !== inEl) focus();
     }
