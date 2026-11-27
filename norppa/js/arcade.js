@@ -2287,14 +2287,16 @@
   /* ================= Typing Seal ================= */
   /* How fast can you type? A word comes up with a quick 3, 2, 1 (1.5 seconds in all, so it can be read before the clock starts), then a window to type it in
      that shrinks as the run goes on (PN.typeWindow). Every letter is checked as it is typed, no Enter. A wrong letter, or running out of time, costs a heart (a typo also starts the same word over, with a new 3, 2, 1 and timer);
-     three hearts and it is over. A word with no typo adds to the streak, and the streak makes the floes drift faster. The score is the words typed.
+     three hearts and it is over. A word with no typo adds to the streak, and a streak makes the fins smash harder, with more snow flying off the keys. After each word a fish is thrown in to her mouth. The score is the words typed.
      Words are in data.js (PN.TYPE_WORDS). In an online race both players get the same words, in the same language, from the shared seed.
      The box under the word is a real text input so a phone keyboard comes up; it is kept equal to what has been typed correctly so far. */
   const typer = (() => {
     const CFG = PN.TYPE, TIER = [0, 1, 2];
     let view = null, el = null, wordEl = null, countEl = null, barEl = null, boxEl = null, inEl = null, phEl = null, livesEl = null, streakEl = null, cardEl = null;
-    let floes = [], fishes = [], puffs = null, fishNow = null, fishEat = 0, lastShow = -1, baseFs = 40;
-    let mode = 'idle', t = 0, word = '', typed = 0, n = 0, lives = 3, maxLives = 3, streak = 0, typo = false, win = 1, lang = 'en', recent = [], said = -1, spin = 1, wait = 0, mum = false, fishI = 0, shown = '';
+    let fishes = [], puffs = null, fish = null, flight = 0, fishI = 0, lastShow = -1, baseFs = 40, camX = 0, halfW = 3;
+    let kb = null, keys = {}, keyList = [], space = null, fins = [], finAlt = 0;
+    const mp = new T.Vector3(), kp = new T.Vector3();
+    let mode = 'idle', t = 0, word = '', typed = 0, n = 0, lives = 3, maxLives = 3, streak = 0, typo = false, win = 1, lang = 'en', recent = [], said = -1, wait = 0, mum = false, shown = '';
     const coarse = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
     /* The next word: easy ones at first, longer words and short phrases later. The same for both players in a race (reseed per word). */
@@ -2343,6 +2345,7 @@
       const short = hpx <= 520, st = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--st')) || 0;
       const cy = 0.35 + dz * 0.28, ytarget = short ? hpx * 0.74 : 214 + st - 95, ndcY = 1 - 2 * ytarget / hpx;
       const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(short ? -0.78 : -0.3) * dz * half * a;
+      camX = cx; halfW = dz * half * a;
       view.camera.position.set(cx, cy, dz);
       view.camera.lookAt(cx, cy - dz * Math.tan(theta), 0);
     }
@@ -2357,7 +2360,6 @@
       barEl.style.width = '100%'; barEl.className = '';
       inEl.value = '';
       wordEl.innerHTML = ''; paintWord(); setPh();
-      if (!again) { fishNow = fishes[fishI++ % fishes.length]; fishNow.m.visible = true; fishNow.x = 6.2; fishNow.eat = 0; fishNow.m.scale.setScalar(fishNow.s); }
     }
     function startTyping() {
       mode = 'type'; t = 0;
@@ -2394,9 +2396,8 @@
     function done() {
       n++; K.score(n);
       streak = typo ? 0 : streak + 1; streakText();
-      mode = 'gap'; wait = 0.4; paintWord(); boxEl.classList.add('wait'); boxEl.classList.remove('live');
-      if (fishNow) fishNow.eat = 0.0001;
-      actor.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.5);
+      mode = 'gap'; wait = 0.6; paintWord(); boxEl.classList.add('wait'); boxEl.classList.remove('live');
+      throwFish();
       if (n % 10 === 0) A.play('chirp');
       if (n === 1) K.beat('first'); else if (n === 4) K.beat('streak');
     }
@@ -2406,12 +2407,23 @@
       for (let i = 0; i < str.length && mode === 'type'; i++) {
         const c = str[i].toLowerCase();
         if (c === word[typed]) {
-          typed++; A.play('tap', 0.12);
+          typed++; A.play('tap', 0.12); smash(c, true);
           if (typed === word.length) { done(); break; }
-        } else if (!bad) { bad = true; wrong(); }
+        } else if (!bad) { bad = true; smash(c, false); wrong(); }
       }
       if (mode === 'type') { paintWord(); setPh(); }
       inEl.value = mode === 'type' ? word.slice(0, typed) : '';
+    }
+    /* A fin comes down on a key (the other fin on the other side, one after the other in the middle). ok: false means a typo, and the key flashes red. */
+    function smash(ch, ok) {
+      /* Strictly left fin, right fin, left fin... on a key from that fin's side. Exact keys do not matter. */
+      const side = finAlt, f = fins[side]; finAlt ^= 1; const _u = 0, pool = keyList.filter(q => side ? q.x < 0.05 : q.x > -0.05);
+      const k = ch === ' ' ? space : pool[Math.floor(rnd() * pool.length)];
+      f.t = 0; f.k = k; f.hit = false; f.big = rnd() < 0.25; k.ok = ok ? 1 : -1;
+    }
+    /* After a word, a fish is thrown in from off screen, in an arc, to her mouth. */
+    function throwFish() {
+      fish = fishes[fishI++ % fishes.length]; fish.m.visible = true; flight = 0.0001; fish.m.scale.setScalar(fish.s);
     }
     function begin() {
       if (mode !== 'ready') return;
@@ -2420,14 +2432,30 @@
 
     function fishMesh(id) {
       const m = new T.Group(), f = PN.Props.fish(PN.items[id].look, true);
-      f.scale.setScalar(1); m.add(f); m.visible = false;
-      return { m, f, x: 6.2, s: 0.6, eat: 0, ph: rnd() * 6 };
+      f.scale.setScalar(1); f.rotation.y = PI; m.add(f); m.visible = false;
+      return { m, f, s: 0.6 };
+    }
+    /* A little keyboard in front of her: three rows of keys and a space bar, in her own space so it grows with her. The fins smash the key that was typed. */
+    function keyboard() {
+      kb = new T.Group();
+      const base = U.mesh(new T.BoxGeometry(1.78, 0.05, 0.78), U.mat(0x3b4660, { roughness: 0.6 }), 0, 0.02, 1.43);
+      kb.add(base);
+      const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], sp = 0.165, geo = new T.BoxGeometry(0.135, 0.06, 0.135);
+      function key(ch, x, z, w) {
+        const mat = U.mat(0xf6f1e6, { roughness: 0.5 }), mesh = new T.Mesh(w ? new T.BoxGeometry(w, 0.06, 0.135) : geo, mat);
+        mesh.position.set(x, 0.075, z); mesh.castShadow = true; kb.add(mesh);
+        const k = { x, z, y: 0.075, mesh, mat, press: 0, ok: 1 };
+        keyList.push(k); return k;
+      }
+      rows.forEach((row, ri) => row.split('').forEach((ch, i) => { keys[ch] = key(ch, (i - (row.length - 1) / 2) * sp, 1.2 + ri * sp); }));
+      space = key(' ', 0, 1.2 + 3 * sp, 0.82);
+      keyList.pop();   // the space bar is not one of the keys a wrong letter lands on
     }
     function build() {
       view = lakeStage(41);
       const sc = view.scene;
-      floes = sc.children.filter((m) => m.isMesh && m.geometry === floeGeometry && (m.position.x || m.position.z));   // the loose floes drift past; the one she sits on stays
-      ['muikku', 'ahven', 'hauki'].forEach((id) => { const fm = PN.items[id] ? fishMesh(id) : fishMesh('muikku'); fm.f.rotation.y = 0; fm.m.position.set(6.2, 0.05, 0.25); sc.add(fm.m); fishes.push(fm); });
+      keyboard();
+      ['muikku', 'ahven', 'hauki'].forEach((id) => { const fm = PN.items[id] ? fishMesh(id) : fishMesh('muikku'); sc.add(fm.m); fishes.push(fm); });
       puffs = Puffs(sc, 36, 0xfff1b5, 1);
       el = document.getElementById('tyBoard'); wordEl = document.getElementById('tyWord'); countEl = document.getElementById('tyCount'); barEl = document.getElementById('tyBar');
       boxEl = document.getElementById('tyBox'); inEl = document.getElementById('tyIn'); phEl = document.getElementById('tyPh'); livesEl = document.getElementById('tyLives');
@@ -2460,12 +2488,14 @@
       start() {
         if (!view) build();
         cast(view, 0.55, true);
-        face(PI * 0.5);
+        face(0);
+        actor.sq.add(kb);
+        fins = [{ fin: actor.flipL, rx: 0.62, rot: [-0.12, -0.45, 0.18], t: 1, k: null, hit: true }, { fin: actor.flipR, rx: -0.62, rot: [-0.12, 0.45, -0.18], t: 1, k: null, hit: true }];
         mum = G.mumMode;
         const v = G.versusInfo && G.versusInfo();
         lang = v && (v.lang === 'fi' || v.lang === 'en') ? v.lang : (PN.isFi() ? 'fi' : 'en');
         maxLives = mum ? CFG.mumLives : CFG.lives; lives = maxLives;
-        n = 0; streak = 0; recent = []; word = ''; typed = 0; mode = 'ready'; t = 0; wait = 0; said = -1; shown = ''; fishI = 0; spin = 1;
+        n = 0; streak = 0; recent = []; word = ''; typed = 0; mode = 'ready'; t = 0; wait = 0; said = -1; shown = ''; fish = null; flight = 0;
         fishes.forEach((f) => { f.m.visible = false; });
         K.hint(coarse() ? 'Tap the box and type the word.' : 'Press any key and type the word.');
         wordEl.innerHTML = ''; wordEl.style.fontSize = ''; wordEl.textContent = tr('Ready?');
@@ -2475,7 +2505,7 @@
         el.hidden = false;
         if (!coarse()) focus();
       },
-      stop() { if (el) { el.hidden = true; inEl.blur(); inEl.value = ''; } mode = 'idle'; if (actor && actor.g) { actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); } },
+      stop() { if (el) { el.hidden = true; inEl.blur(); inEl.value = ''; } mode = 'idle'; if (kb && kb.parent) kb.parent.remove(kb); if (actor && actor.g) { actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); } },
       go() { K.score(0, true); },
       pointer() {},
       key(k) {
@@ -2486,30 +2516,41 @@
         clock += dt;
         lens(view);
         layout();
-        const sp = 0.7 + Math.min(3.3, streak * 0.32);
-        spin = U.damp(spin, sp, 2.5, dt);
-        floes.forEach((f) => {
-          f.position.x -= dt * spin * (0.55 + 0.1 * Math.min(8, Math.abs(f.position.z)));
-          if (f.position.x < -22) f.position.x += 44;
-        });
-        // the fish bobs ahead of her; once a word is done it jumps into her mouth
-        fishes.forEach((f) => {
-          if (!f.m.visible) return;
-          if (f.eat > 0) {
-            f.eat += dt * 3.4;
-            const p = Math.min(1, f.eat);
-            f.m.position.set(U.lerp(f.x, 0.55, p), 0.05 + Math.sin(p * PI) * 0.7 + 0.4 * p, 0.25);
-            f.m.scale.setScalar(f.s * (1 - 0.7 * p));
-            if (p >= 1) { f.m.visible = false; f.eat = 0; puffs.emit(0.7, 0.8, 0.5, 8, 1.6, 0.06, 0.6, 2); }
-            return;
-          }
-          const goal = 1.9;
-          f.x = U.damp(f.x, goal, 2.6, dt);
-          f.m.position.set(f.x, 0.05 + Math.sin(clock * 3 + f.ph) * 0.06, 0.25);
-          f.m.rotation.z = Math.sin(clock * 6 + f.ph) * 0.08;
-        });
         puffs.update(dt, 0, 0);
         actor.update(dt, clock, null);
+        // the fins: down on the typed key and back to rest
+        fins.forEach((f) => {
+          if (f.t < 1) {
+            f.t += dt / 0.17;
+            const p = Math.sin(PI * Math.min(1, f.t)), k = f.k, w = f.big ? 1.9 : 1;
+            f.fin.position.set(U.lerp(f.rx, k.x, p * 0.9), U.lerp(0.31, k.y + 0.16, p) + (f.big ? 0.35 * Math.sin(PI * Math.min(1, f.t * 0.5)) : 0), U.lerp(0.78, k.z - 0.08, p));
+            f.fin.rotation.set(f.rot[0] + p * 0.7 * w, f.rot[1], f.rot[2] + (f.big ? Math.sin(f.t * 20) * 0.3 : 0));
+            if (f.t >= 0.5 && !f.hit) {
+              f.hit = true; k.press = 1; if (f.big) actor.gesture('shake', true);
+              k.mesh.getWorldPosition(kp);
+              puffs.emit(kp.x, kp.y + 0.1, kp.z, (f.big ? 8 : 2) + Math.min(6, streak), 0.7, 0.04, 0.45, 2);
+            }
+          } else { f.fin.position.set(f.rx, 0.31, 0.78); f.fin.rotation.set(f.rot[0], f.rot[1], f.rot[2]); }
+        });
+        keyList.concat([space]).forEach((k) => {
+          k.press = Math.max(0, k.press - dt * 7);
+          k.mesh.position.y = k.y - 0.04 * k.press;
+          k.mat.emissive.setHex(k.ok > 0 ? 0x2f9e63 : 0xd8334f); k.mat.emissiveIntensity = k.press;
+        });
+        // the fish comes in from off screen to her mouth
+        if (fish && flight > 0) {
+          flight += dt / 0.5;
+          const q = Math.min(1, flight);
+          actor.mouthA.getWorldPosition(mp);
+          const sx = camX + halfW + 1.2, sy = mp.y + 1.6;
+          fish.m.position.set(U.lerp(sx, mp.x, q), U.lerp(sy, mp.y, q) + Math.sin(q * PI) * 1.1, mp.z);
+          fish.m.rotation.z = q * 9;
+          if (q >= 1) {
+            fish.m.visible = false; flight = 0;
+            actor.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.5);
+            puffs.emit(mp.x, mp.y, mp.z + 0.1, 8, 1.4, 0.06, 0.6, 2);
+          }
+        }
         const bob = Math.sin(clock * 2.4) * 0.02;
         view.rig.position.y = bob;
         if (!playing) return;
