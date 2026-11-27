@@ -137,6 +137,7 @@
       <div class="chart top" id="daily"></div>
       <div class="axis"><span id="d0"></span><span id="d1"></span></div>
       <div class="dlist" id="dlist"></div>
+      <p class="sub" style="margin:12px 0 0;font-size:12px">Bar number = people active that day. "Played" = finished or quit at least one game. Someone who clears their data, or opens the link in another browser or as an app, can count twice, so totals run slightly high.</p>
     </div>
 
     <h2>When games are played (UK time)</h2>
@@ -191,7 +192,8 @@
   function render(d) {
     var ret = d.players ? Math.round(100 * d.returning_players / d.players) : 0;
     $('tiles').innerHTML =
-      tile(num(d.players), 'players so far', true) +
+      tile(num(d.players_played != null ? d.players_played : d.players), d.players_played != null ? 'players who played a game' : 'players so far', true) +
+      (d.players_played != null ? tile(num(d.players), 'opened the game (' + num(d.players - d.players_played) + ' left without playing)') : '') +
       tile(num(d.players_24h), 'in the last 24 hours') + tile(num(d.players_7d), 'in the last 7 days') +
       tile(ret + '%', 'came back on another day (' + num(d.returning_players) + ')') + tile(num(d.sessions), 'visits') +
       tile(dur(d.avg_session_secs), 'average visit length') + tile(dur(d.avg_play_secs_per_player), 'playing games per player') +
@@ -243,10 +245,10 @@
     var days = d.daily || [], dmax = days.reduce(function (m, x) { return Math.max(m, x.players); }, 1);
     $('daily').innerHTML = days.map(function (x) {
       var h = 100 * x.players / dmax;
-      return '<div class="col" title="' + esc(x.day) + ': ' + x.players + ' active, ' + x.new_players + ' new">' + (x.players ? '<span class="v" style="bottom:' + h + '%">' + x.players + '</span>' : '') + '<div class="n" style="height:' + (100 * x.new_players / dmax) + '%"></div><div class="a" style="height:' + (100 * Math.max(0, x.players - x.new_players) / dmax) + '%"></div></div>';
+      return '<div class="col" title="' + esc(x.day) + ': ' + x.players + ' active' + (x.played != null ? ' (' + x.played + ' played a game)' : '') + ', ' + x.new_players + ' new">' + (x.players ? '<span class="v" style="bottom:' + h + '%">' + x.players + '</span>' : '') + '<div class="n" style="height:' + (100 * x.new_players / dmax) + '%"></div><div class="a" style="height:' + (100 * Math.max(0, x.players - x.new_players) / dmax) + '%"></div></div>';
     }).join('');
     $('dlist').innerHTML = days.slice().reverse().filter(function (x) { return x.players; }).map(function (x) {
-      return '<span>' + esc(x.day.slice(5)) + ': <b>' + x.players + '</b> active, <b>' + x.new_players + '</b> new</span>';
+      return '<span>' + esc(x.day.slice(5)) + ': <b>' + x.players + '</b> active' + (x.played != null ? ' (<b>' + x.played + '</b> played)' : '') + ', <b>' + x.new_players + '</b> new</span>';
     }).join('');
     if (days.length) { $('d0').textContent = days[0].day.slice(5); $('d1').textContent = days[days.length - 1].day.slice(5); }
 
