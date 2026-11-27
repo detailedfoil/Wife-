@@ -167,7 +167,7 @@
       if (!m.ack) send('hello', { p: profile(), ack: true });      // answer a hello once (an answer is not answered, so there is no echo)
       if (first) {
         PN.Audio.play('chirp');
-        UI().toast(tr('<b>{0}</b> joined your room!', fname()), 'seal', '', 4200);
+        UI().toast(tr('<b>{0}</b> joined your room!', fname()) + (amHost() ? ' ' + tr('Tap the room button to start a race.') : ''), 'seal', '', 5200);
         if (PN.Game.friendCome) PN.Game.friendCome(friend.p);
       }
       paint();
@@ -639,7 +639,9 @@
         + (friend && names ? '</p><p class="note">' + tr('Games in this room: {0}.', names) : '')
         + (friend && lent ? '</p><p class="note">' + tr('Lent to you for this room only: {0}.', lent) : '')
         + (met ? '</p><p class="note">' + tr('Seals you have met: {0}.', met) : '');
-      const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>', actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
+      const how = !friend ? '' : boss ? (race ? '' : '<p class="room-how">' + tr('Tap <b>Race a game</b> to pick a game and start.') + '</p>')
+        : '<p class="room-how">' + tr('Waiting for <b>{0}</b> to pick a game. You will be asked to join the race.', fname()) + '</p>';
+      const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>' + how, actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
       if (v === 'leave') leave();
       else if (v === 'pick') {
         const pick = await UI().modal({ title: tr('Race a game'), html: '<p>' + tr('Both of you play the same game at the same time, and see how the other is doing in a corner of the screen.') + '</p>',
