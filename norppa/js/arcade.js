@@ -2286,7 +2286,7 @@
 
   /* ================= Typing Seal ================= */
   /* How fast can you type? A word comes up with a quick 3, 2, 1 (1.5 seconds in all, so it can be read before the clock starts), then a window to type it in
-     that shrinks as the run goes on (PN.typeWindow). Every letter is checked as it is typed, no Enter. A wrong letter, or running out of time, costs a heart;
+     that shrinks as the run goes on (PN.typeWindow). Every letter is checked as it is typed, no Enter. A wrong letter, or running out of time, costs a heart (a typo also starts the same word over, with a new 3, 2, 1 and timer);
      three hearts and it is over. A word with no typo adds to the streak, and the streak makes the floes drift faster. The score is the words typed.
      Words are in data.js (PN.TYPE_WORDS). In an online race both players get the same words, in the same language, from the shared seed.
      The box under the word is a real text input so a phone keyboard comes up; it is kept equal to what has been typed correctly so far. */
@@ -2348,15 +2348,16 @@
     }
     function focus() { try { inEl.focus({ preventScroll: true }); } catch (e) { /* the browser said no: a tap will do it */ } }
 
-    function nextWord() {
-      word = pick(); typed = 0; typo = false; mode = 'show'; t = 0; said = -1;
+    function nextWord(again) {   // again: a typo, so the same word starts over
+      if (!again) word = pick();
+      typed = 0; typo = false; mode = 'show'; t = 0; said = -1;
       win = PN.typeWindow(n, word.length, mum);
       cardEl.className = 'ty-card show'; countEl.className = 'ty-count'; countEl.textContent = '';
       boxEl.classList.add('wait'); boxEl.classList.remove('live');   // nothing to type yet: the box stays out of sight (the keyboard stays up)
       barEl.style.width = '100%'; barEl.className = '';
       inEl.value = '';
       wordEl.innerHTML = ''; paintWord(); setPh();
-      fishNow = fishes[fishI++ % fishes.length]; fishNow.m.visible = true; fishNow.x = 6.2; fishNow.eat = 0; fishNow.m.scale.setScalar(fishNow.s);
+      if (!again) { fishNow = fishes[fishI++ % fishes.length]; fishNow.m.visible = true; fishNow.x = 6.2; fishNow.eat = 0; fishNow.m.scale.setScalar(fishNow.s); }
     }
     function startTyping() {
       mode = 'type'; t = 0;
@@ -2380,7 +2381,7 @@
     function wrong() {
       typo = true; hit();
       boxEl.classList.remove('bad'); void boxEl.offsetWidth; boxEl.classList.add('bad');
-      if (mode !== 'done') K.beat('typo');
+      if (mode !== 'done') { nextWord(true); K.beat('typo'); }   // the same word from the first letter, with the 3, 2, 1 and a fresh timer
     }
     function late() {
       for (let i = typed; i < word.length; i++) wordEl.children[i].style.color = '#d8334f';
