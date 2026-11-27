@@ -54,17 +54,6 @@
     store.set(FRIENDS, JSON.stringify(list.slice(0, MAXF)));
   }
 
-  /* A shared link looks like  .../norppa/?room=ABCD  and is picked up here, before anything else can lose it. */
-  let pending = null;
-  try {
-    const q = new URLSearchParams(location.search).get('room');
-    if (q && /^[A-Za-z]{4}$/.test(q)) {
-      pending = q.toUpperCase();
-      const u = new window.URL(location.href); u.searchParams.delete('room');
-      history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);   // so a reload does not join again
-    }
-  } catch (e) { /* an old browser: no link joining */ }
-  const linkFor = (code) => location.origin + location.pathname + '?room=' + code;
 
   /* ---------- the wire ---------- */
   /* Both transports: open(room, onMsg, onState) -> { send(obj), close() }. onState('ok' | 'fail' | 'lost'). */
@@ -601,17 +590,6 @@
     await UI().modal({ title: head, html, actions: [{ label: tr('OK'), value: 1 }] });
   }
 
-  async function share() {
-    const url = linkFor(room), text = tr('Come and play with my seal! Open this link to join my room.');
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Pikku Norppa', text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
-    }
-    let ok = false;
-    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); ok = true; } } catch (e) { ok = false; }
-    if (ok) UI().toast(tr('Link copied. Send it to your friend.'), 'check');
-    else await UI().modal({ title: tr('Your invite link'), html: '<p>' + tr('Press and hold the link to copy it.') + '</p><textarea class="field" readonly style="margin-top:12px">' + url + '</textarea>', actions: [{ label: tr('Close'), value: 0 }] });
-  }
-
   /* ---------- the menu ---------- */
   const Online = PN.Online = {
     get room() { return room; },
@@ -619,15 +597,9 @@
     get host() { return !!room && amHost(); },
     racing: () => !!(race && (race.state === 'on' || race.state === 'over')),
     myEnd, verdict,
-    /* Called once the game is up: if the page was opened from a shared link, go into that room. */
+    /* Called once the game is up: if the app was closed or reloaded a moment ago, go back into the room. */
     joinPending() {
       if (room) return;
-      if (pending) {
-        const code = pending; pending = null;
-        join(code);
-        UI().toast(tr('Joining room <b>{0}</b>...', code), 'globe', '', 3600);
-        return;
-      }
       try {                                          // the app was closed or reloaded a moment ago: go back into the room
         const r = JSON.parse(store.get(ROOM_KEY) || 'null');
         if (r && /^[A-Z]{4}$/.test(r.code) && Date.now() - r.at < 20 * 60 * 1000) {
@@ -660,7 +632,6 @@
       }
       const games = roomGames(), boss = amHost();
       const acts = friend && boss && !race && games.length ? [{ label: tr('Race a game'), value: 'pick' }] : [];
-      acts.push({ label: tr('Share invite link'), value: 'share', cls: friend ? 'ghost' : '' });
       const met = savedFriends().filter((f) => !friend || f.oid !== (friend.p && friend.p.oid)).slice(0, 5).map((f) => UI().esc(f.name)).join(', ');
       const names = games.filter(iOwn).map(gameTitle).join(', '), lent = games.filter((id) => !iOwn(id)).map(gameTitle).join(', ');
       const text = (friend ? tr('<b>{0}</b> is on your shore.', fname()) : tr('Waiting for a friend. Your room code is <b>{0}</b>.', room))
@@ -670,7 +641,6 @@
         + (met ? '</p><p class="note">' + tr('Seals you have met: {0}.', met) : '');
       const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>', actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
       if (v === 'leave') leave();
-      else if (v === 'share') share();
       else if (v === 'pick') {
         const pick = await UI().modal({ title: tr('Race a game'), html: '<p>' + tr('Both of you play the same game at the same time, and see how the other is doing in a corner of the screen.') + '</p>',
           actions: games.map((id) => ({ label: gameTitle(id), value: id, cls: 'ghost' })).concat([{ label: tr('Not now'), value: 0 }]) });
