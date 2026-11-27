@@ -195,6 +195,7 @@
       U.box(0.1, 0.1, 0.1, dark, -0.65, 0.05, -0.68), U.box(0.1, 0.1, 0.1, dark, 0.65, 0.05, -0.68),
       U.rot(U.box(0.5, 0.04, 0.42, mat(0xece3cf), 0.38, 1.72, -1.6), 0.2, 0.3, -0.2)   // a throw over the back
     );
+    c.position.y = -0.22; c.scale.x = 1.25;   // lower and wider, to fit the Meshy Dave
     scene.add(U.shadows(c, true, true));
   }
 
@@ -257,6 +258,7 @@
     const smile = U.torus(0.06, 0.012, mat(0x7a3a2a), 0, -0.07, 0.25, Math.PI * 0.8); smile.rotation.z = Math.PI * 1.1; head.add(smile);
     head.add(ball(0.035, mat(0xe8806a, { roughness: 1, transparent: true, opacity: 0.5 }), -0.15, -0.02, 0.19), ball(0.035, mat(0xe8806a, { roughness: 1, transparent: true, opacity: 0.5 }), 0.15, -0.02, 0.19));
     man.add(head);
+    man.visible = false;   // the drawn-from-shapes Dave: only shown if the model file cannot load
     scene.add(U.shadows(man, true, false));
   }
 
@@ -303,12 +305,28 @@
     const telly = G.tellyLight = new T.PointLight(0x8fc4ff, 1.2, 5, 1.4); telly.position.set(1.6, 1.0, 0.4);
     scene.add(hemi, sun, sun.target, lampLight, telly);
     room(scene, t); chair(scene, t); dave(scene, t); front(scene, t);
+    loadModel(scene);
     G.view = { scene, camera };
     return G;
   };
 
+  /* Big Dave as a proper sculpted model (art/geezer/dave.glb, made by the owner with Meshy AI from an
+     original ChatGPT picture; credit Meshy if it ships). It sits in the chair on a pivot at the seat so
+     it can breathe, lean back for a swig, bounce at the telly and nod. */
+  const SEAT = new T.Vector3(0, 0.38, -0.95), MS = 1.1;
+  function loadModel(scene) {
+    if (!PN.loadGLB) { G.man.visible = true; return; }
+    PN.loadGLB('art/geezer/dave.glb').then((m) => {
+      m.scale.setScalar(MS);
+      m.position.set(0, 0.6 * MS, 0.07);          // the model's seat (y -0.6) lands on the pivot
+      m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      const pivot = G.model = new T.Group(); pivot.position.copy(SEAT); pivot.add(m);
+      scene.add(pivot);
+    }).catch(() => { G.man.visible = true; });
+  }
+
   /* Fit the camera: tall screens keep the chair's width, wide screens keep Dave's height. */
-  const target = new T.Vector3(0, 0.95, -0.85), dir = new T.Vector3(0, 0.36, 1).normalize();
+  const target = new T.Vector3(0, 1.05, -0.85), dir = new T.Vector3(0, 0.36, 1).normalize();
   G.frame = function (w, h) {
     const c = G.camera, a = w / h, tan = Math.tan(c.fov * Math.PI / 360);
     const d = a < 1 ? Math.max(1.25 / tan, 1.2 / (tan * a)) + 0.4 : 1.7 / tan + 0.4;
@@ -342,6 +360,12 @@
     G.elbowR.rotation.set(-sip * 1.1, sip * 0.6, 0);
     G.armL.rotation.set(-cheer * 2.0, 0, cheer * 0.3);
     G.head.rotation.set(sip * -0.35 + nod * 0.12, Math.sin(time * 0.31) * 0.08 + cheer * 0.3, 0);
+    if (G.model) {
+      const b = 1 + br * 0.012;
+      G.model.scale.set(1 + br * 0.006, b, 1 + br * 0.008);
+      G.model.rotation.set(-sip * 0.22 + nod * 0.06, Math.sin(time * 0.31) * 0.05 + cheer * 0.12 * Math.sin(actT * 14), cheer * 0.05 * Math.sin(actT * 9));
+      G.model.position.y = SEAT.y + cheer * 0.08 * Math.abs(Math.sin(actT * 9));
+    }
     const flick = act === 'telly' ? 0.6 + Math.random() * 1.6 : 0.95 + 0.35 * Math.sin(time * 5.3) * Math.sin(time * 1.9);
     G.tellyLight.intensity = flick;
     G.screen.material.color.setHSL(0.58 + 0.05 * Math.sin(time * 2.2), 0.7, 0.62 + 0.1 * Math.sin(time * 3.1));
@@ -353,7 +377,7 @@
     if (!G.man) return false;
     ndc.set(x / w * 2 - 1, -(y / h) * 2 + 1);
     ray.setFromCamera(ndc, G.camera);
-    return ray.intersectObject(G.man, true).length > 0;
+    return ray.intersectObject(G.model && G.model.visible ? G.model : G.man, true).length > 0;
   };
 
   PN.Geezer3D = G;
