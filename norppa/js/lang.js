@@ -28,7 +28,7 @@
     'The word stays on screen, so you can read it once and then just type. Tap to go on.': 'Sana pysyy näytöllä, joten voit lukea sen kerran ja sitten vain kirjoittaa. Jatka napauttamalla.',
     'A typo costs a heart, and so does running out of time.': 'Kirjoitusvirhe vie sydämen, samoin aikaan jääminen.',
     'The word starts over with a new 3, 2, 1. You have three hearts, and when they are gone the run is over. Tap to go on.': 'Sana alkaa alusta uudella 3, 2, 1 -laskennalla. Sinulla on kolme sydäntä, ja kun ne loppuvat, peli päättyy. Jatka napauttamalla.',
-    'Words without a typo build a streak, and the faster you go the faster the floes drift.': 'Sanat ilman virheitä kasvattavat putkea, ja mitä nopeampi olet, sitä nopeammin jäälautat ajelehtivat.',
+    'Words without a typo build a streak, and the faster you go the harder she smashes.': 'Sanat ilman virheitä kasvattavat putkea, ja mitä nopeampi olet, sitä kovempaa hän hakkaa.',
     'Tap to go on.': 'Jatka napauttamalla.',
     'Careful: the time you get for each word shrinks as you go.': 'Varo: jokaiseen sanaan annettu aika lyhenee koko ajan.',
     'The run never ends if you can keep up. Tap to go on.': 'Peli ei pääty koskaan, jos pysyt mukana. Jatka napauttamalla.',
