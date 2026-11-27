@@ -1237,7 +1237,10 @@
     seal.look = null;
     seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.2, face: W.HOME_HEADING });
     UI.refresh();
-    if (PN.Online) await PN.Online.verdict();     // an online race: who won, before what she earned
+    if (PN.Online) {                              // an online race: who won, before what she earned ("winner takes it all" moves the coins)
+      const adj = await PN.Online.verdict(r ? r.coins : 0);
+      if (r && adj) r.coins = Math.max(0, r.coins + adj);
+    }
     if (!r) return;
     if (id === 'sauna') { await saunaResult(r); return; }
     const gm = PN.GAMES[id], lost = gm.low && !score;      // a timed game: the score is the seconds it took, and none means it was lost

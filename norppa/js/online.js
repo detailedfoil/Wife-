@@ -116,18 +116,11 @@
   /* A game the host has can be played by the guest in this room, even if the guest has not unlocked it (nothing is unlocked for good).
      Games still in developer mode are not lent: the guest needs them too. */
   const lendable = (id) => !!RACE_GAMES[id] && (iOwn(id) || !(PN.GAMES[id] && PN.GAMES[id].dev));
-  /* Playing for coins (developer mode for now, and only when both seals have it on): it is a skill challenge: each player picks
-     their own stake of earned coins, and the challenge is for the smaller of the two, so nobody can lose more than they put in or more than the other risked. A draw gives the
-     stakes back. Worked out on each phone with no referee yet. */
+  /* Ways to play against a friend, picked by the host before a game: 'fun' (friendly competition, nothing at stake), 'all' (winner takes
+     it all: the winner also gets the coins the loser earned in that game, the loser gets none) and 'stake' (each picks an amount of coins,
+     both see the other's, the smaller one counts: the winner gains it, the loser loses it, a draw gives it back). All skill, no coins
+     are bought. Worked out on each phone with no referee yet. */
   const myCoins = () => Math.max(0, Math.floor((PN.Game.state && PN.Game.state.coins) || 0));
-  const betsOn = () => !!(PN.Game.state && PN.Game.state.dev && friend && friend.p && friend.p.dev);
-  const betHtml = (max) => {
-    const d = Math.max(1, Math.min(max, 10));
-    return '<div class="bet-pick"><input type="range" id="betIn" min="1" max="' + max + '" step="1" value="' + d + '" aria-label="' + tr('Your stake') + '">'
-      + '<div class="bet-num">' + UI().ic('coin') + '<b id="betNum">' + d + '</b></div></div><p class="note">' + tr('You have {0} coins.', max) + '</p>';
-  };
-  const betWire = (card) => { const i = card.querySelector('#betIn'), n = card.querySelector('#betNum'); if (i && n) i.addEventListener('input', () => { n.textContent = i.value; }); };
-  const betRead = (card) => { const i = card.querySelector('#betIn'); return Math.max(1, Math.min(myCoins(), parseInt(i && i.value, 10) || 1)); };
   const roomGames = () => {
     if (amHost()) return RACE_IDS.filter(iOwn);
     const theirs = friend && friend.p.games ? friend.p.games : ['catch'];
@@ -181,7 +174,29 @@
     if (m.kind === 'bye') { friendGone(tr('<b>{0}</b> left the room.', fname())); return; }
     if (m.kind === 'invite') return gotInvite(m);
     if (m.kind === 'answer') return gotAnswer(m);
-    if (m.kind === 'go') { if (race && race.k === m.k && race.state === 'wait') startRace(0); return; }
+    if (m.kind === 'go') {
+      if (race && race.k === m.k && race.state === 'wait') startRace(0);
+      else if (race && race.k === m.k && race.state === 'stakes') {                         // the host settled the stakes
+        const rc = race;
+        if (m.h != null && m.g != null) rc.bet = { me: Math.max(1, m.g | 0), them: Math.max(1, m.h | 0) };
+        closeStake();
+        setTimeout(() => { if (race === rc) startRace(0); }, stakeWait());
+      }
+      return;
+    }
+    if (m.kind === 'stake') {
+      if (!race || race.k !== m.k || race.state !== 'stakes') return;
+      const v = Math.max(1, Math.min(1e9, m.v | 0));
+      if (!race.stk) { race.pendingStake = { v, lock: !!m.lock }; return; }   // my screen is not up yet
+      race.stk.them = v; race.stk.themLock = !!m.lock;
+      stakePaint(); stakeMaybeGo();
+      return;
+    }
+    if (m.kind === 'stakeoff') {
+      if (race && race.k === m.k && race.state === 'stakes') { closeStake(); race = null; UI().toast(tr('<b>{0}</b> called off the game.', fname()), 'globe', 'bad', 3600); }
+      return;
+    }
+    if (m.kind === 'earned') { if (race && race.k === m.k) { race.them.earned = m.c | 0; if (race.waiter) race.waiter(); } return; }
     if (m.kind === 'frame') {                        // a small picture of the other player's screen
       if (race && race.k === m.k && typeof m.f === 'string' && m.f.length < 60000) {
         const th = race.them, img = th.frameImg || (th.frameImg = new Image());
@@ -246,6 +261,7 @@
   function friendGone(msg) {
     if (!friend) return;
     friend = null;
+    if (race && race.state === 'stakes') { closeStake(); race = null; }
     if (race) { race.them.gone = true; if (race.waiter) race.waiter(); }
     if (PN.Game.friendGo) PN.Game.friendGo();
     UI().toast(msg, 'seal', '', 4200);
@@ -267,6 +283,7 @@
     clearInterval(pinger); pinger = null;
     if (friend && PN.Game.friendGo) PN.Game.friendGo();
     friend = null; askedK = null;
+    if (race && race.state === 'stakes') { closeStake(); race = null; }
     if (race && race.waiter) { race.them.gone = true; race.waiter(); }
     if (!quiet) PN.Audio.play('tap');
     paint();
@@ -291,14 +308,14 @@
   /* ---------- racing ---------- */
   const canRace = () => PN.Game.raceReady && PN.Game.raceReady();
 
-  async function invite(game, bet) {
+  async function invite(game, mode) {
     if (!friend || race) return;
     const why = canRace();
     if (why !== true) return;
     const k = uid(), seed = (Math.random() * 4294967296) >>> 0;
     askedK = k;
-    race = { k, game, seed, lang: PN.isFi() ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true, bet: bet > 0 ? { me: bet, them: 0 } : null };
-    send('invite', { game, seed, k, lang: race.lang, bet: bet > 0 ? bet : 0 });
+    race = { k, game, seed, lang: PN.isFi() ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true, mode: mode || 'fun', bet: null };
+    send('invite', { game, seed, k, lang: race.lang, mode: race.mode });
     UI().toast(tr('Asked <b>{0}</b> to play against you at {1}...', fname(), gameTitle(game)), 'globe', '', 4000);
     setTimeout(() => { if (race && race.k === k && race.state === 'asked') { race = null; askedK = null; UI().toast(tr('<b>{0}</b> did not answer.', fname()), 'globe', 'bad', 3600); } }, 30000);
   }
@@ -308,23 +325,77 @@
     if (amHost()) { send('answer', { k: m.k, yes: false, why: 'host' }); return; }   // only the host starts races
     if (!lendable(m.game)) { send('answer', { k: m.k, yes: false, why: 'own' }); return; }
     if (race || PN.Games.active || UI().modalOpen) { send('answer', { k: m.k, yes: false, why: 'busy' }); return; }
-    const title = gameTitle(m.game), theirBet = betsOn() ? Math.max(0, m.bet | 0) : 0;
-    if (theirBet && !myCoins()) { send('answer', { k: m.k, yes: false, why: 'coins' }); return; }
+    const title = gameTitle(m.game), mode = m.mode === 'all' || m.mode === 'stake' ? m.mode : 'fun';
+    if (mode === 'stake' && !myCoins()) { send('answer', { k: m.k, yes: false, why: 'coins' }); return; }
     PN.Audio.play('chirp');
-    const v = theirBet
-      ? await UI().modal({ title: tr('A coin challenge!'), html: '<p>' + tr('<b>{0}</b> challenges you at {1} and puts in {2} coins.', fname(), title, theirBet) + '</p><p>' + tr('Pick your own stake. The challenge is for the smaller of the two stakes: the higher score takes it, and a draw gives it back.') + '</p>' + betHtml(myCoins()),
-        actions: [{ label: tr('Join'), value: 1 }, { label: tr('Not now'), value: 0 }], onOpen: betWire, result: (val, card) => (val ? betRead(card) : 0) })
-      : await UI().modal({ title: tr('A game invite!'), html: '<p>' + tr('<b>{0}</b> wants to play {1} against you.', fname(), title) + '</p>',
-        actions: [{ label: tr('Join'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+    const card = mode === 'all'
+      ? { title: tr('Winner takes it all'), html: '<p>' + tr('<b>{0}</b> wants to play {1} against you.', fname(), title) + '</p><p>' + tr('Winner takes it all: the winner gets the coins they earn plus the coins the loser would have earned. The loser gets none from this game.') + '</p>' }
+      : mode === 'stake'
+        ? { title: tr('A game with stakes'), html: '<p>' + tr('<b>{0}</b> wants to play {1} against you.', fname(), title) + '</p><p>' + tr('You each pick an amount of coins to put in and see each other\'s. The smaller one counts: the winner gains it, the loser loses it, and a draw gives it back.') + '</p>' }
+        : { title: tr('A game invite!'), html: '<p>' + tr('<b>{0}</b> wants to play {1} against you.', fname(), title) + '</p><p class="note">' + tr('Friendly competition: no coins at stake.') + '</p>' };
+    const v = await UI().modal({ title: card.title, html: card.html, actions: [{ label: tr('Join'), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (!friend) return;
     if (!v) { send('answer', { k: m.k, yes: false, why: 'no' }); return; }
-    const myBet = theirBet ? v : 0;
     const why = canRace();
     if (why !== true) { send('answer', { k: m.k, yes: false, why: 'cannot' }); return; }
-    race = { k: m.k, game: m.game, seed: m.seed >>> 0, lang: m.lang === 'fi' ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'wait', bet: myBet ? { me: myBet, them: theirBet } : null };
-    send('answer', { k: m.k, yes: true, bet: myBet });
+    race = { k: m.k, game: m.game, seed: m.seed >>> 0, lang: m.lang === 'fi' ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: mode === 'stake' ? 'stakes' : 'wait', mode, bet: null };
+    send('answer', { k: m.k, yes: true });
     const k = m.k;
+    if (mode === 'stake') { stakeScreen(); return; }
     setTimeout(() => { if (race && race.k === k && race.state === 'wait') { race = null; UI().toast(tr('The game was called off.'), 'globe', 'bad', 3600); } }, 8000);
+  }
+
+  /* ---------- the stake screen: both players see both stakes, and the smaller one is circled ---------- */
+  const stakeWait = () => (UI().modalDelay || 300) + 120;      // both phones wait this long after the last lock-in, so the countdown still lines up
+  function stakeScreen() {
+    const rc = race, have = myCoins(), step = have > 1000 ? 50 : have > 200 ? 10 : have > 50 ? 5 : 1, lo = Math.min(step, have), max = Math.max(lo, Math.floor(have / step) * step), d = Math.max(lo, Math.min(max, step * 2));
+    const stk = rc.stk = { me: d, them: null, meLock: false, themLock: false, card: null, done: false, at: performance.now() };
+    if (rc.pendingStake) { stk.them = rc.pendingStake.v; stk.themLock = !!rc.pendingStake.lock; rc.pendingStake = null; }
+    const html = '<p class="note">' + tr('Pick your stake. The smaller of the two counts: the winner gains it, the loser loses it, a draw gives it back.') + '</p>'
+      + '<div class="stake-grid"><div class="stake-box" id="stkMe"><span>' + tr('You') + '</span><b id="stkMeN">' + d + '</b><i>' + tr('Counts') + '</i></div>'
+      + '<div class="stake-box" id="stkThem"><span>' + UI().esc(friend ? friend.p.name || tr('Your friend') : tr('Your friend')) + '</span><b id="stkThemN">...</b><i>' + tr('Counts') + '</i></div></div>'
+      + '<div class="bet-pick"><button class="btn ghost stk-step" id="stkDown" type="button" aria-label="-">−</button><input type="range" id="betIn" min="' + lo + '" max="' + max + '" step="' + step + '" value="' + d + '" aria-label="' + tr('Your stake') + '"><button class="btn ghost stk-step" id="stkUp" type="button" aria-label="+">+</button></div>'
+      + '<p class="note" id="stkNote"></p><button class="btn" id="stkLock" type="button"></button>';
+    UI().modal({ title: tr('Your stake'), html, actions: [{ label: tr('Cancel'), value: 0, cls: 'ghost' }],
+      onOpen(card) {
+        stk.card = card; stk.at = performance.now();
+        const inp = card.querySelector('#betIn'), lock = card.querySelector('#stkLock');
+        const set = (v) => { if (stk.meLock) return; stk.me = Math.max(lo, Math.min(max, v)); inp.value = stk.me; send('stake', { k: rc.k, v: stk.me, lock: false }); stakePaint(); };
+        inp.addEventListener('input', () => set(parseInt(inp.value, 10) || lo));
+        card.querySelector('#stkDown').addEventListener('click', () => set(stk.me - step));
+        card.querySelector('#stkUp').addEventListener('click', () => set(stk.me + step));
+        lock.addEventListener('click', () => { if (stk.meLock) return; stk.meLock = true; PN.Audio.play('tap'); send('stake', { k: rc.k, v: stk.me, lock: true }); stakePaint(); stakeMaybeGo(); });
+        send('stake', { k: rc.k, v: stk.me, lock: false });
+        stakePaint();
+        setTimeout(() => { if (race === rc && rc.state === 'stakes') { closeStake(); race = null; UI().toast(tr('The game was called off.'), 'globe', 'bad', 3600); } }, 3 * 60 * 1000);
+      } }).then(() => { if (race === rc && !stk.done) { send('stakeoff', { k: rc.k }); race = null; UI().toast(tr('You called off the game.'), 'globe', '', 3000); } });
+  }
+  function stakePaint() {
+    const rc = race; if (!rc || !rc.stk || !rc.stk.card) return;
+    const c = rc.stk.card, s2 = rc.stk, q = (id) => c.querySelector(id), both = s2.them != null, small = both ? Math.min(s2.me, s2.them) : 0;
+    q('#stkMeN').textContent = s2.me; q('#stkThemN').textContent = both ? s2.them : '...';
+    q('#stkMe').classList.toggle('counts', both && s2.me === small); q('#stkThem').classList.toggle('counts', both && s2.them === small);
+    q('#stkMe').classList.toggle('locked', s2.meLock); q('#stkThem').classList.toggle('locked', s2.themLock);
+    q('#stkNote').innerHTML = !both ? tr('Waiting for <b>{0}</b> to pick...', fname()) : tr('This counts: <b>{0}</b> coins.', small);
+    const lock = q('#stkLock'); lock.disabled = s2.meLock; lock.textContent = s2.meLock ? tr('Locked in. Waiting for {0}...', friend ? UI().esc(friend.p.name || '') : '') : tr('Lock in {0}', s2.me);
+    q('#betIn').disabled = s2.meLock; q('#stkDown').disabled = s2.meLock; q('#stkUp').disabled = s2.meLock;
+  }
+  function closeStake() {
+    const rc = race; if (!rc || !rc.stk || !rc.stk.card) return;
+    rc.stk.done = true;
+    const b = rc.stk.card.querySelector('.actions .btn');
+    setTimeout(() => { if (b) b.click(); }, Math.max(0, (UI().modalDelay || 300) + 60 - (performance.now() - rc.stk.at)));
+  }
+  /* Both locked in: the host settles it, and both phones start together. */
+  function stakeMaybeGo() {
+    const rc = race; if (!rc || !rc.stk || rc.state !== 'stakes' || !amHost()) return;
+    const s2 = rc.stk;
+    if (!(s2.meLock && s2.themLock && s2.them != null) || s2.going) return;
+    s2.going = true;
+    rc.bet = { me: s2.me, them: s2.them };
+    send('go', { k: rc.k, h: s2.me, g: s2.them });
+    closeStake();
+    setTimeout(() => { if (race === rc) startRace(Math.min(800, (rtt == null ? 300 : rtt) / 2)); }, stakeWait());
   }
 
   function gotAnswer(m) {
@@ -332,11 +403,11 @@
     askedK = null;
     if (!m.yes) {
       race = null;
-      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : m.why === 'host' ? tr('Only the host can start a game.') : m.why === 'coins' ? tr('<b>{0}</b> has no coins for a challenge.', fname()) : tr('<b>{0}</b> said not now.', fname());
+      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : m.why === 'host' ? tr('Only the host can start a game.') : m.why === 'coins' ? tr('<b>{0}</b> has no coins to put in.', fname()) : tr('<b>{0}</b> said not now.', fname());
       UI().toast(msg, 'globe', 'bad', 3600);
       return;
     }
-    if (race.bet) { race.bet.them = Math.max(0, m.bet | 0); if (!race.bet.them) race.bet = null; }   // they joined without a bet (no developer mode there): just for fun
+    if (race.mode === 'stake') { race.state = 'stakes'; stakeScreen(); return; }
     if (canRace() !== true || PN.Games.active || UI().modalOpen) { race = null; return; }   // something came up here: the friend's 8 seconds run out and they are told
     send('go', { k: race.k });
     startRace(Math.min(800, (rtt == null ? 300 : rtt) / 2));   // the friend starts when the go arrives, about half a round trip from now
@@ -574,15 +645,18 @@
   }
 
   /* After my game: wait a little for the friend's final score, then say who won. Returns at once if there was no race. */
-  async function verdict() {
-    if (!race || race.state !== 'over') return;
+  async function verdict(coins) {
+    if (!race || race.state !== 'over') return 0;
     const r = race;
-    if (!r.them.done && !r.them.gone) {
+    r.me.earned = Math.max(0, coins | 0);
+    send('earned', { k: r.k, c: r.me.earned });   // what my game paid, for "winner takes it all"
+    const needEarn = () => r.mode === 'all' && r.them.earned == null && !r.them.gone;
+    if ((!r.them.done && !r.them.gone) || needEarn()) {
       // my game is over but theirs is still going: wait here, with their score as it climbs, until they finish (or I stop waiting)
       const nm = UI().esc(r.name || tr('Your friend'));
       const text = () => tr('{0} is still playing. Score so far: <b>{1}</b>.', nm, r.them.s);
       let closer = null;
-      const ping = () => { if ((r.them.done || r.them.gone) && closer) closer(); };
+      const ping = () => { if ((r.them.done || r.them.gone) && !needEarn() && closer) closer(); };
       r.waiter = () => { const el = document.getElementById('vsWait'); if (el) el.innerHTML = text(); ping(); };
       await UI().modal({ title: tr('Your game is over'), html: '<p id="vsWait">' + text() + '</p><p class="note">' + tr('Your score: {0}', r.me.s) + '</p>',
         actions: [{ label: tr('Stop waiting'), value: 0, cls: 'ghost' }],
@@ -603,33 +677,40 @@
     else if (a > b) { head = tr('You win!'); line = tr('You beat {0}.', name); cls = 'award'; }
     else if (a < b) { head = tr('{0} wins', name); line = tr('So close. Ask for a rematch!'); cls = 'sad'; }
     else { head = tr('A draw!'); line = tr('Exactly the same score.'); cls = 'coin'; }
-    let pot = '';
-    if (r.bet && r.bet.me > 0 && r.bet.them > 0) {
-      const stake = Math.min(r.bet.me, r.bet.them), out = r.me.quit !== r.them.quit ? (r.me.quit ? -1 : 1) : Math.sign(a - b), win = out > 0, draw = out === 0;
+    let pot = '', adj = 0;
+    const out = r.me.quit !== r.them.quit ? (r.me.quit ? -1 : 1) : Math.sign(a - b), win = out > 0, draw = out === 0;
+    if (r.mode === 'stake' && r.bet && r.bet.me > 0 && r.bet.them > 0) {
+      const stake = Math.min(r.bet.me, r.bet.them);
       if (draw) pot = '<p class="note">' + tr('A draw, so you keep your {0} coins.', stake) + '</p>';
-      else { const got = PN.Game.raceCoins(win ? stake : -stake); pot = '<p class="note ' + (win ? 'up' : 'down') + '">' + (win ? tr('You won the challenge: +{0} coins.', got) : tr('You lost the challenge: −{0} coins.', -got)) + '</p>'; }
+      else { const got = PN.Game.raceCoins(win ? stake : -stake); pot = '<p class="note ' + (win ? 'up' : 'down') + '">' + (win ? tr('You won the stake: +{0} coins.', got) : tr('You lost the stake: −{0} coins.', -got)) + '</p>'; }
+    } else if (r.mode === 'all') {
+      if (draw) pot = '<p class="note">' + tr('A draw, so you each keep the coins you earned.') + '</p>';
+      else if (win) { const got = PN.Game.raceCoins(r.them.earned | 0); adj = got; pot = '<p class="note up">' + tr('Winner takes it all: you also get the {0} coins {1} earned.', got, name) + '</p>'; }
+      else { const lost = PN.Game.raceCoins(-r.me.earned); adj = lost; pot = '<p class="note down">' + tr('Winner takes it all: {0} gets the coins you earned.', name) + '</p>'; }
     }
     PN.Audio.play(cls);
     const html = pot + '<div class="vs-board"><div><span>' + tr('You') + '</span><b>' + a + '</b></div><div><span>' + name + '</span><b>' + b + '</b></div></div><p>' + line + '</p>';
     await UI().modal({ title: head, html, actions: [{ label: tr('OK'), value: 1 }] });
+    return adj;
   }
 
-  /* The host has picked a game: for fun or for coins (developer mode), then the invite goes to the friend. */
+  /* The host has picked a game: friendly competition or play against (winner takes it all, or a stake), then the invite goes to the friend. */
   async function startPick(pick) {
-    let bet = 0;
-    if (betsOn() && myCoins() > 0) {
-      const how = await UI().modal({ title: gameTitle(pick), html: '<p>' + tr('Play just for fun, or put some coins on it as a challenge? You each pick your own stake, and the challenge is for the smaller one.') + '</p>',
-        actions: [{ label: tr('Play for fun'), value: 'fun' }, { label: tr('Play for coins'), value: 'coins', cls: 'ghost' }, { label: tr('Not now'), value: 0 }] });
-      if (!how || !friend) return;
-      if (how === 'coins') {
-        bet = await UI().modal({ title: tr('Your stake'), html: '<p>' + tr('How many coins do you put in? {0} picks their own stake next.', fname()) + '</p>' + betHtml(myCoins()),
-          actions: [{ label: tr('Start the challenge'), value: 1 }, { label: tr('Cancel'), value: 0 }], onOpen: betWire, result: (val, card) => (val ? betRead(card) : 0) });
-        if (!bet || !friend) return;
-      }
+    const how = await UI().modal({ title: gameTitle(pick), html: '<p>' + tr('Friendly competition: nothing at stake. Play against: coins are on the line.') + '</p>',
+      actions: [{ label: tr('Friendly competition'), value: 'fun' }, { label: tr('Play against'), value: 'against', cls: 'ghost' }, { label: tr('Not now'), value: 0 }] });
+    if (!how || !friend) return;
+    let mode = 'fun';
+    if (how === 'against') {
+      const sub = await UI().modal({ title: tr('Play against'), html: '<p>' + tr('Winner takes it all: the winner gets the coins they earn plus the coins the loser would have earned.') + '</p><p>' + tr('Stake: you each pick an amount to put in, and the smaller one counts.') + '</p>',
+        actions: [{ label: tr('Winner takes it all'), value: 'all' }, { label: tr('Stake'), value: 'stake', cls: 'ghost' }, { label: tr('Back'), value: 'back', cls: 'ghost' }] });
+      if (sub === 'back') return startPick(pick);
+      if (!sub || !friend) return;
+      if (sub === 'stake' && !myCoins()) { PN.Audio.play('nope'); UI().toast(tr('You have no coins to put in.'), 'globe', 'bad', 3600); return; }
+      mode = sub;
     }
     const why = canRace();
     if (why !== true) { PN.Game.raceRefuse(why); return; }
-    invite(pick, bet);
+    invite(pick, mode);
   }
 
   /* ---------- the menu ---------- */

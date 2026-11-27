@@ -635,3 +635,16 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .race-count .rc-top { font: 700 22px/1 var(--display); color: #fff; text-shadow: 0 2px 0 rgba(13, 24, 60, .5); min-height: 22px; }
 .race-count b { font: 600 110px/1 var(--display); color: #fff; text-shadow: 0 5px 0 rgba(13, 24, 60, .5), 0 0 34px rgba(13, 24, 60, .5); }
 .race-count b.pop { animation: pop .5s cubic-bezier(.2, .9, .3, 1.4); }
+/* stake screen: both stakes side by side, the smaller one circled */
+.stake-grid { display: flex; gap: 10px; justify-content: center; margin: 10px 0 6px; }
+.stake-box { flex: 1; max-width: 150px; border-radius: 18px; background: rgba(60, 100, 150, .08); padding: 8px 6px 6px; display: grid; gap: 1px; justify-items: center; border: 3px solid transparent; transition: border-color .2s, background .2s; }
+.stake-box span { font-size: 13px; font-weight: 800; color: var(--ink-soft); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stake-box b { font-size: 32px; line-height: 1.1; }
+.stake-box i { font-style: normal; font-size: 11px; font-weight: 800; color: #b9741a; visibility: hidden; }
+.stake-box.counts { border-color: #e8a23a; background: rgba(232, 162, 58, .16); }
+.stake-box.counts i { visibility: visible; }
+.stake-box.locked b::after { content: " ✓"; font-size: 16px; color: #2f9e63; }
+#stkLock { margin-top: 8px; width: 100%; }
+#stkLock:disabled { opacity: .7; }
+.stk-step { flex: 0 0 44px; min-width: 44px; padding: 6px 0; font-size: 22px; line-height: 1; }
+.stk-step:disabled { opacity: .5; }
