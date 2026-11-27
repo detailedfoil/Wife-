@@ -114,10 +114,39 @@
   let wire = null, room = null, friend = null, heardAt = 0, pinger = null, chip = null;
   let race = null;        // { k, game, seed, me: {s, t, done, quit}, them: {s, t, done, quit}, state: 'asked'|'wait'|'on'|'over' }
   let askedK = null;      // an invite I sent and am waiting on
+  let host = false;       // true for the seal that made the room: the host starts the races, with the games the host has unlocked
+
+  /* Who is the host. Normally the one who made the room. If both or neither say so (an old save, two people joining the same word),
+     the seal with the smaller id is host, so both sides always agree. */
+  const amHost = () => {
+    if (!friend || !friend.p) return host;
+    const theirs = !!friend.p.host;
+    return host !== theirs ? host : String(oid) < String(friend.p.oid);
+  };
+  /* A game the host has can be played by the guest in this room, even if the guest has not unlocked it (nothing is unlocked for good).
+     Games still in developer mode are not lent: the guest needs them too. */
+  const lendable = (id) => !!RACE_GAMES[id] && (iOwn(id) || !(PN.GAMES[id] && PN.GAMES[id].dev));
+  /* Playing for coins (developer mode for now, and only when both seals have it on): it is a skill challenge: each player picks
+     their own stake of earned coins, and the challenge is for the smaller of the two, so nobody can lose more than they put in or more than the other risked. A draw gives the
+     stakes back. Worked out on each phone with no referee yet. */
+  const myCoins = () => Math.max(0, Math.floor((PN.Game.state && PN.Game.state.coins) || 0));
+  const betsOn = () => !!(PN.Game.state && PN.Game.state.dev && friend && friend.p && friend.p.dev);
+  const betHtml = (max) => {
+    const d = Math.max(1, Math.min(max, 10));
+    return '<div class="bet-pick"><input type="range" id="betIn" min="1" max="' + max + '" step="1" value="' + d + '" aria-label="' + tr('Your stake') + '">'
+      + '<div class="bet-num">' + UI().ic('coin') + '<b id="betNum">' + d + '</b></div></div><p class="note">' + tr('You have {0} coins.', max) + '</p>';
+  };
+  const betWire = (card) => { const i = card.querySelector('#betIn'), n = card.querySelector('#betNum'); if (i && n) i.addEventListener('input', () => { n.textContent = i.value; }); };
+  const betRead = (card) => { const i = card.querySelector('#betIn'); return Math.max(1, Math.min(myCoins(), parseInt(i && i.value, 10) || 1)); };
+  const roomGames = () => {
+    if (amHost()) return RACE_IDS.filter(iOwn);
+    const theirs = friend && friend.p.games ? friend.p.games : ['catch'];
+    return RACE_IDS.filter((id) => theirs.indexOf(id) >= 0 && lendable(id));
+  };
 
   const profile = () => {
     const st = PN.Game.state;
-    return { oid, name: String(st.name || '').slice(0, 24), stage: st.stage, appearance: st.appearance, wearing: st.wearing, games: RACE_IDS.filter(iOwn) };
+    return { oid, name: String(st.name || '').slice(0, 24), stage: st.stage, appearance: st.appearance, wearing: st.wearing, games: RACE_IDS.filter(iOwn), host, dev: !!st.dev };
   };
   const send = (kind, extra) => { if (wire) wire.send(Object.assign({ kind, from: me }, extra || {})); };
   const fname = () => UI().esc(friend ? friend.p.name || tr('Your friend') : tr('Your friend'));
@@ -184,7 +213,7 @@
   const LOSS_LIMIT = 5 * 60 * 1000, FRIEND_QUIET = 25000;
   let wireGen = 0, everUp = false, lostAt = 0, retryN = 0, retryT = null;
   const ROOM_KEY = 'pikkunorppa.room';
-  const remember = (code) => { if (code) store.set(ROOM_KEY, JSON.stringify({ code, at: Date.now() })); else store.set(ROOM_KEY, ''); };
+  const remember = (code) => { if (code) store.set(ROOM_KEY, JSON.stringify({ code, at: Date.now(), host })); else store.set(ROOM_KEY, ''); };
 
   function connect() {
     if (!room) return;
@@ -231,8 +260,9 @@
     paint();
   }
 
-  function join(code) {
+  function join(code, asHost) {
     leave(true);
+    host = !!asHost;
     room = code; everUp = false; lostAt = 0; retryN = 0;
     remember(code);
     connect();
@@ -241,7 +271,7 @@
   function leave(quiet) {
     if (wire) { send('bye'); wire.close(); }
     wireGen++; clearTimeout(retryT); stopPip(); PN.Games.net = null;
-    wire = null; room = null; remember('');
+    wire = null; room = null; host = false; remember('');
     clearInterval(pinger); pinger = null;
     if (friend && PN.Game.friendGo) PN.Game.friendGo();
     friend = null; askedK = null;
@@ -269,32 +299,38 @@
   /* ---------- racing ---------- */
   const canRace = () => PN.Game.raceReady && PN.Game.raceReady();
 
-  async function invite(game) {
+  async function invite(game, bet) {
     if (!friend || race) return;
     const why = canRace();
     if (why !== true) return;
     const k = uid(), seed = (Math.random() * 4294967296) >>> 0;
     askedK = k;
-    race = { k, game, seed, lang: PN.isFi() ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true };
-    send('invite', { game, seed, k, lang: race.lang });
+    race = { k, game, seed, lang: PN.isFi() ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true, bet: bet > 0 ? { me: bet, them: 0 } : null };
+    send('invite', { game, seed, k, lang: race.lang, bet: bet > 0 ? bet : 0 });
     UI().toast(tr('Asked <b>{0}</b> to race at {1}...', fname(), gameTitle(game)), 'globe', '', 4000);
     setTimeout(() => { if (race && race.k === k && race.state === 'asked') { race = null; askedK = null; UI().toast(tr('<b>{0}</b> did not answer.', fname()), 'globe', 'bad', 3600); } }, 30000);
   }
 
   async function gotInvite(m) {
     if (!RACE_GAMES[m.game]) { send('answer', { k: m.k, yes: false, why: 'game' }); return; }
-    if (!iOwn(m.game)) { send('answer', { k: m.k, yes: false, why: 'own' }); return; }
+    if (amHost()) { send('answer', { k: m.k, yes: false, why: 'host' }); return; }   // only the host starts races
+    if (!lendable(m.game)) { send('answer', { k: m.k, yes: false, why: 'own' }); return; }
     if (race || PN.Games.active || UI().modalOpen) { send('answer', { k: m.k, yes: false, why: 'busy' }); return; }
-    const title = gameTitle(m.game);
+    const title = gameTitle(m.game), theirBet = betsOn() ? Math.max(0, m.bet | 0) : 0;
+    if (theirBet && !myCoins()) { send('answer', { k: m.k, yes: false, why: 'coins' }); return; }
     PN.Audio.play('chirp');
-    const v = await UI().modal({ title: tr('A race!'), html: '<p>' + tr('<b>{0}</b> wants to race you at {1}.', fname(), title) + '</p>',
-      actions: [{ label: tr('Race'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+    const v = theirBet
+      ? await UI().modal({ title: tr('A coin challenge!'), html: '<p>' + tr('<b>{0}</b> challenges you at {1} and puts in {2} coins.', fname(), title, theirBet) + '</p><p>' + tr('Pick your own stake. The challenge is for the smaller of the two stakes: the higher score takes it, and a draw gives it back.') + '</p>' + betHtml(myCoins()),
+        actions: [{ label: tr('Race'), value: 1 }, { label: tr('Not now'), value: 0 }], onOpen: betWire, result: (val, card) => (val ? betRead(card) : 0) })
+      : await UI().modal({ title: tr('A race!'), html: '<p>' + tr('<b>{0}</b> wants to race you at {1}.', fname(), title) + '</p>',
+        actions: [{ label: tr('Race'), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (!friend) return;
-    if (v !== 1) { send('answer', { k: m.k, yes: false, why: 'no' }); return; }
+    if (!v) { send('answer', { k: m.k, yes: false, why: 'no' }); return; }
+    const myBet = theirBet ? v : 0;
     const why = canRace();
     if (why !== true) { send('answer', { k: m.k, yes: false, why: 'cannot' }); return; }
-    race = { k: m.k, game: m.game, seed: m.seed >>> 0, lang: m.lang === 'fi' ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'wait' };
-    send('answer', { k: m.k, yes: true });
+    race = { k: m.k, game: m.game, seed: m.seed >>> 0, lang: m.lang === 'fi' ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'wait', bet: myBet ? { me: myBet, them: theirBet } : null };
+    send('answer', { k: m.k, yes: true, bet: myBet });
     const k = m.k;
     setTimeout(() => { if (race && race.k === k && race.state === 'wait') { race = null; UI().toast(tr('The race was called off.'), 'globe', 'bad', 3600); } }, 8000);
   }
@@ -304,10 +340,11 @@
     askedK = null;
     if (!m.yes) {
       race = null;
-      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : tr('<b>{0}</b> said not now.', fname());
+      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : m.why === 'host' ? tr('Only the host can start a race.') : m.why === 'coins' ? tr('<b>{0}</b> has no coins for a challenge.', fname()) : tr('<b>{0}</b> said not now.', fname());
       UI().toast(msg, 'globe', 'bad', 3600);
       return;
     }
+    if (race.bet) { race.bet.them = Math.max(0, m.bet | 0); if (!race.bet.them) race.bet = null; }   // they joined without a bet (no developer mode there): just for fun
     if (canRace() !== true || PN.Games.active || UI().modalOpen) { race = null; return; }   // something came up here: the friend's 8 seconds run out and they are told
     send('go', { k: race.k });
     startRace();
@@ -317,7 +354,7 @@
   function startRace() {
     race.state = 'on';
     if (friend) race.name = friend.p.name;     // kept with the race, in case they leave before it is over
-    const ok = PN.Game.raceStart(race.game, { seed: race.seed, lang: race.lang, name: friend ? friend.p.name : '' });
+    const ok = PN.Game.raceStart(race.game, { seed: race.seed, lang: race.lang, name: friend ? friend.p.name : '', lent: !iOwn(race.game) && lendable(race.game) });
     if (!ok) { send('end', { k: race.k, s: 0, quit: true }); race = null; return; }
     PN.Games.net = { send: (kind, data) => send(kind, Object.assign({ k: race && race.k }, data)), tie: () => !!(friend && friend.p && String(oid) < String(friend.p.oid)) };
     paintRace();
@@ -553,8 +590,14 @@
     else if (a > b) { head = tr('You win!'); line = tr('You beat {0}.', name); cls = 'award'; }
     else if (a < b) { head = tr('{0} wins', name); line = tr('So close. Ask for a rematch!'); cls = 'sad'; }
     else { head = tr('A draw!'); line = tr('Exactly the same score.'); cls = 'coin'; }
+    let pot = '';
+    if (r.bet && r.bet.me > 0 && r.bet.them > 0) {
+      const stake = Math.min(r.bet.me, r.bet.them), out = r.me.quit !== r.them.quit ? (r.me.quit ? -1 : 1) : Math.sign(a - b), win = out > 0, draw = out === 0;
+      if (draw) pot = '<p class="note">' + tr('A draw, so you keep your {0} coins.', stake) + '</p>';
+      else { const got = PN.Game.raceCoins(win ? stake : -stake); pot = '<p class="note ' + (win ? 'up' : 'down') + '">' + (win ? tr('You won the challenge: +{0} coins.', got) : tr('You lost the challenge: −{0} coins.', -got)) + '</p>'; }
+    }
     PN.Audio.play(cls);
-    const html = '<div class="vs-board"><div><span>' + tr('You') + '</span><b>' + a + '</b></div><div><span>' + name + '</span><b>' + b + '</b></div></div><p>' + line + '</p>';
+    const html = pot + '<div class="vs-board"><div><span>' + tr('You') + '</span><b>' + a + '</b></div><div><span>' + name + '</span><b>' + b + '</b></div></div><p>' + line + '</p>';
     await UI().modal({ title: head, html, actions: [{ label: tr('OK'), value: 1 }] });
   }
 
@@ -573,6 +616,7 @@
   const Online = PN.Online = {
     get room() { return room; },
     get friend() { return friend ? friend.p : null; },
+    get host() { return !!room && amHost(); },
     racing: () => !!(race && (race.state === 'on' || race.state === 'over')),
     myEnd, verdict,
     /* Called once the game is up: if the page was opened from a shared link, go into that room. */
@@ -587,7 +631,7 @@
       try {                                          // the app was closed or reloaded a moment ago: go back into the room
         const r = JSON.parse(store.get(ROOM_KEY) || 'null');
         if (r && /^[A-Z]{4}$/.test(r.code) && Date.now() - r.at < 20 * 60 * 1000) {
-          join(r.code);
+          join(r.code, !!r.host);
           UI().toast(tr('Back in room <b>{0}</b>.', r.code), 'globe', '', 3200);
         }
       } catch (e) { /* nothing saved */ }
@@ -602,7 +646,7 @@
           actions: [{ label: tr('Make a room'), value: 'make' }, { label: tr('Join a room'), value: 'join', cls: 'ghost' }, { label: tr('Not now'), value: 0 }] });
         if (v === 'make') {
           const code = WORDS[Math.floor(Math.random() * WORDS.length)];
-          join(code);
+          join(code, true);
           UI().toast(tr('Your room code is <b>{0}</b>. Tell your friend!', code), 'seal', '', 6000);
         } else if (v === 'join') {
           const code = await UI().modal({ title: tr('Join a room'), html: '<p>' + tr('Type the four-letter word your friend sees.') + '</p><input class="field" id="roomIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-top:12px;text-transform:uppercase;letter-spacing:.3em;text-align:center;font-size:22px">',
@@ -614,12 +658,15 @@
         }
         return;
       }
-      const theirs = friend && friend.p.games ? friend.p.games : ['catch'];
-      const games = RACE_IDS.filter((id) => iOwn(id) && theirs.indexOf(id) >= 0);
-      const acts = friend && !race && games.length ? [{ label: tr('Race a game'), value: 'pick' }] : [];
+      const games = roomGames(), boss = amHost();
+      const acts = friend && boss && !race && games.length ? [{ label: tr('Race a game'), value: 'pick' }] : [];
       acts.push({ label: tr('Share invite link'), value: 'share', cls: friend ? 'ghost' : '' });
       const met = savedFriends().filter((f) => !friend || f.oid !== (friend.p && friend.p.oid)).slice(0, 5).map((f) => UI().esc(f.name)).join(', ');
+      const names = games.filter(iOwn).map(gameTitle).join(', '), lent = games.filter((id) => !iOwn(id)).map(gameTitle).join(', ');
       const text = (friend ? tr('<b>{0}</b> is on your shore.', fname()) : tr('Waiting for a friend. Your room code is <b>{0}</b>.', room))
+        + '</p><p class="note">' + (boss ? tr('You are the host: you start the races, and your friend can play every game you have unlocked.') : tr('{0} is the host and starts the races. You can play every game the host has unlocked.', friend ? fname() : tr('The host')))
+        + (friend && names ? '</p><p class="note">' + tr('Games in this room: {0}.', names) : '')
+        + (friend && lent ? '</p><p class="note">' + tr('Lent to you for this room only: {0}.', lent) : '')
         + (met ? '</p><p class="note">' + tr('Seals you have met: {0}.', met) : '');
       const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>', actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
       if (v === 'leave') leave();
@@ -628,9 +675,20 @@
         const pick = await UI().modal({ title: tr('Race a game'), html: '<p>' + tr('Both of you play the same game at the same time, and see how the other is doing in a corner of the screen.') + '</p>',
           actions: games.map((id) => ({ label: gameTitle(id), value: id, cls: 'ghost' })).concat([{ label: tr('Not now'), value: 0 }]) });
         if (!pick || !friend) return;
+        let bet = 0;
+        if (betsOn() && myCoins() > 0) {
+          const how = await UI().modal({ title: gameTitle(pick), html: '<p>' + tr('Play just for fun, or put some coins on it as a challenge? You each pick your own stake, and the challenge is for the smaller one.') + '</p>',
+            actions: [{ label: tr('Play for fun'), value: 'fun' }, { label: tr('Play for coins'), value: 'coins', cls: 'ghost' }, { label: tr('Not now'), value: 0 }] });
+          if (!how || !friend) return;
+          if (how === 'coins') {
+            bet = await UI().modal({ title: tr('Your stake'), html: '<p>' + tr('How many coins do you put in? {0} picks their own stake next.', fname()) + '</p>' + betHtml(myCoins()),
+              actions: [{ label: tr('Start the challenge'), value: 1 }, { label: tr('Cancel'), value: 0 }], onOpen: betWire, result: (val, card) => (val ? betRead(card) : 0) });
+            if (!bet || !friend) return;
+          }
+        }
         const why = canRace();
         if (why !== true) { PN.Game.raceRefuse(why); return; }
-        invite(pick);
+        invite(pick, bet);
       }
     },
   };

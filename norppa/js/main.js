@@ -656,10 +656,16 @@
     const c = S.canPlay(state);
     return c.ok ? true : c.why;
   };
+  G.raceCoins = function (n) {               // a coin challenge on an online race: what actually changed hands (never below 0 coins)
+    const before = state.coins;
+    state.coins = Math.max(0, before + Math.round(n));
+    save(); UI.refresh();
+    return state.coins - before;
+  };
   G.raceRefuse = function (why) { if (why === 'busy') A.play('nope'); else refuse(why); };
   G.raceStart = function (id, versus) {
     if (G.raceReady() !== true) return false;
-    if (!PN.GAMES[id] || !S.gameOwned(state, id) || (PN.GAMES[id].ext && !PN.Games.ext[id])) return false;
+    if (!PN.GAMES[id] || (!S.gameOwned(state, id) && !(versus && versus.lent && !PN.GAMES[id].dev)) || (PN.GAMES[id].ext && !PN.Games.ext[id])) return false;
     UI.closeSheet();
     seal.halt();
     PN.Games.start(id, versus);
