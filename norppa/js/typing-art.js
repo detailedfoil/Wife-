@@ -6,7 +6,7 @@
   function room(scene) {
     const canvas = document.createElement('canvas'), c = canvas.getContext('2d');
     const scenery = new Image();
-    let texture, width = 0, height = 0, sill = 0, sealX = 0, scale = 1;
+    let timer = 0, texture, width = 0, height = 0, sill = 0, sealX = 0, scale = 1;
 
     function fill(x, y, w, h, color) { c.fillStyle = color; c.fillRect(x, y, w, h); }
     function panel(x, y, w, h, r, color) {
@@ -38,7 +38,7 @@
     function paint() {
       const w = width, h = height;
       if (!w || !h) return;
-      const pixel = Math.min(1.6, window.devicePixelRatio || 1, 1800 / Math.max(w, h));
+      const pixel = Math.min(1.25, window.devicePixelRatio || 1, 1280 / Math.max(w, h));   // a modest picture: it is only a backdrop, and a big one is slow to redraw on a phone
       const cw = Math.max(1, Math.round(w * pixel)), ch = Math.max(1, Math.round(h * pixel));
       if (canvas.width !== cw || canvas.height !== ch || !texture) {
         if (texture) texture.dispose();
@@ -92,7 +92,11 @@
     return (w, h, y, x, zoom) => {
       const nextSill = Math.max(16, Math.round(y));
       if (width === w && height === h && sill === nextSill && sealX === x && scale === zoom) return;
-      width = w; height = h; sill = nextSill; sealX = x; scale = zoom; paint();
+      width = w; height = h; sill = nextSill; sealX = x; scale = zoom;
+      // While the phone keyboard slides up the window size changes many times a second: redraw the room once it settles, not on every step
+      // (redrawing and re-uploading the whole picture each time made the game freeze on launch).
+      if (!texture) { paint(); return; }
+      clearTimeout(timer); timer = setTimeout(paint, 120);
     };
   }
 
