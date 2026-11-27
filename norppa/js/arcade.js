@@ -2387,13 +2387,15 @@
 
     function nextWord(again) {   // again: a typo, so the same word starts over
       if (!again) word = pick();
-      typed = 0; typo = false; mode = 'type'; t = 0; said = -1;
+      const first = n === 0 && !again;   // only the very first word of a run gets the 3, 2, 1; after that the clock starts as the word appears
+      typed = 0; typo = false; mode = first ? 'show' : 'type'; t = 0; said = -1;
       win = PN.typeWindow(n, word.length, mum);
-      cardEl.className = 'ty-card'; countEl.className = 'ty-count'; countEl.textContent = '';
+      cardEl.className = first ? 'ty-card show' : 'ty-card'; countEl.className = 'ty-count'; countEl.textContent = '';
+      if (first) { boxEl.classList.add('wait'); boxEl.classList.remove('live'); }   // nothing to type yet: the box stays out of sight (the keyboard stays up)
       barEl.style.width = '100%'; barEl.className = '';
       inEl.value = '';
       wordEl.innerHTML = ''; paintWord(); setPh();
-      startTyping();   // no 3, 2, 1: the clock starts as the word appears
+      if (!first) startTyping();
     }
     function startTyping() {
       mode = 'type'; t = 0;
