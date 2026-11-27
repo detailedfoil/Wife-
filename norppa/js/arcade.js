@@ -2387,7 +2387,7 @@
 
     function nextWord(again) {   // again: a typo, so the same word starts over
       if (!again) word = pick();
-      const first = n === 0 && !again;   // only the very first word of a run gets the 3, 2, 1; after that the clock starts as the word appears
+      const first = n === 0 || again;   // the first word of a run and a restart after a typo get the 3, 2, 1; other words start as they appear
       typed = 0; typo = false; mode = first ? 'show' : 'type'; t = 0; said = -1;
       win = PN.typeWindow(n, word.length, mum);
       cardEl.className = first ? 'ty-card show' : 'ty-card'; countEl.className = 'ty-count'; countEl.textContent = '';
