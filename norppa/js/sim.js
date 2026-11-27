@@ -117,7 +117,7 @@
       taste: {}, tasteGoal: {}, tasteAt: now, tasteRollAt: 0, tasteKey: '', skip: [],
       counters: { pets: 0, feeds: 0, washes: 0, tucks: 0, poops: 0, dives: 0, games: 0, balls: 0,
         bestCatch: 0, bestBall: 0, bestPairs: 0, saunas: 0, forgiven: 0, pupsLost: 0, pupsGrown: 0 },
-      settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true, medicine: false, stats: true, mumMode: false },   // medicine: the daily pill routine is off until it is switched on in Settings
+      settings: { sound: true, music: true, instrument: 'original', sky: 'live', haptics: true, medicine: false, stats: true, mumMode: false, energyCard: true },   // medicine: the daily pill routine is off until it is switched on in Settings
       tut: 0, pupsFresh: 1,   // pupsFresh: pups at home when skill points arrived were started again, once; a new seal never needs it
     };
     PN.Appearance.born(s, s.seed);

@@ -6,6 +6,10 @@
   'use strict';
 
   const FI = {
+    'Don\'t show me again': 'Älä näytä uudestaan',
+    'Got it. You can turn this back on in Settings.': 'Selvä. Voit laittaa tämän takaisin päälle asetuksista.',
+    'Energy drink reminder': 'Energiajuomamuistutus',
+    'A card offers an energy drink when she runs out of energy. The Play and Feed pages still show the hint when it is off.': 'Kortti tarjoaa energiajuomaa, kun energia loppuu. Leiki- ja Ruoki-sivut näyttävät vihjeen silloinkin, kun tämä on pois päältä.',
     /* ---------- out of energy (27 Nov 2026) ---------- */
     '{0} is low on energy.': 'Energia on vähissä.',
     'Tap an energy drink to give her a can right now.': 'Napauta energiajuomaa niin hän saa tölkin heti.',

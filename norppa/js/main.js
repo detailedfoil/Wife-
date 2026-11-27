@@ -1003,6 +1003,7 @@
   G.energyLow = () => !state.asleep ? state.stats.energy < 20 : napping() && S.sleepLeft(state) >= 15 * 60e3;
   async function tiredCard(why) {
     if (tiredOpen || !G.energyLow()) return false;
+    if (why !== 'sheet' && state.settings.energyCard === false) return false;   // switched off: only the Play sheet button opens it
     tiredOpen = true;
     if (why !== 'sheet' && why !== 'blocked') tiredSeen = true;
     try {
@@ -1017,11 +1018,13 @@
             + '<small>' + tr('+{0} energy', c.it.energy) + (wakes ? ', ' + tr('wakes her up') : '') + '</small></span>' };
       });
       acts.push({ value: 'later', cls: 'ghost', label: tr(asleep ? 'Let her sleep' : 'Not now') });
+      if (why !== 'sheet') acts.push({ value: 'never', cls: 'ghost quiet', label: tr('Don\'t show me again') });
       const cheapest = cans[0];
       let html = '<p>' + (asleep ? tr('{0} fell asleep from tiredness. She wakes by herself in about {1}.', UI.esc(state.name), UI.mins(S.sleepLeft(state))) : tr('{0} is almost out of energy and will fall asleep soon.', UI.esc(state.name))) + '</p>';
       html += opts.length ? '<p>' + (own.length ? tr('Skip the wait: an energy drink wakes her and fills her up right now.') : tr('The larder has no energy drinks, but you have the coins. Skip the wait with one from the shop.')) + '</p>'
         : '<p>' + tr('There are no energy drinks in the larder, and not enough coins for one yet. The cheapest costs {0} coins.', cheapest ? cheapest.cost : '') + '</p>';
       const v = await UI.modal({ art: opts.length ? PN.Thumbs.get(opts[0].id) : null, title: asleep ? tr('{0} is out of energy', UI.esc(state.name)) : tr('{0} is running low', UI.esc(state.name)), html, actions: acts, tapAway: 'later', over: true, layout: 'energy' });
+      if (v === 'never') { state.settings.energyCard = false; save(); UI.toast(tr('Got it. You can turn this back on in Settings.'), 'bolt'); return true; }
       if (!v || v === 'later') return true;
       const [kind, id] = v.split(':');
       if (kind === 'buy') { const coins = state.coins; G.buy(id); if (state.coins === coins) return true; }
