@@ -359,6 +359,7 @@
       reindeer: [0xb48d6d, 0xf3e4cf], bear: [0x987254, 0xe2c5a1], arcticfox: [0xe6edf4, 0xffffff], hare: [0xf3f1ec, 0xffffff],
       owl: [0xae9b88, 0xf5e9d6], moose: [0x92735d, 0xd4b396], lynx: [0xdcb781, 0xffefd8], squirrel: [0xc98961, 0xffedd9],
     };
+    const woolColors = { reindeer: 0x9f4547, bear: 0x548477, arcticfox: 0x7192bb, hare: 0xac6884, moose: 0xb87c41, lynx: 0x517e89, squirrel: 0x7b769c };
     function critter(kind) {
       const fur = mat(FUR[kind][0]), pale = mat(FUR[kind][1]), black = mat(0x1d1a1a, { roughness: 0.4 }), bone = mat(0xdccdaa), pink = mat(0xf7b8c4);
       const g = new T.Group(), head = new T.Group(), eyes = [];
@@ -370,6 +371,14 @@
         g.add(U.rod([s * 0.34, 1.2, 0.1], [s * 0.27, 0.96, 0.5], 0.105, fur, 16));
         g.add(U.ball(0.13, fur, s * 0.27, 0.95, 0.54, 1, 0.72, 1.1, 20));
       });
+      if (woolColors[kind]) {
+        // A folded wool scarf nestles into the chest, below the animated chin.
+        const wool = mat(woolColors[kind], { roughness: 1 });
+        const tail = U.ball(1, wool, 0.19, 1.12, 0.37, 0.082, 0.17, 0.043, 20);
+        tail.rotation.z = 0.31;
+        const fold = U.ball(1, wool, 0, 1.29, 0.06, 0.36, 0.115, 0.33, 24);
+        fold.rotation.z = -0.09; g.add(tail, fold);
+      }
       head.position.set(0, 1.7, 0.06);
       head.scale.setScalar(1.10);
       // Broad plush cheeks and a large forehead, with features low on the face.
@@ -471,7 +480,7 @@
         });
         t.wrapS = t.wrapT = T.RepeatWrapping; return t;
       };
-      const topTex = planks('#c9a06e', 'rgba(90,55,25,0.55)', 4); topTex.repeat.set(3, 1.5);
+      const topTex = planks('#d4ad81', 'rgba(100,65,42,0.27)', 4); topTex.repeat.set(3, 1.5);
       const floorTex = planks('#6b4a30', 'rgba(30,18,8,0.6)', 6); floorTex.repeat.set(4, 3);
       const topMat = new T.MeshStandardMaterial({ map: topTex, roughness: 0.7 });
       scene.add(U.box(9, 0.14, 3.2, topMat, 0, -0.07, 0.65));                                    // the counter top, from the customer's edge to ours
@@ -486,16 +495,40 @@
       // a window on the winter night
       const night = U.tex(256, 256, (g, w, h) => {
         const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#0a1230'); sky.addColorStop(1, '#2b4686'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
-        for (let i = 0; i < 7; i++) { const x = 20 + i * 34, a = g.createLinearGradient(0, 20, 0, 150); a.addColorStop(0, 'rgba(90,240,170,0)'); a.addColorStop(0.5, 'rgba(90,240,170,0.38)'); a.addColorStop(1, 'rgba(90,240,170,0)'); g.fillStyle = a; g.fillRect(x, 20 + (i % 3) * 10, 22, 130); }
-        g.fillStyle = '#e8f1ff'; g.fillRect(0, h - 44, w, 44);
+        // Curved aurora ribbons fade into a blue hour sky above the frozen lake.
+        for (let band = 0; band < 2; band++) {
+          const y = 55 + band * 26, ribbon = g.createLinearGradient(0, y - 30, 0, y + 54);
+          ribbon.addColorStop(0, 'rgba(121,226,205,0)'); ribbon.addColorStop(0.68, 'rgba(121,226,205,.30)');
+          ribbon.addColorStop(1, 'rgba(169,224,221,.05)'); g.fillStyle = ribbon;
+          g.beginPath(); g.moveTo(-5, y + 34); g.bezierCurveTo(85, y - 40, 126, y + 72, 262, y - 13);
+          g.lineTo(262, y - 48); g.bezierCurveTo(141, y + 39, 85, y - 81, -5, y - 5); g.fill();
+        }
         const r2 = U.rng(9);
-        for (let i = 0; i < 6; i++) { const x = 16 + i * 44 + r2() * 10, s = 50 + r2() * 40; g.fillStyle = '#16332c'; g.beginPath(); g.moveTo(x, h - 40 - s); g.lineTo(x + s * 0.34, h - 36); g.lineTo(x - s * 0.34, h - 36); g.closePath(); g.fill(); g.fillStyle = '#e8f1ff'; g.beginPath(); g.moveTo(x, h - 40 - s); g.lineTo(x + s * 0.12, h - 40 - s * 0.66); g.lineTo(x - s * 0.12, h - 40 - s * 0.66); g.closePath(); g.fill(); }
-        g.fillStyle = '#ffffff'; for (let i = 0; i < 46; i++) { g.beginPath(); g.arc(r2() * w, r2() * h, 1 + r2() * 1.8, 0, TAU); g.fill(); }
+        g.fillStyle = '#dce6ef';
+        for (let i = 0; i < 28; i++) { g.beginPath(); g.arc(r2() * w, r2() * 140, 0.6 + r2(), 0, TAU); g.fill(); }
+        g.fillStyle = '#f8e6be'; g.beginPath(); g.arc(184, 52, 13, 0, TAU); g.fill();
+        g.fillStyle = '#536f90'; g.beginPath(); g.moveTo(0, 183); g.quadraticCurveTo(64, 128, 132, 161);
+        g.quadraticCurveTo(196, 179, w, 142); g.lineTo(w, h); g.lineTo(0, h); g.fill();
+        g.fillStyle = '#a7c6d6'; g.fillRect(0, 194, w, 62);
+        for (let i = 0; i < 12; i++) {
+          const x = i * 25 - 7, height = 18 + 24 * r2();
+          g.fillStyle = '#334f62'; g.beginPath(); g.moveTo(x, 195 - height);
+          g.quadraticCurveTo(x + 3, 181, x + height * 0.29, 196);
+          g.quadraticCurveTo(x, 201, x - height * 0.29, 196); g.fill();
+        }
+        g.fillStyle = '#e3eff1'; g.beginPath(); g.moveTo(0, 214); g.bezierCurveTo(75, 202, 138, 249, w, 216);
+        g.lineTo(w, h); g.lineTo(0, h); g.fill();
       });
       const frame = mat(0xf2e6cf);
       const win = U.group(U.mesh(new T.PlaneGeometry(1.1, 1.1), new T.MeshBasicMaterial({ map: night })),
         U.box(1.26, 0.09, 0.08, frame, 0, 0.59, 0), U.box(1.26, 0.09, 0.08, frame, 0, -0.59, 0), U.box(0.09, 1.26, 0.08, frame, 0.59, 0, 0), U.box(0.09, 1.26, 0.08, frame, -0.59, 0, 0),
         U.box(0.04, 1.1, 0.05, frame, 0, 0, 0), U.box(1.1, 0.04, 0.05, frame, 0, 0, 0), U.box(1.4, 0.05, 0.2, frame, 0, -0.66, 0.06));
+      const pot = mat(0xab6255), leaf = mat(0x749d88);
+      win.add(U.cyl(0.079, 0.055, 0.12, pot, -0.37, -0.57, 0.09, 16));
+      [-1, 0, 1].forEach(side => {
+        const sprig = U.ball(1, leaf, -0.37 + side * 0.044, -0.45, 0.09, 0.035, 0.092, 0.027, 16);
+        sprig.rotation.z = -side * 0.56; win.add(sprig);
+      });
       scene.add(win); decor.win = win;
       // a sign
       const chalk = U.tex(256, 170, (g, w, h) => {
@@ -618,10 +651,12 @@
     }
     function drawSlip(g) {
       const pad = 34, top = 150, pitch = 50, w = slip.usedW;
-      g.fillStyle = '#fffdf6'; g.fillRect(0, 0, w, slip.used);
+      g.fillStyle = '#fffaf0'; g.fillRect(0, 0, w, slip.used);
+      g.fillStyle = '#32665c'; g.fillRect(0, 0, w, 8);
+      g.fillStyle = '#c89066'; g.fillRect(0, 11, w, 3);
       const dash = (y) => { g.strokeStyle = '#8d8a80'; g.lineWidth = 3; g.setLineDash([10, 8]); g.beginPath(); g.moveTo(pad, y); g.lineTo(w - pad, y); g.stroke(); g.setLineDash([]); };
       const fit = (text, maxW, size, bold) => { let s = size; do { g.font = (bold ? 'bold ' : '') + s + 'px ' + MONO; s -= 1; } while (g.measureText(text).width > maxW && s > 12); };
-      g.fillStyle = '#222'; g.textBaseline = 'middle'; g.textAlign = 'center';
+      g.fillStyle = '#28594e'; g.textBaseline = 'middle'; g.textAlign = 'center';
       g.font = 'bold 38px ' + MONO; g.fillText('KAHVILA NORPPA', w / 2, 52);
       g.font = '26px ' + MONO; g.fillText(tr('Order {0}', slip.n), w / 2, 96); dash(126);
       slip.rows.forEach((row, i) => {

@@ -1308,8 +1308,10 @@
     }
     const card = (c, down, flip) => {
       const cls = (fresh.has(c) ? ' deal' : '') + (flip ? ' flip' : '');
-      return down ? '<span class="bj-card down' + cls + '"></span>'
-        : '<span class="bj-card' + (Math.floor(c / 13) === 1 || Math.floor(c / 13) === 2 ? ' red' : '') + cls + '"><span>' + RANKS[c % 13] + '<i>' + SUITS[Math.floor(c / 13)] + '</i></span></span>';
+      if (down) return '<span class="bj-card down' + cls + '"></span>';
+      const index = Math.floor(c / 13), suit = SUITS[index];
+      return '<span class="bj-card' + (index === 1 || index === 2 ? ' red' : '') + cls + '"><small aria-hidden="true">' + suit
+        + '</small><span>' + RANKS[c % 13] + '<i>' + suit + '</i></span></span>';
     };
     /* a tower of chips that grows with the tokens she has */
     function chips() {
@@ -1402,6 +1404,29 @@
       const trim = U.torus(2.47, 0.032, U.mat(0xd8a94b, { metalness: 0.28, roughness: 0.42 }), 0, -0.71, 0, PI * 2, 96);
       trim.rotation.x = PI / 2;
       view.scene.add(trim);
+      const rail = U.torus(2.55, 0.105, U.mat(0x784b38, { roughness: 0.65 }), 0, -0.79, 0, PI * 2, 96);
+      rail.rotation.x = PI / 2; view.scene.add(rail);
+      // One painted wall behind the dealer. The pools of lamplight stay soft at phone scale.
+      const wall = U.tex(768, 256, (c, w, h) => {
+        const shade = c.createLinearGradient(0, 0, 0, h);
+        shade.addColorStop(0, '#26444a'); shade.addColorStop(1, '#163437');
+        c.fillStyle = shade; c.fillRect(0, 0, w, h);
+        for (let x = 0; x < w; x += 96) {
+          c.strokeStyle = '#345052'; c.lineWidth = 2; c.strokeRect(x + 6, -12, 84, 208);
+          c.strokeStyle = '#2e494c'; c.strokeRect(x + 11, -12, 74, 203);
+        }
+        c.fillStyle = '#705a43'; c.fillRect(0, 205, w, 4);
+        [290, 478].forEach(x => {
+          const light = c.createRadialGradient(x, 143, 2, x, 143, 78);
+          light.addColorStop(0, 'rgba(255,209,134,.45)'); light.addColorStop(1, 'rgba(255,209,134,0)');
+          c.fillStyle = light; c.fillRect(x - 78, 65, 156, 156);
+          c.fillStyle = '#b99865'; c.fillRect(x - 2, 141, 4, 20); c.fillRect(x - 7, 158, 14, 3);
+          c.fillStyle = '#ffde9f'; c.beginPath(); c.moveTo(x - 6, 128); c.lineTo(x + 6, 128);
+          c.lineTo(x + 12, 144); c.lineTo(x - 12, 144); c.closePath(); c.fill();
+        });
+      });
+      wall.wrapS = T.RepeatWrapping; wall.repeat.x = 3;
+      view.scene.add(U.mesh(new T.PlaneGeometry(36, 4), new T.MeshBasicMaterial({ map: wall }), 0, 0.70, -4.2));
       view.camera.position.set(0, 0.5, 4.6);
       el = document.getElementById('bjTable');
       el.addEventListener('click', (e) => { const b = e.target.closest('[data-bj]'); if (b && !b.disabled) act(b.dataset.bj); });
@@ -2786,6 +2811,28 @@
     });
     groups.forEach(({ part, transforms }) => instanced(bus, part.geometry, part.material, transforms));
   }
+  // The same uncoloured upholstery takes the blue seat dye and each heat-map colour.
+  let upholstery, stopEnamel, streetMap, chassisShade;
+  function seatCloth() {
+    return U.tex(128, 128, (c, w, h) => {
+      c.fillStyle = '#fafafa'; c.fillRect(0, 0, w, h);
+      c.strokeStyle = '#dfdfdf'; c.lineWidth = 2; c.strokeRect(9, 9, w - 18, h - 18);
+      c.strokeStyle = '#eeeeee'; c.lineWidth = 3;
+      for (let x = 19; x < w - 18; x += 18) {
+        c.beginPath(); c.moveTo(x, 24); c.lineTo(x + 6, 19); c.lineTo(x + 12, 24); c.stroke();
+      }
+    });
+  }
+  function stopSign() {
+    return U.tex(96, 112, (c, w, h) => {
+      c.fillStyle = '#f6d481'; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#305674'; c.fillRect(10, 10, w - 20, h - 20);
+      c.fillStyle = '#fff2c9'; c.fillRect(24, 30, 48, 46);
+      c.fillRect(29, 74, 8, 9); c.fillRect(59, 74, 8, 9);
+      c.fillStyle = '#456b84'; c.fillRect(29, 35, 38, 19);
+      c.fillRect(30, 64, 6, 5); c.fillRect(60, 64, 6, 5);
+    });
+  }
   function build() {
     const scene = new T.Scene(); scene.background = new T.Color(0xcbdfe5);
     scene.add(new T.HemisphereLight(0xfffaf0, 0x718d9b, 2.0));
@@ -2797,15 +2844,36 @@
       round: roundedBox(), ball: geo(new T.SphereGeometry(1, 16, 12)),
       tire: geo(new T.CylinderGeometry(0.60, 0.60, 0.28, 20)),
       hub: geo(new T.CylinderGeometry(0.24, 0.24, 0.30, 16)),
+      shade: geo(new T.PlaneGeometry(1, 1)),
       hit: geo(new T.BoxGeometry(0.96, 0.10, 1.10)),
       marker: geo(new T.TorusGeometry(0.38, 0.035, 8, 28)),
       arrow: geo(new T.ConeGeometry(0.30, 0.55, 16)),
     };
+    if (!streetMap) {
+      streetMap = U.tex(256, 256, (c, w, h) => {
+        const tint = c.createLinearGradient(0, 0, w, 0);
+        [[0, '#b8cad1'], [.07, '#98acb7'], [.22, '#869aa8'], [.28, '#7c919f'], [.38, '#8da1ad'],
+          [.62, '#8da1ad'], [.72, '#7c919f'], [.78, '#869aa8'], [.93, '#98acb7'], [1, '#b8cad1']].forEach(([at, col]) => tint.addColorStop(at, col));
+        c.fillStyle = tint; c.fillRect(0, 0, w, h);
+        const r = U.rng(49); c.fillStyle = 'rgba(223,236,240,.12)';
+        for (let i = 0; i < 160; i++) c.fillRect(r() * w, r() * h, 0.8 + r() * 1.5, 1 + r() * 6);
+      });
+      streetMap.wrapT = T.RepeatWrapping; streetMap.repeat.y = 22;
+      chassisShade = U.tex(64, 64, (c) => {
+        const shade = c.createRadialGradient(32, 32, 10, 32, 32, 32);
+        shade.addColorStop(0, 'rgba(34,52,64,.38)'); shade.addColorStop(.65, 'rgba(34,52,64,.24)'); shade.addColorStop(1, 'rgba(34,52,64,0)');
+        c.fillStyle = shade; c.fillRect(0, 0, 64, 64);
+      });
+    }
+    if (!upholstery) upholstery = seatCloth();
+    if (!stopEnamel) stopEnamel = stopSign();
     materials = {
+      sign: mat(0xffffff, { map: stopEnamel }),
+      shade: mat(0xffffff, { map: chassisShade, transparent: true, depthWrite: false }), runner: mat(0x607f87),
       paint: mat(0xf3bc42), trim: mat(0x28568a), cream: mat(0xf4eee0), floor: mat(0xe9d7b5),
-      seat: mat(0x6b9bdd), cushion: mat(0xffffff), frame: mat(0x315584), tire: mat(0x334453), hub: mat(0xb6cbd0),
+      seat: mat(0x6b9bdd), cushion: mat(0xffffff, { map: upholstery }), frame: mat(0x315584), tire: mat(0x334453), hub: mat(0xb6cbd0),
       glass: mat(0xa8def1, { roughness: 0.18, transparent: true, opacity: 0.20, depthWrite: false }), light: mat(0xffe4a2, { emissive: 0xffd388, emissiveIntensity: 0.35 }),
-      red: mat(0xdc807b), road: mat(0x7f919d), line: mat(0xeaf1e8), snow: mat(0xe6f1ed),
+      red: mat(0xdc807b), road: mat(0xffffff, { map: streetMap }), line: mat(0xeaf1e8), snow: mat(0xe6f1ed),
       green: mat(0x62a984), gold: mat(0xffd36b, { emissive: 0xffcc54, emissiveIntensity: 0.4 }),
       mint: mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.25 }), blue: mat(0x3975a1),
     };
@@ -2839,17 +2907,33 @@
       for (let z = -25; z <= 25; z += 3.2) box(scenery, materials.line, 0.07, 0.015, 1.35, sign * (half + 1.1), -0.515, z);
       for (let i = 0; i < 5; i++) {
         ball(scenery, materials.snow, sign * (half + 2.4 + i % 2), -0.50, -10 + i * 5, 0.8, 0.20, 1.4);
-        ball(scenery, materials.green, sign * (half + 3.3), -0.30, -11 + i * 5, 0.65, 0.5, 0.65);
+        const bushX = sign * (half + 3.3 + 0.25 * (i % 2)), bushZ = -11 + i * 5;
+        ball(scenery, materials.green, bushX, -0.30, bushZ, 0.65, 0.5, 0.65);
+        ball(scenery, materials.snow, bushX - 0.05, -0.07, bushZ + 0.04, 0.59, 0.34, 0.61);
       }
     });
+    // A ploughed verge and a small enamel stop marker alongside the passenger side.
+    const verge = half + 2.28;
+    box(scenery, materials.snow, 0.92, 0.17, 150, verge, -0.49, 0);
+    box(scenery, materials.frame, 0.09, 1.95, 0.09, verge, 0.49, 5.8);
+    const sign = box(scenery, materials.sign, 0.73, 0.86, 0.08, verge, 1.35, 5.8);
+    sign.rotation.y = Math.PI - 0.22;
+    box(scenery, materials.snow, 0.78, 0.08, 0.12, verge, 1.79, 5.8).rotation.y = sign.rotation.y;
+    const shade = new T.Mesh(geometry.shade, materials.shade);
+    shade.rotation.x = -Math.PI / 2; shade.position.set(0.09, -0.51, 0.12);
+    shade.scale.set(busWidth * 1.48, (11.8 + busExtra) * 1.22, 1); bus.add(shade);
     // Chassis, exposed floor, low cutaway walls and separate window panels.
     box(bus, materials.trim, busWidth, 0.95, 11.8 + busExtra, 0, 0.12, -0.1);
     box(bus, materials.floor, busWidth - 0.25, 0.14, 11.25 + busExtra, 0, 0.68, 0.02);
+    // Rubber aisle runner with a warm binding, visible between the seat pairs.
+    box(bus, materials.runner, 0.53, 0.015, 10.98 + busExtra, 0, 0.762, 0);
     [-1, 1].forEach(sign => {
+      box(bus, materials.cream, 0.027, 0.015, 10.98 + busExtra, sign * 0.237, 0.773, 0);
       const x = sign * (half - 0.10);
       box(bus, materials.paint, 0.18, 0.53, 10.9 + busExtra, x, 0.86, -0.05);
       box(bus, materials.cream, 0.20, 0.10, 10.9 + busExtra, x, 1.14, -0.05);
       for (let i = 0; i < rows; i++) box(bus, materials.glass, 0.10, 0.25, 0.89, x, 1.31, seats[i * Math.ceil(round / 4) * 2].z);
+      box(bus, materials.cream, 0.035, 0.065, 10.68 + busExtra, sign * (half - 0.005), 0.73, -0.05);
       // Mirror stalks are outside the cabin, away from the selectable seats.
       box(bus, materials.trim, 0.56, 0.08, 0.10, sign * (half + 0.15), 1.16, front(-5.12));
       box(bus, materials.glass, 0.20, 0.30, 0.14, sign * (half + 0.40), 1.19, front(-5.12));
