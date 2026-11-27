@@ -2387,20 +2387,20 @@
 
     function nextWord(again) {   // again: a typo, so the same word starts over
       if (!again) word = pick();
-      typed = 0; typo = false; mode = 'show'; t = 0; said = -1;
+      typed = 0; typo = false; mode = 'type'; t = 0; said = -1;
       win = PN.typeWindow(n, word.length, mum);
-      cardEl.className = 'ty-card show'; countEl.className = 'ty-count'; countEl.textContent = '';
-      boxEl.classList.add('wait'); boxEl.classList.remove('live');   // nothing to type yet: the box stays out of sight (the keyboard stays up)
+      cardEl.className = 'ty-card'; countEl.className = 'ty-count'; countEl.textContent = '';
       barEl.style.width = '100%'; barEl.className = '';
       inEl.value = '';
       wordEl.innerHTML = ''; paintWord(); setPh();
+      startTyping();   // no 3, 2, 1: the clock starts as the word appears
     }
     function startTyping() {
       mode = 'type'; t = 0;
       cardEl.className = 'ty-card'; void cardEl.offsetWidth; cardEl.className = 'ty-card go';   // the card flashes green and the box pops up: now is the time to look at the keyboard
       boxEl.classList.remove('wait'); boxEl.classList.add('live'); boxEl.classList.remove('pop'); void boxEl.offsetWidth; boxEl.classList.add('pop');
-      countEl.className = 'ty-count go pop'; countEl.textContent = tr('Go!');
-      A.play('go'); A.play('chirp', 0.5);
+      countEl.className = 'ty-count'; countEl.textContent = '';
+      A.play('chirp', 0.5);
       const st = PN.Game.state;
       if (st && st.settings.haptics && navigator.vibrate) { try { navigator.vibrate(40); } catch (e) { /* not allowed here */ } }
       paintWord(); setPh();
