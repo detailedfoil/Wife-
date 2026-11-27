@@ -151,7 +151,7 @@
     await pupNews();
     await dailyGift();
     G.ready = true;
-    if (PN.Online) PN.Online.joinPending();       // opened from a friend's shared link
+    if (PN.Online) PN.Online.joinPending();       // back into a room after a reload
     S.save(state);
     if (PN.Track) PN.Track.start(() => state);
   }
