@@ -8,7 +8,7 @@
   const FI = {
     /* ---------- Typing Seal (27 Nov 2026) ---------- */
     'Typing Seal': 'Kirjoittava norppa',
-    'Read the word during a quick 3, 2, 1, then type it before the time runs out. Every word catches a fish. Three mistakes and it is over.': 'Lue sana nopean 3, 2, 1 aikana ja kirjoita se ennen kuin aika loppuu. Jokainen sana nappaa kalan. Kolme virhettä ja peli päättyy.',
+    'A word appears: type it before the time runs out. Every word catches a fish. Three mistakes and it is over.': 'Sana ilmestyy: kirjoita se ennen kuin aika loppuu. Jokainen sana nappaa kalan. Kolme virhettä ja peli päättyy.',
     'words typed': 'sanaa kirjoitettu',
     'Tap the box and type the word.': 'Napauta ruutua ja kirjoita sana.',
     'Press any key and type the word.': 'Paina mitä tahansa näppäintä ja kirjoita sana.',
@@ -23,9 +23,8 @@
     'Ready?': 'Valmiina?',
     'Type the word': 'Kirjoita sana',
     'Tap the box to start typing.': 'Napauta ruutua ja aloita kirjoittaminen.',
-    'A word appears with a quick 3, 2, 1. Read it, then type it. No Enter needed.': 'Sana tulee näkyviin nopean 3, 2, 1 -laskennan kanssa. Lue se ja kirjoita se. Enteriä ei tarvita.',
+    'A word appears. Type it before the bar runs out. No Enter needed.': 'Sana ilmestyy. Kirjoita se ennen kuin palkki loppuu. Enteriä ei tarvita.',
     'Got it! Every word you finish catches a fish.': 'Hienoa! Jokainen valmis sana nappaa kalan.',
-    'The word stays on screen, so you can read it once and then just type. Tap to go on.': 'Sana pysyy näytöllä, joten voit lukea sen kerran ja sitten vain kirjoittaa. Jatka napauttamalla.',
     'A typo costs a heart, and so does running out of time.': 'Kirjoitusvirhe vie sydämen, samoin aikaan jääminen.',
     'You have three hearts. Lose them all and the run is over. Tap to go on.': 'Sinulla on kolme sydäntä. Kun ne loppuvat, peli päättyy. Jatka napauttamalla.',
     'Words without a typo build a streak, and the faster you go the faster the floes drift.': 'Sanat ilman virheitä kasvattavat putkea, ja mitä nopeampi olet, sitä nopeammin jäälautat ajelehtivat.',
