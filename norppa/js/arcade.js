@@ -2443,6 +2443,9 @@
       str = str.normalize('NFC');   // an accent can arrive as a letter plus a combining mark on some keyboards
       for (let i = 0; i < str.length && mode === 'type'; i++) {
         const c = str[i].toLowerCase();
+        // Spaces are optional: typing one that is due counts, one that is not due does nothing, and a letter typed where a space was due skips it. No penalty either way.
+        if (c === ' ' && word[typed] !== ' ') continue;
+        if (c !== ' ' && word[typed] === ' ') typed++;
         if (c === word[typed]) {
           typed++; A.play('tap', 0.12); smash(c, true);
           if (typed === word.length) { done(); break; }
