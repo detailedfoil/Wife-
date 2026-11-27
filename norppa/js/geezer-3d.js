@@ -311,15 +311,59 @@
   };
 
   /* Big Dave as a proper sculpted model (art/geezer/dave.glb, made by the owner with Meshy AI from an
-     original ChatGPT picture; credit Meshy if it ships). It sits in the chair on a pivot at the seat so
+     original ChatGPT picture, then smoothed and shrunk with tools/geezer/smooth.mjs; credit Meshy if it ships). It sits in the chair on a pivot at the seat so
      it can breathe, lean back for a swig, bounce at the telly and nod. */
   const SEAT = new T.Vector3(0, 0.38, -0.95), MS = 1.1;
+  /* A simple arm rig made in code: each arm (with the can or the remote) gets a bone at the
+     shoulder. Weights come from how far out the vertex is, leaving out the grey trackies
+     (read from the texture), then blurred across the mesh so nothing tears. */
+  function rigArms(src) {
+    const geo = src.geometry, pos = geo.attributes.position, uv = geo.attributes.uv, n = pos.count;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+    const cx = cv.getContext('2d'); cx.drawImage(src.material.map.image, 0, 0, 256, 256);
+    const px = cx.getImageData(0, 0, 256, 256).data;
+    const grey = (i) => {
+      const u = Math.min(255, Math.max(0, Math.floor(uv.getX(i) * 256))), v = Math.min(255, Math.max(0, Math.floor(uv.getY(i) * 256))), o = (v * 256 + u) * 4;
+      const r = px[o], g = px[o + 1], b = px[o + 2];
+      return Math.max(r, g, b) - Math.min(r, g, b) < 28 && r > 55 && r < 175;
+    };
+    const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const key = new Map(), gid = new Int32Array(n);
+    for (let i = 0; i < n; i++) {
+      const k = Math.round(pos.getX(i) * 1e4) + ',' + Math.round(pos.getY(i) * 1e4) + ',' + Math.round(pos.getZ(i) * 1e4);
+      if (!key.has(k)) key.set(k, key.size); gid[i] = key.get(k);
+    }
+    const NG = key.size, WR = new Float32Array(NG), WL = new Float32Array(NG), nb = Array.from({ length: NG }, () => []), idx = geo.index.array;
+    for (let f = 0; f < idx.length; f += 3) { const a = gid[idx[f]], b = gid[idx[f + 1]], c = gid[idx[f + 2]]; nb[a].push(b, c); nb[b].push(a, c); nb[c].push(a, b); }
+    for (let i = 0; i < n; i++) {
+      const x = pos.getX(i), k = grey(i) ? 0 : ss(-0.37, -0.29, pos.getY(i));
+      WR[gid[i]] = ss(0.34, 0.44, -x) * k; WL[gid[i]] = ss(0.34, 0.44, x) * k;
+    }
+    for (let pass = 0; pass < 6; pass++) for (const W of [WR, WL]) {
+      const C = W.slice();
+      for (let g = 0; g < NG; g++) { let sum = W[g], c = 1; for (const h of nb[g]) { sum += W[h]; c++; } C[g] = sum / c; }
+      W.set(C);
+    }
+    const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { const wr = WR[gid[i]], wl = WL[gid[i]]; si.set([0, 1, 2, 0], i * 4); sw.set([1 - wr - wl, wr, wl, 0], i * 4); }
+    geo.setAttribute('skinIndex', new T.Uint16BufferAttribute(si, 4));
+    geo.setAttribute('skinWeight', new T.Float32BufferAttribute(sw, 4));
+    const root = new T.Bone(), armR = new T.Bone(), armL = new T.Bone();
+    armR.position.set(-0.4, 0.32, 0); armL.position.set(0.4, 0.32, 0); root.add(armR, armL);
+    const mesh = new T.SkinnedMesh(geo, src.material);
+    mesh.add(root); mesh.bind(new T.Skeleton([root, armR, armL]));
+    G.boneR = armR; G.boneL = armL;
+    return mesh;
+  }
+
   function loadModel(scene) {
     if (!PN.loadGLB) { G.man.visible = true; return; }
-    PN.loadGLB('art/geezer/dave.glb').then((m) => {
+    PN.loadGLB('art/geezer/dave.glb').then((g) => {
+      let m = g.children[0];
+      try { m = rigArms(m); } catch (e) { G.boneR = G.boneL = null; }
       m.scale.setScalar(MS);
       m.position.set(0, 0.6 * MS, 0.07);          // the model's seat (y -0.6) lands on the pivot
-      m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
       const pivot = G.model = new T.Group(); pivot.position.copy(SEAT); pivot.add(m);
       scene.add(pivot);
     }).catch(() => { G.man.visible = true; });
@@ -363,8 +407,11 @@
     if (G.model) {
       const b = 1 + br * 0.012;
       G.model.scale.set(1 + br * 0.006, b, 1 + br * 0.008);
-      G.model.rotation.set(-sip * 0.22 + nod * 0.06, Math.sin(time * 0.31) * 0.05 + cheer * 0.12 * Math.sin(actT * 14), cheer * 0.05 * Math.sin(actT * 9));
-      G.model.position.y = SEAT.y + cheer * 0.08 * Math.abs(Math.sin(actT * 9));
+      G.model.rotation.set(-sip * 0.12 + nod * 0.06, Math.sin(time * 0.31) * 0.05, cheer * 0.03 * Math.sin(actT * 9));
+      G.model.position.y = SEAT.y + cheer * 0.05 * Math.abs(Math.sin(actT * 9));
+      const pump = cheer * (0.85 + 0.25 * Math.sin(actT * 12));
+      if (G.boneR) G.boneR.rotation.set(-sip * 0.8 - pump + Math.sin(time * 0.9) * 0.03, 0, sip * 0.4);
+      if (G.boneL) G.boneL.rotation.set(-pump + Math.sin(time * 0.8 + 1) * 0.03, 0, 0);
     }
     const flick = act === 'telly' ? 0.6 + Math.random() * 1.6 : 0.95 + 0.35 * Math.sin(time * 5.3) * Math.sin(time * 1.9);
     G.tellyLight.intensity = flick;
