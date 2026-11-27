@@ -411,7 +411,7 @@
     ],
   };
   /* The typing window: a base plus so many seconds a letter, and the seconds a letter gets shrink with every word until they hit the floor. Mum Mode gets longer. */
-  PN.TYPE = { lives: 3, mumLives: 5, show: 1.5, base: 0.43, perStart: 0.40, perDecay: 0.95, perFloor: 0.12, mumTime: 1.8 };   // the first prototype's window times 0.42 (halved, then 15% faster again, 27 Nov, by request)
+  PN.TYPE = { lives: 3, mumLives: 5, show: 1.5, base: 0.43, perStart: 0.40, perDecay: 0.965, perFloor: 0.145, mumTime: 1.8 };   // the first prototype's window times 0.42 (halved, then 15% faster again, 27 Nov, by request)
   PN.typeWindow = (n, len, mum) => (PN.TYPE.base + len * Math.max(PN.TYPE.perFloor, PN.TYPE.perStart * Math.pow(PN.TYPE.perDecay, n))) * (mum ? PN.TYPE.mumTime : 1);
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
   PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'type', 'coffee', 'curl', 'sled', 'bj'];
