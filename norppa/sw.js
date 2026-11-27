@@ -1,9 +1,9 @@
 /* Pikku Norppa: lets the game open with no signal.
    Online, the newest files are always fetched; the copy kept here is only the fallback. */
-const CACHE = 'pikku-norppa-v264-geezer-proto';
+const CACHE = 'pikku-norppa-v265-geezer-3d';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'css/blackjack-table.css', 'css/clinic.css', 'css/geezer.css', 'vendor/three.min.js',
-  'js/data.js', 'js/lang.js', 'js/install.js', 'js/appearance.js', 'js/clinic.js', 'js/sim.js', 'js/sweep.js', 'js/coffee.js', 'js/astro.js', 'js/audio.js', 'js/props.js', 'js/seal.js', 'js/fx.js', 'js/world.js', 'js/ui.js', 'js/games.js', 'art/typing-saimaa.webp', 'js/typing-art.js', 'js/arcade.js', 'js/pill.js', 'js/track.js', 'js/online.js', 'js/geezer-art.js', 'js/geezer.js', 'js/main.js',
+  'js/data.js', 'js/lang.js', 'js/install.js', 'js/appearance.js', 'js/clinic.js', 'js/sim.js', 'js/sweep.js', 'js/coffee.js', 'js/astro.js', 'js/audio.js', 'js/props.js', 'js/seal.js', 'js/fx.js', 'js/world.js', 'js/ui.js', 'js/games.js', 'art/typing-saimaa.webp', 'js/typing-art.js', 'js/arcade.js', 'js/pill.js', 'js/track.js', 'js/online.js', 'js/geezer-3d.js', 'js/geezer.js', 'js/main.js',
   'fonts/dynapuff-600.woff2', 'fonts/nunito-600.woff2', 'fonts/nunito-800.woff2',
   'icons/favicon.svg', 'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];

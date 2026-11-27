@@ -1,21 +1,7 @@
 /* Geezer home prototype (developer mode only). See js/geezer.js. */
-.gz { position: fixed; inset: 0; background: #5e4a3c; overflow: hidden; color: #2a1a14; font: 800 14px var(--body); }
-.gz-scene, .gz-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.gz-man { cursor: pointer; }
-.gz-belly { transform-box: fill-box; transform-origin: 50% 100%; animation: gzBreathe 3.6s ease-in-out infinite; }
-.gz-head { transform-box: fill-box; transform-origin: 50% 100%; animation: gzBob 3.6s ease-in-out infinite; }
-.gz-lids { opacity: 0; animation: gzBlink 5.2s infinite; }
-.gz-arm { transform-box: view-box; transform-origin: 380px 360px; transition: transform .35s ease; }
-.gz.sip .gz-arm { transform: rotate(38deg) translate(30px, -60px); }
-.gz.nod .gz-head { animation: gzNod .7s ease-in-out; }
-.gz-glow { opacity: .55; animation: gzFlicker 2.8s steps(1) infinite; }
-.gz.telly .gz-glow { opacity: 1; animation: gzFlicker .4s steps(1) infinite; }
-@keyframes gzBreathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, 1.035); } }
-@keyframes gzBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes gzBlink { 0%, 92%, 100% { opacity: 0; } 94%, 97% { opacity: 1; } }
-@keyframes gzNod { 30% { transform: translateY(10px) rotate(-3deg); } 70% { transform: translateY(-4px) rotate(2deg); } }
-@keyframes gzFlicker { 0% { opacity: .5; } 30% { opacity: .75; } 55% { opacity: .45; } 80% { opacity: .65; } }
+.gz { position: fixed; inset: 0; overflow: hidden; color: #2a1a14; font: 800 14px var(--body); }
 
+body.gz-on #hud, body.gz-on .vignette { visibility: hidden; }
 .gz-top { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: calc(10px + var(--st)) calc(12px + var(--sr)) 0 calc(12px + var(--sl)); }
 .gz-plate, .gz-coins, .gz-round, .gz-meter, .gz-dock button, .gz-back, .gz-bubble, .gz-tray { background: #f7efe0; border: 3px solid #2a1a14; box-shadow: 0 4px 0 #2a1a14; }
 .gz-plate { border-radius: 14px; padding: 6px 14px 8px; display: grid; transform: rotate(-1.5deg); }
@@ -59,4 +45,3 @@
   .gz-bubble { top: calc(74px + var(--st)); left: 30%; }
   .gz-bubble::after { left: auto; right: -20px; bottom: 6px; border: 10px solid transparent; border-left: 14px solid #2a1a14; }
 }
-@media (prefers-reduced-motion: reduce) { .gz-belly, .gz-head, .gz-lids, .gz-glow { animation: none; } }
