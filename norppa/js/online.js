@@ -29,7 +29,7 @@
   /* The games that can be raced: they end with a score where more is better, and what makes each one hard (where things fall, the wind, the tune) comes from the shared seed.
      Live picture in the corner (drawn from a few small numbers, not video): all of them except Seat Shuffle, which shows both players on one shared bus instead.
      Not raced (by choice): Puffer Sweeper, Blackjack and Coffee Memory. Seat Shuffle is raced on one shared bus, with a seat conflict rule (see arcade.js). */
-  const RACE_IDS = ['catch', 'ball', 'swim', 'stack', 'toss', 'curl', 'sled', 'piano', 'shuffle'];
+  const RACE_IDS = ['catch', 'ball', 'swim', 'stack', 'toss', 'curl', 'sled', 'piano', 'shuffle', 'type'];
   const gameTitle = (id) => (PN.GAMES[id] ? tr(PN.GAMES[id].title) : id);
   const iOwn = (id) => { try { return PN.Sim.gameOwned(PN.Game.state, id); } catch (e) { return false; } };
   const RACE_GAMES = {}; RACE_IDS.forEach((id) => { RACE_GAMES[id] = id; });
@@ -265,8 +265,8 @@
     if (why !== true) return;
     const k = uid(), seed = (Math.random() * 4294967296) >>> 0;
     askedK = k;
-    race = { k, game, seed, me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true };
-    send('invite', { game, seed, k });
+    race = { k, game, seed, lang: PN.isFi() ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true };
+    send('invite', { game, seed, k, lang: race.lang });
     UI().toast(tr('Asked <b>{0}</b> to race at {1}...', fname(), gameTitle(game)), 'globe', '', 4000);
     setTimeout(() => { if (race && race.k === k && race.state === 'asked') { race = null; askedK = null; UI().toast(tr('<b>{0}</b> did not answer.', fname()), 'globe', 'bad', 3600); } }, 30000);
   }
@@ -283,7 +283,7 @@
     if (v !== 1) { send('answer', { k: m.k, yes: false, why: 'no' }); return; }
     const why = canRace();
     if (why !== true) { send('answer', { k: m.k, yes: false, why: 'cannot' }); return; }
-    race = { k: m.k, game: m.game, seed: m.seed >>> 0, me: { s: 0 }, them: { s: 0 }, state: 'wait' };
+    race = { k: m.k, game: m.game, seed: m.seed >>> 0, lang: m.lang === 'fi' ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'wait' };
     send('answer', { k: m.k, yes: true });
     const k = m.k;
     setTimeout(() => { if (race && race.k === k && race.state === 'wait') { race = null; UI().toast(tr('The race was called off.'), 'globe', 'bad', 3600); } }, 8000);
@@ -307,7 +307,7 @@
   function startRace() {
     race.state = 'on';
     if (friend) race.name = friend.p.name;     // kept with the race, in case they leave before it is over
-    const ok = PN.Game.raceStart(race.game, { seed: race.seed, name: friend ? friend.p.name : '' });
+    const ok = PN.Game.raceStart(race.game, { seed: race.seed, lang: race.lang, name: friend ? friend.p.name : '' });
     if (!ok) { send('end', { k: race.k, s: 0, quit: true }); race = null; return; }
     PN.Games.net = { send: (kind, data) => send(kind, Object.assign({ k: race && race.k }, data)), tie: () => !!(friend && friend.p && String(oid) < String(friend.p.oid)) };
     paintRace();
@@ -448,6 +448,16 @@
       const sx = glide('sx', n.p[0], 20), sz = glide('sz', n.p[1], 20);
       dot(X(sx), Z(sz), 4.5, '#dfe3ea'); c.strokeStyle = '#6b7380'; c.lineWidth = 1; c.beginPath(); c.arc(X(sx), Z(sz), 4.5, 0, 6.3); c.stroke();
       c.fillStyle = '#26456b'; c.font = '800 10px sans-serif'; c.textAlign = 'center'; c.fillText(n.n + ' / 8', w / 2, h - 3);
+    } else if (n && id === 'type') {
+      c.fillStyle = sky; c.fillRect(0, 0, w, h);
+      const hearts = n.k || 3; for (let i = 0; i < hearts; i++) dot(10 + i * 10, 9, 3.5, i < n.l ? '#ee5d7a' : 'rgba(60,80,110,.3)');
+      c.fillStyle = '#26456b'; c.font = '800 10px sans-serif'; c.textAlign = 'right'; c.fillText(String(n.n || 0), w - 6, 12);
+      c.fillStyle = '#fff'; c.fillRect(4, 22, w - 8, 36);
+      if (n.m === 1) { c.fillStyle = '#d33c52'; c.font = '800 22px sans-serif'; c.textAlign = 'center'; c.fillText(String(n.c || ''), w / 2, 48); }
+      else { const word = n.w || '', fs = Math.max(8, Math.min(15, (w - 14) / Math.max(4, word.length) * 1.75)); c.font = '800 ' + fs + 'px sans-serif'; c.textAlign = 'left';
+        let x = (w - c.measureText(word).width) / 2; for (let i = 0; i < word.length; i++) { c.fillStyle = i < n.p ? '#2f9e63' : '#26456b'; c.fillText(word[i], x, 44); x += c.measureText(word[i]).width; } }
+      c.fillStyle = 'rgba(60,80,110,.2)'; c.fillRect(4, 62, w - 8, 5); c.fillStyle = '#f5a93b'; c.fillRect(4, 62, (w - 8) * (n.f == null ? 1 : n.f), 5);
+      seal(w / 2 - 8, h - 14, 9);
     } else if (n && id === 'piano') {
       c.fillStyle = '#2a1d2a'; c.fillRect(0, 0, w, h);
       const L = n.l || 4, lw = w / L, line = h * 0.82;
