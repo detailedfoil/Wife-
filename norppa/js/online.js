@@ -399,7 +399,10 @@
       const wide = source.width > source.height, w = cr ? 176 : wide ? 168 : 112, h = Math.max(24, Math.round(w * sh / sw));
       const cv = frameCv || (frameCv = document.createElement('canvas'));
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-      cv.getContext('2d').drawImage(source, sx, sy, sw, sh, 0, 0, w, h);
+      const c2 = cv.getContext('2d');
+      c2.fillStyle = race.game === 'piano' ? '#2a1d2a' : '#9fc6e4';   // a see-through screen (Kantele Tiles) would pile every picture on the last one
+      c2.fillRect(0, 0, w, h);
+      c2.drawImage(source, sx, sy, sw, sh, 0, 0, w, h);
       const url = cv.toDataURL('image/jpeg', 0.5);
       if (url.length > 40000) return;               // far too big for a small picture: skip this one
       send('frame', { k: race.k, w, h, f: url.slice(url.indexOf(',') + 1) });
@@ -447,7 +450,7 @@
     if (!pip || !race) return;
     const nowT = performance.now(); pip.dt = Math.min(0.1, (nowT - (pipT || nowT)) / 1000); pipT = nowT;
     const wide = window.innerWidth > window.innerHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
-    const th0 = race.them, real = th0.frameOk && th0.frameImg && th0.fw && performance.now() - th0.frameAt < 1500;
+    const th0 = race.them, real = th0.frameOk && th0.frameImg && th0.fw && (performance.now() - th0.frameAt < 1500 || th0.done || th0.gone);   // once they are done, their last picture stays
     let w = wide ? 132 : 96, h = wide ? 88 : 128;
     if (real) { w = race.game === 'type' ? (wide ? 176 : 150) : wide ? 160 : 108; h = Math.round(Math.min(w * th0.fh / th0.fw, window.innerHeight * 0.3)); }
     const cv = pip.cv;
@@ -464,7 +467,7 @@
         for (let i = 0; i < (n.k || 3); i++) { c.fillStyle = i < n.l ? '#ee5d7a' : 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(8 + i * 9, 8, 3.2, 0, 6.3); c.fill(); }
         c.fillStyle = '#f5a93b'; c.fillRect(0, h - bar - 3, w * (n.f == null ? 1 : n.f), 3);
       }
-      if (th.done) { c.fillStyle = 'rgba(20,40,70,.55)'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(tr('Done'), w / 2, h / 2); }
+      if (th.done || th.gone) { c.fillStyle = 'rgba(20,40,70,.55)'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(th.gone && !th.done ? tr('Left') : tr('Done'), w / 2, h / 2); }
       return;
     }
     const stale = th.snapAt && performance.now() - th.snapAt > 2000;
@@ -540,7 +543,7 @@
       c.fillStyle = '#9fc2e6'; c.font = '800 10px sans-serif'; c.fillText(th.done ? tr('Done') : tr('Playing...'), w / 2, h - 10);
     }
     c.globalAlpha = 1;
-    if (th.done) { c.fillStyle = 'rgba(20,40,70,.55)'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(tr('Done'), w / 2, h / 2); }
+    if (th.done || th.gone) { c.fillStyle = 'rgba(20,40,70,.55)'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(th.gone && !th.done ? tr('Left') : tr('Done'), w / 2, h / 2); }
   }
 
   /* the friend's score in the game's top bar */

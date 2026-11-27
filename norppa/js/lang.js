@@ -125,6 +125,7 @@
     'Tap <b>Race a game</b>, or any game on the Play tab, to start a race.': 'Aloita kisa napauttamalla <b>Kisaa pelissä</b> tai mitä tahansa peliä Leiki-välilehdellä.',
     'Waiting for <b>{0}</b> to pick a game. You will be asked to join the race.': 'Odotetaan, että <b>{0}</b> valitsee pelin. Sinulta kysytään, haluatko mukaan kisaan.',
     'Get ready!': 'Valmiina!',
+    'Left': 'Lähti',
     'Tap a game to race your friend at it.': 'Napauta peliä, niin kisaat siinä kaveria vastaan.',
     '<b>{0}</b> is the host and starts the games. Wait for their race invite.': '<b>{0}</b> on isäntä ja aloittaa pelit. Odota kisakutsua.',
     'This game cannot be played online yet. Pick another one, or leave the room to play it alone.': 'Tätä peliä ei voi vielä pelata verkossa. Valitse toinen, tai lähde huoneesta pelataksesi yksin.',
