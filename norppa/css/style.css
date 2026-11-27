@@ -586,3 +586,5 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .row.online-row .ic-wrap { background: rgba(255, 255, 255, .22); color: #fff; }
 .row.online-row b, .row.online-row span.d { color: #fff; }
 .row.online-row span.d { opacity: .9; }
+.row.online-card { margin-bottom: 10px; }
+.beta-tag { display: inline-block; font: 800 10px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; background: #fff; color: #5a3be0; border-radius: 6px; padding: 3px 5px; vertical-align: 2px; margin-left: 4px; }
