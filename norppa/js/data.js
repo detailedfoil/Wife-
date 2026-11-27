@@ -394,7 +394,7 @@
   };
   /* muck: how mucky a game leaves her, in cleanliness points a minute of play (sim.js: a mucky seal earns less). Sledging and
      snowballs are the muckiest; the piano, the card table and anything in the water the least. */
-  /* Typing Seal (a game behind developer mode). Words in three tiers, plain a to z and single spaces so any keyboard can type them (no accents, like the customer names).
+  /* Typing Seal (a game behind developer mode). Words in three tiers, single spaces only. English is plain a to z; Finnish uses proper ä, ö and å (the owner said so, 27 Nov; the typing check lower-cases and NFC-normalises what is typed, so Ä and Ö work). Finnish customer names still have no accents.
      A run starts in tier 1 and drifts to tier 3 (longer words and short phrases) as it goes. An online race uses one language for both players (the inviter's). */
   const TW = (s) => s.split(/\s+/).filter(Boolean);
   const TWP = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);   // tier 3 holds phrases, so it is split on commas
@@ -405,9 +405,9 @@
       TWP('snowflake, snowstorm, avalanche, shimmering, frostbitten, northern lights, icy water, fresh herring, cold wet nose, sleepy little seal, slippery ice, a fish for lunch, belly flop, winter wonderland, warm woolly hat, hot chocolate, chilly morning, cozy blanket, splashing waves, arctic breeze, seal on the ice, catch the fish, frozen lake, snowy mountain, quiet snowfall, fluffy white pup, dive under the ice, sunny winter day'),
     ],
     fi: [
-      TW('kala lumi meri vesi kivi puu reki pipo sukka hiihto hanki tuuli pilvi kuu aalto sauna pulla kahvi maito mehu puuro kana nokka lokki ahven hauki lohi siika saari ranta polku talo tupa kello lahja joulu kuusi koivu kuutti norppa uida turkki tassu huivi kenka lapanen takki hattu kaakao'),
-      TW('pakkanen revontulet lumipallo lumiukko pulkka luistin sukset lapaset villasukat kalastaja silakka saaristo majakka laituri purjevene pyydys verkko merikotka kalalokki hylkeet kinos huurre taivas aurinko nuotio takka lyhty tunturi kalakeitto mustikka puolukka karhu kettu ilves saukko hanhi joutsen kurki'),
-      TWP('lumihiutale, lumimyrsky, revontulet taivaalla, pikku norppa, iso kala, kuuma sauna, valkoinen lumi, tuore silakka, lumi sataa, talvi tulee, kuu paistaa, tuuli puhaltaa, norppa nukkuu, kala uiskentelee, pakkanen paukkuu, kuutti uimassa, nopea norppa, villasukat jalassa, kuuma kaakao, norppa saa kalan, iso lumipallo, musta kahvi, harmaa norppa,, norppa uiskentelee, lumiset kuuset, tuulinen ranta, pieni kuutti, puro solisee'),
+      TW('kala lumi meri vesi kivi puu reki pipo sukka hiihto hanki tuuli pilvi kuu aalto sauna pulla kahvi maito mehu puuro kana nokka lokki ahven hauki lohi siika saari ranta polku talo tupa kello lahja joulu kuusi koivu kuutti norppa uida turkki tassu huivi lapanen takki hattu kaakao jää löyly kämmen järvi käpy tähti pöllö kenkä'),
+      TW('pakkanen revontulet lumipallo lumiukko pulkka luistin sukset lapaset villasukat kalastaja silakka saaristo majakka laituri purjevene pyydys verkko merikotka kalalokki hylkeet kinos huurre taivas aurinko nuotio takka lyhty tunturi kalakeitto mustikka puolukka karhu kettu ilves saukko hanhi joutsen kurki jäälautta jääpuikko jääkarhu jäätelö lämmin kylmä ystävä pehmeä päivä'),
+      TWP('lumihiutale, lumimyrsky, revontulet taivaalla, pikku norppa, iso kala, kuuma sauna, valkoinen lumi, tuore silakka, lumi sataa, talvi tulee, kuu paistaa, tuuli puhaltaa, norppa nukkuu, kala uiskentelee, pakkanen paukkuu, kuutti uimassa, nopea norppa, villasukat jalassa, kuuma kaakao, norppa saa kalan, iso lumipallo, musta kahvi, harmaa norppa, norppa uiskentelee, lumiset kuuset, tuulinen ranta, pieni kuutti, puro solisee, jäällä on kylmä, löyly lämmittää, pehmeä jää, järvi jäätyy, lämmin kämmen, hyvää päivää, tähti tuikkii, pöllö huhuilee'),
     ],
   };
   /* The typing window: a base plus so many seconds a letter, and the seconds a letter gets shrink with every word until they hit the floor. Mum Mode gets longer. */
