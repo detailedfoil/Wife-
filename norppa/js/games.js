@@ -54,8 +54,8 @@
       go: { at: 'top', lines: ['The tune has started! Keep tapping each tile as it slides down.', 'It gets faster as the tune goes on.'] },
     },
     type: {
-      start: { do: 'tap', target: '#tyBox', demo: 'tap', at: 'bottom', lines: ['Tap the box to start typing.', 'A word appears. Type it before the bar runs out. No Enter needed.'] },
-      first: { do: 'tap', at: 'top', lines: ['Got it! Every word you finish catches a fish.', 'Tap to go on.'] },
+      start: { do: 'tap', target: '#tyBox', demo: 'tap', at: 'bottom', lines: ['Tap the box to start typing.', 'A word appears with a quick 3, 2, 1. Read it, then type it. No Enter needed.'] },
+      first: { do: 'tap', at: 'top', lines: ['Got it! Every word you finish catches a fish.', 'The word stays on screen, so you can read it once and then just type. Tap to go on.'] },
       typo: { do: 'tap', at: 'top', lines: ['A typo costs a heart, and so does running out of time.', 'You have three hearts. Lose them all and the run is over. Tap to go on.'] },
       streak: { do: 'tap', at: 'top', lines: ['Words without a typo build a streak, and the faster you go the faster the floes drift.', 'Tap to go on.'] },
       shrink: { do: 'tap', at: 'top', lines: ['Careful: the time you get for each word shrinks as you go.', 'The run never ends if you can keep up. Tap to go on.'] },

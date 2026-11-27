@@ -2285,7 +2285,7 @@
 
 
   /* ================= Typing Seal ================= */
-  /* How fast can you type? A word comes up with a quick 3, 2, 1 (removed by request: the clock now starts as the word appears), then a window to type it in
+  /* How fast can you type? A word comes up with a quick 3, 2, 1 (1.5 seconds in all, so it can be read before the clock starts), then a window to type it in
      that shrinks as the run goes on (PN.typeWindow). Every letter is checked as it is typed, no Enter. A wrong letter, or running out of time, costs a heart;
      three hearts and it is over. A word with no typo adds to the streak, and the streak makes the floes drift faster. The score is the words typed.
      Words are in data.js (PN.TYPE_WORDS). In an online race both players get the same words, in the same language, from the shared seed.
@@ -2349,19 +2349,23 @@
     function focus() { try { inEl.focus({ preventScroll: true }); } catch (e) { /* the browser said no: a tap will do it */ } }
 
     function nextWord() {
-      word = pick(); typed = 0; typo = false; mode = 'type'; t = 0; said = -1;
+      word = pick(); typed = 0; typo = false; mode = 'show'; t = 0; said = -1;
       win = PN.typeWindow(n, word.length, mum);
-      cardEl.className = 'ty-card'; countEl.className = 'ty-count'; countEl.textContent = '';
+      cardEl.className = 'ty-card show'; countEl.className = 'ty-count'; countEl.textContent = '';
+      boxEl.classList.add('wait'); boxEl.classList.remove('live');   // nothing to type yet: the box stays out of sight (the keyboard stays up)
       barEl.style.width = '100%'; barEl.className = '';
       inEl.value = '';
       wordEl.innerHTML = ''; paintWord(); setPh();
       fishNow = fishes[fishI++ % fishes.length]; fishNow.m.visible = true; fishNow.x = 6.2; fishNow.eat = 0; fishNow.m.scale.setScalar(fishNow.s);
-      startTyping();   // no 3, 2, 1: the clock starts as the word appears
     }
     function startTyping() {
       mode = 'type'; t = 0;
-      cardEl.className = 'ty-card';
-      countEl.className = 'ty-count'; countEl.textContent = '';
+      cardEl.className = 'ty-card'; void cardEl.offsetWidth; cardEl.className = 'ty-card go';   // the card flashes green and the box pops up: now is the time to look at the keyboard
+      boxEl.classList.remove('wait'); boxEl.classList.add('live'); boxEl.classList.remove('pop'); void boxEl.offsetWidth; boxEl.classList.add('pop');
+      countEl.className = 'ty-count go pop'; countEl.textContent = tr('Go!');
+      A.play('go'); A.play('chirp', 0.5);
+      const st = PN.Game.state;
+      if (st && st.settings.haptics && navigator.vibrate) { try { navigator.vibrate(40); } catch (e) { /* not allowed here */ } }
       paintWord(); setPh();
       if (document.activeElement !== inEl) focus();
     }
@@ -2382,14 +2386,14 @@
       for (let i = typed; i < word.length; i++) wordEl.children[i].style.color = '#d8334f';
       cardEl.classList.remove('late'); void cardEl.offsetWidth; cardEl.classList.add('late');
       countEl.className = 'ty-count pop'; countEl.textContent = tr('Too slow!');
-      mode = 'gap'; wait = 1.0; barEl.style.width = '0%';
+      mode = 'gap'; wait = 1.0; barEl.style.width = '0%'; boxEl.classList.add('wait'); boxEl.classList.remove('live');
       hit();
       if (mode === 'gap' && n >= 3) K.beat('shrink');
     }
     function done() {
       n++; K.score(n);
       streak = typo ? 0 : streak + 1; streakText();
-      mode = 'gap'; wait = 0.4; paintWord();
+      mode = 'gap'; wait = 0.4; paintWord(); boxEl.classList.add('wait'); boxEl.classList.remove('live');
       if (fishNow) fishNow.eat = 0.0001;
       actor.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.5);
       if (n % 10 === 0) A.play('chirp');
@@ -2410,7 +2414,7 @@
     }
     function begin() {
       if (mode !== 'ready') return;
-      mode = 'gap'; wait = 0.25; K.hint(''); focus(); setPh();
+      mode = 'gap'; wait = 0.25; K.hint(''); boxEl.classList.add('wait'); focus(); setPh();
     }
 
     function fishMesh(id) {
