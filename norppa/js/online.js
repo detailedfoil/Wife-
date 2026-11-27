@@ -123,6 +123,15 @@
   const fname = () => UI().esc(friend ? friend.p.name || tr('Your friend') : tr('Your friend'));
   const UI = () => PN.UI;
 
+  /* A friend's seal name is typed by them and shown to us, so it is cleaned on arrival: markup characters and control characters go,
+     it is cut to 24, and a name holding an obvious swear word (English or Finnish, with look-alike digits and spaces ignored) shows as
+     "Your friend" instead. Rough on purpose: the room has no chat, and leaving it is always one tap away. */
+  const BAD = ['fuck', 'shit', 'cunt', 'bitch', 'nigg', 'faggot', 'rapist', 'nazi', 'hitler', 'porn', 'whore', 'slut', 'pussy', 'dick', 'cock', 'penis', 'vagina', 'vittu', 'perkele', 'paska', 'saatana', 'huora', 'mulkku', 'kyrpa', 'runkk', 'neekeri', 'narttu', 'pillu', 'kusipaa', 'jaatti'];
+  const cleanName = (n) => {
+    n = String(n == null ? '' : n).replace(/[\u0000-\u001f\u007f<>&"`]/g, '').trim().slice(0, 24);
+    const flat = n.toLowerCase().replace(/[äå]/g, 'a').replace(/ö/g, 'o').replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e').replace(/[4@]/g, 'a').replace(/[5$]/g, 's').replace(/[^a-z]/g, '');
+    return BAD.some((w) => flat.indexOf(w) >= 0) ? '' : n;
+  };
   function onMsg(m) {
     if (!m || m.from === me || !wire) return;
     if (friend && m.from !== friend.id) {
@@ -132,6 +141,7 @@
     }
     if (m.kind === 'full') { if (m.to === me && !friend) { PN.Audio.play('nope'); UI().toast(tr('That room already has two seals.'), 'seal', 'bad', 4200); leave(true); } return; }
     if (m.kind === 'hello' && m.p) {
+      m.p = Object.assign({}, m.p, { name: cleanName(m.p.name) });
       const first = !friend;
       friend = { id: m.from, p: m.p };
       heardAt = Date.now();
