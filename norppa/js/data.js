@@ -356,6 +356,7 @@
     curl: { len: 45, price: 1000, muck: 7, title: 'Curling Seal', icon: 'dice', tint: 'leaf', text: 'Pull back and let go to slide. Stop as near the middle of the rings as you can.', best: 'best_curl', pay: [5.9, 0.6], unit: 'points' },
     sled: { len: 40, price: 1250, muck: 12, title: 'Sled Run', icon: 'bolt', tint: 'warm', text: 'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.', best: 'best_sled', pay: [0.0054, 1.3], unit: 'metres' },
     coffee: { len: 120, ext: true, price: 850, muck: 3, title: 'Coffee Memory', icon: 'steam', tint: 'warm', text: 'Remember each customer\'s order and make the drink from memory. Every two drinks add one more thing to remember, and one wrong drink ends it.', best: 'best_coffee', pay: [0.77, 1.85], unit: 'drinks served' },   // ext: its rules live in coffee.js; 850 coins, between Puffer Sweeper and Curling Seal; tuned for a player who reaches 11 drinks fairly often in about two minutes (65 coins, 31 a minute with the boost): 4 drinks pay 10, 6 pay 21, 9 pay 46, 12 pay 76, 14 pay 100, and the 150 cap is reached around 18 drinks, just after the orders stop growing at ten things
+    type: { dev: true, len: 60, price: 700, muck: 3, title: 'Typing Seal', icon: 'keys', tint: 'sky', text: 'Read the word during a quick 3, 2, 1, then type it before the time runs out. Every word catches a fish. Three mistakes and it is over.', best: 'best_type', pay: [1.24, 1.15], unit: 'words typed' },   // dev: behind developer mode until the owner says otherwise; pay is a first guess, see tools/typing-balance.js
     bj: { len: 90, price: 1500, muck: 3, title: 'Blackjack', icon: 'dice', tint: 'leaf', text: 'Beat the dealer without going over 21. Cash out when you like.', best: 'best_bj', pay: [0.5, 1], unit: 'tokens won' },
   };
   /* pay: [a, b] means a game pays a * score^b coins (what lands in the purse), at most 150. Tuned by simulating every game at four
@@ -393,8 +394,27 @@
   };
   /* muck: how mucky a game leaves her, in cleanliness points a minute of play (sim.js: a mucky seal earns less). Sledging and
      snowballs are the muckiest; the piano, the card table and anything in the water the least. */
+  /* Typing Seal (a game behind developer mode). Words in three tiers, plain a to z and single spaces so any keyboard can type them (no accents, like the customer names).
+     A run starts in tier 1 and drifts to tier 3 (longer words and short phrases) as it goes. An online race uses one language for both players (the inviter's). */
+  const TW = (s) => s.split(/\s+/).filter(Boolean);
+  const TWP = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);   // tier 3 holds phrases, so it is split on commas
+  PN.TYPE_WORDS = {
+    en: [
+      TW('seal fish ice snow cold nose pup sled swim wave floe fin tail dive slide pool hole gull hat bell star moon sun sky wind frost cozy nap fur paw lake pine fir coat boot mitt tea jam bun cake milk egg ball kite song hop run jump play nest rock sand ship boat net hook bait snack bay peak drift flake chill brisk glide splash whale bubble'),
+      TW('winter frozen icicle glacier whisker flipper blubber iceberg harbor fishing skating sledding cuddle tummy bubbles shiver mitten snowman snowball lantern cabin coffee cocoa pancake blanket sunrise sunset reindeer walrus penguin herring salmon perch pike whitefish forest meadow cuddly sparkle freezing slippery'),
+      TWP('snowflake, snowstorm, avalanche, shimmering, frostbitten, northern lights, icy water, fresh herring, cold wet nose, sleepy little seal, slippery ice, a fish for lunch, belly flop, winter wonderland, warm woolly hat, hot chocolate, chilly morning, cozy blanket, splashing waves, arctic breeze, seal on the ice, catch the fish, frozen lake, snowy mountain, quiet snowfall, fluffy white pup, dive under the ice, sunny winter day'),
+    ],
+    fi: [
+      TW('kala lumi meri vesi kivi puu reki pipo sukka hiihto hanki tuuli pilvi kuu aalto sauna pulla kahvi maito mehu puuro kana nokka lokki ahven hauki lohi siika saari ranta polku talo tupa kello lahja joulu kuusi koivu kuutti norppa uida turkki tassu huivi kenka lapanen takki hattu kaakao'),
+      TW('pakkanen revontulet lumipallo lumiukko pulkka luistin sukset lapaset villasukat kalastaja silakka saaristo majakka laituri purjevene pyydys verkko merikotka kalalokki hylkeet kinos huurre taivas aurinko nuotio takka lyhty tunturi kalakeitto mustikka puolukka karhu kettu ilves saukko hanhi joutsen kurki'),
+      TWP('lumihiutale, lumimyrsky, revontulet taivaalla, pikku norppa, iso kala, kuuma sauna, valkoinen lumi, tuore silakka, lumi sataa, talvi tulee, kuu paistaa, tuuli puhaltaa, norppa nukkuu, kala uiskentelee, pakkanen paukkuu, kuutti uimassa, nopea norppa, villasukat jalassa, kuuma kaakao, norppa saa kalan, iso lumipallo, musta kahvi, harmaa norppa,, norppa uiskentelee, lumiset kuuset, tuulinen ranta, pieni kuutti, puro solisee'),
+    ],
+  };
+  /* The typing window: a base plus so many seconds a letter, and the seconds a letter gets shrink with every word until they hit the floor. Mum Mode gets longer. */
+  PN.TYPE = { lives: 3, mumLives: 5, show: 1.5, base: 1.0, perStart: 0.95, perDecay: 0.965, perFloor: 0.34, mumTime: 1.8 };
+  PN.typeWindow = (n, len, mum) => (PN.TYPE.base + len * Math.max(PN.TYPE.perFloor, PN.TYPE.perStart * Math.pow(PN.TYPE.perDecay, n))) * (mum ? PN.TYPE.mumTime : 1);
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
-  PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'sled', 'bj'];
+  PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'type', 'coffee', 'curl', 'sled', 'bj'];
   PN.GAMES = GAMES;
   PN.MUM_GAME_TEXT = {
     swim: 'Tap to swim up and slip through the gaps. You get one go.',
@@ -408,7 +428,7 @@
   PN.SKILLS = {
     water: { icon: 'drop', tint: 'sea', name: 'Swimming', spec: 'Swimmer', games: ['catch', 'swim'] },
     sport: { icon: 'ball', tint: 'warm', name: 'Sports', spec: 'Sporty', games: ['ball', 'stack', 'toss', 'curl', 'sled'] },
-    brain: { icon: 'star', tint: 'sky', name: 'Brains', spec: 'Clever', games: ['shuffle', 'puff', 'piano', 'coffee', 'bj'] },
+    brain: { icon: 'star', tint: 'sky', name: 'Brains', spec: 'Clever', games: ['shuffle', 'puff', 'piano', 'type', 'coffee', 'bj'] },
     care: { icon: 'heart', tint: 'rose', name: 'Care', spec: 'Cuddler', games: [] },   // cuddles and saunas
   };
   PN.SKILL_ORDER = ['water', 'sport', 'brain', 'care'];

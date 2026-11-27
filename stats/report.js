@@ -1,7 +1,7 @@
 /* Pikku Norppa stats: the plain-text report (the same one the stats page copies), shared by the page and the daily snapshot script. */
 (function (root) {
   'use strict';
-  var NAMES = { ball: 'Nose Ball', shuffle: 'Seal Seat Shuffle', catch: 'Fish Rain', swim: 'Swimmy Seal', stack: 'Ice Cream Stack', puff: 'Puffer Sweeper', toss: 'Snowball Toss', piano: 'Kantele Tiles', coffee: 'Coffee Memory', curl: 'Curling Seal', sled: 'Sled Run', bj: 'Blackjack', sauna: 'Sauna (Löyly)' };
+  var NAMES = { ball: 'Nose Ball', shuffle: 'Seal Seat Shuffle', catch: 'Fish Rain', swim: 'Swimmy Seal', stack: 'Ice Cream Stack', puff: 'Puffer Sweeper', toss: 'Snowball Toss', piano: 'Kantele Tiles', type: 'Typing Seal', coffee: 'Coffee Memory', curl: 'Curling Seal', sled: 'Sled Run', bj: 'Blackjack', sauna: 'Sauna (Löyly)' };
   var name = function (id) { return NAMES[id] || id; };
 
   var last = null, OPEN = {};                // which game cards are open (kept when the page refreshes)

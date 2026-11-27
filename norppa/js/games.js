@@ -53,6 +53,13 @@
       start: { do: 'tap', at: 'top', lines: ['Tap the Start tile to begin.', 'Then tap every tile in order as it slides down. Miss one and it is over.'] },
       go: { at: 'top', lines: ['The tune has started! Keep tapping each tile as it slides down.', 'It gets faster as the tune goes on.'] },
     },
+    type: {
+      start: { do: 'tap', target: '#tyBox', demo: 'tap', at: 'bottom', lines: ['Tap the box to start typing.', 'A word appears with a quick 3, 2, 1. Read it, then type it. No Enter needed.'] },
+      first: { do: 'tap', at: 'top', lines: ['Got it! Every word you finish catches a fish.', 'The word stays on screen, so you can read it once and then just type. Tap to go on.'] },
+      typo: { do: 'tap', at: 'top', lines: ['A typo costs a heart, and so does running out of time.', 'You have three hearts. Lose them all and the run is over. Tap to go on.'] },
+      streak: { do: 'tap', at: 'top', lines: ['Words without a typo build a streak, and the faster you go the faster the floes drift.', 'Tap to go on.'] },
+      shrink: { do: 'tap', at: 'top', lines: ['Careful: the time you get for each word shrinks as you go.', 'The run never ends if you can keep up. Tap to go on.'] },
+    },
     toss: {
       start: { do: 'flick', demo: 'flick', at: 'top', lines: ['Flick the snowball up the screen along the dotted line.', 'For your first three throws, the line leans into the wind for you.'] },
       solo: { at: 'top', lines: ["That's the guide done. From now on you're on your own.", 'Check the flag and the wind number before every throw, and lean your flick into the wind. Three misses and it is over.'] },
@@ -194,6 +201,7 @@
   const rss = Games.rs = (k) => (rnd() - 0.5) * 2 * k;  // the same, seeded in a race
   /* A game with several goes or rounds calls this at the start of each, so every round is the same for both players however many random numbers the last one used. */
   Games.seeded = () => !!(g && g.versus);
+  Games.versusInfo = () => (g && g.versus) || null;   // { seed, name, lang } in an online race (a game can read the language both players use)
   Games.net = null;                                   // set by online.js during a race: { send(kind, data), tie() }
   Games.netIn = (m) => { if (g && g.ext && g.ext.remote) g.ext.remote(m); };   // a message from the other player, for games that talk to each other
   Games.reseed = (n) => { if (g && g.versus) g.rng = seeded((g.versus.seed + Math.imul(n | 0, 7919)) >>> 0); };
