@@ -168,7 +168,7 @@
       if (!m.ack) send('hello', { p: profile(), ack: true });      // answer a hello once (an answer is not answered, so there is no echo)
       if (first) {
         PN.Audio.play('chirp');
-        UI().toast(tr('<b>{0}</b> joined your room!', fname()) + (amHost() ? ' ' + tr('Tap a game to race your friend at it.') : ''), 'seal', '', 5200);
+        UI().toast(tr('<b>{0}</b> joined your room!', fname()) + (amHost() ? ' ' + tr('Tap a game to play against your friend.') : ''), 'seal', '', 5200);
         if (PN.Game.friendCome) PN.Game.friendCome(friend.p);
       }
       paint();
@@ -299,7 +299,7 @@
     askedK = k;
     race = { k, game, seed, lang: PN.isFi() ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'asked', mine: true, bet: bet > 0 ? { me: bet, them: 0 } : null };
     send('invite', { game, seed, k, lang: race.lang, bet: bet > 0 ? bet : 0 });
-    UI().toast(tr('Asked <b>{0}</b> to race at {1}...', fname(), gameTitle(game)), 'globe', '', 4000);
+    UI().toast(tr('Asked <b>{0}</b> to play against you at {1}...', fname(), gameTitle(game)), 'globe', '', 4000);
     setTimeout(() => { if (race && race.k === k && race.state === 'asked') { race = null; askedK = null; UI().toast(tr('<b>{0}</b> did not answer.', fname()), 'globe', 'bad', 3600); } }, 30000);
   }
 
@@ -313,9 +313,9 @@
     PN.Audio.play('chirp');
     const v = theirBet
       ? await UI().modal({ title: tr('A coin challenge!'), html: '<p>' + tr('<b>{0}</b> challenges you at {1} and puts in {2} coins.', fname(), title, theirBet) + '</p><p>' + tr('Pick your own stake. The challenge is for the smaller of the two stakes: the higher score takes it, and a draw gives it back.') + '</p>' + betHtml(myCoins()),
-        actions: [{ label: tr('Race'), value: 1 }, { label: tr('Not now'), value: 0 }], onOpen: betWire, result: (val, card) => (val ? betRead(card) : 0) })
-      : await UI().modal({ title: tr('A race!'), html: '<p>' + tr('<b>{0}</b> wants to race you at {1}.', fname(), title) + '</p>',
-        actions: [{ label: tr('Race'), value: 1 }, { label: tr('Not now'), value: 0 }] });
+        actions: [{ label: tr('Join'), value: 1 }, { label: tr('Not now'), value: 0 }], onOpen: betWire, result: (val, card) => (val ? betRead(card) : 0) })
+      : await UI().modal({ title: tr('A game invite!'), html: '<p>' + tr('<b>{0}</b> wants to play {1} against you.', fname(), title) + '</p>',
+        actions: [{ label: tr('Join'), value: 1 }, { label: tr('Not now'), value: 0 }] });
     if (!friend) return;
     if (!v) { send('answer', { k: m.k, yes: false, why: 'no' }); return; }
     const myBet = theirBet ? v : 0;
@@ -324,7 +324,7 @@
     race = { k: m.k, game: m.game, seed: m.seed >>> 0, lang: m.lang === 'fi' ? 'fi' : 'en', me: { s: 0 }, them: { s: 0 }, state: 'wait', bet: myBet ? { me: myBet, them: theirBet } : null };
     send('answer', { k: m.k, yes: true, bet: myBet });
     const k = m.k;
-    setTimeout(() => { if (race && race.k === k && race.state === 'wait') { race = null; UI().toast(tr('The race was called off.'), 'globe', 'bad', 3600); } }, 8000);
+    setTimeout(() => { if (race && race.k === k && race.state === 'wait') { race = null; UI().toast(tr('The game was called off.'), 'globe', 'bad', 3600); } }, 8000);
   }
 
   function gotAnswer(m) {
@@ -332,7 +332,7 @@
     askedK = null;
     if (!m.yes) {
       race = null;
-      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : m.why === 'host' ? tr('Only the host can start a race.') : m.why === 'coins' ? tr('<b>{0}</b> has no coins for a challenge.', fname()) : tr('<b>{0}</b> said not now.', fname());
+      const msg = m.why === 'busy' ? tr('<b>{0}</b> is busy right now.', fname()) : m.why === 'cannot' ? tr('<b>{0}</b> cannot play right now.', fname()) : m.why === 'own' ? tr('<b>{0}</b> has not unlocked that game yet.', fname()) : m.why === 'host' ? tr('Only the host can start a game.') : m.why === 'coins' ? tr('<b>{0}</b> has no coins for a challenge.', fname()) : tr('<b>{0}</b> said not now.', fname());
       UI().toast(msg, 'globe', 'bad', 3600);
       return;
     }
@@ -597,7 +597,7 @@
     race = null; stopPip(); PN.Games.net = null;
     const name = UI().esc(r.name || tr('Your friend')), a = r.me.s, b = r.them.s;
     let head, line, cls;
-    if (r.me.quit && !r.them.quit) { head = tr('{0} wins', name); line = tr('You stopped the game, so the race goes to {0}.', name); cls = 'sad'; }
+    if (r.me.quit && !r.them.quit) { head = tr('{0} wins', name); line = tr('You stopped the game early, so it goes to {0}.', name); cls = 'sad'; }
     else if (r.them.quit && !r.me.quit) { head = tr('You win!'); line = tr('{0} stopped the game early.', name); cls = 'award'; }
     else if (!r.them.done) { head = a > b ? tr('You win!') : a < b ? tr('{0} wins', name) : tr('A draw!'); line = tr('{0} did not send a final score, so this uses the last one heard.', name); cls = a >= b ? 'award' : 'sad'; }
     else if (a > b) { head = tr('You win!'); line = tr('You beat {0}.', name); cls = 'award'; }
@@ -644,7 +644,7 @@
     autoRace(id) {
       if (!room || !friend) return false;
       if (race) { PN.Audio.play('nope'); return true; }
-      if (!amHost()) { PN.Audio.play('nope'); UI().toast(tr('<b>{0}</b> is the host and starts the games. Wait for their race invite.', fname()), 'globe', 'bad', 4200); return true; }
+      if (!amHost()) { PN.Audio.play('nope'); UI().toast(tr('<b>{0}</b> is the host and starts the games. Wait for their invite.', fname()), 'globe', 'bad', 4200); return true; }
       if (!RACE_GAMES[id]) { PN.Audio.play('nope'); UI().toast(tr('This game cannot be played online yet. Pick another one, or leave the room to play it alone.'), 'globe', 'bad', 4600); return true; }
       UI().closeSheet();
       startPick(id);
@@ -684,20 +684,20 @@
         return;
       }
       const games = roomGames(), boss = amHost();
-      const acts = friend && boss && !race && games.length ? [{ label: tr('Race a game'), value: 'pick' }] : [];
+      const acts = friend && boss && !race && games.length ? [{ label: tr('Play against a friend'), value: 'pick' }] : [];
       const met = savedFriends().filter((f) => !friend || f.oid !== (friend.p && friend.p.oid)).slice(0, 5).map((f) => UI().esc(f.name)).join(', ');
       const names = games.filter(iOwn).map(gameTitle).join(', '), lent = games.filter((id) => !iOwn(id)).map(gameTitle).join(', ');
       const text = (friend ? tr('<b>{0}</b> is on your shore.', fname()) : tr('Waiting for a friend. Your room code is <b>{0}</b>.', room))
-        + '</p><p class="note">' + (boss ? tr('You are the host: you start the races, and your friend can play every game you have unlocked.') : tr('{0} is the host and starts the races. You can play every game the host has unlocked.', friend ? fname() : tr('The host')))
+        + '</p><p class="note">' + (boss ? tr('You are the host: you start the games, and your friend can play every game you have unlocked.') : tr('{0} is the host and starts the games. You can play every game the host has unlocked.', friend ? fname() : tr('The host')))
         + (friend && names ? '</p><p class="note">' + tr('Games in this room: {0}.', names) : '')
         + (friend && lent ? '</p><p class="note">' + tr('Lent to you for this room only: {0}.', lent) : '')
         + (met ? '</p><p class="note">' + tr('Seals you have met: {0}.', met) : '');
-      const how = !friend ? '' : boss ? (race ? '' : '<p class="room-how">' + tr('Tap <b>Race a game</b>, or any game on the Play tab, to start a race.') + '</p>')
-        : '<p class="room-how">' + tr('Waiting for <b>{0}</b> to pick a game. You will be asked to join the race.', fname()) + '</p>';
+      const how = !friend ? '' : boss ? (race ? '' : '<p class="room-how">' + tr('Tap <b>Play against a friend</b>, or any game on the Play tab, to start.') + '</p>')
+        : '<p class="room-how">' + tr('Waiting for <b>{0}</b> to pick a game. You will be asked to join.', fname()) + '</p>';
       const v = await UI().modal({ title: tr('Room {0}', room), html: '<p>' + text + '</p>' + how, actions: acts.concat([{ label: tr('Leave the room'), value: 'leave', cls: 'ghost' }, { label: tr('Close'), value: 0 }]) });
       if (v === 'leave') leave();
       else if (v === 'pick') {
-        const pick = await UI().modal({ title: tr('Race a game'), html: '<p>' + tr('Both of you play the same game at the same time, and see how the other is doing in a corner of the screen.') + '</p>',
+        const pick = await UI().modal({ title: tr('Play against a friend'), html: '<p>' + tr('Both of you play the same game at the same time, and see how the other is doing in a corner of the screen.') + '</p>',
           actions: games.map((id) => ({ label: gameTitle(id), value: id, cls: 'ghost' })).concat([{ label: tr('Not now'), value: 0 }]) });
         if (pick && friend) startPick(pick);
       }
