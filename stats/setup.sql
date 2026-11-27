@@ -69,7 +69,7 @@ begin
   select json_build_object(
     'generated', now(),
     'players', (select count(distinct player_id) from events),
-    'players_played', (select count(distinct player_id) from events where event in ('game_end','game_quit')),
+    'players_played', (select count(distinct player_id) from events where coalesce(mum, 0) = 0 and event in ('game_end','game_quit')),
     'players_24h', (select count(distinct player_id) from events where created_at > now() - interval '24 hours'),
     'players_7d', (select count(distinct player_id) from events where created_at > now() - interval '7 days'),
     'sessions', (select count(distinct session_id) from events),
@@ -188,7 +188,7 @@ begin
     'daily', coalesce((select json_agg(d order by d.day) from (
         select day::text as day,
                (select count(distinct player_id) from events e where (e.created_at at time zone 'Europe/London')::date = day) as players,
-               (select count(distinct player_id) from events e where event in ('game_end','game_quit') and (e.created_at at time zone 'Europe/London')::date = day) as played,
+               (select count(distinct player_id) from events e where coalesce(mum, 0) = 0 and event in ('game_end','game_quit') and (e.created_at at time zone 'Europe/London')::date = day) as played,
                (select count(*) from (select player_id from events group by player_id having min((created_at at time zone 'Europe/London')::date) = day) f) as new_players,
                (select count(distinct session_id) from events e where (e.created_at at time zone 'Europe/London')::date = day) as sessions
         from (select (now() at time zone 'Europe/London')::date - n as day from generate_series(0, 29) n) days) d), '[]'::json),

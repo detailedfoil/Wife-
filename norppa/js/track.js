@@ -87,6 +87,7 @@
     /* A game finished (or was given up): how long it was played, the score, and what it did: coins paid, happiness change, energy used,
        her taste for the game, the happy bonus and the muck penalty (percent). Those last ones are for balancing the games. */
     game(id, gaveUp, secs, score, r, fps, info, mum) {
+      if (mum) return;   // Mum Mode plays are not tracked at all
       if (gaveUp && !(secs >= 1)) return;
       r = r || {};
       const whole = (n) => (isFinite(n) ? Math.round(n) : null);
