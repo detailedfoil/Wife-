@@ -83,6 +83,10 @@
   .bj-slide input { height: 28px; } .bj-ends { margin-bottom: 4px; }
   .bj-btns button { height: 42px; font-size: 16px; }
 }
+/* Leave room beneath the dealer's chin and above the betting controls on short upright phones. */
+@media (orientation: portrait) and (max-height: 640px) {
+  .bj-top { margin-top: calc(var(--st, 0px) + clamp(60px, 100vh - 375px, 32vh)); }
+}
 /* landscape phones: the cards on the left, the panel on the right */
 @media (orientation: landscape) and (max-height: 560px) {
   .bj { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 12px; padding: calc(var(--st, 0px) + 54px) calc(14px + var(--sr, 0px)) calc(8px + var(--sb)) calc(14px + var(--sl, 0px)); }
