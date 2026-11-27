@@ -370,7 +370,7 @@
         c.beginPath(); c.arc(cx, 132, 46, -0.3 * Math.PI, 1.6 * Math.PI, true); c.stroke();
         c.fillStyle = '#2a2d33';
         [0, 14, 28].forEach((d) => { c.beginPath(); c.arc(cx + 10 + d, 136, 4.2, 0, 7); c.fill(); });
-        c.fillStyle = '#16181c'; c.font = '800 40px sans-serif'; c.fillText('SEALCIUS', cx, 250);
+        c.fillStyle = '#16181c'; c.font = '800 34px sans-serif'; c.fillText('FROSTFIZZ', cx, 250);
         c.fillStyle = '#ef5a3c'; c.font = '700 20px sans-serif'; c.fillText('LIVE FLIPPER', cx, 282);
         c.fillStyle = '#f08a1c'; c.beginPath(); c.arc(cx - 52, 330, 24, 0, 7); c.fill();
         c.fillStyle = '#3f8f3a'; c.beginPath(); c.ellipse(cx - 40, 304, 12, 6, -0.6, 0, 7); c.fill();
@@ -426,7 +426,7 @@
         c.strokeStyle = '#fff1dc'; c.lineWidth = 4; c.beginPath();
         for (let x = 0; x <= w; x += 6) { const y = 382 + Math.sin(x / 22 + 1) * 7; if (x) c.lineTo(x, y); else c.moveTo(x, y); }
         c.stroke();
-        c.fillStyle = '#ffffff'; c.font = '700 17px sans-serif'; c.fillText('GIVES YOU FLIPPERS', cx, 420);
+        c.fillStyle = '#ffffff'; c.font = '700 17px sans-serif'; c.fillText('FULL OF FLIP', cx, 420);
         c.fillStyle = '#9fb4e6'; c.font = '600 13px sans-serif'; c.fillText('SMALL CAN, BIG SPLASH', cx, 446);
         const base = c.createLinearGradient(0, 466, 0, h);
         base.addColorStop(0, '#d5d9df'); base.addColorStop(1, '#8b929c');
@@ -465,7 +465,7 @@
         c.textAlign = 'center';
         const tt = c.createLinearGradient(cx - 120, 0, cx + 120, 0);
         tt.addColorStop(0, '#b97dff'); tt.addColorStop(1, '#ff69b4');
-        c.fillStyle = tt; c.font = '800 50px sans-serif'; c.fillText('KRAKEN', cx, 322);
+        c.fillStyle = tt; c.font = '800 50px sans-serif'; c.fillText('SQUID', cx, 322);
         c.fillStyle = '#ffffff'; c.font = '800 28px sans-serif'; c.fillText('ENERGY', cx, 358);
         c.fillStyle = '#ff69b4'; c.fillRect(cx - 90, 374, 180, 4); c.fillStyle = '#a45cff'; c.fillRect(cx - 90, 382, 180, 4);
         c.fillStyle = '#d9c2ff'; c.font = '700 16px sans-serif'; c.fillText('WAKE THE DEEP', cx, 416);

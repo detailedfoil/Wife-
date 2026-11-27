@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1c40">
+<title>Pikku Norppa: privacy and credits</title>
+<style>
+  :root { --bg: #0f1c40; --card: #182b5e; --line: #2a4180; --ink: #fff; --dim: #c3cff0; --gold: #ffd45c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 600 16px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 26px; margin: 8px 0 4px; }
+  h2 { font-size: 19px; margin: 28px 0 6px; color: var(--gold); }
+  p, li { color: var(--dim); font-weight: 500; }
+  a { color: var(--gold); }
+  .bar { display: flex; gap: 8px; margin: 8px 0 16px; }
+  .bar button { font: inherit; font-weight: 700; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  .bar button.on { background: var(--gold); border-color: var(--gold); color: #1a2550; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px 16px 14px; }
+  [lang="fi"]:not(html) { display: none; }
+  body.fi [lang="en"]:not(html) { display: none; }
+  body.fi [lang="fi"]:not(html) { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <button id="bEn" class="on" type="button">English</button>
+    <button id="bFi" type="button">Suomi</button>
+    <a href="./" style="margin-left:auto;align-self:center">Pikku Norppa</a>
+  </div>
+
+  <section lang="en">
+    <h1>Privacy and credits</h1>
+    <p>Last updated 27 November 2026. Pikku Norppa is a free game made by one person (detailedfoil). It has no accounts, no ads and no purchases with real money.</p>
+    <div class="card">
+      <h2>What stays on your device</h2>
+      <p>Your seal, coins, settings and saves are kept on your own device in the browser's storage. If you clear the site data or use a different device, they are not there. Nobody else can see them.</p>
+      <h2>Anonymous play numbers</h2>
+      <p>Unless you switch it off (Settings, Share play stats), the game sends small anonymous events to the maker's Supabase database: which games were played, for how long, scores, coins, level, how long a visit lasted, your language, rough screen size, whether the game is installed as an app, and errors. Each device gets a random ID so the numbers can be averaged. There is no name, email, location or advertising ID, and the numbers are not shared with advertisers or sold. They are used only to balance the game. They cannot be traced back to a person, so a single device's data cannot be looked up on request. Switching the setting off stops anything new from being sent.</p>
+      <h2>Playing online with a friend</h2>
+      <p>If you make or join a room, the game sends your seal's name (up to 24 characters), its look and what it wears, and your moves and scores in the race, to the other person in the room. This goes through Supabase Realtime and is not stored. Seals you met are remembered only on your own device. There is no chat. Do not put personal details in your seal's name, because the other player can see it. You can leave a room at any time.</p>
+      <h2>Children</h2>
+      <p>The game is meant for players aged 13 and over. It is not directed at children under 13.</p>
+      <h2>Questions</h2>
+      <p>Open an issue at <a href="https://github.com/detailedfoil/Wife-/issues">github.com/detailedfoil/Wife-/issues</a>. This page may be updated; the date above shows when.</p>
+    </div>
+    <h2>Credits</h2>
+    <div class="card">
+      <p>Game, art and sound by detailedfoil, with help from AI tools. All sounds are made live in your browser, and the 3D scenery is drawn in code.</p>
+      <ul>
+        <li><a href="https://threejs.org/">three.js</a>, MIT licence, copyright three.js authors.</li>
+        <li>DynaPuff and Nunito fonts, SIL Open Font Licence 1.1.</li>
+        <li>Backend: <a href="https://supabase.com/">Supabase</a>.</li>
+        <li>Tunes: Ievan polkka (traditional Finnish), Maamme (Fredrik Pacius) and Ode to Joy (Beethoven), all in the public domain.</li>
+      </ul>
+      <p>All names in the game are made up. Any resemblance to real brands is unintended.</p>
+    </div>
+  </section>
+
+  <section lang="fi">
+    <h1>Tietosuoja ja kiitokset</h1>
+    <p>Päivitetty 27.11.2026. Pikku Norppa on yhden ihmisen (detailedfoil) tekemä ilmainen peli. Siinä ei ole tilejä, mainoksia eikä oikealla rahalla ostettavaa.</p>
+    <div class="card">
+      <h2>Mitä jää omalle laitteellesi</h2>
+      <p>Norppasi, kolikot, asetukset ja tallennukset ovat vain laitteesi selaimen muistissa. Jos tyhjennät sivuston tiedot tai vaihdat laitetta, ne eivät ole mukana. Kukaan muu ei näe niitä.</p>
+      <h2>Nimettömät pelinumerot</h2>
+      <p>Jos et kytke sitä pois (Asetukset, Jaa pelitilastot), peli lähettää tekijän Supabase-tietokantaan pieniä nimettömiä tapahtumia: mitä pelejä pelattiin, kuinka kauan, pisteet, kolikot, taso, käynnin kesto, kieli, likimääräinen näytön koko, onko peli asennettu sovellukseksi ja virheet. Jokaiselle laitteelle annetaan satunnainen tunnus, jotta lukuja voi keskiarvoistaa. Mukana ei ole nimeä, sähköpostia, sijaintia eikä mainostunnusta, eikä lukuja jaeta mainostajille tai myydä. Niitä käytetään vain pelin tasapainottamiseen. Niitä ei voi yhdistää henkilöön, joten yksittäisen laitteen tietoja ei voi hakea pyynnöstä. Asetuksen kytkeminen pois estää uusien lähettämisen.</p>
+      <h2>Verkossa kaverin kanssa</h2>
+      <p>Kun teet huoneen tai liityt siihen, peli lähettää norppasi nimen (enintään 24 merkkiä), ulkonäön, vaatteet sekä kisan siirrot ja pisteet huoneen toiselle pelaajalle. Tieto kulkee Supabase Realtimen kautta eikä tallennu. Tapaamasi norpat muistetaan vain omalla laitteellasi. Chattia ei ole. Älä kirjoita norpan nimeen henkilötietoja, koska toinen pelaaja näkee sen. Huoneesta voi lähteä milloin vain.</p>
+      <h2>Lapset</h2>
+      <p>Peli on tarkoitettu vähintään 13-vuotiaille. Se ei ole suunnattu alle 13-vuotiaille.</p>
+      <h2>Kysymykset</h2>
+      <p>Tee ilmoitus osoitteessa <a href="https://github.com/detailedfoil/Wife-/issues">github.com/detailedfoil/Wife-/issues</a>. Sivua voidaan päivittää, ja päivämäärä ylhäällä kertoo milloin.</p>
+    </div>
+    <h2>Kiitokset</h2>
+    <div class="card">
+      <p>Pelin, kuvat ja äänet on tehnyt detailedfoil tekoälytyökalujen avulla. Kaikki äänet syntyvät selaimessasi, ja 3D-maisema piirretään koodilla.</p>
+      <ul>
+        <li><a href="https://threejs.org/">three.js</a>, MIT-lisenssi, tekijänoikeus three.js authors.</li>
+        <li>DynaPuff- ja Nunito-fontit, SIL Open Font Licence 1.1.</li>
+        <li>Taustapalvelu: <a href="https://supabase.com/">Supabase</a>.</li>
+        <li>Sävelmät: Ievan polkka (perinteinen), Maamme (Fredrik Pacius) ja Ilolaulu (Beethoven), kaikki vapaasti käytettävissä.</li>
+      </ul>
+      <p>Kaikki pelin nimet ovat keksittyjä. Yhtäläisyys oikeisiin tuotemerkkeihin on sattumaa.</p>
+    </div>
+  </section>
+</main>
+<script>
+  (function () {
+    var fi = false;
+    try { var q = /[?&]lang=(en|fi)/.exec(location.search); fi = q ? q[1] === 'fi' : /^fi/i.test(navigator.language || ''); } catch (e) {}
+    function set(f) { document.body.classList.toggle('fi', f); document.documentElement.lang = f ? 'fi' : 'en';
+      document.getElementById('bEn').className = f ? '' : 'on'; document.getElementById('bFi').className = f ? 'on' : ''; }
+    document.getElementById('bEn').onclick = function () { set(false); };
+    document.getElementById('bFi').onclick = function () { set(true); };
+    set(fi);
+  })();
+</script>
+</body>
+</html>
