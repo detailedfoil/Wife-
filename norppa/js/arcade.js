@@ -2440,6 +2440,7 @@
     /* Letters typed (from the box or the keyboard). Each one is right or a typo; only one heart goes for one burst of letters. */
     function chars(str) {
       let bad = false;
+      str = str.normalize('NFC');   // an accent can arrive as a letter plus a combining mark on some keyboards
       for (let i = 0; i < str.length && mode === 'type'; i++) {
         const c = str[i].toLowerCase();
         if (c === word[typed]) {
