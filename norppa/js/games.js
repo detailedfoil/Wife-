@@ -201,6 +201,7 @@
   const rss = Games.rs = (k) => (rnd() - 0.5) * 2 * k;  // the same, seeded in a race
   /* A game with several goes or rounds calls this at the start of each, so every round is the same for both players however many random numbers the last one used. */
   Games.seeded = () => !!(g && g.versus);
+  Games.hold = (on) => { if (g) { g.paused = !!on; g.drawn = false; } };   // an online race waits, frozen, for the shared 3, 2, 1 (online.js)
   Games.versusInfo = () => (g && g.versus) || null;   // { seed, name, lang } in an online race (a game can read the language both players use)
   Games.net = null;                                   // set by online.js during a race: { send(kind, data), tie() }
   Games.netIn = (m) => { if (g && g.ext && g.ext.remote) g.ext.remote(m); };   // a message from the other player, for games that talk to each other
@@ -394,7 +395,7 @@
     g = { id, seal, mumMode, saves: mumMode ? 2 : 0, phase: 'count', clock: 0, said: -1, tx: 0, vx: 0, score: 0, time: GAME_LEN, items: [], caught: {}, spawn: 0.5, stun: 0,
       keyL: 0, keyR: 0, z: LANE_Z, lastTick: 99, b: null, secs: 0 };
     if (id === 'ball') { g.homeBallMaterial = W.ball.material; W.ball.material = matchBallMaterial(); }
-    if (versus) { g.versus = versus; g.rng = seeded(versus.seed); }
+    if (versus) { g.versus = versus; g.rng = seeded(versus.seed); g.clock = 2.25; g.said = 2; }   // the race counted 3, 2, 1 together already: straight to Go
     else if (TUTORIALS[id] && !Games.tutorial.seen(id)) g.tut = { shown: {}, count: 0 };
   };
   /* What the online race needs to know right now: the score, the seconds left, and a small picture of the game for the corner view
@@ -462,7 +463,7 @@
 
   /* An arcade game: the same count-in and ending, the game itself runs its own stage. */
   function updateExt(dt) {
-    if (g.phase === 'count' && g.ext.nocount) { g.phase = 'play'; g.clock = 0; g.ext.go(); beat('start'); }
+    if (g.phase === 'count' && (g.ext.nocount || g.versus)) { g.phase = 'play'; g.clock = 0; g.ext.go(); beat('start'); }
     if (g.phase === 'count') {
       const n = Math.floor(g.clock / 0.75);
       if (n !== g.said && n < 4) {
