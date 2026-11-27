@@ -1224,6 +1224,7 @@
     if (blocked() || bedBusy) return;
     if (!S.gameOwned(state, id)) return;
     if (PN.GAMES[id].ext && !PN.Games.ext[id]) { A.play('nope'); UI.toast(tr('This game is still loading. Close the game and open it again.'), 'steam'); return; }   // its file has not arrived yet (an old copy of the page)
+    if (PN.Online && PN.Online.autoRace(id)) return;     // in a room with a friend: a race with them, never a game alone
     const c = S.canPlay(state);
     if (!c.ok) { if (PN.Track) PN.Track.blocked(id, c.why); refuse(c.why); return; }
     seal.halt();
