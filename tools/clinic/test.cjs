@@ -142,6 +142,18 @@ console.log('PASS: atomic purchases, level/coin gates, monotonic prices, paid re
  const fresh=S.newState(now); fresh.stage=2; const f1=S.addPup(fresh,now,'Uusi'); f1.xp=T.pupXpStep*2; assert.equal(S.pupLevel(S.migrate(clone(fresh)).pups[0]),2);
 }
 console.log('PASS: pup xp and levels, skill points up to 10, locked once spent, grow-up skill, capped family bonus, visiting perks scaled by points and old saves.');
+// Energy drinks at zero energy: a can wakes a napping seal once it leaves her a quarter full, a night's sleep holds, and the timer is honest.
+{
+ const mk=()=>{const x=S.newState(now); x.pantry={redseal:1,kraken:1}; x.stats.energy=3; S.advance(x,now+1000,now); return x;};
+ const a=mk(); assert.ok(a.asleep&&a.sleepKind==='nap','she dozes off at zero energy');
+ const left=S.sleepLeft(a); assert.ok(left>2*3600e3,'the nap is hours long');
+ assert.equal(S.energyCans(a).map(c=>c.id).join(),'redseal,sealsius,kraken','cans, smallest first');
+ assert.ok(S.feed(a,'redseal').ok); assert.ok(!a.asleep,'even the small can wakes her from a nap (3 + 22 energy)');
+ const b=mk(); b.stats.energy=1; assert.ok(S.feed(b,'redseal').ok); assert.ok(b.asleep,'a can that leaves her below a quarter does not wake her'); assert.ok(S.sleepLeft(b)<S.sleepLeft(mk()));
+ const n=mk(); n.sleepKind='night'; assert.ok(S.feed(n,'kraken').ok); assert.ok(n.asleep,'a night sleep is not broken by a can');
+ assert.equal(S.sleepLeft(S.newState(now)),0,'awake: nothing to wait for');
+}
+console.log('PASS: energy drinks wake a napping seal, never a night sleep, and the sleep timer shrinks with each can.');
 // "Add to Home Screen": which kind of device is it, and do update stamps sort by time? (Compared as text, 10 Dec comes before 18 Nov.)
 load('js/install.js');
 {
