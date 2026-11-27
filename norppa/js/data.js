@@ -416,6 +416,23 @@
   PN.mmss = (s) => Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
   PN.GAME_ORDER = ['ball', 'shuffle', 'catch', 'swim', 'stack', 'puff', 'toss', 'piano', 'coffee', 'curl', 'type', 'sled', 'bj'];
   PN.GAMES = GAMES;
+  /* The Google Play app is the same game opened in an Android wrapper (a Trusted Web Activity). The wrapper opens it with ?app=play, or
+     with an android-app:// referrer; the flag lives in sessionStorage because the wrapper shares storage with Chrome and a saved flag would
+     leak into ordinary browsing. In that app Blackjack (simulated gambling, a higher store rating) is a developer-only game, so players
+     never see it, and the Brains list leaves it out. Saves are untouched: a Blackjack bought on the web is still owned. */
+  PN.PLAY_APP = (() => {
+    try {
+      if (typeof location === 'undefined') return false;
+      let on = false;
+      try { on = sessionStorage.getItem('pikkunorppa.playapp') === '1'; } catch (e) { /* storage blocked */ }
+      if (/[?&]app=play\b/.test(location.search) || /^android-app:\/\//.test(document.referrer || '')) {
+        on = true;
+        try { sessionStorage.setItem('pikkunorppa.playapp', '1'); } catch (e) { /* storage blocked */ }
+      }
+      return on;
+    } catch (e) { return false; }
+  })();
+  if (PN.PLAY_APP) GAMES.bj.dev = true;
   PN.MUM_GAME_TEXT = {
     swim: 'Tap to swim up and slip through the gaps. You get one go.',
     toss: 'Follow the guide to flick the snowball into the bucket. You get five misses.',
@@ -432,6 +449,7 @@
     care: { icon: 'heart', tint: 'rose', name: 'Care', spec: 'Cuddler', games: [] },   // cuddles and saunas
   };
   PN.SKILL_ORDER = ['water', 'sport', 'brain', 'care'];
+  if (PN.PLAY_APP) PN.SKILLS.brain.games = PN.SKILLS.brain.games.filter((g) => g !== 'bj');
   PN.skillOf = (game) => PN.SKILL_ORDER.find((k) => PN.SKILLS[k].games.indexOf(game) >= 0) || null;
   const ECON = { price: 2, food: 1.25, cosmetic: 6, cosmeticFloor: 200, cosmeticCut: 0.85, earn: 2 / 3, fishFood: 0.75 };   // food: fish and food cost a quarter more; cosmeticCut: things to wear and for the shore cost 15% less
   PN.ECON = ECON;
