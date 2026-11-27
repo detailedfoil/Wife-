@@ -45,7 +45,7 @@
     ballJoy: 1, ballJoyGoes: 6,   // a bounce on the nose lifts happiness by a point (a quarter of that if it is quick after the last), and only the first six an hour
     petJoy: 0.2, petJoyPats: 10,   // a pat lifts happiness by only a fifth of a point, and only the first ten an hour
     saunaRounds: 5, saunaBonus: 12, saunaClean: 95, saunaJoy: 6,
-    gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
+    canWake: 25, gameEnergy: 6, gameMax: 150, gameBoost: 1.075,   // gameBoost: every mini-game pays 7.5% over its balanced curve, cap included
     catchKeepChance: 0.1,
     playEnergy: 0.14, playEnergyMin: 2, playEnergyMax: 20, playEnergyNeed: 6,   // a game tires her by how long it lasted: 6 for a 43 second round of Fish Rain (halved, by request)
     // Care and games. Every game leaves her muckier (GAMES[id].muck, cleanliness points a minute, 1 to muckMost a game), and under
@@ -469,7 +469,10 @@
     const before = s.food, fav = id === state.fav;   // she can be fed in her sleep
     state.pantry[id]--;
     s.food = pct(s.food + it.food);
-    if (it.energy) s.energy = pct(s.energy + it.energy);
+    if (it.energy) {
+      s.energy = pct(s.energy + it.energy);
+      if (state.asleep && state.sleepKind !== 'night' && s.energy >= T.canWake) { state.asleep = false; state.sleepKind = null; state.tuckXp = 0; }   // a can in a nap wakes her once it leaves her at least a quarter full: no waiting for sleep
+    }
     if (fav && !state.favKnown) { state.favKnown = true; learn(state, 'herkku'); }
     state.counters.feeds++;
     const want = sulkNeeds(state);
@@ -561,6 +564,22 @@
     state.coins -= cost; state.owned['game_' + id] = true;
     if (id === 'sauna') { state.owned.sauna = true; state.placed.sauna = true; }   // the sauna itself comes with the game
     return ok({ price: cost });
+  }
+
+  /* How long until she wakes by herself, in ms (0 if she is awake). A night's sleep also holds until morning. */
+  function sleepLeft(state) {
+    if (!state.asleep) return 0;
+    const target = state.sleepKind === 'night' ? 99.5 : state.wakeAt;
+    let ms = Math.max(0, target - state.stats.energy) / (T.energyAsleep * (state.sick ? 0.6 : 1)) * H;
+    if (state.sleepKind === 'night') { const h = localHour(Date.now()); if (isBedtime(Date.now())) ms = Math.max(ms, ((7 - h + 24) % 24) * H); }
+    return ms;
+  }
+
+  /* The energy drinks, smallest first, with how many are in the larder and what one costs now. Coffee is not one: it cannot be given in her sleep. */
+  function energyCans(state) {
+    return Object.keys(PN.items).filter((id) => PN.items[id].energy && !PN.items[id].full && PN.items[id].price != null)
+      .map((id) => ({ id, it: PN.items[id], have: state.pantry[id] || 0, cost: price(state, PN.items[id].price) }))
+      .sort((a, b) => a.it.energy - b.it.energy);
   }
 
   function canPlay(state) {
@@ -1195,7 +1214,7 @@
   }
 
   PN.Sim = { T, H, DAY, care, growth, newState, migrate, advance, level, xpFor, mood, check, learn, addXp, drain, emit,
-    feed, pet, tuck, wake, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
+    feed, pet, tuck, wake, sleepLeft, energyCans, cleanPoop, playBall, canPlay, gameOwned, unlockGame, canDive, diveResult, gameReward, gamePay, gameMult, happyBonus, gameJoy, joyScale, gameMoods, setSkip, tasteSync,
     buy, wear, place, saunaNeed, canSauna, saunaDone, dailyGift, canEvolve, evolve, pupDue, pupNews, pupBirthDue, addPup, pupLook, visitStatus, callWait, callPup, visitTick, sendHome, presentsLeft, visiting, cuddlePup, graduatePup,
     pupLevel, pupSpent, pupFree, spendPoint, specOf, pupSpec, topSkills, pupXp, familyBonus, helpers, diveHelp, muckCost, careSlow,
     sulkNeeds, medInfo, medSync, setMedicine, takeMed, price, devOn, devOff, devRestore, devHasBackup, giveFish, canBorrow, spare, borrow, save, load, wipe, exportCode, importCode, isNight, dayKey, localHour };

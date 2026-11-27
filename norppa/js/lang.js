@@ -6,6 +6,26 @@
   'use strict';
 
   const FI = {
+    /* ---------- out of energy (27 Nov 2026) ---------- */
+    '{0} is low on energy.': 'Energia on vähissä.',
+    'Tap an energy drink to give her a can right now.': 'Napauta energiajuomaa niin hän saa tölkin heti.',
+    '{0} is out of energy.': 'Energia on loppu.',
+    'No need to wait for sleep. An energy drink fills her up right now.': 'Unta ei tarvitse odottaa. Energiajuoma täyttää hänet heti.',
+    'Energy drinks': 'Energiajuomat',
+    'Drink {0}': 'Juo {0}',
+    'Buy {0} for {1}': 'Osta {0}: {1} kolikkoa',
+    '+{0} energy': '+{0} energiaa',
+    'wakes her up': 'herättää hänet',
+    'Let her sleep': 'Anna hänen nukkua',
+    'Not now': 'Ei nyt',
+    '{0} fell asleep from tiredness. She wakes by herself in about {1}.': '{0} nukahti väsymyksestä. Hän herää itse noin {1} kuluttua.',
+    '{0} is almost out of energy and will fall asleep soon.': 'Energia on melkein loppu ja norppa nukahtaa pian.',
+    'Skip the wait: an energy drink wakes her and fills her up right now.': 'Ohita odotus: energiajuoma herättää hänet ja täyttää hänet heti.',
+    'The larder has no energy drinks, but you have the coins. Skip the wait with one from the shop.': 'Ruokakomerossa ei ole energiajuomia, mutta sinulla on kolikoita. Ohita odotus ostamalla yksi kaupasta.',
+    'There are no energy drinks in the larder, and not enough coins for one yet. The cheapest costs {0} coins.': 'Ruokakomerossa ei ole energiajuomia, eikä kolikoita vielä riitä yhteen. Halvin maksaa {0} kolikkoa.',
+    '{0} is out of energy': 'Energia on loppu',
+    '{0} is running low': 'Energia on vähissä',
+    '{0} is bright eyed again. Off you go!': '{0} on taas pirteä. Menoksi!',
     /* ---------- Typing Seal (27 Nov 2026) ---------- */
     'Typing Seal': 'Kirjoittava norppa',
     'Read the word during a quick 3, 2, 1, then type it before the time runs out. Every word catches a fish. Three mistakes and it is over.': 'Lue sana nopean 3, 2, 1 aikana ja kirjoita se ennen kuin aika loppuu. Jokainen sana nappaa kalan. Kolme virhettä ja peli päättyy.',
@@ -364,7 +384,7 @@
     'Doing fine.': 'Hyvin menee.',
     'Feed to fill it.': 'Ruokkiminen täyttää sen.',
     'Games she fancies lift it. A few strokes help a little.': 'Mieluisat pelit nostavat sitä. Silittely auttaa vähän.',
-    'Sleep brings it back.': 'Uni palauttaa sen.',
+    'Sleep brings it back, or an energy drink fills it at once.': 'Uni palauttaa sen, tai energiajuoma täyttää sen heti.',
     'A sauna or a dive sorts it.': 'Sauna tai sukellus auttaa.',
     'Little one': 'Pikkuinen',
     'Level {0} {1}': 'Taso {0}, {1}',

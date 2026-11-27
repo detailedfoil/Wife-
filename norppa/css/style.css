@@ -589,3 +589,17 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .row.online-row span.d { opacity: .9; }
 .row.online-card { margin-bottom: 10px; }
 .beta-tag { display: inline-block; font: 800 10px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; background: #fff; color: #5a3be0; border-radius: 6px; padding: 3px 5px; vertical-align: 2px; margin-left: 4px; }
+
+/* the energy drink card: a can's name, and under it what it does */
+.canbtn { display: block; text-align: center; line-height: 1.2; }
+.canbtn .ic { width: 1.1em; height: 1.1em; vertical-align: -0.18em; margin-right: 6px; }
+.canbtn small { display: block; font-size: 12px; opacity: .85; margin-top: 3px; font-weight: 600; }
+@media (max-height: 520px) {
+  .modal-card.energy { max-height: calc(100vh - 16px); overflow-y: auto; padding-top: 14px; padding-bottom: 14px; }
+  .modal-card.energy .art { display: none; }
+  .modal-card.energy .actions { flex-direction: column; position: static; margin-top: 8px; }
+  .modal-card.energy p + p { display: none; }
+  .modal-card.energy h3 { margin: 0 0 4px; }
+  .modal-card.energy .actions .btn { flex: none; padding: 9px 12px; min-height: 0; }
+  .modal-card.energy p { margin: 4px 0; }
+}

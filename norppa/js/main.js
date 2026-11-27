@@ -988,9 +988,51 @@
   function refuse(why) {
     A.play('nope');
     if (!seal.asleep && why !== 'asleep') seal.gesture('no');
+    if ((why === 'tired' || why === 'asleep') && tiredCard('blocked')) return;
     if (why === 'sulk' && state.medLate) { UI.toast(tr('{0} has anxiety and will not play. She needs her medicine.', nm()), 'anxi'); return; }
     UI.toast(whyText(why), why === 'asleep' ? 'zzz' : why === 'sick' ? 'med' : why === 'sulk' ? 'grump' : 'clock');
   }
+
+  /* ---------- out of energy: offer a can straight away ----------
+     A seal at zero energy sleeps for hours, and players used to close the game. An energy drink fills her up at once, so
+     the card shows when she dozes off from tiredness, when a game or dive is refused for tiredness, and after a game that
+     leaves her low. It offers the cans in the larder, or one to buy if the larder has none, or just the sleep timer. */
+  let tiredOpen = false, tiredSeen = false;
+  const napping = () => state.asleep && state.sleepKind !== 'night';
+  /* true when a can would help: asleep from tiredness with a real wait left (a night's sleep holds until morning, so no), or awake and nearly flat */
+  G.energyLow = () => !state.asleep ? state.stats.energy < 20 : napping() && S.sleepLeft(state) >= 15 * 60e3;
+  async function tiredCard(why) {
+    if (tiredOpen || !G.energyLow()) return false;
+    tiredOpen = true;
+    if (why !== 'sheet' && why !== 'blocked') tiredSeen = true;
+    try {
+      const asleep = state.asleep, lvl = Math.max(state.maxLevel || 1, S.level(state).level);
+      const cans = S.energyCans(state), own = cans.filter((c) => c.have > 0);
+      const buyable = cans.filter((c) => c.have === 0 && c.cost <= state.coins && (state.dev || !PN.shopFor(c.id) || lvl >= PN.shopFor(c.id).level));
+      const opts = (own.length ? own : buyable).sort((a, b) => b.it.energy - a.it.energy);
+      const acts = opts.map((c, i) => {
+        const wakes = asleep && state.stats.energy + c.it.energy >= S.T.canWake;
+        return { value: (c.have ? 'drink:' : 'buy:') + c.id, cls: i ? 'ghost' : '',
+          label: '<span class="canbtn">' + UI.ic('bolt') + (c.have ? tr('Drink {0}', UI.esc(c.it.fi)) + (c.have > 1 ? ' ×' + c.have : '') : tr('Buy {0} for {1}', UI.esc(c.it.fi), c.cost))
+            + '<small>' + tr('+{0} energy', c.it.energy) + (wakes ? ', ' + tr('wakes her up') : '') + '</small></span>' };
+      });
+      acts.push({ value: 'later', cls: 'ghost', label: tr(asleep ? 'Let her sleep' : 'Not now') });
+      const cheapest = cans[0];
+      let html = '<p>' + (asleep ? tr('{0} fell asleep from tiredness. She wakes by herself in about {1}.', UI.esc(state.name), UI.mins(S.sleepLeft(state))) : tr('{0} is almost out of energy and will fall asleep soon.', UI.esc(state.name))) + '</p>';
+      html += opts.length ? '<p>' + (own.length ? tr('Skip the wait: an energy drink wakes her and fills her up right now.') : tr('The larder has no energy drinks, but you have the coins. Skip the wait with one from the shop.')) + '</p>'
+        : '<p>' + tr('There are no energy drinks in the larder, and not enough coins for one yet. The cheapest costs {0} coins.', cheapest ? cheapest.cost : '') + '</p>';
+      const v = await UI.modal({ art: opts.length ? PN.Thumbs.get(opts[0].id) : null, title: asleep ? tr('{0} is out of energy', UI.esc(state.name)) : tr('{0} is running low', UI.esc(state.name)), html, actions: acts, tapAway: 'later', over: true, layout: 'energy' });
+      if (!v || v === 'later') return true;
+      const [kind, id] = v.split(':');
+      if (kind === 'buy') { const coins = state.coins; G.buy(id); if (state.coins === coins) return true; }
+      G.feed(id);
+      await wait(1);
+      if (!state.asleep && state.stats.energy >= 20) UI.toast(tr('{0} is bright eyed again. Off you go!', nm()), 'bolt');
+      else if (G.energyLow()) { tiredOpen = false; await tiredCard('again'); }
+    } finally { tiredOpen = false; }
+    return true;
+  }
+  G.tiredCard = tiredCard;
 
   /* Food flies in from the bottom of the screen and lands in the mouth. */
   function toss(id, then) {
@@ -1062,6 +1104,7 @@
     } else {
       const r = S.tuck(state, now);
       if (!r.ok) { A.play('nope'); seal.gesture('no'); UI.toast(tr('{0} is not sleepy yet.', nm()), 'zzz'); return; }
+      tiredSeen = true;
       UI.toast(r.night ? 'Hyvää yötä, ' + plain() + '.' : tr('Time for a nap.'), 'moon');
     }
     UI.closeSheet(); UI.refresh();
@@ -1215,6 +1258,7 @@
     const v = await UI.modal({ title, layout: 'game-result', html, actions: (again ? [{ label: replay, value: 1 }] : []).concat([{ label: tr(again ? 'Enough for now' : 'Lovely'), value: 0 }]) });
     save();
     if (v === 1) G.startGame(id);
+    else if (!tiredSeen && !state.asleep) tiredCard('result');
   };
 
   async function saunaResult(r) {
@@ -1815,7 +1859,7 @@
       else if (state.medLate) b = 'anxi';
       else if (state.grudge > 0) b = 'grump';
       else if (s.food < 25) b = 'fish';
-      else if (s.energy < 20) b = 'zzz';
+      else if (s.energy < 20) b = S.energyCans(state).some((c) => c.have > 0) ? 'bolt' : 'zzz';
       else if (s.clean < 25) b = 'steam';
       else if (s.joy < 30) b = 'heart';
       else if (S.isNight(Date.now()) && s.energy < 60) b = 'moon';
@@ -1829,6 +1873,10 @@
     hudT -= dt;
     if (hudT > 0) return;
     hudT = 0.2;
+    if (G.ready && !G.busy && !PN.Games.active && !UI.modalOpen && !bedBusy) {
+      if (!state.asleep && state.stats.energy >= 30) tiredSeen = false;
+      else if (!tiredSeen && state.asleep && S.sleepLeft(state) >= 30 * 60e3) tiredCard('auto');
+    }
     W.cam.sheet = UI.sheetName ? Math.min(0.62, $('sheet').offsetHeight / window.innerHeight) : 0;
     A.setWind(W.env.wind * (0.5 + 0.5 * W.env.precip));
   }
