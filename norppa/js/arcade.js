@@ -7,6 +7,7 @@
    Ice Stack: set sliding floes down on a tower; the overhang breaks off.
    Puffer Sweeper: minesweeper with pufferfish, one board against the clock.
    Ice Piano: piano tiles; tap the tiles of a tune in order as it speeds up.
+   Typing Seal: read a word, then type it before the window shrinks away (developer mode for now).
    Each one plugs into games.js through Games.ext: { label, label2, hint, start, go, view, pointer, key, update }. */
 (function (PN) {
   'use strict';
@@ -2283,6 +2284,249 @@
   })();
 
 
+  /* ================= Typing Seal ================= */
+  /* How fast can you type? A word comes up with a quick 3, 2, 1 (1.5 seconds in all, so it can be read before the clock starts), then a window to type it in
+     that shrinks as the run goes on (PN.typeWindow). Every letter is checked as it is typed, no Enter. A wrong letter, or running out of time, costs a heart;
+     three hearts and it is over. A word with no typo adds to the streak, and the streak makes the floes drift faster. The score is the words typed.
+     Words are in data.js (PN.TYPE_WORDS). In an online race both players get the same words, in the same language, from the shared seed.
+     The box under the word is a real text input so a phone keyboard comes up; it is kept equal to what has been typed correctly so far. */
+  const typer = (() => {
+    const CFG = PN.TYPE, TIER = [0, 1, 2];
+    let view = null, el = null, wordEl = null, countEl = null, barEl = null, boxEl = null, inEl = null, phEl = null, livesEl = null, streakEl = null, cardEl = null;
+    let floes = [], fishes = [], puffs = null, fishNow = null, fishEat = 0, lastShow = -1, baseFs = 40;
+    let mode = 'idle', t = 0, word = '', typed = 0, n = 0, lives = 3, maxLives = 3, streak = 0, typo = false, win = 1, lang = 'en', recent = [], said = -1, spin = 1, wait = 0, mum = false, fishI = 0, shown = '';
+    const coarse = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+
+    /* The next word: easy ones at first, longer words and short phrases later. The same for both players in a race (reseed per word). */
+    function pick() {
+      G.reseed(n);
+      const words = PN.TYPE_WORDS[lang];
+      const p3 = mum ? 0 : n < 8 ? 0 : Math.min(0.5, (n - 8) / 40), p1 = Math.max(0.12, 1 - n / 18), p2 = Math.max(0, 1 - p1 - p3), sum = p1 + p2 + p3;
+      const r = grnd() * sum, tier = r < p1 ? 0 : r < p1 + p2 ? 1 : 2, list = words[tier];
+      let w = list[0];
+      for (let i = 0; i < 24; i++) { w = list[Math.floor(grnd() * list.length)]; if (recent.indexOf(w) < 0) break; }
+      recent.push(w); if (recent.length > 14) recent.shift();
+      return w;
+    }
+    function fit() {
+      if (!wordEl || !word) return;
+      wordEl.style.fontSize = '';
+      baseFs = parseFloat(getComputedStyle(wordEl).fontSize) || 40;
+      const avail = Math.max(120, cardEl.clientWidth - 112);   // room for the countdown badge on both sides, so the word stays in the middle
+      wordEl.style.fontSize = Math.round(Math.max(22, Math.min(baseFs, avail / (word.length * 0.66)))) + 'px';
+    }
+    function paintWord() {
+      const kids = wordEl.children;
+      if (kids.length !== word.length) {
+        wordEl.innerHTML = '';
+        for (let i = 0; i < word.length; i++) { const s = document.createElement('span'); s.textContent = word[i]; wordEl.appendChild(s); }
+        fit();
+      }
+      for (let i = 0; i < word.length; i++) kids[i].className = i < typed ? 'done' : i === typed && mode === 'type' ? 'cur' : '';
+    }
+    function lifeRow(hitAt) {
+      let h = '';
+      for (let i = 0; i < maxLives; i++) h += PN.UI.ic('heartfull').replace('class="ic"', 'class="ic' + (i >= lives ? ' lost' : '') + (i === hitAt ? ' hit' : '') + '"');
+      livesEl.innerHTML = h;
+      livesEl.setAttribute('aria-label', tr('Hearts left: {0}', lives));
+    }
+    function streakText() { streakEl.textContent = streak >= 3 ? tr('Streak {0}', streak) : ''; }
+    function setPh() {
+      const text = mode === 'ready' ? tr(coarse() ? 'Tap here, then type' : 'Press any key to start') : mode === 'show' ? tr('Read it...') : mode === 'type' ? tr('Type it!') : '';
+      if (text !== shown) { shown = text; phEl.textContent = text; }
+      boxEl.classList.toggle('typing', typed > 0);
+    }
+    /* Where the camera goes so she and the fish sit in the band above the word card, whatever the screen: the same size on the screen on a phone, a wide
+       window and a desktop (PXU pixels to a unit), and in a short landscape window to the left of the card, low down, out of the way of the keyboard. */
+    function layout() {
+      const hpx = window.innerHeight, a = W.aspect, half = Math.tan(W.camera.fov * PI / 360), PXU = 107, dz = hpx / (2 * half * PXU);
+      const short = hpx <= 520, st = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--st')) || 0;
+      const cy = 0.35 + dz * 0.28, ytarget = short ? hpx * 0.74 : 214 + st - 95, ndcY = 1 - 2 * ytarget / hpx;
+      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(short ? -0.78 : -0.3) * dz * half * a;
+      view.camera.position.set(cx, cy, dz);
+      view.camera.lookAt(cx, cy - dz * Math.tan(theta), 0);
+    }
+    function focus() { try { inEl.focus({ preventScroll: true }); } catch (e) { /* the browser said no: a tap will do it */ } }
+
+    function nextWord() {
+      word = pick(); typed = 0; typo = false; mode = 'show'; t = 0; said = -1;
+      win = PN.typeWindow(n, word.length, mum);
+      cardEl.className = 'ty-card show'; countEl.className = 'ty-count'; countEl.textContent = '';
+      barEl.style.width = '100%'; barEl.className = '';
+      inEl.value = '';
+      wordEl.innerHTML = ''; paintWord(); setPh();
+      fishNow = fishes[fishI++ % fishes.length]; fishNow.m.visible = true; fishNow.x = 6.2; fishNow.eat = 0; fishNow.m.scale.setScalar(fishNow.s);
+    }
+    function startTyping() {
+      mode = 'type'; t = 0;
+      cardEl.className = 'ty-card';
+      countEl.className = 'ty-count go pop'; countEl.textContent = tr('Go!');
+      A.play('go');
+      paintWord(); setPh();
+      if (document.activeElement !== inEl) focus();
+    }
+    function hit() {   // one heart gone
+      lives--; streak = 0;
+      lifeRow(lives); streakText();
+      actor.gesture('shake', true); A.play('nope');
+      const st = PN.Game.state;
+      if (st && st.settings.haptics && navigator.vibrate) { try { navigator.vibrate(30); } catch (e) { /* not allowed here */ } }
+      if (lives <= 0) { mode = 'done'; K.over(tr('Out of hearts!')); }
+    }
+    function wrong() {
+      typo = true; hit();
+      boxEl.classList.remove('bad'); void boxEl.offsetWidth; boxEl.classList.add('bad');
+      if (mode !== 'done') K.beat('typo');
+    }
+    function late() {
+      for (let i = typed; i < word.length; i++) wordEl.children[i].style.color = '#d8334f';
+      cardEl.classList.remove('late'); void cardEl.offsetWidth; cardEl.classList.add('late');
+      countEl.className = 'ty-count pop'; countEl.textContent = tr('Too slow!');
+      mode = 'gap'; wait = 1.0; barEl.style.width = '0%';
+      hit();
+      if (mode === 'gap' && n >= 3) K.beat('shrink');
+    }
+    function done() {
+      n++; K.score(n);
+      streak = typo ? 0 : streak + 1; streakText();
+      mode = 'gap'; wait = 0.4; paintWord();
+      if (fishNow) fishNow.eat = 0.0001;
+      actor.gesture('gulp', true); A.play('gulp'); A.play('squeak', 0.5);
+      if (n % 10 === 0) A.play('chirp');
+      if (n === 1) K.beat('first'); else if (n === 4) K.beat('streak');
+    }
+    /* Letters typed (from the box or the keyboard). Each one is right or a typo; only one heart goes for one burst of letters. */
+    function chars(str) {
+      let bad = false;
+      for (let i = 0; i < str.length && mode === 'type'; i++) {
+        const c = str[i].toLowerCase();
+        if (c === word[typed]) {
+          typed++; A.play('tap', 0.12);
+          if (typed === word.length) { done(); break; }
+        } else if (!bad) { bad = true; wrong(); }
+      }
+      if (mode === 'type') { paintWord(); setPh(); }
+      inEl.value = mode === 'type' ? word.slice(0, typed) : '';
+    }
+    function begin() {
+      if (mode !== 'ready') return;
+      mode = 'gap'; wait = 0.25; K.hint(''); focus(); setPh();
+    }
+
+    function fishMesh(id) {
+      const m = new T.Group(), f = PN.Props.fish(PN.items[id].look, true);
+      f.scale.setScalar(1); m.add(f); m.visible = false;
+      return { m, f, x: 6.2, s: 0.6, eat: 0, ph: rnd() * 6 };
+    }
+    function build() {
+      view = lakeStage(41);
+      const sc = view.scene;
+      floes = sc.children.filter((m) => m.isMesh && m.geometry === floeGeometry && (m.position.x || m.position.z));   // the loose floes drift past; the one she sits on stays
+      ['muikku', 'ahven', 'hauki'].forEach((id) => { const fm = PN.items[id] ? fishMesh(id) : fishMesh('muikku'); fm.f.rotation.y = 0; fm.m.position.set(6.2, 0.05, 0.25); sc.add(fm.m); fishes.push(fm); });
+      puffs = Puffs(sc, 36, 0xfff1b5, 1);
+      el = document.getElementById('tyBoard'); wordEl = document.getElementById('tyWord'); countEl = document.getElementById('tyCount'); barEl = document.getElementById('tyBar');
+      boxEl = document.getElementById('tyBox'); inEl = document.getElementById('tyIn'); phEl = document.getElementById('tyPh'); livesEl = document.getElementById('tyLives');
+      streakEl = document.getElementById('tyStreak'); cardEl = document.getElementById('tyCard');
+      inEl.setAttribute('aria-label', tr('Type the word'));
+      inEl.addEventListener('input', () => {
+        if (mode !== 'type') { inEl.value = ''; return; }
+        const v = inEl.value;
+        if (v.length <= typed) { inEl.value = word.slice(0, typed); return; }   // a backspace: nothing to take back
+        chars(v.slice(typed));
+      });
+      inEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+      // A tap anywhere (but the top bar) keeps the keyboard up and the box focused; in the pause before the first word it also starts the game.
+      document.addEventListener('pointerdown', (e) => {
+        if (el.hidden || !PN.Games.active || (e.target.closest && e.target.closest('.g-top'))) return;
+        if (e.target !== inEl) e.preventDefault();
+        if (mode === 'ready') begin(); else focus();
+      }, true);
+      window.addEventListener('resize', () => { if (!el.hidden) fit(); });
+    }
+    return {
+      label: 'Words', nocount: true, hint: '',
+      view: () => view,
+      peek: () => ({ mode, word, typed, n, lives, streak, win, lang, left: win - t }),
+      type: (s) => chars(s), begin,
+      snap() {   // the corner picture in an online race: the word and how far they have got, drawn small
+        if (!word) return null;
+        return { w: word, p: typed, l: lives, k: maxLives, n, s: streak, m: mode === 'show' ? 1 : mode === 'type' ? 2 : 0, c: mode === 'show' ? Math.max(1, said > 0 ? 3 - said + 1 : 3) : 0, f: mode === 'type' ? Math.round(Math.max(0, 1 - t / win) * 100) / 100 : 1 };
+      },
+      start() {
+        if (!view) build();
+        cast(view, 0.55, true);
+        face(PI * 0.5);
+        mum = G.mumMode;
+        const v = G.versusInfo && G.versusInfo();
+        lang = v && (v.lang === 'fi' || v.lang === 'en') ? v.lang : (PN.isFi() ? 'fi' : 'en');
+        maxLives = mum ? CFG.mumLives : CFG.lives; lives = maxLives;
+        n = 0; streak = 0; recent = []; word = ''; typed = 0; mode = 'ready'; t = 0; wait = 0; said = -1; shown = ''; fishI = 0; spin = 1;
+        fishes.forEach((f) => { f.m.visible = false; });
+        K.hint(coarse() ? 'Tap the box and type the word.' : 'Press any key and type the word.');
+        wordEl.innerHTML = ''; wordEl.style.fontSize = ''; wordEl.textContent = tr('Ready?');
+        countEl.className = 'ty-count'; countEl.textContent = ''; cardEl.className = 'ty-card'; barEl.style.width = '100%'; barEl.className = '';
+        inEl.value = ''; boxEl.className = 'ty-box';
+        lifeRow(-1); streakText(); setPh();
+        el.hidden = false;
+        if (!coarse()) focus();
+      },
+      stop() { if (el) { el.hidden = true; inEl.blur(); inEl.value = ''; } mode = 'idle'; if (actor && actor.g) { actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); } },
+      go() { K.score(0, true); },
+      pointer() {},
+      key(k) {
+        if (mode === 'ready') { if (k && k.length === 1) begin(); return; }
+        if (mode === 'type' && document.activeElement !== inEl && k && k.length === 1) { chars(k); focus(); }
+      },
+      update(dt, playing) {
+        clock += dt;
+        lens(view);
+        layout();
+        const sp = 0.7 + Math.min(3.3, streak * 0.32);
+        spin = U.damp(spin, sp, 2.5, dt);
+        floes.forEach((f) => {
+          f.position.x -= dt * spin * (0.55 + 0.1 * Math.min(8, Math.abs(f.position.z)));
+          if (f.position.x < -22) f.position.x += 44;
+        });
+        // the fish bobs ahead of her; once a word is done it jumps into her mouth
+        fishes.forEach((f) => {
+          if (!f.m.visible) return;
+          if (f.eat > 0) {
+            f.eat += dt * 3.4;
+            const p = Math.min(1, f.eat);
+            f.m.position.set(U.lerp(f.x, 0.55, p), 0.05 + Math.sin(p * PI) * 0.7 + 0.4 * p, 0.25);
+            f.m.scale.setScalar(f.s * (1 - 0.7 * p));
+            if (p >= 1) { f.m.visible = false; f.eat = 0; puffs.emit(0.7, 0.8, 0.5, 8, 1.6, 0.06, 0.6, 2); }
+            return;
+          }
+          const goal = 1.9;
+          f.x = U.damp(f.x, goal, 2.6, dt);
+          f.m.position.set(f.x, 0.05 + Math.sin(clock * 3 + f.ph) * 0.06, 0.25);
+          f.m.rotation.z = Math.sin(clock * 6 + f.ph) * 0.08;
+        });
+        puffs.update(dt, 0, 0);
+        actor.update(dt, clock, null);
+        const bob = Math.sin(clock * 2.4) * 0.02;
+        view.rig.position.y = bob;
+        if (!playing) return;
+        if (mode === 'gap') { wait -= dt; if (wait <= 0) nextWord(); }
+        else if (mode === 'show') {
+          t += dt;
+          const c = 3 - Math.floor(t / (CFG.show / 3));
+          if (c !== said && c >= 1) { said = c; countEl.textContent = String(c); countEl.className = 'ty-count pop'; A.play('tick'); }
+          if (t >= CFG.show) startTyping();
+        } else if (mode === 'type') {
+          t += dt;
+          const left = win - t, frac = Math.max(0, left / win);
+          barEl.style.width = (frac * 100).toFixed(1) + '%';
+          barEl.className = frac < 0.25 ? 'low' : frac < 0.55 ? 'mid' : '';
+          if (t > 0.6 && countEl.textContent === tr('Go!')) countEl.textContent = '';
+          if (left <= 0) late();
+        }
+      },
+    };
+  })();
+
+
   /* ---------- Sauna: how she gets clean ----------
      Not a game for coins: a go is a run of rounds, and every round that goes well scrubs a share of the dirt away (see Sim.saunaDone).
      A heat bar fills up the side with a gold line on it, like the swing bar in a golf game. Hold her by the head and pull her out of the sauna
@@ -2652,7 +2896,7 @@
      page that does not ask for that file, or an old copy of the file itself; either way the new one is fetched here. */
   if (!(PN.Coffee && PN.Coffee.V >= 4)) { const sc = document.createElement('script'); sc.src = 'js/coffee.js?v=4'; document.head.appendChild(sc); }
 
-  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
+  G.ext.swim = swim; G.ext.stack = stack; G.ext.puff = puff; G.ext.piano = piano; G.ext.type = typer; G.ext.toss = toss; G.ext.curl = curl; G.ext.sled = sled; G.ext.bj = bj; G.ext.sauna = sauna;
 })(window.PN = window.PN || {});
 
 /* Seal Seat Shuffle: a roofless Three.js bus, viewed from above. */
