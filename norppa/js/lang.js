@@ -47,7 +47,7 @@
     'Ready?': 'Valmiina?',
     'Type the word': 'Kirjoita sana',
     'Tap the box to start typing.': 'Napauta ruutua ja aloita kirjoittaminen.',
-    'A word appears. Type it before the bar runs out. No Enter needed.': 'Sana tulee näkyviin. Kirjoita se ennen kuin palkki loppuu. Enteriä ei tarvita.',
+    'The first word comes with a quick 3, 2, 1. After that each word starts the moment it appears. Type it before the bar runs out. No Enter needed.': 'Ensimmäinen sana tulee nopean 3, 2, 1 -laskennan kanssa. Sen jälkeen jokainen sana alkaa heti kun se ilmestyy. Kirjoita se ennen kuin palkki loppuu. Enteriä ei tarvita.',
     'Got it! Every word you finish catches a fish.': 'Hienoa! Jokainen valmis sana nappaa kalan.',
     'The word stays on screen, so you can read it once and then just type. Tap to go on.': 'Sana pysyy näytöllä, joten voit lukea sen kerran ja sitten vain kirjoittaa. Jatka napauttamalla.',
     'A typo costs a heart, and so does running out of time.': 'Kirjoitusvirhe vie sydämen, samoin aikaan jääminen.',
