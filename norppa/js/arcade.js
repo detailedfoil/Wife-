@@ -1830,6 +1830,17 @@
     let view = null, el = null, cells = [], prizeEl = null, modeEl = null, tipEl = null, fish = [];
     let mines = null, num = null, open = null, mark = null, left = 0, flags = 0, t = 0, mode = 'idle', flagging = false, wait = 0, press = null, shownT = -1, shownP = -1;
 
+    let framedWidth = 0, framedHeight = 0;
+    function frameBoard() {
+      const w = window.innerWidth, h = window.innerHeight;
+      if (w === framedWidth && h === framedHeight) return;
+      framedWidth = w; framedHeight = h;
+      const cam = view.camera;
+      if (window.matchMedia('(orientation: landscape) and (min-width: 480px) and (max-height: 520px)').matches) {
+        const space = el.getBoundingClientRect().left;
+        cam.setViewOffset(w, h, (w - space) / 2, -h * 0.23, w, h);
+      } else if (cam.view && cam.view.enabled) cam.clearViewOffset();
+    }
     /* A round little pufferfish for the water beside her. */
     function puffer() {
       const g = new T.Group(), dark = U.mat(0x263647, { roughness: 0.34 }), gold = U.mat(0xd99a48);
@@ -1999,6 +2010,7 @@
         if (!view) build();
         cast(view, 0.85, true);
         face(0);
+        framedWidth = 0;
         size = G.mumMode ? 6 : 9;
         mineCount = G.mumMode ? 4 : 10;
         saves = G.mumMode ? 2 : 0;
@@ -2018,7 +2030,7 @@
       update(dt, playing) {
         clock += dt;
         lens(view);
-        lookAtPool(view, 1.2);
+        frameBoard(); lookAtPool(view, 1.2);
         fish.forEach((f) => {
           f.g.position.y = f.y + Math.sin(clock * 1.4 + f.ph) * 0.045;
           f.g.rotation.z = Math.sin(clock * 0.9 + f.ph) * 0.12;
@@ -2099,7 +2111,8 @@
         e = document.createElement('div'); e.id = 'gSong'; e.className = 'g-song';
         document.getElementById('gamehud').appendChild(e);
       }
-      e.style.cssText = 'position:absolute;top:calc(66px + env(safe-area-inset-top, 0px));left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;padding:7px 14px;border-radius:16px;background:rgba(16,43,82,.88);color:#fff;font:700 16px var(--body, sans-serif);line-height:1.3;text-align:center;text-shadow:none;z-index:4;pointer-events:none';
+      const quit = document.getElementById('gQuit');
+      if (e.parentNode !== quit.parentNode) quit.before(e);
       e.textContent = text; e.hidden = !text;
     }
     function size() {
@@ -2222,7 +2235,7 @@
         tap(Math.max(0, Math.min(LANES - 1, Math.floor((e.clientX - r.left) / r.width * LANES))));
       });
       el.addEventListener('contextmenu', (e) => e.preventDefault());
-      window.addEventListener('resize', () => { if (!el.hidden) size(); });
+      window.addEventListener('resize', () => { if (!el.hidden) { size(); draw(); } });
     }
     return {
       label: 'Tiles', nocount: true, hint: 'Tap the Start tile, then every tile in order.',
@@ -2293,7 +2306,7 @@
   const typer = (() => {
     const CFG = PN.TYPE, TIER = [0, 1, 2];
     let view = null, el = null, wordEl = null, countEl = null, barEl = null, boxEl = null, inEl = null, phEl = null, livesEl = null, streakEl = null, cardEl = null;
-    let fishes = [], puffs = null, fish = null, flight = 0, fishI = 0, lastShow = -1, baseFs = 40, camX = 0, halfW = 3;
+    let fishes = [], puffs = null, fish = null, flight = 0, fishI = 0, sealScreenY = 0, besideCard = false, camX = 0, halfW = 3;
     let kb = null, keys = {}, keyList = [], space = null, fins = [], finAlt = 0;
     const mp = new T.Vector3(), kp = new T.Vector3();
     let mode = 'idle', t = 0, word = '', typed = 0, n = 0, lives = 3, maxLives = 3, streak = 0, typo = false, win = 1, lang = 'en', recent = [], said = -1, wait = 0, mum = false, shown = '';
@@ -2313,9 +2326,24 @@
     function fit() {
       if (!wordEl || !word) return;
       wordEl.style.fontSize = '';
-      baseFs = parseFloat(getComputedStyle(wordEl).fontSize) || 40;
-      const avail = Math.max(120, cardEl.clientWidth - 112);   // room for the countdown badge on both sides, so the word stays in the middle
-      wordEl.style.fontSize = Math.round(Math.max(22, Math.min(baseFs, avail / (word.length * 0.66)))) + 'px';
+      const range = document.createRange();
+      range.selectNodeContents(wordEl);
+      const width = range.getBoundingClientRect().width;
+      if (width > wordEl.clientWidth) {
+        const font = parseFloat(getComputedStyle(wordEl).fontSize);
+        wordEl.style.fontSize = Math.floor(font * wordEl.clientWidth / width) + 'px';
+      }
+    }
+    function sizeBoard() {
+      // Mobile browsers can resize just the visual viewport when the system keyboard opens.
+      const visibleHeight = Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight);
+      el.style.setProperty('--ty-vh', visibleHeight + 'px');
+      el.classList.toggle('compact', visibleHeight <= 520);
+      besideCard = visibleHeight <= 520 && window.innerWidth >= 480 && window.innerWidth > visibleHeight;
+      el.classList.toggle('beside', besideCard);
+      el.classList.toggle('shallow', visibleHeight <= 250 && besideCard);
+      sealScreenY = besideCard ? visibleHeight * 0.62 : el.offsetTop - 95;
+      fit();
     }
     function paintWord() {
       const kids = wordEl.children;
@@ -2342,9 +2370,8 @@
        window and a desktop (PXU pixels to a unit), and in a short landscape window to the left of the card, low down, out of the way of the keyboard. */
     function layout() {
       const hpx = window.innerHeight, a = W.aspect, half = Math.tan(W.camera.fov * PI / 360), PXU = 107, dz = hpx / (2 * half * PXU);
-      const short = hpx <= 520, st = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--st')) || 0;
-      const cy = 0.35 + dz * 0.28, ytarget = short ? hpx * 0.68 : 214 + st - 95, ndcY = 1 - 2 * ytarget / hpx;
-      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(short ? -0.62 : -0.3) * dz * half * a;
+      const cy = 0.35 + dz * 0.28, ndcY = 1 - 2 * sealScreenY / hpx;
+      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(besideCard ? -0.67 : -0.3) * dz * half * a;
       camX = cx; halfW = dz * half * a;
       view.camera.position.set(cx, cy, dz);
       view.camera.lookAt(cx, cy - dz * Math.tan(theta), 0);
@@ -2474,7 +2501,10 @@
         if (e.target !== inEl) e.preventDefault();
         if (mode === 'ready') begin(); else focus();
       }, true);
-      window.addEventListener('resize', () => { if (!el.hidden) fit(); });
+      streakEl.before(countEl);
+      const resize = () => { if (!el.hidden) sizeBoard(); };
+      window.addEventListener('resize', resize);
+      window.visualViewport?.addEventListener('resize', resize);
     }
     return {
       label: 'Words', nocount: true, hint: '',
@@ -2515,6 +2545,7 @@
         inEl.value = ''; boxEl.className = 'ty-box';
         lifeRow(-1); streakText(); setPh();
         el.hidden = false;
+        sizeBoard();
         if (!coarse()) focus();
       },
       stop() { if (el) { el.hidden = true; inEl.blur(); inEl.value = ''; } mode = 'idle'; if (kb && kb.parent) kb.parent.remove(kb); if (actor && actor.g) { actor.flipL.position.set(0.66, 0.2, 0.36); actor.flipR.position.set(-0.66, 0.2, 0.36); } },

@@ -740,7 +740,8 @@
       const cam = view.camera; aspect = W.aspect; tall = aspect < 1;
       cam.aspect = aspect; cam.fov = W.camera.fov; cam.updateProjectionMatrix();
       const el = (tall ? 31 : 19) * RAD, dir = new T.Vector3(0, Math.sin(el), Math.cos(el)), zT = tall ? 0 : -0.3;
-      const pts = (tall ? [[0.86, 0.3, 0.3], [-0.86, 0.3, 0.3], [0, 1.42, -1.5], [0, 0, 1.9], [0.74, 0, 1.3], [-0.9, 0, 1.6]] : [[1.9, 0.3, 0.5], [-1.9, 0.3, 0.5], [0, 1.22, -1.25], [0, 0, 0.95]]).map((p) => new T.Vector3(p[0], p[1], p[2]));
+      // Frame the longest hare ears, including the bob when a drink is served.
+      const pts = (tall ? [[0.86, 0.3, 0.3], [-0.86, 0.3, 0.3], [0, 2.32, -1.5], [0, 0, 1.9], [0.74, 0, 1.3], [-0.9, 0, 1.6]] : [[1.9, 0.3, 0.5], [-1.9, 0.3, 0.5], [0, 2.0, -1.25], [0, 0, 0.95]]).map((p) => new T.Vector3(p[0], p[1], p[2]));
       const v = new T.Vector3(), fits = (p) => { v.copy(p).project(cam); return Math.abs(v.x) <= 0.97 && v.y <= 0.84 && v.y >= -0.9; };
       let best = null;
       for (let ty = 0.1; ty <= 1.21; ty += 0.05) for (let d = 2; d < 12; d += 0.05) {
