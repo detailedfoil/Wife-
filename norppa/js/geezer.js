@@ -2,7 +2,7 @@
    A look-only test of a different main character: a big British bloke in his
    lounge instead of the seal on the shore. It lays its own home screen over the
    normal one; nothing in the save, the sim, the games or the shop changes.
-   Turn it on in Settings (developer mode) > Geezer home. The art is in geezer-art.js. */
+   Turn it on in Settings (developer mode) > Geezer home. The 3D lounge is in geezer-3d.js. */
 (function (PN) {
   'use strict';
 
@@ -40,7 +40,7 @@
     'Close': 'Sulje',
   });
 
-  let root = null, svgBox = null, bubbleT = 0, tray = null;
+  let root = null, bubbleT = 0, tray = null;
   const on = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
   const $ = (id) => document.getElementById(id);
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -55,7 +55,7 @@
     root = document.createElement('div');
     root.className = 'gz';
     root.hidden = true;
-    root.innerHTML = '<div class="gz-scene" id="gzScene">' + PN.GeezerArt.svg() + '</div>'
+    root.innerHTML = ''
       + '<div class="gz-top"><div class="gz-plate"><b data-l="Big Dave">' + tr('Big Dave') + '</b><span data-l="Proper geezer">' + tr('Proper geezer') + '</span></div>'
       + '<div class="gz-top-r"><div class="gz-coins"><i></i><b id="gzCoins">0</b></div><button class="gz-round" id="gzSettings" aria-label="Settings" data-la="Settings">⚙</button></div></div>'
       + '<div class="gz-meters">' + [['food', 'Belly', '🥧'], ['joy', 'Mood', '🙂'], ['energy', 'Oomph', '⚡'], ['clean', 'Fresh', '🧼']]
@@ -67,19 +67,25 @@
         .map((d) => '<button data-gz="' + d[0] + '"><span class="gz-di">' + d[2] + '</span><span data-l="' + d[1] + '">' + tr(d[1]) + '</span></button>').join('') + '</nav>';
     const hud = $('hud');
     hud.parentNode.insertBefore(root, hud.nextSibling);
-    svgBox = root.querySelector('.gz-svg');
     tray = $('gzTray');
     root.addEventListener('click', onClick);
-    window.addEventListener('resize', frame);
-    frame();
   }
 
-  /* Keep the bloke and his chair in view: tall screens see the middle of the room,
-     wide screens see more of it from side to side. */
-  function frame() {
-    if (!svgBox) return;
-    const w = innerWidth, h = innerHeight;
-    svgBox.setAttribute('viewBox', h >= w ? '150 -200 720 1500' : '-150 -170 1320 1290');
+  /* While it shows, the game's renderer draws the lounge instead of the shore. */
+  let raf = 0, last = 0;
+  function loop(ts) {
+    raf = requestAnimationFrame(loop);
+    const W = PN.World, dt = Math.min(0.1, (ts - (last || ts)) / 1000); last = ts;
+    const v = PN.Geezer3D.build();
+    v.frame(innerWidth, innerHeight);
+    v.update(dt, ts / 1000);
+    if (!W.override || W.override === v.view) W.override = v.view;
+  }
+  function start() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } }
+  function stop() {
+    if (raf) cancelAnimationFrame(raf); raf = 0;
+    const W = PN.World, v = PN.Geezer3D;
+    if (v.view && W.override === v.view) W.override = null;
   }
 
   function say(text) {
@@ -88,10 +94,7 @@
     b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
     clearTimeout(bubbleT); bubbleT = setTimeout(() => { b.hidden = true; }, 2600);
   }
-  function act(cls, ms) {
-    root.classList.add(cls);
-    setTimeout(() => root.classList.remove(cls), ms);
-  }
+  function act(name) { PN.Geezer3D.act(name); }
   function tap() { if (PN.Audio) PN.Audio.play('tap'); }
 
   function openTray(kind) {
@@ -104,19 +107,22 @@
   }
 
   function onClick(e) {
-    const b = e.target.closest('[data-gz], #gzSettings, #gzBack, .gz-man');
-    if (!b) { if (!tray.hidden && !e.target.closest('.gz-tray')) tray.hidden = true; return; }
+    const b = e.target.closest('[data-gz], #gzSettings, #gzBack');
+    if (!b) {
+      if (!tray.hidden && !e.target.closest('.gz-tray')) { tray.hidden = true; return; }
+      if (e.target === root && PN.Geezer3D.hitDave(e.clientX, e.clientY, innerWidth, innerHeight)) { tap(); say(pick(IDLE)); act('nod'); }
+      return;
+    }
     if (b.id === 'gzSettings') { tap(); PN.UI.openSheet('settings'); return; }
     if (b.id === 'gzBack') { tap(); set(false); return; }
-    if (b.classList.contains('gz-man')) { tap(); say(pick(IDLE)); act('nod', 700); return; }
     const k = b.dataset.gz;
     tap();
     if (k === 'feed' || k === 'shop') openTray(k);
     else if (k === 'close') tray.hidden = true;
-    else if (k === 'eat') { tray.hidden = true; act('sip', 1300); setTimeout(() => say(pick(YUM)), 600); }
+    else if (k === 'eat') { tray.hidden = true; act('sip'); setTimeout(() => say(pick(YUM)), 600); }
     else if (k === 'buy') say('Just a look for now: nothing to buy yet.');
-    else if (k === 'telly') { tray.hidden = true; act('telly', 2400); say(pick(TELLY)); }
-    else if (k === 'bath') { tray.hidden = true; say(Math.random() < 0.7 ? 'A bath? I had one last month.' : 'Go on then. Lots of bubbles, mind.'); act('nod', 700); }
+    else if (k === 'telly') { tray.hidden = true; act('telly'); say(pick(TELLY)); }
+    else if (k === 'bath') { tray.hidden = true; say(Math.random() < 0.7 ? 'A bath? I had one last month.' : 'Go on then. Lots of bubbles, mind.'); act('nod'); }
   }
 
   /* Show it only on the home screen, only in developer mode. */
@@ -127,6 +133,8 @@
     if (show && !root) build();
     if (!root) return;
     if (root.hidden === show) { root.hidden = !show; if (show) PN.setLang(PN.lang); }
+    document.body.classList.toggle('gz-on', show);
+    if (show) start(); else stop();
     if (!show) return;
     $('gzCoins').textContent = Math.floor(G.state.coins).toLocaleString();
     root.querySelectorAll('.gz-meter').forEach((m) => {
