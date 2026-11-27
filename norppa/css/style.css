@@ -581,3 +581,8 @@ textarea.field { font: 600 12px/1.3 ui-monospace, Menlo, Consolas, monospace; te
 .vs-pip { position: absolute; left: calc(12px + var(--sl)); top: calc(58px + var(--st)); pointer-events: none; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 12px rgba(8, 20, 40, .35); border: 2px solid rgba(255, 255, 255, .85); background: #26456b; }
 .vs-pip canvas { display: block; }
 .vs-pip-name { position: absolute; left: 0; right: 0; top: 0; padding: 1px 5px; font: 800 10.5px var(--body); color: #fff; background: rgba(20, 40, 70, .55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+/* The online button stands out from the plain white rows. */
+.row.online-row { background: linear-gradient(135deg, #2b7bff, #7a4dff); color: #fff; box-shadow: 0 2px 0 rgba(43, 24, 120, .25), 0 6px 16px rgba(80, 60, 220, .35); }
+.row.online-row .ic-wrap { background: rgba(255, 255, 255, .22); color: #fff; }
+.row.online-row b, .row.online-row span.d { color: #fff; }
+.row.online-row span.d { opacity: .9; }
