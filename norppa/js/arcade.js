@@ -2308,6 +2308,7 @@
     let view = null, el = null, wordEl = null, countEl = null, barEl = null, boxEl = null, inEl = null, phEl = null, livesEl = null, streakEl = null, cardEl = null;
     let fishes = [], puffs = null, fish = null, flight = 0, fishI = 0, sealScreenY = 0, besideCard = false, camX = 0, halfW = 3;
     let kb = null, keys = {}, keyList = [], space = null, fins = [], finAlt = 0;
+    let paintRoom, pixelsPerUnit = 107;
     const mp = new T.Vector3(), kp = new T.Vector3();
     let mode = 'idle', t = 0, word = '', typed = 0, n = 0, lives = 3, maxLives = 3, streak = 0, typo = false, win = 1, lang = 'en', recent = [], said = -1, wait = 0, mum = false, shown = '';
     const coarse = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
@@ -2329,9 +2330,11 @@
       const range = document.createRange();
       range.selectNodeContents(wordEl);
       const width = range.getBoundingClientRect().width;
-      if (width > wordEl.clientWidth) {
+      // Both bounds include the postcard's brief scale animation. Leave a little ink margin.
+      const available = wordEl.getBoundingClientRect().width - 4;
+      if (available > 0 && width > available) {
         const font = parseFloat(getComputedStyle(wordEl).fontSize);
-        wordEl.style.fontSize = Math.floor(font * wordEl.clientWidth / width) + 'px';
+        wordEl.style.fontSize = Math.max(1, Math.floor(font * available / width) - 1) + 'px';
       }
     }
     function sizeBoard() {
@@ -2342,7 +2345,11 @@
       besideCard = visibleHeight <= 520 && window.innerWidth >= 480 && window.innerWidth > visibleHeight;
       el.classList.toggle('beside', besideCard);
       el.classList.toggle('shallow', visibleHeight <= 250 && besideCard);
-      sealScreenY = besideCard ? visibleHeight * 0.62 : el.offsetTop - 95;
+      const bandTop = 48, bandBottom = besideCard ? visibleHeight : el.offsetTop;
+      pixelsPerUnit = U.clamp((bandBottom - bandTop) * 0.78, 45, 125);
+      sealScreenY = besideCard ? Math.max(73, visibleHeight * 0.55) : bandBottom - pixelsPerUnit * 0.67 - 8;
+      const sealX = window.innerWidth * (besideCard ? 0.165 : 0.43);
+      paintRoom(window.innerWidth, window.innerHeight, sealScreenY + pixelsPerUnit * 0.17, sealX, pixelsPerUnit / 107);
       fit();
     }
     function paintWord() {
@@ -2369,9 +2376,9 @@
     /* Where the camera goes so she and the fish sit in the band above the word card, whatever the screen: the same size on the screen on a phone, a wide
        window and a desktop (PXU pixels to a unit), and in a short landscape window to the left of the card, low down, out of the way of the keyboard. */
     function layout() {
-      const hpx = window.innerHeight, a = W.aspect, half = Math.tan(W.camera.fov * PI / 360), PXU = 107, dz = hpx / (2 * half * PXU);
+      const hpx = window.innerHeight, a = W.aspect, half = Math.tan(W.camera.fov * PI / 360), dz = hpx / (2 * half * pixelsPerUnit);
       const cy = 0.35 + dz * 0.28, ndcY = 1 - 2 * sealScreenY / hpx;
-      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = -(besideCard ? -0.67 : -0.3) * dz * half * a;
+      const theta = Math.atan((cy - 0.35) / dz) + Math.atan(ndcY * half), cx = (besideCard ? 0.67 : 0.14) * dz * half * a;
       camX = cx; halfW = dz * half * a;
       view.camera.position.set(cx, cy, dz);
       view.camera.lookAt(cx, cy - dz * Math.tan(theta), 0);
@@ -2465,21 +2472,53 @@
     /* A little keyboard in front of her: three rows of keys and a space bar, in her own space so it grows with her. The fins smash the key that was typed. */
     function keyboard() {
       kb = new T.Group();
-      const base = U.mesh(new T.BoxGeometry(1.5, 0.05, 0.6), U.mat(0x3b4660, { roughness: 0.6 }), 0, 0.1, 1.2);
-      kb.add(base);
-      const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], sp = 0.13, geo = new T.BoxGeometry(0.108, 0.06, 0.108);
+      const enamel = U.mat(0x377d78), rim = U.mat(0x244c50), brass = U.mat(0xd7a65a);
+      function casePart(w, h, d, r, mat, x, y, z) {
+        const shape = new T.Shape();
+        const a = w / 2, b = d / 2;
+        shape.moveTo(-a + r, -b); shape.lineTo(a - r, -b); shape.quadraticCurveTo(a, -b, a, -b + r);
+        shape.lineTo(a, b - r); shape.quadraticCurveTo(a, b, a - r, b);
+        shape.lineTo(-a + r, b); shape.quadraticCurveTo(-a, b, -a, b - r);
+        shape.lineTo(-a, -b + r); shape.quadraticCurveTo(-a, -b, -a + r, -b);
+        const geo = new T.ExtrudeGeometry(shape, { depth: h, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.012, bevelThickness: 0.012, curveSegments: 4 });
+        geo.rotateX(-PI / 2);
+        const part = U.mesh(geo, mat, x, y, z); kb.add(part); return part;
+      }
+      casePart(1.68, 0.05, 0.84, 0.11, rim, 0, 0.035, 1.25);
+      casePart(1.64, 0.09, 0.81, 0.10, enamel, 0, 0.077, 1.25);
+      casePart(1.41, 0.012, 0.53, 0.06, rim, 0, 0.163, 1.33);
+      const roller = U.mesh(new T.CylinderGeometry(0.052, 0.052, 1.27, 16), rim, 0, 0.225, 0.975);
+      roller.rotation.z = PI / 2; kb.add(roller);
+      for (const side of [-1, 1]) {
+        const knob = U.mesh(new T.CylinderGeometry(0.078, 0.078, 0.09, 16), brass, side * 0.68, 0.225, 0.975);
+        knob.rotation.z = PI / 2; kb.add(knob);
+      }
+      const slip = U.tex(256, 96, c => {
+        c.fillStyle = '#fff2d5'; c.fillRect(0, 0, 256, 96);
+        c.fillStyle = '#ba7964'; c.fillRect(209, 11, 27, 28);
+        c.fillStyle = '#a3aca3';
+        for (const [y, w] of [[31, 84], [44, 70], [57, 98]]) c.fillRect(21, y, w, 3);
+      });
+      const letter = U.mesh(new T.PlaneGeometry(0.86, 0.23), U.mat(0xffffff, { map: slip, side: T.DoubleSide }), 0, 0.31, 0.96);
+      letter.rotation.x = -0.26; kb.add(letter);
+      const rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], sp = 0.13;
+      const cap = new T.CylinderGeometry(0.052, 0.058, 0.048, 14);
       function key(ch, x, z, w) {
-        const mat = U.mat(0xf6f1e6, { roughness: 0.5 }), mesh = new T.Mesh(w ? new T.BoxGeometry(w, 0.06, 0.108) : geo, mat);
-        mesh.position.set(x, 0.145, z); mesh.castShadow = true; kb.add(mesh);
-        const k = { x, z, y: 0.145, mesh, mat, press: 0, ok: 1 };
+        const mat = U.mat(ch === ' ' ? 0xf0c583 : 0xffeed2, { roughness: 0.55 });
+        const y = 0.215;
+        const mesh = w ? casePart(w, 0.027, 0.09, 0.035, mat, x, y, z) : U.mesh(cap, mat, x, y, z);
+        if (!w) kb.add(mesh);
+        const k = { x, z, y, mesh, mat, press: 0, ok: 1 };
         keyList.push(k); return k;
       }
-      rows.forEach((row, ri) => row.split('').forEach((ch, i) => { keys[ch] = key(ch, (i - (row.length - 1) / 2) * sp, 1.0 + (3 - ri) * sp); }));
-      space = key(' ', 0, 1.0, 0.65);
+      rows.forEach((row, ri) => row.split('').forEach((ch, i) => { keys[ch] = key(ch, (i - (row.length - 1) / 2) * sp, 1.13 + ri * sp); }));
+      space = key(' ', 0, 1.52, 0.65);
       keyList.pop();   // the space bar is not one of the keys a wrong letter lands on
     }
     function build() {
-      view = lakeStage(41);
+      view = stage('#aec9c9', '#dfba8a', { ground: 0xf0d3ad, hemi: 1.65, key: 1.85 });
+      view.scene.background.dispose();
+      paintRoom = PN.TypingArt.room(view.scene);
       const sc = view.scene;
       keyboard();
       ['muikku', 'ahven', 'hauki'].forEach((id) => { const fm = PN.items[id] ? fishMesh(id) : fishMesh('muikku'); sc.add(fm.m); fishes.push(fm); });
