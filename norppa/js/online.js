@@ -337,10 +337,12 @@
     if (now - lastFrameAt < FRAME_EVERY) return;
     lastFrameAt = now;
     try {
-      const wide = source.width > source.height, w = wide ? 168 : 112, h = Math.max(24, Math.round(w * source.height / source.width));
+      const ext = PN.Games.ext && PN.Games.ext[race.game], cr = ext && ext.crop ? ext.crop() : null;   // a game can ask for just part of its screen
+      const sx = cr ? cr.x * source.width : 0, sy = cr ? cr.y * source.height : 0, sw = cr ? cr.w * source.width : source.width, sh = cr ? cr.h * source.height : source.height;
+      const wide = source.width > source.height, w = cr ? 176 : wide ? 168 : 112, h = Math.max(24, Math.round(w * sh / sw));
       const cv = frameCv || (frameCv = document.createElement('canvas'));
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-      cv.getContext('2d').drawImage(source, 0, 0, w, h);
+      cv.getContext('2d').drawImage(source, sx, sy, sw, sh, 0, 0, w, h);
       const url = cv.toDataURL('image/jpeg', 0.5);
       if (url.length > 40000) return;               // far too big for a small picture: skip this one
       send('frame', { k: race.k, w, h, f: url.slice(url.indexOf(',') + 1) });
@@ -390,13 +392,21 @@
     const wide = window.innerWidth > window.innerHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
     const th0 = race.them, real = th0.frameOk && th0.frameImg && th0.fw && performance.now() - th0.frameAt < 1500;
     let w = wide ? 132 : 96, h = wide ? 88 : 128;
-    if (real) { w = wide ? 160 : 108; h = Math.round(Math.min(w * th0.fh / th0.fw, window.innerHeight * 0.3)); }
+    if (real) { w = race.game === 'type' ? (wide ? 176 : 150) : wide ? 160 : 108; h = Math.round(Math.min(w * th0.fh / th0.fw, window.innerHeight * 0.3)); }
     const cv = pip.cv;
     if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px'; }
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
     const th = race.them, n = th.snap, dt = th.snapAt ? Math.min(0.6, (performance.now() - th.snapAt) / 1000) : 0, id = race.game;
     if (real) {                                       // their actual screen
       c.drawImage(th0.frameImg, 0, 0, w, h);
+      if (id === 'type' && n && !th.done) {   // their word and progress, drawn over the picture (the word itself is not on the canvas)
+        const word = n.w || '', bar = 16;
+        c.fillStyle = 'rgba(255,255,255,.88)'; c.fillRect(0, h - bar, w, bar);
+        if (n.m === 1) { c.fillStyle = '#d33c52'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(String(n.c || ''), w / 2, h - 4); }
+        else { c.font = '800 12px sans-serif'; c.textAlign = 'left'; let x = (w - c.measureText(word).width) / 2; for (let i = 0; i < word.length; i++) { c.fillStyle = i < n.p ? '#2f9e63' : '#26456b'; c.fillText(word[i], x, h - 4); x += c.measureText(word[i]).width; } }
+        for (let i = 0; i < (n.k || 3); i++) { c.fillStyle = i < n.l ? '#ee5d7a' : 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(8 + i * 9, 8, 3.2, 0, 6.3); c.fill(); }
+        c.fillStyle = '#f5a93b'; c.fillRect(0, h - bar - 3, w * (n.f == null ? 1 : n.f), 3);
+      }
       if (th.done) { c.fillStyle = 'rgba(20,40,70,.55)'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 12px sans-serif'; c.textAlign = 'center'; c.fillText(tr('Done'), w / 2, h / 2); }
       return;
     }

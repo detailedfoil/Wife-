@@ -2481,6 +2481,18 @@
       view: () => view,
       peek: () => ({ mode, word, typed, n, lives, streak, win, lang, left: win - t }),
       type: (s) => chars(s), begin,
+      crop() {   // the part of the screen worth sending in an online race: just the seal and her keyboard (the word is sent as numbers and drawn over it)
+        if (!view) return null;
+        const c = view.camera, v = new T.Vector3(), out = { x0: 1, x1: -1, y0: 1, y1: -1 };
+        c.updateMatrixWorld();
+        [[-1.15, -0.15], [1.15, -0.15], [-1.15, 1.2], [1.15, 1.2]].forEach(([x, y]) => {
+          v.set(x * 0.55 * 1.3, y * 0.55 * 1.3, 0.55).project(c);
+          out.x0 = Math.min(out.x0, v.x); out.x1 = Math.max(out.x1, v.x); out.y0 = Math.min(out.y0, v.y); out.y1 = Math.max(out.y1, v.y);
+        });
+        const f = (a) => Math.max(0, Math.min(1, a));
+        const x = f((out.x0 + 1) / 2), y = f((1 - out.y1) / 2), x2 = f((out.x1 + 1) / 2), y2 = f((1 - out.y0) / 2);
+        return x2 - x > 0.1 && y2 - y > 0.05 ? { x, y, w: x2 - x, h: y2 - y } : null;
+      },
       snap() {   // the corner picture in an online race: the word and how far they have got, drawn small
         if (!word) return null;
         return { w: word, p: typed, l: lives, k: maxLives, n, s: streak, m: mode === 'show' ? 1 : mode === 'type' ? 2 : 0, c: mode === 'show' ? Math.max(1, said > 0 ? 3 - said + 1 : 3) : 0, f: mode === 'type' ? Math.round(Math.max(0, 1 - t / win) * 100) / 100 : 1 };
