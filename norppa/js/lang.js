@@ -959,7 +959,7 @@
     'So close!': 'Melkein!',
     'Further back!': 'Kauemmas!',
     'Curling Seal': 'Curlingnorppa',
-    'Pull back and let go to slide. Stop as near the middle of the rings as you can.': 'Vedä taaksepäin ja päästä irti, niin norppa liukuu. Pysähdy mahdollisimman lähelle renkaiden keskustaa.',
+    'Pull back and let go to slide. Aim for the target.': 'Vedä taaksepäin ja päästä irti liukuaksesi. Tähtää maaliin.',
     'Sled Run': 'Pulkkamäki',
     'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.': 'Ohjaa mäkeä alas puiden ja kivien välistä. Nappaa kalat ja hyppää hyppyreistä.',
     'Gaps': 'Välit',
