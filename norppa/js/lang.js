@@ -942,7 +942,7 @@
     'to clear the ice': 'kului jään selvittämiseen',
     'You woke a pufferfish. No coins this time.': 'Herätit pallokalan. Tällä kertaa ei tullut kolikoita.',
     'Swimmy Seal': 'Uiva norppa',
-    'Tap to swim up. Slip between the ice and the kelp. You get three goes, and the average of them counts.': 'Napauta, niin norppa ui ylöspäin. Pujottele jään ja levän välistä. Saat kolme yritystä, ja niiden keskiarvo lasketaan.',
+    'Tap to swim, you get 3 goes, the average of them determines your score': 'Napauta uidaksesi, saat 3 yritystä ja niiden keskiarvo määrää pisteesi.',
     'Snowball Toss': 'Lumipallonheitto',
     'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.': 'Sipaise lumipallo ämpäriin. Katso ensin tuulta. Kolme ohiheittoa, ja peli päättyy.',
     'Flick the snowball into the bucket. Three misses and it is over.': 'Sipaise lumipallo ämpäriin. Kolme ohiheittoa, ja peli päättyy.',
