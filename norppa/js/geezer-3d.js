@@ -359,12 +359,13 @@
         // brows
         float brow = seg3(p, vec3(0.035 * s, 1.553, 0.172), vec3(0.145 * s, 1.548, 0.128)) - 0.018;
         col = mix(col, lin(vec3(0.4, 0.26, 0.17)), lt(brow, 0.004));
-        // eyes, heavy lids and lashes, bags
+        // eyes, heavy lids, bags
         vec3 e = vec3(0.07 * s, 1.492, 0.152); float de = length(p - e);
         float bag = 1.0 - smoothstep(0.7, 1.2, length((p - vec3(0.072 * s, 1.453, 0.155)) / vec3(0.042, 0.018, 0.024)));
         col = mix(col, lin(vec3(0.86, 0.6, 0.55)), bag * 0.4);
+        // a soft crease where the heavy lid meets the eye, no dark line
         float lidY = e.y + 0.004 - 0.12 * (x - e.x) * s;
-        col = mix(col, lin(vec3(0.3, 0.17, 0.13)), step(de, 0.05) * step(0.0398, de) * lt(y, lidY + 0.0045) * gt(z, 0.12));
+        col = mix(col, lin(vec3(0.85, 0.58, 0.48)), step(de, 0.047) * step(0.0405, de) * lt(y, lidY + 0.003) * gt(y, lidY - 0.004) * gt(z, 0.12) * 0.5);
         if (de < 0.0405) {
           vec3 d = normalize(p - e);
           float c2 = dot(d, normalize(vec3(-0.06 * s, -0.12, 1.0)));
