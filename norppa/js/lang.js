@@ -931,7 +931,7 @@
     'Missed one!': 'Yksi jäi väliin!',
     'tiles played': 'laattaa soitettu',
     'Puffer Sweeper': 'Pallokalaharavoija',
-    'Open every tile without waking a pufferfish. A number counts the pufferfish around it. The quicker you clear it, the more coins.': 'Avaa jokainen ruutu herättämättä pallokalaa. Numero kertoo, montako pallokalaa ruudun ympärillä on. Mitä nopeammin selvität kentän, sitä enemmän kolikoita.',
+    'Minesweeper-style game. Find and flag the pufferfish.': 'Miinaharava-tyylinen peli. Etsi ja liputa pallokalat.',
     'Pufferfish': 'Pallokalat',
     'Tap any tile to start. Hold a tile to flag it.': 'Aloita napauttamalla mitä tahansa ruutua. Merkitse ruutu pitämällä sitä pohjassa.',
     'Open': 'Avaa',
