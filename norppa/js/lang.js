@@ -888,7 +888,7 @@
     'scoops stacked': 'palloa pinottu',
     'Sweet!': 'Herkullista!',
     'Tap to stack the ice cream. Keep your cone balanced!': 'Pinoa jäätelöä napauttamalla. Pidä tötterö tasapainossa!',
-    'Build a delicious ice cream tower! Tap to stack each scoop neatly. Overhanging bits tumble off': 'Rakenna herkullinen jäätelötorni! Pinoa pallot siististi napauttamalla. Yli jäävät palat putoavat pois',
+    'Tap to stack each scoop neatly, overhanging bits tumble off.': 'Pinoa jokainen pallo siististi napauttamalla, yli jäävät palat putoavat pois.',
     'Floes slide across. Tap to set each one down on the tower. Whatever hangs over breaks off. Miss the tower and it is over.': 'Jäälautat liukuvat ohi. Laske jokainen torniin napauttamalla. Reunan yli jäävä osa lohkeaa pois. Jos lautta menee tornin ohi, peli päättyy.',
     'Floes': 'Lautat',
     'Tap to set the floe down on the one below.': 'Laske lautta alemman päälle napauttamalla.',
