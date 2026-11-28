@@ -85,6 +85,7 @@
           for (let k = 0; k < n; k++) for (let ch = 0; ch < 3; ch++) { const v = c.array[k * c.itemSize + ch] / div; out[k * 3 + ch] = srgb ? Math.pow(v, 2.2) : v; }
           g.setAttribute('color', new T.BufferAttribute(out, 3));
         }
+        if (at._PAINT != null) g.setAttribute('paint', accessor(json, bin, at._PAINT));   // where the game paints his clothes
         if (pr.indices != null) g.setIndex(accessor(json, bin, pr.indices));
         if (at.NORMAL != null) g.setAttribute('normal', accessor(json, bin, at.NORMAL)); else g.computeVertexNormals();
         const isSkin = n.skin != null && at.JOINTS_0 != null;
