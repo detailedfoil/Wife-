@@ -55,7 +55,7 @@ tris = read(old_index, dtype, 1).reshape(-1, 3)
 # The new jaw overlaps the retained neck. The wrists overlap the new prop grips.
 x, y, z = pos.T
 outside_wrist = (abs(x) - .61) * .76 + (.895 - y) * .65
-keep = (y < 1.252 + .027*clothing.smooth(.13,.21,abs(x))) & ~((abs(x) > .55) & (outside_wrist > .014))
+keep = (y < 1.252 + .043 * clothing.smooth(.12, .18, abs(x))) & ~((abs(x) > .55) & (outside_wrist > .014))
 # Retain the torso for tailoring. The trousers and socks are cut in the sitting pose.
 keep &= y > .65
 remaining = tris[keep[tris].all(axis=1)]

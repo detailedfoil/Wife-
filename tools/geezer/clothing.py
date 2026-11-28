@@ -43,6 +43,10 @@ def vest_edges(p):
     front = smooth(-0.12, 0.17, z)
     hem = 0.779 + 0.078 * front - 0.041 * (x / 0.35) ** 2 + 0.009 * np.sin(9 * x + 0.4)
     neck = 1.167 - 0.086 * front + 3.7 * x * x
+    # At the crown of the shoulder the scoop turns into a nearly vertical
+    # cut beside the neck. This connects the front panel to the back panel.
+    shoulder = smooth(1.185, 1.234, y)
+    neck = np.maximum(neck, y + shoulder * (np.abs(x) - 0.139) - (1 - shoulder) * 0.10)
     side = 0.25 - 0.057 * smooth(0.96, 1.21, y)
     armhole = 0.995 + 0.68 * np.maximum(side - np.abs(x), 0) + 1.7 * np.maximum(0.25 - np.abs(x), 0)
     return hem, neck, armhole
@@ -50,7 +54,7 @@ def vest_edges(p):
 
 def vest(p, n, faces, joints, weights, torso_weight):
     # Subdivide just the torso patch. Clip the triangles to the neckline, armholes and curved hem.
-    valid = (p[:, 1] > 0.70) & (p[:, 1] < 1.26) & (np.abs(p[:, 0]) < 0.365)
+    valid = (p[:, 1] > 0.70) & (p[:, 1] < 1.30) & (np.abs(p[:, 0]) < 0.365)
     f = faces[valid[faces].all(axis=1)]
     used, f = np.unique(f, return_inverse=True)
     f = f.reshape(-1, 3)
@@ -69,7 +73,7 @@ def vest(p, n, faces, joints, weights, torso_weight):
     # Deep scooped arms, with shoulder straps that run over the top onto the back.
     side_limit = 0.263 - 0.044 * smooth(0.99, 1.18, y)
     side = np.maximum(hole - y, side_limit - np.abs(x))
-    d = np.minimum.reduce((y - hem, neck - y, side, 1.234 - y))
+    d = np.minimum.reduce((y - hem, neck - y, side))
     # Only intersect the boundary triangles; the interior keeps its indexed topology.
     keep = d >= 0
     complete = f[keep[f].all(axis=1)].tolist()
@@ -105,6 +109,9 @@ def vest(p, n, faces, joints, weights, torso_weight):
         + 0.004 * np.exp(-(((h - 0.10 + 0.11 * np.abs(x)) / 0.018) ** 2))
     )
     loft = 0.012 + 0.006 * np.exp(-(((h - 0.010) / 0.008) ** 2)) + fold
+    # The cotton sits above the skin across the shoulder joint during a cheer.
+    strap = smooth(1.16, 1.235, y)
+    loft += 0.006 * strap
     q = base + n * loft[:, None]
     # Stitch an inner lip to every cut edge, to give the garment real thickness.
     edges, cnt = np.unique(
@@ -119,10 +126,11 @@ def vest(p, n, faces, joints, weights, torso_weight):
             np.column_stack((rim[:, 1], inner[:, 1], inner[:, 0])),
         )
     )
-    q = np.vstack((q, base[boundary] - 0.001 * n[boundary]))
+    q = np.vstack((q, base[boundary] + 0.004 * n[boundary]))
     # Front artwork is a clean cotton swatch with the food stains from the original vest.
     uv = np.column_stack((0.5 + x / 0.67, np.clip((1.13 - y) / 0.316, 0, 1)))
-    uv[z < 0.07] = [0.015, 0.5]
+    cotton_front = smooth(0.045, 0.12, z)
+    uv[:, 0] = 0.015 + (uv[:, 0] - 0.015) * cotton_front
     uv = np.vstack((uv, uv[boundary]))
     distance = np.minimum(
         y - hem, np.minimum(neck - y, np.maximum(hole - y, 0.263 - 0.044 * smooth(0.99, 1.18, y) - np.abs(x)))
@@ -133,7 +141,7 @@ def vest(p, n, faces, joints, weights, torso_weight):
         - 0.035 * np.exp(-(((distance - 0.020) / 0.004) ** 2))
     )
     color = np.repeat(shade[:, None], 3, axis=1)
-    color = np.vstack((color, color[boundary] * 0.84))
+    color = np.vstack((color, color[boundary] * 0.94))
     skin = np.vstack((skin, skin[boundary]))
     ji = np.argsort(-skin, axis=1)[:, :4]
     sw = np.take_along_axis(skin, ji, axis=1)
