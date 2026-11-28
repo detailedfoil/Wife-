@@ -32,7 +32,7 @@
     '{0} is bright eyed again. Off you go!': '{0} on taas pirteä. Menoksi!',
     /* ---------- Typing Seal (27 Nov 2026) ---------- */
     'Typing Seal': 'Kirjoittava norppa',
-    'A word appears: type it before the time runs out. Every word catches a fish. Three mistakes and it is over.': 'Sana tulee näkyviin: kirjoita se ennen kuin aika loppuu. Jokainen sana nappaa kalan. Kolme virhettä ja peli päättyy.',
+    'A word appears, type it before the time runs out.': 'Sana tulee näkyviin, kirjoita se ennen kuin aika loppuu.',
     'words typed': 'sanaa kirjoitettu',
     'Tap the box and type the word.': 'Napauta ruutua ja kirjoita sana.',
     'Press any key and type the word.': 'Paina mitä tahansa näppäintä ja kirjoita sana.',
