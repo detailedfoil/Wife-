@@ -328,57 +328,20 @@
   }
   function pose(list, k) { if (k) for (const p of list) turn(p[0], p[1], p[2] * k); }
 
-  /* Body colours follow the standing mesh as it bends. The sculpted head carries its own portrait texture. */
+  /* Sparse, soft forearm hairs follow the skin as the rig moves. */
   const PAINT = `
-    float gt(float a, float t) { float w = max(fwidth(a), 1e-4); return clamp((a - t) / w + 0.5, 0.0, 1.0); }
-    float lt(float a, float t) { return 1.0 - gt(a, t); }
-    vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
-    float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
     vec3 davePaint(vec3 p) {
-      float x = p.x, y = p.y, z = p.z, ax = abs(x);
-      vec3 col = lin(vec3(0.97, 0.68, 0.50));
-      // white vest: rides up over the belly, scoop neck, straps, armholes, a few stains
-      float front = smoothstep(-0.1, 0.2, z);
-      float hemY = mix(0.782, 0.84, front) - 0.023 * pow(ax / 0.34, 2.0);
-      float neck = mix(1.17, 1.086, front) + 3.6 * x * x;
-      float armEdge = 0.248 - 0.073 * smoothstep(0.965, 1.19, y);
-      float armCut = smoothstep(0.964, 1.13, y);
-      float edge = mix(0.36, armEdge, armCut);
-      float vest = gt(y, hemY) * lt(y, min(1.234, neck)) * lt(ax, edge);
-      float hem = y - hemY;
-      vec3 vc = lin(vec3(0.975, 0.957, 0.932));
-      // Wide cotton binding and a soft fold where the raised hem rests on his belly.
-      vc *= 1.0 - 0.16 * exp(-pow((hem - 0.017) / 0.0038, 2.0));
-      vc *= 1.0 - 0.12 * exp(-pow((neck - y - 0.014) / 0.0035, 2.0));
-      vc *= 1.0 - 0.10 * armCut * exp(-pow((edge - ax - 0.012) / 0.004, 2.0));
-      vec2 q2 = vec2(x, y);
-      float fz = gt(z, 0.12);
-      float st1 = min(min(length(q2 - vec2(-0.08, 1.0)) - 0.022, length(q2 - vec2(-0.062, 0.988)) - 0.013), length(q2 - vec2(-0.094, 1.018)) - 0.011);
-      float st2 = min(length(q2 - vec2(-0.04, 0.905)) - 0.008, length(q2 - vec2(-0.05, 0.925)) - 0.005);
-      float st3 = min(length(q2 - vec2(0.12, 0.94)) - 0.016, length(q2 - vec2(0.135, 0.952)) - 0.009);
-      vc = mix(vc, lin(vec3(0.9, 0.74, 0.3)), fz * (1.0 - smoothstep(-0.004, 0.003, min(st1, st2))) * 0.85);
-      vc = mix(vc, lin(vec3(0.92, 0.55, 0.45)), fz * (1.0 - smoothstep(-0.004, 0.003, st3)) * 0.8);
-      col = mix(col, vc, vest);
-      // grey trackies with a ribbed waistband, a drawstring bow and gathered cuffs
-      float waist = mix(0.745, 0.739, front) - 0.008 * cos(9.0 * x);
-      vec3 tc = lin(vec3(0.50, 0.48, 0.50));
-      float fold = y - 0.273 - 0.045 * sin(atan(z + 0.06, ax - 0.206));
-      tc *= 1.0 - 0.12 * exp(-pow(fold / 0.013, 2.0));
-      tc = mix(tc, lin(vec3(0.44, 0.43, 0.46)) * (0.95 + 0.05 * sin(x * 700.0)), gt(y, waist - 0.025));
-      float cuff = gt(y, 0.172) * lt(y, 0.24);
-      tc = mix(tc, lin(vec3(0.4, 0.39, 0.42)) * (0.92 + 0.08 * sin(atan(z + 0.066, ax - 0.206) * 40.0)), cuff);
-      vec2 b = vec2(x, y - (waist - 0.045));
-      float bow = min(abs(length(vec2(ax - 0.022, b.y - 0.006)) - 0.013) - 0.0032,
-                  min(seg(vec2(ax, b.y), vec2(0.004, -0.002), vec2(0.013, -0.065)) - 0.0034, length(vec2(ax - 0.013, b.y + 0.067)) - 0.006));
-      tc = mix(tc, lin(vec3(0.95, 0.93, 0.88)), lt(bow, 0.0) * gt(z, 0.18));
-      tc = mix(tc, lin(vec3(0.25, 0.25, 0.27)), lt(length(vec2(ax - 0.012, y - (waist - 0.022))), 0.004) * gt(z, 0.18));
-      col = mix(col, tc, lt(y, waist) * gt(y, 0.172) * lt(ax, 0.4));
-      // socks with two blue stripes
-      vec3 sc = lin(vec3(0.94, 0.94, 0.93));
-      sc = mix(sc, lin(vec3(0.2, 0.36, 0.78)), max(gt(y, 0.128) * lt(y, 0.139), gt(y, 0.149) * lt(y, 0.16)));
-      sc = mix(sc, lin(vec3(0.75, 0.75, 0.76)), lt(y, 0.012));
-      col = mix(col, sc, lt(y, 0.172) * lt(ax, 0.4));
-      return col;
+      vec3 skin = pow(vec3(.97,.68,.50),vec3(2.2));
+      float forearm = smoothstep(.36,.47,abs(p.x));
+      vec2 uv = vec2(abs(p.x)*48.,(p.y+.45*p.z)*55.);
+      vec2 cell = floor(uv);
+      float seed = fract(sin(dot(cell,vec2(23.17,54.23)))*4375.5);
+      vec2 d = fract(uv)-.5;
+      d.x += .15*sin(seed*31.)-.38*d.y;
+      float distanceToHair = length(vec2(d.x*2.8,d.y));
+      float aa = max(.035,fwidth(distanceToHair));
+      float hair = (1.-smoothstep(.11-aa,.11+aa,distanceToHair))*step(.68,seed);
+      return skin*(1.-.24*hair*forearm);
     }`;
   function paintDave(m) {
     m.material.onBeforeCompile = (sh) => {
@@ -419,8 +382,8 @@
         if (!o.isMesh) return;
         o.castShadow = true;
         o.receiveShadow = false;
-        if (o.isSkinnedMesh) paintDave(o);
-        else if (o.material.map) {
+        if (o.isSkinnedMesh && o.parent.name === 'Dave') paintDave(o);
+        else if (!o.isSkinnedMesh && o.material.map) {
           // The portrait already contains soft shading under the cheeks and nose.
           o.material.onBeforeCompile = (shader) => {
             shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>',
