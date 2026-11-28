@@ -1,7 +1,7 @@
 // Builds Big Dave from scratch: a body sculpted from smooth blended shapes (a signed distance field),
 // turned into a mesh with surface nets, given its own skeleton (Mixamo-style bone names so the game's
 // sitting and arm poses work) and skin weights from the shapes each bone owns. Colours are painted
-// per pixel in the game (geezer-3d.js), so the file only holds shape, normals and weights.
+// per pixel on the body. Use finish-dave.py on this base to add the portrait sculpt and prepare the wrists.
 // Run from a folder with @gltf-transform/core and meshoptimizer installed:
 //   node build-dave.mjs out.glb [cell=0.006] [triangles=56000]
 import { Document, NodeIO } from '@gltf-transform/core';

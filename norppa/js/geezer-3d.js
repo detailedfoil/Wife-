@@ -328,71 +328,29 @@
   }
   function pose(list, k) { if (k) for (const p of list) turn(p[0], p[1], p[2] * k); }
 
-  /* Every colour on Dave is painted per pixel from his standing (bind pose) position, so the edges of the
-     vest, trackies, socks, eyes and mouth stay clean whatever the mesh does. Units are metres, he faces +z. */
+  /* Body colours follow the standing mesh as it bends. The sculpted head carries its own portrait texture. */
   const PAINT = `
     float gt(float a, float t) { float w = max(fwidth(a), 1e-4); return clamp((a - t) / w + 0.5, 0.0, 1.0); }
     float lt(float a, float t) { return 1.0 - gt(a, t); }
     vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
-    float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
     float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
-    float seg3(vec3 p, vec3 a, vec3 b) { vec3 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
     vec3 davePaint(vec3 p) {
-      float x = p.x, y = p.y, z = p.z, ax = abs(x), s = x < 0.0 ? -1.0 : 1.0;
-      vec3 col = lin(vec3(0.95, 0.68, 0.52));
-      if (y > 1.22) {
-        // stubble shadow and dots on the jaw, rosy cheeks, ears and nose, short hair round the back
-        float jaw = smoothstep(1.45, 1.40, y) * smoothstep(-0.05, 0.05, z);
-        col = mix(col, lin(vec3(0.84, 0.62, 0.52)), jaw * 0.35);
-        vec3 q = p * 230.0, c = floor(q);
-        float dotty = step(0.55, hash3(c)) * step(length(fract(q) - 0.5), 0.2);
-        col = mix(col, lin(vec3(0.55, 0.38, 0.32)), dotty * jaw * 0.7);
-        float back = smoothstep(1.405, 1.42, y) * smoothstep(1.545, 1.53, y) * smoothstep(0.01, -0.03, z);
-        float ear = 1.0 - smoothstep(1.0, 1.4, length((p - vec3(0.21 * s, 1.45, -0.05)) / vec3(0.032, 0.062, 0.047)));
-        col = mix(col, lin(vec3(0.58, 0.44, 0.34)), back * (1.0 - ear) * 0.75);
-        col = mix(col, lin(vec3(0.6, 0.42, 0.34)), back * (1.0 - ear) * dotty);
-        col = mix(col, lin(vec3(0.97, 0.6, 0.52)), ear * 0.45);
-        float cheek = 1.0 - smoothstep(0.0, 0.065, length(vec2(ax - 0.125, y - 1.395)));
-        col = mix(col, lin(vec3(0.97, 0.56, 0.5)), cheek * step(0.06, z) * 0.45);
-        float nose = 1.0 - smoothstep(0.85, 1.3, length((p - vec3(0.0, 1.418, 0.2)) / vec3(0.06, 0.052, 0.055)));
-        col = mix(col, lin(vec3(0.97, 0.56, 0.5)), nose * 0.8);
-        // brows
-        float brow = seg3(p, vec3(0.035 * s, 1.553, 0.172), vec3(0.145 * s, 1.548, 0.128)) - 0.018;
-        col = mix(col, lin(vec3(0.4, 0.26, 0.17)), lt(brow, 0.004));
-        // eyes, heavy lids, bags
-        vec3 e = vec3(0.07 * s, 1.492, 0.152); float de = length(p - e);
-        float bag = 1.0 - smoothstep(0.7, 1.2, length((p - vec3(0.072 * s, 1.453, 0.155)) / vec3(0.042, 0.018, 0.024)));
-        col = mix(col, lin(vec3(0.86, 0.6, 0.55)), bag * 0.4);
-        // a soft crease where the heavy lid meets the eye, no dark line
-        float lidY = e.y + 0.004 - 0.12 * (x - e.x) * s;
-        col = mix(col, lin(vec3(0.85, 0.58, 0.48)), step(de, 0.047) * step(0.0405, de) * lt(y, lidY + 0.003) * gt(y, lidY - 0.004) * gt(z, 0.12) * 0.5);
-        if (de < 0.0405) {
-          vec3 d = normalize(p - e);
-          float c2 = dot(d, normalize(vec3(-0.06 * s, -0.12, 1.0)));
-          vec3 eye = lin(vec3(0.97, 0.95, 0.92));
-          eye = mix(eye, lin(vec3(0.42, 0.27, 0.15)), gt(c2, 0.925));
-          eye = mix(eye, lin(vec3(0.25, 0.15, 0.08)), gt(c2, 0.925) * lt(c2, 0.94));
-          eye = mix(eye, vec3(0.01), gt(c2, 0.978));
-          eye = mix(eye, vec3(1.0), gt(dot(d, normalize(vec3(0.35, 0.3, 1.0))), 0.994));
-          col = eye;
-        }
-        // a lazy smile
-        float my = y - (1.338 + 5.5 * x * x);
-        float mouth = lt(abs(my), 0.0032) * lt(ax, 0.062) * gt(z, 0.1);
-        col = mix(col, lin(vec3(0.95, 0.55, 0.5)), lt(my, 0.0) * gt(my, -0.011) * lt(ax, 0.045) * gt(z, 0.1) * 0.45);
-        col = mix(col, lin(vec3(0.45, 0.2, 0.17)), mouth);
-        float dimple = lt(length(vec2(ax - 0.066, y - 1.3625)), 0.004) * gt(z, 0.1);
-        col = mix(col, lin(vec3(0.7, 0.4, 0.33)), dimple * 0.6);
-      }
+      float x = p.x, y = p.y, z = p.z, ax = abs(x);
+      vec3 col = lin(vec3(0.97, 0.68, 0.50));
       // white vest: rides up over the belly, scoop neck, straps, armholes, a few stains
       float front = smoothstep(-0.1, 0.2, z);
-      float hemY = mix(0.77, 0.845, front);
-      float hole = gt(ax, 0.17 + 0.45 * max(0.0, 1.12 - y)) * gt(y, 0.99);
-      float strap = gt(ax, 0.1) * lt(ax, 0.175);
-      float scoop = max(gt(z, -0.03) * gt(y, 1.08 + 7.0 * ax * ax), lt(z, -0.03) * gt(y, 1.16 + 4.0 * ax * ax));
-      float vest = gt(y, hemY) * lt(y, 1.235) * (1.0 - hole) * (1.0 - scoop * (1.0 - strap)) * lt(ax, 0.36);
-      vec3 vc = lin(vec3(0.95, 0.94, 0.91)) * (0.97 + 0.03 * sin(x * 520.0));
-      vc *= mix(0.88, 1.0, gt(y, hemY + 0.014));
+      float hemY = mix(0.782, 0.84, front) - 0.023 * pow(ax / 0.34, 2.0);
+      float neck = mix(1.17, 1.086, front) + 3.6 * x * x;
+      float armEdge = 0.248 - 0.073 * smoothstep(0.965, 1.19, y);
+      float armCut = smoothstep(0.964, 1.13, y);
+      float edge = mix(0.36, armEdge, armCut);
+      float vest = gt(y, hemY) * lt(y, min(1.234, neck)) * lt(ax, edge);
+      float hem = y - hemY;
+      vec3 vc = lin(vec3(0.975, 0.957, 0.932));
+      // Wide cotton binding and a soft fold where the raised hem rests on his belly.
+      vc *= 1.0 - 0.16 * exp(-pow((hem - 0.017) / 0.0038, 2.0));
+      vc *= 1.0 - 0.12 * exp(-pow((neck - y - 0.014) / 0.0035, 2.0));
+      vc *= 1.0 - 0.10 * armCut * exp(-pow((edge - ax - 0.012) / 0.004, 2.0));
       vec2 q2 = vec2(x, y);
       float fz = gt(z, 0.12);
       float st1 = min(min(length(q2 - vec2(-0.08, 1.0)) - 0.022, length(q2 - vec2(-0.062, 0.988)) - 0.013), length(q2 - vec2(-0.094, 1.018)) - 0.011);
@@ -402,8 +360,10 @@
       vc = mix(vc, lin(vec3(0.92, 0.55, 0.45)), fz * (1.0 - smoothstep(-0.004, 0.003, st3)) * 0.8);
       col = mix(col, vc, vest);
       // grey trackies with a ribbed waistband, a drawstring bow and gathered cuffs
-      float waist = mix(0.745, 0.705, front);
-      vec3 tc = lin(vec3(0.46, 0.45, 0.48)) * (0.96 + 0.06 * hash3(floor(p * 400.0)));
+      float waist = mix(0.745, 0.739, front) - 0.008 * cos(9.0 * x);
+      vec3 tc = lin(vec3(0.50, 0.48, 0.50));
+      float fold = y - 0.273 - 0.045 * sin(atan(z + 0.06, ax - 0.206));
+      tc *= 1.0 - 0.12 * exp(-pow(fold / 0.013, 2.0));
       tc = mix(tc, lin(vec3(0.44, 0.43, 0.46)) * (0.95 + 0.05 * sin(x * 700.0)), gt(y, waist - 0.025));
       float cuff = gt(y, 0.172) * lt(y, 0.24);
       tc = mix(tc, lin(vec3(0.4, 0.39, 0.42)) * (0.92 + 0.08 * sin(atan(z + 0.066, ax - 0.206) * 40.0)), cuff);
@@ -429,12 +389,45 @@
     };
     m.material.needsUpdate = true;
   }
+  // Build each grip around its actual prop in seated wrist space, then let the hand bone carry both.
+  function grip(side, drink) {
+    const hand = new T.Group(), skin = mat(0xf7ad80, { roughness: 0.86 });
+    const palm = ball(1, skin, side * 0.024, -0.012, 0.038, 0.069, 0.080, 0.087);
+    hand.add(palm);
+    const cord = (points, radius) => {
+      const path = new T.CatmullRomCurve3(points.map(([x,y,z]) => new T.Vector3(side*x,y,z)));
+      hand.add(new T.Mesh(new T.TubeGeometry(path, 14, radius, 10, false), skin));
+      const tip = path.getPoint(1);
+      hand.add(ball(radius, skin, tip.x, tip.y, tip.z));
+    };
+    for (let i = 0; i < 4; i++) {
+      const y = 0.032 - i * 0.032, r = 0.019 - i * 0.0012;
+      if (drink) cord([[0.05,y,0.043],[0.079,y,0.089],[0.061,y-0.004,0.143],[0.016+i*0.006,y-0.008,0.167-i*0.004]],r);
+      else cord([[0.043,y,0.038],[0.052,y-0.01,0.08],[0.031,y-0.018,0.11],[-0.008,y-0.013,0.117]],r);
+    }
+    cord(drink ? [[0.015,0.038,0.045],[-0.032,0.065,0.058],[-0.065,0.064,0.108]]
+               : [[0.025,0.046,0.043],[0.002,0.059,0.080],[-0.023,0.049,0.123]], 0.024);
+    return hand;
+  }
+
   function loadModel(scene) {
     if (!PN.loadGLB) { G.man.visible = true; return; }
     PN.loadGLB('art/geezer/dave.glb').then((g) => {
       G.bones = g.bones; G.rest = {};
       for (const k in g.bones) G.rest[k] = g.bones[k].quaternion.clone();
-      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; paintDave(o); } });
+      g.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = true;
+        o.receiveShadow = false;
+        if (o.isSkinnedMesh) paintDave(o);
+        else if (o.material.map) {
+          // The portrait already contains soft shading under the cheeks and nose.
+          o.material.onBeforeCompile = (shader) => {
+            shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>',
+              'outgoingLight = mix(outgoingLight, diffuseColor.rgb, 0.60);\n#include <opaque_fragment>');
+          };
+        }
+      });
       g.scale.setScalar(MS);
       const pivot = G.model = new T.Group(); pivot.position.copy(SEAT); pivot.add(g);
       scene.add(pivot);
@@ -449,10 +442,17 @@
         const m = new T.Matrix4().copy(h.matrixWorld).invert().multiply(want.matrixWorld);
         scene.remove(want);
         m.decompose(obj.position, obj.quaternion, obj.scale);
-        obj.scale.multiplyScalar(1); h.add(obj);
+        h.add(obj);
       };
-      const drink = can('blue', 1.7); drink.castShadow = true; hold('RightHand', drink, 0.09, 0.02);
-      const remote = U.box(0.07, 0.04, 0.2, mat(0x2b2d33, { roughness: 0.4 }), 0, 0, 0); remote.castShadow = true; hold('LeftHand', remote, 0.1, -0.01);
+      hold('RightHand', grip(-1, true), 0, 0);
+      hold('LeftHand', grip(1, false), 0, 0);
+      const drink = can('blue', 1.7); drink.castShadow = true; hold('RightHand', drink, 0.092, 0.022);
+      const remote = U.box(0.07, 0.04, 0.2, mat(0x2b2d33, { roughness: 0.55 }), 0, 0, 0);
+      remote.add(ball(0.011, mat(0xdc6957), -0.016, 0.020, 0.075, 1, 0.45, 1));
+      for (const z of [0.024, 0.046]) {
+        remote.add(U.box(0.038, 0.006, 0.009, mat(0x8c9195), 0, 0.020, z));
+      }
+      remote.castShadow = true; hold('LeftHand', remote, 0.126, 0.018); remote.rotateY(0.18);
     }).catch((e) => { console.warn('dave.glb', e); G.man.visible = true; });
   }
   /* Put every bone back to the A-pose, sit him down, then add the moves. */
@@ -464,10 +464,10 @@
   };
 
   /* Fit the camera: tall screens keep the chair's width, wide screens keep Dave's height. */
-  const target = new T.Vector3(0, 1.05, -0.85), dir = new T.Vector3(0, 0.36, 1).normalize();
+  const target = new T.Vector3(0, 1.05, -0.85), dir = new T.Vector3(0, 0.24, 1).normalize();
   G.frame = function (w, h) {
     const c = G.camera, a = w / h, tan = Math.tan(c.fov * Math.PI / 360);
-    const d = a < 1 ? Math.max(1.25 / tan, 1.2 / (tan * a)) + 0.4 : 1.7 / tan + 0.4;
+    const d = a < 1 ? Math.max(1.25 / tan, 1.10 / (tan * a)) + 0.4 : 1.7 / tan + 0.4;
     c.aspect = a;
     c.position.copy(target).addScaledVector(dir, d);
     c.position.y += a < 1 ? 0.12 : 0.05;
