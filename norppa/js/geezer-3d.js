@@ -310,16 +310,15 @@
     return G;
   };
 
-  /* Big Dave as a rigged model (art/geezer/dave.glb): the owner made him with Meshy AI from an original
-     ChatGPT picture, standing in an A-pose with a Mixamo skeleton. tools/geezer/rigconv.mjs shrinks it and
-     paints him (face from the first Dave model, vest, trackies and socks by body area). Here he is sat in
-     the chair by turning his bones, and every move is a blend of poses. Credit Meshy if it ships. */
+  /* Big Dave (art/geezer/dave.glb) is built from scratch by tools/geezer/build-dave.mjs: smooth blended
+     shapes made into a mesh, with his own Mixamo-style skeleton. He stands in an A-pose in the file; here he
+     is sat in the chair by turning his bones, and every move is a blend of poses. */
   const SEAT = new T.Vector3(0, -0.36, -0.92), MS = 1.42;
   const SIT = [['LeftUpLeg', [1, 0, 0], -1.25], ['RightUpLeg', [1, 0, 0], -1.25], ['LeftUpLeg', [0, 1, 0], 0.3], ['RightUpLeg', [0, 1, 0], -0.3],
     ['LeftLeg', [1, 0, 0], 1.05], ['RightLeg', [1, 0, 0], 1.05], ['Spine', [1, 0, 0], -0.12],
     ['LeftArm', [0, 0, 1], -0.55], ['RightArm', [0, 0, 1], 0.55], ['LeftForeArm', [1, 0, 0], -1.4], ['RightForeArm', [1, 0, 0], -1.4]];
   const SIP = [['RightArm', [1, 0, 0], -0.6], ['RightForeArm', [0, 1, 0], 1.2], ['RightForeArm', [1, 0, 0], -0.8], ['Head', [1, 0, 0], -0.25]];
-  const CHEER = [['LeftArm', [0, 0, 1], 1.9], ['RightArm', [0, 0, 1], -1.9]];
+  const CHEER = [['LeftArm', [0, 0, 1], 2.3], ['RightArm', [0, 0, 1], -2.3]];
   const qa = new T.Quaternion(), qb = new T.Quaternion(), va = new T.Vector3();
   function turn(name, axis, ang) {
     const b = G.bones['mixamorig:' + name]; if (!b || !ang) return;
@@ -329,54 +328,112 @@
   }
   function pose(list, k) { if (k) for (const p of list) turn(p[0], p[1], p[2] * k); }
 
-  /* His clothes are painted per pixel from the A-pose position (the same rules as tools/geezer/rigconv.mjs),
-     so the vest, trackies and socks get clean edges instead of following the triangles. */
-  const CLOTHES = `
+  /* Every colour on Dave is painted per pixel from his standing (bind pose) position, so the edges of the
+     vest, trackies, socks, eyes and mouth stay clean whatever the mesh does. Units are metres, he faces +z. */
+  const PAINT = `
     float gt(float a, float t) { float w = max(fwidth(a), 1e-4); return clamp((a - t) / w + 0.5, 0.0, 1.0); }
     float lt(float a, float t) { return 1.0 - gt(a, t); }
     vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
-    vec3 daveClothes(vec3 p, vec3 base) {
-      float x = p.x, y = p.y, z = p.z, ax = abs(x);
-      float front = gt(z, -0.06), waist = mix(0.84, 0.8, front);
-      vec3 col = lin(vec3(0.94, 0.66, 0.5));
-      float vb = gt(y, 0.84 + 0.09 * clamp(z / 0.18, 0.0, 1.0));
-      float strap = gt(ax, 0.1) * lt(ax, 0.19) * lt(y, 1.23);
-      float neck = front * gt(y, 1.07 + 7.0 * ax * ax);
-      float hole = gt(ax, 0.19 + 0.4 * max(0.0, 1.13 - y)) * lt(z, 0.12);
-      float vest = vb * mix((1.0 - neck) * (1.0 - hole), strap, gt(y, 1.13));
-      vec3 vc = lin(vec3(0.93, 0.92, 0.9));
-      vec2 q = vec2(x, y);
-      vc = mix(vc, lin(vec3(0.86, 0.68, 0.2)), front * lt(length(q - vec2(-0.06, 1.02)), 0.035));
-      vc = mix(vc, lin(vec3(0.85, 0.42, 0.3)), front * lt(length(q - vec2(0.1, 0.97)), 0.028));
-      vc = mix(vc, lin(vec3(0.86, 0.68, 0.2)), front * lt(length(q - vec2(-0.02, 0.95)), 0.015));
+    float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+    float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+    float seg3(vec3 p, vec3 a, vec3 b) { vec3 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+    vec3 davePaint(vec3 p) {
+      float x = p.x, y = p.y, z = p.z, ax = abs(x), s = x < 0.0 ? -1.0 : 1.0;
+      vec3 col = lin(vec3(0.95, 0.68, 0.52));
+      if (y > 1.22) {
+        // stubble shadow and dots on the jaw, rosy cheeks, ears and nose, short hair round the back
+        float jaw = smoothstep(1.45, 1.40, y) * smoothstep(-0.05, 0.05, z);
+        col = mix(col, lin(vec3(0.84, 0.62, 0.52)), jaw * 0.35);
+        vec3 q = p * 230.0, c = floor(q);
+        float dotty = step(0.55, hash3(c)) * step(length(fract(q) - 0.5), 0.2);
+        col = mix(col, lin(vec3(0.55, 0.38, 0.32)), dotty * jaw * 0.7);
+        float back = smoothstep(1.405, 1.42, y) * smoothstep(1.545, 1.53, y) * smoothstep(0.01, -0.03, z);
+        float ear = 1.0 - smoothstep(1.0, 1.4, length((p - vec3(0.21 * s, 1.45, -0.05)) / vec3(0.032, 0.062, 0.047)));
+        col = mix(col, lin(vec3(0.58, 0.44, 0.34)), back * (1.0 - ear) * 0.75);
+        col = mix(col, lin(vec3(0.6, 0.42, 0.34)), back * (1.0 - ear) * dotty);
+        col = mix(col, lin(vec3(0.97, 0.6, 0.52)), ear * 0.45);
+        float cheek = 1.0 - smoothstep(0.0, 0.065, length(vec2(ax - 0.125, y - 1.395)));
+        col = mix(col, lin(vec3(0.97, 0.56, 0.5)), cheek * step(0.06, z) * 0.45);
+        float nose = 1.0 - smoothstep(0.85, 1.3, length((p - vec3(0.0, 1.418, 0.2)) / vec3(0.06, 0.052, 0.055)));
+        col = mix(col, lin(vec3(0.97, 0.56, 0.5)), nose * 0.8);
+        // brows
+        float brow = seg3(p, vec3(0.035 * s, 1.553, 0.172), vec3(0.145 * s, 1.548, 0.128)) - 0.018;
+        col = mix(col, lin(vec3(0.4, 0.26, 0.17)), lt(brow, 0.004));
+        // eyes, heavy lids and lashes, bags
+        vec3 e = vec3(0.07 * s, 1.492, 0.152); float de = length(p - e);
+        float bag = 1.0 - smoothstep(0.7, 1.2, length((p - vec3(0.072 * s, 1.453, 0.155)) / vec3(0.042, 0.018, 0.024)));
+        col = mix(col, lin(vec3(0.86, 0.6, 0.55)), bag * 0.4);
+        float lidY = e.y + 0.004 - 0.12 * (x - e.x) * s;
+        col = mix(col, lin(vec3(0.3, 0.17, 0.13)), step(de, 0.05) * step(0.0398, de) * lt(y, lidY + 0.0045) * gt(z, 0.12));
+        if (de < 0.0405) {
+          vec3 d = normalize(p - e);
+          float c2 = dot(d, normalize(vec3(-0.06 * s, -0.12, 1.0)));
+          vec3 eye = lin(vec3(0.97, 0.95, 0.92));
+          eye = mix(eye, lin(vec3(0.42, 0.27, 0.15)), gt(c2, 0.925));
+          eye = mix(eye, lin(vec3(0.25, 0.15, 0.08)), gt(c2, 0.925) * lt(c2, 0.94));
+          eye = mix(eye, vec3(0.01), gt(c2, 0.978));
+          eye = mix(eye, vec3(1.0), gt(dot(d, normalize(vec3(0.35, 0.3, 1.0))), 0.994));
+          col = eye;
+        }
+        // a lazy smile
+        float my = y - (1.338 + 5.5 * x * x);
+        float mouth = lt(abs(my), 0.0032) * lt(ax, 0.062) * gt(z, 0.1);
+        col = mix(col, lin(vec3(0.95, 0.55, 0.5)), lt(my, 0.0) * gt(my, -0.011) * lt(ax, 0.045) * gt(z, 0.1) * 0.45);
+        col = mix(col, lin(vec3(0.45, 0.2, 0.17)), mouth);
+        float dimple = lt(length(vec2(ax - 0.066, y - 1.3625)), 0.004) * gt(z, 0.1);
+        col = mix(col, lin(vec3(0.7, 0.4, 0.33)), dimple * 0.6);
+      }
+      // white vest: rides up over the belly, scoop neck, straps, armholes, a few stains
+      float front = smoothstep(-0.1, 0.2, z);
+      float hemY = mix(0.77, 0.845, front);
+      float hole = gt(ax, 0.17 + 0.45 * max(0.0, 1.12 - y)) * gt(y, 0.99);
+      float strap = gt(ax, 0.1) * lt(ax, 0.175);
+      float scoop = max(gt(z, -0.03) * gt(y, 1.08 + 7.0 * ax * ax), lt(z, -0.03) * gt(y, 1.16 + 4.0 * ax * ax));
+      float vest = gt(y, hemY) * lt(y, 1.235) * (1.0 - hole) * (1.0 - scoop * (1.0 - strap)) * lt(ax, 0.36);
+      vec3 vc = lin(vec3(0.95, 0.94, 0.91)) * (0.97 + 0.03 * sin(x * 520.0));
+      vc *= mix(0.88, 1.0, gt(y, hemY + 0.014));
+      vec2 q2 = vec2(x, y);
+      float fz = gt(z, 0.12);
+      float st1 = min(min(length(q2 - vec2(-0.08, 1.0)) - 0.022, length(q2 - vec2(-0.062, 0.988)) - 0.013), length(q2 - vec2(-0.094, 1.018)) - 0.011);
+      float st2 = min(length(q2 - vec2(-0.04, 0.905)) - 0.008, length(q2 - vec2(-0.05, 0.925)) - 0.005);
+      float st3 = min(length(q2 - vec2(0.12, 0.94)) - 0.016, length(q2 - vec2(0.135, 0.952)) - 0.009);
+      vc = mix(vc, lin(vec3(0.9, 0.74, 0.3)), fz * (1.0 - smoothstep(-0.004, 0.003, min(st1, st2))) * 0.85);
+      vc = mix(vc, lin(vec3(0.92, 0.55, 0.45)), fz * (1.0 - smoothstep(-0.004, 0.003, st3)) * 0.8);
       col = mix(col, vc, vest);
-      vec3 tc = mix(lin(vec3(0.42, 0.41, 0.44)), lin(vec3(0.36, 0.35, 0.38)), gt(y, waist - 0.03));
-      tc = mix(tc, vec3(0.92), front * lt(ax, 0.025) * gt(y, 0.7) * gt(z, 0.05));
-      col = mix(col, tc, lt(y, waist));
-      float h = y - 0.143;
-      float stripe = max(gt(h, 0.03) * lt(h, 0.045), gt(h, 0.06) * lt(h, 0.075));
-      vec3 sc = mix(vec3(0.9), lin(vec3(0.2, 0.35, 0.75)), stripe);
-      col = mix(col, sc, lt(h, 0.09) * lt(y, 0.4));
+      // grey trackies with a ribbed waistband, a drawstring bow and gathered cuffs
+      float waist = mix(0.745, 0.705, front);
+      vec3 tc = lin(vec3(0.46, 0.45, 0.48)) * (0.96 + 0.06 * hash3(floor(p * 400.0)));
+      tc = mix(tc, lin(vec3(0.44, 0.43, 0.46)) * (0.95 + 0.05 * sin(x * 700.0)), gt(y, waist - 0.025));
+      float cuff = gt(y, 0.172) * lt(y, 0.24);
+      tc = mix(tc, lin(vec3(0.4, 0.39, 0.42)) * (0.92 + 0.08 * sin(atan(z + 0.066, ax - 0.206) * 40.0)), cuff);
+      vec2 b = vec2(x, y - (waist - 0.045));
+      float bow = min(abs(length(vec2(ax - 0.022, b.y - 0.006)) - 0.013) - 0.0032,
+                  min(seg(vec2(ax, b.y), vec2(0.004, -0.002), vec2(0.013, -0.065)) - 0.0034, length(vec2(ax - 0.013, b.y + 0.067)) - 0.006));
+      tc = mix(tc, lin(vec3(0.95, 0.93, 0.88)), lt(bow, 0.0) * gt(z, 0.18));
+      tc = mix(tc, lin(vec3(0.25, 0.25, 0.27)), lt(length(vec2(ax - 0.012, y - (waist - 0.022))), 0.004) * gt(z, 0.18));
+      col = mix(col, tc, lt(y, waist) * gt(y, 0.172) * lt(ax, 0.4));
+      // socks with two blue stripes
+      vec3 sc = lin(vec3(0.94, 0.94, 0.93));
+      sc = mix(sc, lin(vec3(0.2, 0.36, 0.78)), max(gt(y, 0.128) * lt(y, 0.139), gt(y, 0.149) * lt(y, 0.16)));
+      sc = mix(sc, lin(vec3(0.75, 0.75, 0.76)), lt(y, 0.012));
+      col = mix(col, sc, lt(y, 0.172) * lt(ax, 0.4));
       return col;
     }`;
-  function paintClothes(m) {
-    if (!m.geometry.getAttribute('paint')) return;
+  function paintDave(m) {
     m.material.onBeforeCompile = (sh) => {
-      sh.vertexShader = 'attribute float paint;\nvarying float vPaint;\nvarying vec3 vBind;\n' + sh.vertexShader
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBind = position; vPaint = paint;');
-      sh.fragmentShader = 'varying float vPaint;\nvarying vec3 vBind;\n' + sh.fragmentShader
-        .replace('void main() {', CLOTHES + '\nvoid main() {')
-        .replace('#include <color_fragment>', '#include <color_fragment>\n{ float k = clamp((vPaint - 0.5) / max(fwidth(vPaint), 1e-4) + 0.5, 0.0, 1.0);\n  diffuseColor.rgb = mix(diffuseColor.rgb, daveClothes(vBind, diffuseColor.rgb), k); }');
+      sh.vertexShader = 'varying vec3 vBind;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvBind = position;');
+      sh.fragmentShader = 'varying vec3 vBind;\n' + sh.fragmentShader
+        .replace('void main() {', PAINT + '\nvoid main() {')
+        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = davePaint(vBind);');
     };
     m.material.needsUpdate = true;
   }
-
   function loadModel(scene) {
     if (!PN.loadGLB) { G.man.visible = true; return; }
     PN.loadGLB('art/geezer/dave.glb').then((g) => {
       G.bones = g.bones; G.rest = {};
       for (const k in g.bones) G.rest[k] = g.bones[k].quaternion.clone();
-      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; paintClothes(o); } });
+      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; paintDave(o); } });
       g.scale.setScalar(MS);
       const pivot = G.model = new T.Group(); pivot.position.copy(SEAT); pivot.add(g);
       scene.add(pivot);
