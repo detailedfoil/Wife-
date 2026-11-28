@@ -88,7 +88,7 @@
       const b = e.target.closest('button'); if (!b) return;
       const st = G().state, k = b.dataset.stat, v = Math.round(st.stats[k]);
       const words = { food: ['Tummy', 'fish'], joy: ['Happiness', 'heart'], energy: ['Energy', 'bolt'], clean: ['Cleanliness', 'steam'] }[k];
-      const tip = { food: 'Feed to fill it.', joy: 'Games she fancies lift it. A few strokes help a little.', energy: 'Sleep brings it back, or an energy drink fills it at once.', clean: 'A sauna or a dive sorts it.' }[k];
+      const tip = { food: 'Feed to fill it.', joy: 'Games {seal} fancies lift it. A few strokes help a little.', energy: 'Sleep brings it back, or an energy drink fills it at once.', clean: 'A sauna or a dive sorts it.' }[k];
       UI.toast('<b>' + tr(words[0]) + ' ' + v + pc() + '</b> ' + tr(v < 60 ? tip : 'Doing fine.'), words[1]);
     });
     $('plate').addEventListener('click', () => { PN.Audio.play('tap'); UI.openSheet('profile'); });
@@ -128,7 +128,7 @@
     });
     const sn = S.sulkNeeds(st), chip = $('sulkChip');
     chip.hidden = !sn;
-    if (sn) chip.textContent = st.medLate ? tr('Anxiety: needs her medicine') : tr('Angry: {0} of sleep left', mins(napMs(st)));
+    if (sn) chip.textContent = st.medLate ? tr('Anxiety: needs medicine') : tr('Angry: {0} of sleep left', mins(napMs(st)));
     const mi = S.medInfo(st, Date.now()), mc = $('medChip');
     mc.hidden = !st.name || !mi.late;
     if (!mc.hidden) mc.textContent = mi.taken ? tr('Pill photo +{0}', S.T.medBonus) : tr('Medicine');
@@ -255,7 +255,7 @@
       const n = grown.filter((f) => { const top = S.topSkills(f.pts); return k === 'all' ? top.length !== 1 && top.length !== 2 : top.indexOf(k) >= 0 && top.length <= 2; }).length;
       h += line(UI.specName(k) + (k === 'all' ? '' : ' · ' + UI.skillName(k)), n);
     });
-    h += '<p class="note">' + tr('Each point a grown pup has gives +{0}% coins in the games of that skill while she visits, and each Care point makes her happiness drop {1}% slower while you are away (visiting or not; only the best Care pup in the family counts).', S.T.pointBonus, S.T.carePoint) + '</p>';
+    h += '<p class="note">' + tr('Each point a grown pup has gives +{0}% coins in the games of that skill while they visit, and each Care point makes happiness drop {1}% slower while you are away (visiting or not; only the best Care pup in the family counts).', S.T.pointBonus, S.T.carePoint) + '</p>';
     h += '<div class="shelf">' + tr('Every pup') + '<span>' + tr('newest first') + '</span></div><div class="rows">';
     const one = (p, home, i) => {
       const spec = home ? (S.pupSpent(p) ? UI.specLabel(p) : null) : UI.specLabel(p);
@@ -319,7 +319,7 @@
   const VIEWS = {
     feed(st) {
       const need = S.sulkNeeds(st);
-      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} has anxiety.', esc(st.name)) + '</b> ' + tr('She needs her medicine. Nothing else will calm her down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is angry.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angry timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it. All the head pats together and the sauna cut {0} each.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
+      const sulkBanner = st.medLate ? '<div class="sulk-card"><b>' + tr('{0} has anxiety.', esc(st.name)) + '</b> ' + tr('Medicine needed. Nothing else will calm {seal} down today.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="med">' + tr('Medicine') + '</button></p></div>' : need ? '<div class="sulk-card"><b>' + tr('{0} is angry.', esc(st.name)) + '</b> ' + '<div class="sulk-timer">' + tr('Angry timer: {0} of sleep left', mins(napMs(st))) + '</div>' + tr('Sleeping counts the timer down. Each treat below cuts {0} off it. All the head pats together and the sauna cut {0} each.', mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '<div class="sulk-want">'
         + need.treats.map((id) => '<span class="' + (need.got.indexOf(id) >= 0 ? 'done' : '') + '"><img src="' + PN.Thumbs.get(id) + '" alt="">' + esc(PN.items[id].fi) + (need.got.indexOf(id) >= 0 ? ' \u2713' : ' \u2212' + mins(S.T.sulkTreatCut * S.T.sulkSleepH * 3600e3)) + '</span>').join('')
         + '<span class="' + (need.pats >= S.T.sulkPats ? 'done' : '') + '">' + ic('heart') + tr('Head pats') + ' ' + Math.min(need.pats, S.T.sulkPats) + '/' + S.T.sulkPats + (need.pats >= S.T.sulkPats ? ' \u2713' : ' \u2212' + mins(S.T.sulkPatCut * S.T.sulkSleepH * 3600e3)) + '</span>'
         + '<span class="' + (need.bath ? 'done' : '') + '">' + ic('steam') + tr('Sauna') + (need.bath ? ' \u2713' : ' \u2212' + mins(S.T.sulkBathCut * S.T.sulkSleepH * 3600e3)) + '</span>'
@@ -329,7 +329,7 @@
       ids.sort((a, b) => order[PN.items[a].kind] - order[PN.items[b].kind] || (PN.items[a].food || 0) - (PN.items[b].food || 0));
       const lowE = G().energyLow();
       if (lowE) ids.sort((a, b) => !!PN.items[b].energy - !!PN.items[a].energy);   // short of energy: the cans come first
-      const energyBanner = lowE && ids.some((id) => PN.items[id].energy) ? '<div class="sulk-card"><b>' + tr('{0} is low on energy.', esc(st.name)) + '</b> ' + tr('Tap an energy drink to give her a can right now.') + '</div>' : '';
+      const energyBanner = lowE && ids.some((id) => PN.items[id].energy) ? '<div class="sulk-card"><b>' + tr('{0} is low on energy.', esc(st.name)) + '</b> ' + tr('Tap an energy drink to give {seal} a can right now.') + '</div>' : '';
       const fav = st.favKnown ? tr('Favourite: <b>{0}</b>.', PN.items[st.fav].fi.toLowerCase()) : tr('There is one fish {0} loves best. Try them all to find it.', esc(st.name));
       const spare = S.spare(st, Date.now());
       const juice = spare.juice ? '<div class="rows">' + row({ icon: 'med', tint: 'rose', title: tr('Ask the neighbours'), act: 'borrow',
@@ -358,11 +358,11 @@
       const hb = moods.happy, happyCard = '<div class="happy-card ' + (hb > 0 ? 'up' : '') + '">' + ic(hb > 0 ? 'heartfull' : 'heartflat') + '<div><b>' + (hb > 0 ? tr('{0} is happy: +{1}% on every game.', esc(st.name), hb) : tr('{0} is content: no bonus yet.', esc(st.name))) + '</b> ' + tr('Happiness {0}%. A heart with an arrow up lifts it, and the bonus with it, up to +{1}%. A heart with an arrow down brings it down.', Math.round(st.stats.joy), S.T.happyMax) + '</div></div>';
       const onl = PN.Online, inRoom = onl && onl.room, fr = onl && onl.friend;
       const onlineCard = onl ? '<button class="row online-row online-card" data-do="online"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Play with a friend') + ' <span class="beta-tag">' + tr('Online beta') + '</span></b><span class="d">' + (inRoom ? (fr ? tr('Playing with {0} in room {1}', esc(fr.name || ''), inRoom) : tr('In room {0}. Waiting for a friend.', inRoom)) : tr('Make or join a room: both seals on the shore, and games against each other.')) + '</span></span></button>' : '';
-      const tiredBanner = G().energyLow() ? '<div class="sulk-card"><b>' + tr('{0} is out of energy.', esc(st.name)) + '</b> ' + tr('No need to wait for sleep. An energy drink fills her up right now.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="tiredcard">' + ic('bolt') + tr('Energy drinks') + '</button></p></div>' : '';
-      let h = onlineCard + tiredBanner + (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until she has had a sauna.', moods.muck) + '</div>' : '')
-        + happyCard + '<p class="lead">' + tr('The heart by a game shows whether it lifts her happiness (arrow up) or lowers it (arrow down), and by how much for every minute you play it. Each play wears a game out a little and makes the others more fun.') + '</p>';
+      const tiredBanner = G().energyLow() ? '<div class="sulk-card"><b>' + tr('{0} is out of energy.', esc(st.name)) + '</b> ' + tr('No need to wait for sleep. An energy drink fills {seal} up right now.') + '<p style="margin:10px 0 0"><button class="btn small" data-do="tiredcard">' + ic('bolt') + tr('Energy drinks') + '</button></p></div>' : '';
+      let h = onlineCard + tiredBanner + (moods.muck > 0 ? '<div class="sulk-card"><b>' + tr('{0} is mucky.', esc(st.name)) + '</b> ' + tr('Every game pays {0}% less until {seal} has had a sauna.', moods.muck) + '</div>' : '')
+        + happyCard + '<p class="lead">' + tr('The heart by a game shows whether it lifts happiness (arrow up) or lowers it (arrow down), and by how much for every minute you play it. Each play wears a game out a little and makes the others more fun.') + '</p>';
       h += '<div class="rows">';
-      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. She might come back angry.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
+      h += row({ icon: 'dive', tint: 'sea', title: tr('Dive'), text: tr('Send {0} down the ice hole and see what comes back up.', esc(st.name)) + '<em class="risk">' + tr('High risk, high reward. {seal} might come back angry.') + '</em>', act: 'dive', cls: off(dive), side: dive.ok ? tr('ready') : dive.why === 'wait' ? mins(st.dive.readyAt - now) : why(dive) });
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (gm.dev && !st.dev) return;                       // developer-mode games are not shown otherwise
@@ -372,7 +372,7 @@
       });
       h += '</div>';
       if (owned.length >= 4) {   // with only the three free games there is nothing worth leaving out yet
-        h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is never one of her favourites, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
+        h += '<div class="shelf">' + tr('Leave out') + '<span>' + tr('{0} of {1}', moods.skips, moods.skipMax) + '</span></div><p class="lead">' + tr('Not keen on a game? Leave out up to {0}. A game left out is never one of the favourites, and still wears out if you play it.', moods.skipMax) + '</p><div class="chips wrap">'
           + owned.map((id) => '<button class="chip-btn' + (moods.games[id].skip ? ' on' : '') + '" data-do="skip" data-id="' + id + '" aria-pressed="' + moods.games[id].skip + '">' + tr(PN.GAMES[id].title) + '</button>').join('') + '</div>';
       }
       return h;
@@ -443,7 +443,7 @@
       let h = '<div class="then-now" aria-label="' + tr('{0}, then and now', esc(st.name)) + '">' + pic(PN.Thumbs.seal(st.birthAppearance, 0), tr('{0} as a kuutti', esc(st.name))) + pic(PN.Thumbs.seal(st.appearance, st.stage), tr('album|Now')) + '</div>';
       if (t === 'pupstats') return pupStatsPage(st);
       if (!st.pups.length && !st.family.length) {
-        return h + '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of her own.', S.T.pupLevel) }) + '</div>';
+        return h + '<p class="lead">' + tr('No pups yet.') + '</p><div class="rows">' + row({ icon: 'seal', title: tr('One day, perhaps'), text: tr('A grown seal who is happy, well fed and at friendship level {0} may have a pup of their own.', S.T.pupLevel) }) + '</div>';
       }
       PN.Thumbs.pups(st.pups.concat(st.family));      // little portraits, drawn once for each outfit
       const face = (w) => PN.Thumbs.pup(w);
@@ -454,7 +454,7 @@
         side: '+' + fam + '%' });
       st.pups.forEach((p, i) => {
         const left = Math.max(0, S.T.pupGrow - p.grownMs);
-        h += row({ icon: 'seal', img: face(p), tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: (p.sick ? tr('Poorly. Feed {0} so she can nurse, and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
+        h += row({ icon: 'seal', img: face(p), tint: p.sick ? 'rose' : 'leaf', title: esc(p.name), text: (p.sick ? tr('Poorly. Feed {0} and give cloudberry juice.', esc(st.name)) : p.ready ? tr('Ready to set off into the lake.')
           : p.food < 20 ? tr('Hungry. Pups feed from their mother, so keep {0} well fed.', esc(st.name)) : tr('Growing well. About {0} of good care to go.', mins(left).replace(/ \d+ min$/, '')))
           + ' ' + tr('Level {0}.', S.pupLevel(p)) + (S.pupFree(p) ? ' ' + tr('Skill points to spend: {0}.', S.pupFree(p)) : '') + ' ' + tr('Heading for: {0}.', UI.headingFor(p)),
           side: tr('born {0}', day(p.bornAt)), act: 'pupinfo', id: i });
@@ -473,8 +473,8 @@
         h += row({ icon: f.fate === 'grown' ? 'star' : 'heart', img: face(f), tint: stat !== 'home' ? 'leaf' : '', cls: f.fate === 'grown' ? 'done' : '', title: esc(f.name) + (f.fate === 'grown' && f.pts ? ' · ' + UI.specLabel(f) : ''), text: text + (f.fate === 'grown' && f.pts ? UI.radar(f.pts, 96, true) : ''),
           side: tr('{0} to {1}', day(f.bornAt), day(f.endAt)), act: f.fate === 'grown' ? 'callpup' : '', id: i });
       });
-      return h + '</div><p class="note">' + tr('Pups earn xp from everything the family does while they are at home, and every {0} xp is a skill point, up to {1}. Spend them on the pup card. A grown pup gives +{2}% coins per point in the games of that skill when she visits, and each Care point makes her happiness drop {3}% slower while you are away (visiting or not; only the best Care pup in the family counts).', S.T.pupXpStep, S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint) + '</p>'
-        + '<p class="note">' + tr('Pups feed from their mother whenever her tummy is above a third. If she goes hungry for long, so do they.') + '</p>';
+      return h + '</div><p class="note">' + tr('Pups earn xp from everything the family does while they are at home, and every {0} xp is a skill point, up to {1}. Spend them on the pup card. A grown pup gives +{2}% coins per point in the games of that skill when they visit, and each Care point makes happiness drop {3}% slower while you are away (visiting or not; only the best Care pup in the family counts).', S.T.pupXpStep, S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint) + '</p>'
+        + '<p class="note">' + tr('Pups feed from their mother whenever the mother\'s tummy is above a third. If the mother goes hungry for long, so do they.') + '</p>';
     },
     profile(st) {
       const lv = S.level(st), days = Math.floor((Date.now() - st.createdAt) / S.DAY), fi = PN.isFi();
@@ -485,7 +485,7 @@
       if (st.stage < 2) {
         const nx = D.STAGES[st.stage + 1];
         next = tr('Becomes a {0} at friendship level {1}.', fi ? nx.fi : nx.en, S.T.stageLevel[st.stage]);
-      } else next = st.pupMet === 'waiting' ? tr('Expecting! The pup is due in about {0} hours.', Math.max(1, Math.ceil((st.pupBirthAt - Date.now()) / S.H))) : st.pupMet === 'ready' ? tr('Fully grown, and something is in the air. Close the game and come back to see.') : st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once her pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if she is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
+      } else next = st.pupMet === 'waiting' ? tr('Expecting! The pup is due in about {0} hours.', Math.max(1, Math.ceil((st.pupBirthAt - Date.now()) / S.H))) : st.pupMet === 'ready' ? tr('Fully grown, and something is in the air. Close the game and come back to see.') : st.pups.length ? tr('Fully grown. The friendship points for the next pup start counting once the pup has swum off.') : tr('Fully grown. A pup may arrive after {0} more friendship points, if {seal} is happy and well fed.', Math.max(0, Math.ceil(S.xpFor(S.T.pupLevel) - st.pupProg)));
       return line('Kind', stage.fi + (fi ? '' : ' (' + stage.en + ')')) + line('Age', days < 1 ? tr('less than a day') : tr(days === 1 ? '{0} day' : '{0} days', days))
         + line('Friendship', tr('level {0} ({1} of {2})', lv.level, Math.floor(lv.into), lv.need)) + line('Mood', st.medLate && S.mood(st) === 'sulk' ? tr('mood|anxiety') : tr(moods[S.mood(st)]))
         + line('Favourite food', st.favKnown ? favIt.fi + (fi ? '' : ' (' + favIt.en.toLowerCase() + ')') : tr('not found yet'))
@@ -503,8 +503,8 @@
         + tog('mumMode', 'Mum Mode', 'heart', 'Slower minigames, fewer obstacles and more room for mistakes.')
         + '<div class="row"><span class="ic-wrap">' + ic('music') + '</span><span class="txt"><b>' + tr('Background instrument') + '</b><span class="d">' + tr('A random instrument each time you open the game. Change it here anytime.') + '</span><span class="music-choices">' + PN.Audio.instruments.map((i) => '<button class="music-choice' + (PN.Audio.instrument === i.id ? ' on' : '') + '" data-do="instrument" data-id="' + i.id + '" aria-pressed="' + (PN.Audio.instrument === i.id) + '"><b>' + tr(i.name) + '</b><span class="d">' + tr(i.description) + '</span></button>').join('') + '</span></span></div>'
         + (navigator.vibrate ? tog('haptics', 'Buzz', 'bolt', 'A little buzz under your finger when you stroke and tap.') : '')
-        + tog('energyCard', 'Energy drink reminder', 'bolt', 'A card offers an energy drink when she runs out of energy. The Play and Feed pages still show the hint when it is off.')
-        + tog('medicine', 'Daily medicine', 'med', 'Off to begin with. Switch it on and she needs her medicine every day from 5am, starting today, or she gets anxiety until she has had it.')
+        + tog('energyCard', 'Energy drink reminder', 'bolt', 'A card offers an energy drink when {seal} runs out of energy. The Play and Feed pages still show the hint when it is off.')
+        + tog('medicine', 'Daily medicine', 'med', 'Off to begin with. Switch it on and {seal} needs medicine every day from 5am, starting today, or gets anxiety until it is taken.')
         + tog('stats', 'Share play stats', 'globe', 'Sends anonymous numbers (which games, how long, coins, progress, how the game runs) to the maker. No name or personal details.')
         + '<div class="row"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Language') + '</b><span class="d">' + tr('Play in English or in Finnish.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + lang + '</span></span></div>'
         + '<div class="row"><span class="ic-wrap">' + ic('sun') + '</span><span class="txt"><b>' + tr('Sky') + '</b><span class="d">' + tr('Real time shows the daylight over Inari in Lapland and the weather in Tampere as they are right now.') + '</span><span class="seg" style="margin-top:8px;display:inline-flex">' + seg + '</span></span></div>'
@@ -512,19 +512,19 @@
         + '<div class="row"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset high scores') + '</b><span class="d">' + tr('Set the best score of every game back to zero. Coins and everything else stay.') + '</span><span class="btn-row"><button class="btn small ghost" data-do="resetscores">' + tr('Reset high scores') + '</button></span></span></div>'
         + '<div class="row"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Start over') + '</b><span class="d">' + tr('Say goodbye to {0} and begin again with a new pup.', esc(st.name)) + '</span><span class="btn-row"><button class="btn small ghost" data-do="reset">' + tr('Start over') + '</button></span></span></div>'
         + '<a class="row" href="privacy.html" target="_blank" rel="noopener"><span class="ic-wrap">' + ic('book') + '</span><span class="txt"><b>' + tr('Privacy and credits') + '</b><span class="d">' + tr('What the game stores and sends, and who made the pieces it is built from.') + '</span></span></a>'
-        + '<button class="row" data-do="update"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Check for updates') + '</b><span class="d">' + tr('Look for a newer version of the game and load it. Your seal stays as she is.') + '</span></span></button>'
+        + '<button class="row" data-do="update"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Check for updates') + '</b><span class="d">' + tr('Look for a newer version of the game and load it. Your seal stays exactly as it is.') + '</span></span></button>'
         + '<button class="row online-row" data-do="online"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Online trial') + '</b><span class="d">' + tr('Make or join a room with a friend: both seals on the shore, and games against each other. Still being tried out.') + '</span></span></button>'
         + (devShown(st) ? '<div class="row" data-do="devtoggle" role="button" tabindex="0"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Developer mode') + '</b><span class="d">' + tr('Everything in the shop and the games is free. Your save from before is kept, and Reset brings it back.') + '</span></span><span class="toggle' + (st.dev ? ' on' : '') + '"></span></div>' : '')
         + (st.dev ? '<label class="dev-find"><span class="ic-wrap">' + ic('search') + '</span><input type="search" class="dev-search" placeholder="' + tr('Search developer options') + '" aria-label="' + tr('Search developer options') + '"></label><p class="note dev-none" hidden>' + tr('No developer options match.') + '</p>'
-          + '<button class="row dev-row" data-do="devcreate"><span class="ic-wrap">' + ic('seal') + '</span><span class="txt"><b>' + tr('Try the seal creator') + '</b><span class="d">' + tr('Open the new-seal creator with a random kuutti, just to test it. Nothing is saved and your seal stays as she is.') + '</span></span></button>' : '')
+          + '<button class="row dev-row" data-do="devcreate"><span class="ic-wrap">' + ic('seal') + '</span><span class="txt"><b>' + tr('Try the seal creator') + '</b><span class="d">' + tr('Open the new-seal creator with a random kuutti, just to test it. Nothing is saved and your seal stays exactly as it is.') + '</span></span></button>' : '')
         + (st.dev && st.settings.medicine ? '<button class="row dev-row" data-do="devmed"><span class="ic-wrap">' + ic('med') + '</span><span class="txt"><b>' + tr('Medicine is due now') + '</b><span class="d">' + tr('Forget the medicine for today and make it overdue, for testing.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="online"><span class="ic-wrap">' + ic('globe') + '</span><span class="txt"><b>' + tr('Play online (test)') + '</b><span class="d">' + tr('Make or join a room with a friend: both seals on the shore, and games against each other. Still a prototype.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="geezer"><span class="ic-wrap">' + ic('star') + '</span><span class="txt"><b>' + tr('Geezer home (prototype)') + '</b><span class="d">' + tr('Swap the seal and the shore for a big bloke in his lounge, to see how it looks. Only the look changes.') + '</span></span><span class="toggle' + (PN.Geezer && PN.Geezer.on() ? ' on' : '') + '"></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devenergy"><span class="ic-wrap">' + ic('bolt') + '</span><span class="txt"><b>' + tr('Fill energy') + '</b><span class="d">' + tr('Top up the energy bar whenever you like.') + '</span></span></button>' : '')
-        + (st.dev ? '<button class="row dev-row" data-do="devdirty"><span class="ic-wrap">' + ic('drop') + '</span><span class="txt"><b>' + tr('Make her dirty') + '</b><span class="d">' + tr('Drop her cleanliness to zero, to test the sauna.') + '</span></span></button>' : '')
+        + (st.dev ? '<button class="row dev-row" data-do="devdirty"><span class="ic-wrap">' + ic('drop') + '</span><span class="txt"><b>' + tr('Make {seal} dirty') + '</b><span class="d">' + tr('Drop cleanliness to zero, to test the sauna.') + '</span></span></button>' : '')
         + (st.dev ? '<button class="row dev-row" data-do="devtut"><span class="ic-wrap">' + ic('refresh') + '</span><span class="txt"><b>' + tr('Reset tutorials') + '</b><span class="d">' + tr('Show the first-time game tutorials again, for testing.') + '</span></span></button>' : '')
         + (st.dev ? [
-          ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If she is not a grown seal yet she becomes one first. Two pups is the most.', 'seal'],
+          ['new', 'New pup now', 'Welcome a pup straight away, with the naming. If {seal} is not grown yet, that happens first. Two pups is the most.', 'seal'],
           ['visit', 'Call a pup home now', 'Call the first grown-up pup back and skip the hour of waiting, to see the visit and the 100 coins. Dev mode also ignores the 12 hour wait between calls.', 'seal'],
           ['ready', 'Pups are ready to leave', 'Skip the two days of growing. Tap a pup, then Wave goodbye, to see it go.', 'star'],
           ['bye', 'Say farewell now', 'Send the first pup off into the lake straight away, with the wave, the coins and the splash.', 'heart'],
@@ -532,11 +532,11 @@
           ['sick', 'Make the pups poorly', 'The pups go hungry and fall poorly, to see how they look and how they get better.', 'drop'],
           ['heal', 'Feed and cheer the pups', 'Full tummies, full happiness, and no longer poorly.', 'fish'],
           ['train', 'Level up the pups', 'Every pup at home goes up exactly one level, and gets one skill point to spend.', 'star'],
-          ['lvl-', 'Pups: one level less', 'Every pup at home goes down a level. If she has spent more points than her new level allows, one is taken back from her biggest skill.', 'star'],
-          ['lvlmax', 'Pups: top level', 'Every pup at home goes straight to the top level, with all her points to spend.', 'star'],
-          ['refund', 'Pups: take points back', 'Every pup at home gets her spent points back to spend again.', 'star'],
+          ['lvl-', 'Pups: one level less', 'Every pup at home goes down a level. If a pup has spent more points than the new level allows, one is taken back from the biggest skill.', 'star'],
+          ['lvlmax', 'Pups: top level', 'Every pup at home goes straight to the top level, with all the points to spend.', 'star'],
+          ['refund', 'Pups: take points back', 'Every pup at home gets the spent points back to spend again.', 'star'],
           ['g+', 'Grown pups: one more point', 'Every grown-up pup gets a point in a random skill, up to the most points.', 'star'],
-          ['g-', 'Grown pups: one point less', 'Every grown-up pup loses a point from her biggest skill.', 'star'],
+          ['g-', 'Grown pups: one point less', 'Every grown-up pup loses a point from the biggest skill.', 'star'],
           ['spec', 'New points for grown pups', 'Give every grown-up pup 10 points spread at random over the skills, to test the visit bonuses.', 'star'],
         ].map((r) => '<button class="row dev-row" data-do="devpup" data-id="' + r[0] + '"><span class="ic-wrap">' + ic(r[3]) + '</span><span class="txt"><b>' + tr(r[1]) + '</b><span class="d">' + tr(r[2]) + '</span></span></button>').join('') : '')
         + (st.dev ? '<button class="row dev-row" data-do="devreset"><span class="ic-wrap rose">' + ic('close') + '</span><span class="txt"><b>' + tr('Reset to before developer mode') + '</b><span class="d">' + tr('Put back the save from just before developer mode was turned on.') + '</span></span></button>' : '')
@@ -695,10 +695,10 @@
   };
   UI.fade = (on) => new Promise((r) => { $('fade').classList.toggle('on', on); setTimeout(r, 520); });
   UI.esc = esc; UI.thumb = thumb; UI.temp = temp; UI.mins = mins;
-  /* Pup skills: what a skill and a grown pup are called, and what a grown pup does for the family when she visits. */
+  /* Pup skills: what a skill and a grown pup are called, and what a grown pup does for the family when they visit. */
   UI.skillName = (k) => tr(PN.SKILLS[k] ? PN.SKILLS[k].name : 'All-rounder');
   UI.specName = (k) => tr(PN.SKILLS[k] ? PN.SKILLS[k].spec : 'All-rounder');
-  /* What a grown pup's points do for the family while she visits. */
+  /* What a grown pup's points do for the family while they visit. */
   UI.perkText = (f, name) => {
     const pts = (f && f.pts) || {}, parts = [];
     PN.SKILL_ORDER.forEach((k) => {
@@ -710,7 +710,7 @@
       if (k === 'water') parts.push(tr('on dives +{0}% coins and a {1}% smaller chance of coming up angry', n * S.T.pointBonus, n * S.T.diveSulkCut));
     });
     const care = pts.care ? ' ' + tr('Care: happiness drops {0}% slower while you are away (only the best Care pup in the family counts).', pts.care * S.T.carePoint) : '';
-    return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) + care : care ? care.trim() : tr('{0} has no skill points, so she gives no visiting bonus.', name);
+    return parts.length ? tr('When {0} visits: {1}.', name, parts.join('; ')) + care : care ? care.trim() : tr('{0} has no skill points, so there is no visiting bonus.', name);
   };
   /* A pup's points as one line: Swimming 3 · Sports 0 · Brains 1 · Care 6. */
   /* Radar chart of a pup's points: one spoke per skill, rings at 2, 4 and 6 points, the most a skill can have. */

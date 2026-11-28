@@ -18,6 +18,7 @@
 
   const nm = () => '<b>' + UI.esc(state.name) + '</b>';
   const plain = () => UI.esc(state.name);
+  PN.sealName = () => (state && state.name) || '';
   const chip = (inner) => '<span class="chip">' + inner + '</span>';
   const coinChip = (n) => chip(UI.ic('coin') + '+' + n);
   const itemChip = (id, n) => chip('<img src="' + PN.Thumbs.get(id) + '" alt="">' + (n > 1 ? n + ' × ' : '') + UI.esc(PN.items[id].fi));
@@ -187,8 +188,8 @@
   /* Seals born before the creator get to choose their natural look once, for free. */
   async function offerLook() {
     if (!PN.Appearance.canChooseFree(state)) return;
-    const v = await UI.modal({ title: tr('New: choose her look'), html: tr('<p>Seals can now have their own natural look: coat, markings, eyes and more. {0} gets to choose hers once, for free.</p><p>Her pups can take after it. Any change after this is made at Plastic Sturgeon.</p>', plain()),
-      actions: [{ label: tr('Choose her look'), value: 1 }, { label: tr('Keep her as she is'), value: 0 }] });
+    const v = await UI.modal({ title: tr('New: choose the look of {seal}'), html: tr('<p>Seals can now have their own natural look: coat, markings, eyes and more. {0} gets to choose once, for free.</p><p>Pups can take after it. Any change after this is made at Plastic Sturgeon.</p>', plain()),
+      actions: [{ label: tr('Choose a look'), value: 1 }, { label: tr('Keep it as it is'), value: 0 }] });
     if (v === 1 && await PN.Clinic.create({ legacy: true })) { seal.gesture('happy'); A.play('chirp'); FX.hearts(head(), 3); }
     state.lookChosen = true;
     S.save(state);
@@ -211,7 +212,7 @@
     if (state.pupPointsSeen) return;
     state.pupPointsSeen = 1;
     if (!state.pups.length && !state.family.length) { S.save(state); return; }
-    const v = await UI.modal({ title: tr('New: pup skill points'), html: tr('<p>Pups now level up. Everything you do while they are at home earns them xp, and every level is a skill point (up to {0}) that you spend on their card: Swimming, Sports, Brains or Care. Where the points go is what they grow up to be.</p><p>A grown pup who visits gives +{1}% coins per point in the games of that skill, and each Care point makes her happiness drop {2}% slower while you are away (visiting or not; only the best Care pup in the family counts). Every pup raised still adds {3}% to all game coins (up to {4}%).</p><p>Pups who are already here start again as if they were newborn, with the full two days to earn their points, and pups who have already grown up keep the bonus they had.</p>', S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint, S.T.famBonusEach, S.T.famBonusMax),
+    const v = await UI.modal({ title: tr('New: pup skill points'), html: tr('<p>Pups now level up. Everything you do while they are at home earns them xp, and every level is a skill point (up to {0}) that you spend on their card: Swimming, Sports, Brains or Care. Where the points go is what they grow up to be.</p><p>A grown pup who visits gives +{1}% coins per point in the games of that skill, and each Care point makes happiness drop {2}% slower while you are away (visiting or not; only the best Care pup in the family counts). Every pup raised still adds {3}% to all game coins (up to {4}%).</p><p>Pups who are already here start again as if they were newborn, with the full two days to earn their points, and pups who have already grown up keep the bonus they had.</p>', S.T.pupMaxPoints, S.T.pointBonus, S.T.carePoint, S.T.famBonusEach, S.T.famBonusMax),
       actions: [{ label: tr('See the family'), value: 1 }, { label: tr('Lovely'), value: 0 }] });
     S.save(state);
     if (v === 1) UI.openSheet('album', 'family');
@@ -234,11 +235,11 @@
     if (sum.sleptH >= 1) add('zzz', one(sum.sleptH, 'Slept for about {0} hour.', 'Slept for about {0} hours.'));
     if (sum.pupLost.length) { bad = true; sum.pupLost.forEach((n) => add('heart', tr('<b>{0}</b> went too long without milk and did not make it.', UI.esc(n)), 'bad')); }
     if (sum.sick && state.sick) { bad = true; add('med', tr('{0} has fallen poorly. Cloudberry juice or steady care will mend it.', plain()), 'bad'); }
-    if (sum.pupSick.length) { bad = true; sum.pupSick.forEach((n) => { if (state.pups.some((p) => p.name === n && p.sick)) add('med', tr('<b>{0}</b> is poorly from hunger. Feed {1} so she can nurse.', UI.esc(n), plain()), 'bad'); }); }
-    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry or grubby for {0} hour.', 'Was left hungry or grubby for {0} hours.') + (state.stage < 2 ? ' ' + tr('Her growing slipped back.') : ''), 'bad'); }
+    if (sum.pupSick.length) { bad = true; sum.pupSick.forEach((n) => { if (state.pups.some((p) => p.name === n && p.sick)) add('med', tr('<b>{0}</b> is poorly from hunger. Feed {1} so {0} can nurse.', UI.esc(n), plain()), 'bad'); }); }
+    if (sum.neglectH >= 1) { bad = true; add('clock', one(sum.neglectH, 'Was left hungry or grubby for {0} hour.', 'Was left hungry or grubby for {0} hours.') + (state.stage < 2 ? ' ' + tr('Growing slipped back.') : ''), 'bad'); }
     else if (state.stats.food < 25 && !state.asleep) add('fish', tr('Got hungry waiting for you.'));
     if (sum.xpLost > 0) add('heart', one(sum.xpLost, 'Friendship slipped by {0} point.', 'Friendship slipped by {0} points.'), 'bad');
-    if (state.medLate) { bad = true; add('anxi', tr('{0} has anxiety. She needs her medicine.', plain()), 'bad'); }
+    if (state.medLate) { bad = true; add('anxi', tr('{0} has anxiety. Medicine needed.', plain()), 'bad'); }
     else if (state.grudge > 0) { bad = true; add('grump', tr('{0} is angry. Food and gentle strokes will win it round.', plain()), 'bad'); }
     if (sum.cured) add('check', tr('Got over being poorly.'), 'good');
     sum.pupWell.forEach((n) => add('check', tr('<b>{0}</b> is feeling better.', UI.esc(n)), 'good'));
@@ -373,7 +374,7 @@
         UI.toast(tr('Award: <b>{0}</b>. +{1} coins', UI.esc(PN.awardTitle(a)), a.c), 'star', '', 4200);
         A.play('award', 0.6);
       } else if (e.type === 'medlate') {
-        UI.toast(tr('{0} has not had her medicine and has anxiety.', nm()), 'anxi', '', 4200);
+        UI.toast(tr('{0} has not had the medicine and has anxiety.', nm()), 'anxi', '', 4200);
       } else if (e.type === 'forgiven') {
         UI.toast(tr('{0} has forgiven you.', nm()), 'heart', '', 3800);
         seal.sulk = false; seal.heading = W.HOME_HEADING;
@@ -385,13 +386,13 @@
         UI.toast(tr('{0} is feeling better.', nm()), 'check', '', 3800);
         A.play('sparkle'); FX.sparkle(head(), 10);
       } else if (e.type === 'pupSick') {
-        UI.toast(tr('<b>{0}</b> is poorly from hunger. Feed {1} so she can nurse.', UI.esc(e.name), plain()), 'med', 'bad', 5600);
+        UI.toast(tr('<b>{0}</b> is poorly from hunger. Feed {1} so {0} can nurse.', UI.esc(e.name), plain()), 'med', 'bad', 5600);
         A.play('sad');
       } else if (e.type === 'pupLost') {
         A.play('lost');
         syncPups();
         UI.modal({ title: tr('Goodbye, {0}', UI.esc(e.name)),
-          html: tr('<p>{0} went too long without milk and did not make it.</p><p>{1} will be sad for a while. Keep her tummy full and it need not happen again.</p>', UI.esc(e.name), plain()),
+          html: tr('<p>{0} went too long without milk and did not make it.</p><p>{1} will be sad for a while. Keep the tummy full and it need not happen again.</p>', UI.esc(e.name), plain()),
           actions: [{ label: tr('I am sorry'), value: 1 }] });
       }
     }
@@ -784,7 +785,7 @@
     UI.closeSheet();
     A.play('sparkle');
     seal.gesture('surprise');
-    await UI.modal({ title: tr('A surprise in the den'), html: tr('<p>{0} has had a pup of her own: a tiny white kuutti.</p><p>Pups feed from their mother, so keep her tummy above a third. A hungry mother means a hungry pup.</p>', plain()),
+    await UI.modal({ title: tr('A surprise in the den'), html: tr('<p>{0} has had a pup: a tiny white kuutti.</p><p>Pups feed from their mother, so keep the tummy above a third. A hungry mother means a hungry pup.</p>', plain()),
       actions: [{ label: tr('Oh my!'), value: 1 }] });
     const name = await UI.askName({ title: tr('Name the pup'), text: tr('What will the little one be called?'), ok: tr('Welcome, little one') });
     const p = S.addPup(state, Date.now(), name);
@@ -813,9 +814,9 @@
     if (!p || UI.modalOpen) return;
     A.play('tap');
     const left = Math.max(0, S.T.pupGrow - p.grownMs);
-    const how = p.sick ? tr('Poorly from hunger. Feed {0} well so she can nurse, and give cloudberry juice.', plain())
+    const how = p.sick ? tr('Poorly from hunger. Feed {0} well and give cloudberry juice.', plain())
       : p.ready ? tr('Big and strong, and ready to swim off into the lake.')
-        : p.food < 20 ? tr('Hungry. Pups feed from their mother whenever her tummy is above a third.')
+        : p.food < 20 ? tr('Hungry. Pups feed from their mother whenever the mother\'s tummy is above a third.')
           : tr('Growing well. About {0} of good care to go.', span(left));
     const free = S.pupFree(p);
     const acts = [{ label: tr('Cuddle'), value: 'cuddle' }];
@@ -833,7 +834,7 @@
     else if (v === 'points' && idx >= 0) await spendPoints(idx);
     else if (v === 'go' && idx >= 0) {
       if (S.pupFree(p) > 0) {
-        const w = await UI.modal({ title: tr('Points left over'), html: '<p>' + tr('{0} still has skill points to spend ({1}). Once she swims off they are lost.', UI.esc(p.name), S.pupFree(p)) + '</p>',
+        const w = await UI.modal({ title: tr('Points left over'), html: '<p>' + tr('{0} still has skill points to spend ({1}). Once the pup swims off they are lost.', UI.esc(p.name), S.pupFree(p)) + '</p>',
           actions: [{ label: tr('Spend them'), value: 'points' }, { label: tr('Wave goodbye anyway'), value: 'go' }, { label: tr('Back'), value: 0 }] });
         if (w === 'points') await spendPoints(idx); else if (w === 'go') graduate(idx);
       } else graduate(idx);
@@ -843,7 +844,7 @@
   async function spendPoints(i) {
     let p = state.pups[i];
     while (p && S.pupFree(p) > 0) {
-      const games = (k) => k === 'care' ? tr('each point makes her happiness drop {0}% slower while you are away, visiting or not', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up angry', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
+      const games = (k) => k === 'care' ? tr('each point makes happiness drop {0}% slower while you are away, visiting or not', S.T.carePoint) : tr('+{0}% coins per point in {1}', S.T.pointBonus, PN.SKILLS[k].games.map((g) => tr(PN.GAMES[g].title)).join(', ')) + (k === 'water' ? '; ' + tr('on dives +{0}% coins and a {1}% smaller chance of coming up angry', S.T.pointBonus, S.T.diveSulkCut) + ' (' + tr('per point') + ')' : '');
       const v = await UI.modal({ layout: 'spend', title: tr('Skill points for {0}', UI.esc(p.name)),
         html: '<p>' + tr('Skill points to spend: <b>{0}</b>. A point is locked in once spent.', S.pupFree(p)) + ' ' + tr('No skill can have more than {0} points.', S.T.pupSkillMax) + '</p><div class="pup-skills">' + UI.radar(p.pts, 190) + '</div>'
           + '<p class="small">' + PN.SKILL_ORDER.map((k) => '<b>' + UI.skillName(k) + '</b>: ' + games(k) + '.').join('<br>') + '</p>',
@@ -959,7 +960,7 @@
     await wait(0.9);
     await showLoot(loot);
     if (carried) seal.mouthA.remove(carried);
-    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up angry.', '{0} got bitten down there and is angry.', '{0} got her flippers tangled in weed and came up angry.', '{0} was spooked by a big shadow under the ice and is angry.', '{0} swallowed a mouthful of icy water and is angry.', '{0} got stuck in the ice hole on the way out and is angry.'][Math.floor(Math.random() * 6)], nm()), 'grump'); }
+    if (loot.sulked) { seal.sulk = true; seal.gesture('no'); A.play('hmph'); UI.toast(tr(['{0} got nipped by a crab and came up angry.', '{0} got bitten down there and is angry.', '{0} got tangled in weed and came up angry.', '{0} was spooked by a big shadow under the ice and is angry.', '{0} swallowed a mouthful of icy water and is angry.', '{0} got stuck in the ice hole on the way out and is angry.'][Math.floor(Math.random() * 6)], nm()), 'grump'); }
     else { seal.gesture('happy'); A.play('chirp'); }
     await seal.moveTo(W.HOME.x, W.HOME.z, { speed: 2.0, face: W.HOME_HEADING });
     G.busy = false; UI.setBusy(false);
@@ -995,7 +996,7 @@
     A.play('nope');
     if (!seal.asleep && why !== 'asleep') seal.gesture('no');
     if ((why === 'tired' || why === 'asleep') && tiredCard('blocked')) return;
-    if (why === 'sulk' && state.medLate) { UI.toast(tr('{0} has anxiety and will not play. She needs her medicine.', nm()), 'anxi'); return; }
+    if (why === 'sulk' && state.medLate) { UI.toast(tr('{0} has anxiety and will not play. Medicine needed.', nm()), 'anxi'); return; }
     UI.toast(whyText(why), why === 'asleep' ? 'zzz' : why === 'sick' ? 'med' : why === 'sulk' ? 'grump' : 'clock');
   }
 
@@ -1021,13 +1022,13 @@
         const wakes = asleep && state.stats.energy + c.it.energy >= S.T.canWake;
         return { value: (c.have ? 'drink:' : 'buy:') + c.id, cls: i ? 'ghost' : '',
           label: '<span class="canbtn">' + UI.ic('bolt') + (c.have ? tr('Drink {0}', UI.esc(c.it.fi)) + (c.have > 1 ? ' ×' + c.have : '') : tr('Buy {0} for {1}', UI.esc(c.it.fi), c.cost))
-            + '<small>' + tr('+{0} energy', c.it.energy) + (wakes ? ', ' + tr('wakes her up') : '') + '</small></span>' };
+            + '<small>' + tr('+{0} energy', c.it.energy) + (wakes ? ', ' + tr('wakes {seal} up') : '') + '</small></span>' };
       });
-      acts.push({ value: 'later', cls: 'ghost', label: tr(asleep ? 'Let her sleep' : 'Not now') });
+      acts.push({ value: 'later', cls: 'ghost', label: tr(asleep ? 'Let {seal} sleep' : 'Not now') });
       if (why !== 'sheet') acts.push({ value: 'never', cls: 'ghost quiet', label: tr('Don\'t show me again') });
       const cheapest = cans[0];
-      let html = '<p>' + (asleep ? tr('{0} fell asleep from tiredness. She wakes by herself in about {1}.', UI.esc(state.name), UI.mins(S.sleepLeft(state))) : tr('{0} is almost out of energy and will fall asleep soon.', UI.esc(state.name))) + '</p>';
-      html += opts.length ? '<p>' + (own.length ? tr('Skip the wait: an energy drink wakes her and fills her up right now.') : tr('The larder has no energy drinks, but you have the coins. Skip the wait with one from the shop.')) + '</p>'
+      let html = '<p>' + (asleep ? tr('{0} fell asleep from tiredness and will wake up in about {1}.', UI.esc(state.name), UI.mins(S.sleepLeft(state))) : tr('{0} is almost out of energy and will fall asleep soon.', UI.esc(state.name))) + '</p>';
+      html += opts.length ? '<p>' + (own.length ? tr('Skip the wait: an energy drink wakes {seal} and fills up the energy right now.') : tr('The larder has no energy drinks, but you have the coins. Skip the wait with one from the shop.')) + '</p>'
         : '<p>' + tr('There are no energy drinks in the larder, and not enough coins for one yet. The cheapest costs {0} coins.', cheapest ? cheapest.cost : '') + '</p>';
       const v = await UI.modal({ art: opts.length ? PN.Thumbs.get(opts[0].id) : null, title: asleep ? tr('{0} is out of energy', UI.esc(state.name)) : tr('{0} is running low', UI.esc(state.name)), html, actions: acts, tapAway: 'later', over: true, layout: 'energy' });
       if (v === 'never') { state.settings.energyCard = false; save(); UI.toast(tr('Got it. You can turn this back on in Settings.'), 'bolt'); return true; }
@@ -1066,7 +1067,7 @@
     const r = S.feed(state, id), it = PN.items[id];
     if (!r.ok) {
       A.play('nope');
-      if (r.why === 'asleep' && it && it.full) UI.toast(tr('{0} is fast asleep. Coffee is for when she is awake.', nm()), 'zzz');
+      if (r.why === 'asleep' && it && it.full) UI.toast(tr('{0} is fast asleep. Coffee is for when {0} is awake.', nm()), 'zzz');
       else if (r.why === 'asleep') UI.toast(whyText('asleep') + tr(' Wake first, or wait for morning.'), 'zzz');
       else if (r.why === 'notsick') UI.toast(tr('Nobody is poorly. Save the juice for a rainy day.'), 'med');
       return;
@@ -1257,7 +1258,7 @@
     if (!lost) (r.help || []).forEach((h) => { html += '<p class="note up">' + UI.ic('seal') + (h.pct ? tr('{0} ({1}) is visiting: +{2}% coins.', UI.esc(h.name), UI.specName(h.spec), h.pct) : '') + (h.pct && h.cut ? ' ' : '') + (h.cut ? tr('{0} is visiting: muck costs {1}% less.', UI.esc(h.name), h.cut) : '') + '</p>'; });
     if (r.joy > 0) html += '<p class="note up">' + UI.ic('heartup') + tr('{0} loved that: happiness +{1}.', UI.esc(state.name), r.joy) + '</p>';
     else if (r.joy < 0) html += '<p class="note down">' + UI.ic('heartdown') + tr('{0} is tired of this one: happiness −{1}.', UI.esc(state.name), -r.joy) + '</p>';
-    if (!lost && r.muck > 0) html += '<p class="note down">' + tr('She is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';
+    if (!lost && r.muck > 0) html += '<p class="note down">' + tr('{seal} is mucky: −{0}% coins. Time for a sauna.', r.muck) + '</p>';
     const fresh = r.fish.filter((f) => f.isNew).map((f) => UI.esc(PN.items[f.id].fi));
     if (fresh.length) html += '<p>' + tr('New for the album: {0}.', fresh.join(', ')) + '</p>';
     else if (r.fish.length) html += '<p>' + tr('The catch goes in the larder.') + '</p>';
@@ -1543,7 +1544,7 @@
     if (!r.ok) return;
     A.play(r.coins ? 'award' : 'chirp'); FX.sparkle(head(), 10, 0x7fe0a8);
     if (!seal.asleep) seal.gesture('happy', true);
-    UI.toast(r.coins ? tr('{0} took her medicine. +{1} coins for the photo!', nm(), r.coins) : tr('{0} took her medicine.', nm()), r.coins ? 'coin' : 'check', '', 3800);
+    UI.toast(r.coins ? tr('{0} took the medicine. +{1} coins for the photo!', nm(), r.coins) : tr('{0} took the medicine.', nm()), r.coins ? 'coin' : 'check', '', 3800);
     UI.refresh(); save();
   };
   G.devMed = function () {
@@ -1699,7 +1700,7 @@
     const now = D.STAGES[state.stage];
     seal.gesture('happy', true); A.play('level'); FX.sparkle(head(), 14); FX.hearts(head(), 4);
     await UI.modal({ title: tr('{0} has grown!', plain()), html: tr('<p>No longer a {0}. {1} is now a <b>{2}</b>, a {3}.</p>', before.fi, plain(), now.fi, now.en) + '<div class="loot">' + coinChip(S.T.growCoins) + '</div>'
-      + (state.stage === 2 ? tr('<p>A happy, well-fed grown seal may one day have a pup of her own.</p>') : ''), actions: [{ label: 'Onnea!', value: 1 }] });
+      + (state.stage === 2 ? tr('<p>A happy, well-fed grown seal may one day have a pup of their own.</p>') : ''), actions: [{ label: 'Onnea!', value: 1 }] });
     S.save(state); UI.refresh();
     G.busy = false;
   }

@@ -75,7 +75,7 @@
       note: 'A huge black can with a tentacle on it. A big lift of energy, but not much of a dinner.' },
     /* full: fills tummy, happiness and energy at once (not cleanliness). Dear on purpose: it is for a visit with no time to play. */
     { id: 'kahvi', fi: 'Kahvi', en: 'Coffee', full: true, food: 0, price: 160,
-      note: 'A big mug of strong coffee. Fills her tummy, happiness and energy in one go. She still needs her sauna.' },
+      note: 'A big mug of strong coffee. Fills the tummy, happiness and energy in one go. {seal} still needs a sauna.' },
     { id: 'lakkamehu', fi: 'Lakkamehu', en: 'Cloudberry juice', med: true, price: 25,
       note: 'Golden and full of vitamins. Makes a poorly seal better.' },
   ];
@@ -183,7 +183,7 @@
     { id: 'teltta', cat: 'leiri', fi: 'Teltta', en: 'Tent', price: 200, note: 'For nights when the sky is too good to miss.' },
     { id: 'vene', cat: 'leiri', fi: 'Soutuvene', en: 'Rowing boat', price: 240, note: 'Every lakeside cabin has one.' },
     { id: 'palju', cat: 'leiri', fi: 'Palju', en: 'Hot tub', price: 320, note: 'A wooden tub of hot water under the open sky.' },
-    { id: 'sauna', cat: 'leiri', fi: 'Sauna', en: 'Sauna', hidden: true, note: 'Always on the shore. Tap it for a sauna, which is how she gets clean.' },
+    { id: 'sauna', cat: 'leiri', fi: 'Sauna', en: 'Sauna', hidden: true, note: 'Always on the shore. Tap it for a sauna, which is how {seal} gets clean.' },
 
     { id: 'snowman', cat: 'lumi', fi: 'Lumiukko', en: 'Snowman', price: 80, note: 'Good company. Never complains about the cold.' },
     { id: 'luminorppa', cat: 'lumi', fi: 'Luminorppa', en: 'Snow seal', price: 100, note: 'A friend made of snow. It looks a bit familiar.' },
@@ -207,7 +207,7 @@
     { id: 'verho', cat: 'koti', fi: 'Oviverho', en: 'Door curtain', price: 140, note: 'A woollen curtain over the doorway, tied back at the sides. Keeps the draught out.' },
     { id: 'talja', cat: 'koti', fi: 'Porontalja', en: 'Reindeer hide', price: 150, note: 'A soft reindeer hide to sleep on, as in every Lapland cabin. It lies in the doorway of the den.' },
     { id: 'ryijy', cat: 'koti', fi: 'Ryijy', en: 'Rya rug', price: 170, note: 'A thick, shaggy Finnish rug, knotted by hand. Laid out in front of the den.' },
-    { id: 'peitto', cat: 'koti', fi: 'Torkkupeitto', en: 'Snuggle blanket', price: 190, note: 'A knitted wool blanket. At night she sleeps tucked up under it; by day it waits folded by the door.' },
+    { id: 'peitto', cat: 'koti', fi: 'Torkkupeitto', en: 'Snuggle blanket', price: 190, note: 'A knitted wool blanket. At night {seal} sleeps tucked up under it; by day it waits folded by the door.' },
   ];
 
   PN.SHOPS = [{"id":"suomi","en":"Suomi Classics","fi":"Suomalaiset suosikit","level":1,"icon":"🇫🇮","items":["saunahattu","pipo_red","pipo_blue","pipo_green","scarf_blue","wreath","viikinki","flag","tonttu","sarvet"]},{"id":"cozy","en":"Cozy Corner","fi":"Kotoisa nurkka","level":2,"icon":"🏡","items":["lantern","lights","matto","tyynyt","kynttilat","verho","talja","ryijy","peitto","rahi"]},{"id":"fashion","en":"Flipper Fashion","fi":"Räpylämuoti","level":3,"icon":"🧣","items":["pipo_yellow","pipo_pink","scarf_red","scarf_green","scarf_rainbow","huivi","baskeri","bow","glasses","husbi_glasses","shades","sydanlasit","kuulokkeet"]},{"id":"outdoor","en":"Outdoor Living","fi":"Ulkoelämää","level":6,"icon":"🏕️","items":["palju","teltta","campfire","laituri","vene","pilkki","ulkotulet","olkihattu","reppu","piknikkori"]},{"id":"pets","en":"Little Friends Pet Shop","fi":"Pikku ystävien eläinkauppa","level":10,"icon":"🐦","items":["feeder","joutsen","poro","naali","janis","orava","siili","saukko","sorsa","ankanpoikaset","cookie"]},{"id":"party","en":"Party on the Shore","fi":"Rantajuhlat","level":14,"icon":"🎈","items":["viirit","ilmapallot","ilmapallo","lahjat","kurpitsa","xmastree","tahti","juhlahattu","bell","punanena"]},{"id":"winter","en":"Winter Wonders","fi":"Talven ihmeet","level":18,"icon":"❄️","items":["snowman","luminorppa","iceheart","lumilinna","lumilyhty","jaalyhty","sled","earmuffs","karvalakki","laskettelulasit"]},{"id":"dapper","en":"The Dapper Seal","fi":"Tyylikäs norppa","level":22,"icon":"🎩","items":["silinteri","yolakki","solmuke","solmio","helmet","mitali","monokkeli","crown","knalli","taskukello"]},{"id":"fantasy","en":"Make Believe Boutique","fi":"Mielikuvituspuoti","level":26,"icon":"🪄","items":["velho","kokinhattu","kissa","pupu","kukka","kukkakaulus","sieni","sadekeha","viikset","silmalappu","ankka","viitta","dinopiikit","haineva","perhonen","enkeli"]},{"id":"sturgeon","en":"Plastic Sturgeon","fi":"Plastic Sturgeon","level":30,"icon":"🐟","items":[]}];
@@ -441,7 +441,7 @@
   /* Pup skills (18 Nov 2026). A pup at home learns from what the family does: every game played while she is home is practice in
      that game's skill, and cuddles and saunas are practice in Care. Her best skill when she grows up is what she becomes (Sim.pupSpec),
      an all-rounder when her two best are close. Every pup raised adds to the family bonus on all game coins, and a grown pup who is
-     visiting helps in the games of her own skill. The numbers are in Sim.T (famBonusEach and below). */
+     visiting helps in the games of their own skill. The numbers are in Sim.T (famBonusEach and below). */
   PN.SKILLS = {
     water: { icon: 'drop', tint: 'sea', name: 'Swimming', spec: 'Swimmer', games: ['catch', 'swim'] },
     sport: { icon: 'ball', tint: 'warm', name: 'Sports', spec: 'Sporty', games: ['ball', 'stack', 'toss', 'curl', 'sled'] },
