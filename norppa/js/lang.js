@@ -961,7 +961,7 @@
     'Curling Seal': 'Curlingnorppa',
     'Pull back and let go to slide. Aim for the target.': 'Vedä taaksepäin ja päästä irti liukuaksesi. Tähtää maaliin.',
     'Sled Run': 'Pulkkamäki',
-    'Steer down the hill between the trees and rocks. Grab the fish, hit the ramps.': 'Ohjaa mäkeä alas puiden ja kivien välistä. Nappaa kalat ja hyppää hyppyreistä.',
+    'Avoid the trees and rocks, catch the fish and hit the ramps!': 'Väistä puita ja kiviä, nappaa kalat ja hyppää hyppyreistä!',
     'Gaps': 'Välit',
     'Points': 'Pisteet',
     'Metres': 'Metrit',
