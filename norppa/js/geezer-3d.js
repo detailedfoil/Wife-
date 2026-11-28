@@ -449,12 +449,16 @@
 
   /* Fit the camera: tall screens keep the chair's width, wide screens keep Dave's height. */
   const target = new T.Vector3(0, 1.05, -0.85), dir = new T.Vector3(0, 0.24, 1).normalize();
-  G.frame = function (w, h) {
+  G.frame = function (w, h, yaw = 0) {
     const c = G.camera, a = w / h, tan = Math.tan(c.fov * Math.PI / 360);
     const d = a < 1 ? Math.max(1.25 / tan, 1.10 / (tan * a)) + 0.4 : 1.7 / tan + 0.4;
     c.aspect = a;
-    c.position.copy(target).addScaledVector(dir, d);
-    c.position.y += a < 1 ? 0.12 : 0.05;
+    const radius = dir.z * d;
+    c.position.set(
+      target.x + Math.sin(yaw) * radius,
+      target.y + dir.y * d + (a < 1 ? .12 : .05),
+      target.z + Math.cos(yaw) * radius
+    );
     c.lookAt(target.x, target.y + (a < 1 ? 0.08 : 0.05), target.z);
     c.updateProjectionMatrix();
   };

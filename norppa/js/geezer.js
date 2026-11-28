@@ -41,6 +41,8 @@
   });
 
   let root = null, bubbleT = 0, tray = null;
+  const ORBIT_LIMIT = 22 * Math.PI / 180;
+  let orbit = 0, drag = null, dragged = false;
   const on = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
   const $ = (id) => document.getElementById(id);
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -68,7 +70,38 @@
     const hud = $('hud');
     hud.parentNode.insertBefore(root, hud.nextSibling);
     tray = $('gzTray');
+    root.addEventListener('pointerdown', startOrbit);
+    root.addEventListener('pointermove', moveOrbit);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      root.addEventListener(type, endOrbit);
+    }
     root.addEventListener('click', onClick);
+  }
+
+  function startOrbit(e) {
+    if (!e.isPrimary || e.button !== 0) return;
+    dragged = false;
+    if (e.target !== root || !tray.hidden) return;
+    drag = { id: e.pointerId, x: e.clientX };
+    root.setPointerCapture(e.pointerId);
+  }
+
+  function moveOrbit(e) {
+    if (drag?.id !== e.pointerId) return;
+    const dx = e.clientX - drag.x;
+    if (!dragged) {
+      if (Math.abs(dx) < 6) return;
+      dragged = true;
+      root.classList.add('gz-dragging');
+    }
+    orbit = Math.max(-ORBIT_LIMIT, Math.min(ORBIT_LIMIT, orbit - dx * .004));
+    drag.x = e.clientX;
+  }
+
+  function endOrbit(e) {
+    if (drag?.id !== e.pointerId) return;
+    drag = null;
+    root.classList.remove('gz-dragging');
   }
 
   /* While it shows, the game's renderer draws the lounge instead of the shore. */
@@ -77,13 +110,20 @@
     raf = requestAnimationFrame(loop);
     const W = PN.World, dt = Math.min(0.1, (ts - (last || ts)) / 1000); last = ts;
     const v = PN.Geezer3D.build();
-    v.frame(innerWidth, innerHeight);
+    v.frame(innerWidth, innerHeight, orbit);
     v.update(dt, ts / 1000);
     if (!W.override || W.override === v.view) W.override = v.view;
   }
   function start() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } }
   function stop() {
     if (raf) cancelAnimationFrame(raf); raf = 0;
+    if (drag) {
+      if (root.hasPointerCapture(drag.id)) root.releasePointerCapture(drag.id);
+      drag = null;
+      root.classList.remove('gz-dragging');
+    }
+    dragged = false;
+    orbit = 0;
     const W = PN.World, v = PN.Geezer3D;
     if (v.view && W.override === v.view) W.override = null;
   }
@@ -107,6 +147,7 @@
   }
 
   function onClick(e) {
+    if (e.target === root && dragged) { dragged = false; return; }
     const b = e.target.closest('[data-gz], #gzSettings, #gzBack');
     if (!b) {
       if (!tray.hidden && !e.target.closest('.gz-tray')) { tray.hidden = true; return; }

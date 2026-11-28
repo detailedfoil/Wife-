@@ -1,5 +1,7 @@
 /* Geezer home prototype (developer mode only). See js/geezer.js. */
-.gz { position: fixed; inset: 0; overflow: hidden; color: #2a1a14; font: 800 14px var(--body); }
+.gz { position: fixed; inset: 0; overflow: hidden; touch-action: none; user-select: none; cursor: grab; color: #2a1a14; font: 800 14px var(--body); }
+
+.gz.gz-dragging { cursor: grabbing; }
 
 body.gz-on #hud, body.gz-on .vignette { visibility: hidden; }
 .gz-top { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: calc(10px + var(--st)) calc(12px + var(--sr)) 0 calc(12px + var(--sl)); }
@@ -23,8 +25,8 @@ body.gz-on #hud, body.gz-on .vignette { visibility: hidden; }
 .gz-bubble::after { content: ''; position: absolute; left: 62%; bottom: -14px; border: 9px solid transparent; border-top: 12px solid #2a1a14; }
 .gz-bubble.pop { animation: gzPop .25s ease-out; }
 @keyframes gzPop { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
-.gz-dock { position: absolute; left: 0; right: 0; bottom: calc(12px + var(--sb)); display: flex; justify-content: center; gap: 9px; padding: 0 8px; }
-.gz-dock button { width: 80px; height: 66px; border-radius: 18px; display: grid; place-items: center; align-content: center; gap: 2px; font-size: 11.5px; line-height: 1.05; text-align: center; }
+.gz-dock { position: absolute; left: 0; right: 0; bottom: calc(12px + var(--sb)); display: flex; justify-content: center; gap: 9px; padding: 0 8px; pointer-events: none; }
+.gz-dock button { pointer-events: auto; width: 80px; height: 66px; border-radius: 18px; display: grid; place-items: center; align-content: center; gap: 2px; font-size: 11.5px; line-height: 1.05; text-align: center; }
 .gz-dock button:active, .gz-tray button:active { transform: translateY(3px); box-shadow: 0 1px 0 #2a1a14; }
 .gz-di { font-size: 24px; }
 .gz-tray { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(122px + var(--sb)); width: min(440px, calc(100% - 24px)); border-radius: 20px; padding: 10px 12px 12px; }
