@@ -45,6 +45,7 @@
     poo: '<path d="M8 19.5c-3.2 0-4-3.2-2-5-1-2 .2-4 3-4-.4-2 1.2-3.8 3.6-4-.4 2 2 2.2 2 4 2.6 0 4 2 3 4 2 1.8 1.2 5-2 5H8z"/>',
     keys: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle class="f" cx="6.5" cy="10" r="1"/><circle class="f" cx="10.2" cy="10" r="1"/><circle class="f" cx="13.8" cy="10" r="1"/><circle class="f" cx="17.5" cy="10" r="1"/><path d="M7 14.5h10"/>',
     piano: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.2 4.5v15M14.8 4.5v15"/><path class="f" d="M7.6 4.5h3.2v8H7.6zM13.2 4.5h3.2v8h-3.2z"/>',
+    flag: '<path d="M6 21V3.5"/><path class="f" d="M6 4h12l-3.2 4.2L18 12.4H6z"/><path d="M3.5 21h6.5"/>',
     puff: '<circle cx="11" cy="12" r="5.6"/><path d="M11 3.2v1.9M11 18.9v1.9M2.2 12h1.9M4.8 5.8l1.3 1.3M4.8 18.2l1.3-1.3M15.6 6.6l1-1M15.6 17.4l1 1M16.6 12l4.6-2.6v5.2z"/><circle class="f" cx="9" cy="10.8" r="1"/>',
     stack: '<rect x="7" y="4" width="9" height="4.5" rx="1.5"/><rect x="5" y="9.75" width="12" height="4.5" rx="1.5"/><rect x="4" y="15.5" width="16" height="4.5" rx="1.5"/>',
     up: '<path d="M12 19V6M6 11l6-6 6 6"/>',
