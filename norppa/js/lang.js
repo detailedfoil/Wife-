@@ -944,7 +944,7 @@
     'Swimmy Seal': 'Uiva norppa',
     'Tap to swim. You get 3 goes, and the average of them determines your score.': 'Napauta uidaksesi. Saat 3 yritystä, ja niiden keskiarvo määrää pisteesi.',
     'Snowball Toss': 'Lumipallonheitto',
-    'Flick the snowball into the bucket. Check the wind first. Three misses and it is over.': 'Sipaise lumipallo ämpäriin. Katso ensin tuulta. Kolme ohiheittoa, ja peli päättyy.',
+    'Flick the snowball into the bucket, look out for the wind!': 'Sipaise lumipallo ämpäriin, varo tuulta!',
     'Flick the snowball into the bucket. Three misses and it is over.': 'Sipaise lumipallo ämpäriin. Kolme ohiheittoa, ja peli päättyy.',
     'Misses left: {0}': 'Ohiheittoja jäljellä: {0}',
     'One miss left': 'Enää yksi ohiheitto',
