@@ -366,7 +366,7 @@
       PN.GAME_ORDER.forEach((id) => {
         const gm = PN.GAMES[id], best = st.counters[gm.best];
         if (gm.dev && !st.dev) return;                       // developer-mode games are not shown otherwise
-        const text = tr((st.settings.mumMode && PN.MUM_GAME_TEXT?.[id]) || gm.text);
+        const text = tr((st.settings.mumMode && PN.MUM_GAME_TEXT?.[id]) || gm.text, esc(st.name));
         if (!S.gameOwned(st, id)) h += row({ icon: 'lock', tint: gm.tint, title: tr(gm.title), text, act: 'unlock', id, cls: st.coins >= S.price(st, gm.price) ? '' : ' off', side: tr('Unlock {0}', gm.price) + (st.dev ? ' · ' + tr('Free') : '') });
         else h += row({ icon: gm.icon, tint: gm.tint, title: tr(gm.title), text, act: 'game', id, cls: off(can), side: can.ok ? mood(id) + (best ? '<small>' + tr('best {0}', gm.low ? PN.mmss(best) : best) + '</small>' : '') : why(can) });
       });
