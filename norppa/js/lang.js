@@ -902,7 +902,7 @@
     'She is mucky: −{0}% coins. Time for a sauna.': 'Hän on likainen: −{0} % kolikoita. On saunan aika.',
     'Kantele Tiles': 'Kantelelaatat',
     'Coffee Memory': 'Kahvimuisti',
-    'Remember each customer\'s order and make the drink from memory. Every two drinks add one more thing to remember, and one wrong drink ends it.': 'Muista jokaisen asiakkaan tilaus ja valmista juoma muistista. Joka toinen juoma lisää yhden muistettavan asian, ja yksi väärä juoma päättää pelin.',
+    'Remember each customer\'s order and make the drink from memory.': 'Muista jokaisen asiakkaan tilaus ja valmista juoma muistista.',
     'drinks served': 'juomaa tarjoiltu',
     'Drinks': 'Juomat',
     'Order {0}': 'Tilaus {0}',
