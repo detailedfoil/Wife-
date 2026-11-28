@@ -329,12 +329,54 @@
   }
   function pose(list, k) { if (k) for (const p of list) turn(p[0], p[1], p[2] * k); }
 
+  /* His clothes are painted per pixel from the A-pose position (the same rules as tools/geezer/rigconv.mjs),
+     so the vest, trackies and socks get clean edges instead of following the triangles. */
+  const CLOTHES = `
+    float gt(float a, float t) { float w = max(fwidth(a), 1e-4); return clamp((a - t) / w + 0.5, 0.0, 1.0); }
+    float lt(float a, float t) { return 1.0 - gt(a, t); }
+    vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
+    vec3 daveClothes(vec3 p, vec3 base) {
+      float x = p.x, y = p.y, z = p.z, ax = abs(x);
+      float front = gt(z, -0.06), waist = mix(0.84, 0.8, front);
+      vec3 col = lin(vec3(0.94, 0.66, 0.5));
+      float vb = gt(y, 0.84 + 0.09 * clamp(z / 0.18, 0.0, 1.0));
+      float strap = gt(ax, 0.1) * lt(ax, 0.19) * lt(y, 1.23);
+      float neck = front * gt(y, 1.07 + 7.0 * ax * ax);
+      float hole = gt(ax, 0.19 + 0.4 * max(0.0, 1.13 - y)) * lt(z, 0.12);
+      float vest = vb * mix((1.0 - neck) * (1.0 - hole), strap, gt(y, 1.13));
+      vec3 vc = lin(vec3(0.93, 0.92, 0.9));
+      vec2 q = vec2(x, y);
+      vc = mix(vc, lin(vec3(0.86, 0.68, 0.2)), front * lt(length(q - vec2(-0.06, 1.02)), 0.035));
+      vc = mix(vc, lin(vec3(0.85, 0.42, 0.3)), front * lt(length(q - vec2(0.1, 0.97)), 0.028));
+      vc = mix(vc, lin(vec3(0.86, 0.68, 0.2)), front * lt(length(q - vec2(-0.02, 0.95)), 0.015));
+      col = mix(col, vc, vest);
+      vec3 tc = mix(lin(vec3(0.42, 0.41, 0.44)), lin(vec3(0.36, 0.35, 0.38)), gt(y, waist - 0.03));
+      tc = mix(tc, vec3(0.92), front * lt(ax, 0.025) * gt(y, 0.7) * gt(z, 0.05));
+      col = mix(col, tc, lt(y, waist));
+      float h = y - 0.143;
+      float stripe = max(gt(h, 0.03) * lt(h, 0.045), gt(h, 0.06) * lt(h, 0.075));
+      vec3 sc = mix(vec3(0.9), lin(vec3(0.2, 0.35, 0.75)), stripe);
+      col = mix(col, sc, lt(h, 0.09) * lt(y, 0.4));
+      return col;
+    }`;
+  function paintClothes(m) {
+    if (!m.geometry.getAttribute('paint')) return;
+    m.material.onBeforeCompile = (sh) => {
+      sh.vertexShader = 'attribute float paint;\nvarying float vPaint;\nvarying vec3 vBind;\n' + sh.vertexShader
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBind = position; vPaint = paint;');
+      sh.fragmentShader = 'varying float vPaint;\nvarying vec3 vBind;\n' + sh.fragmentShader
+        .replace('void main() {', CLOTHES + '\nvoid main() {')
+        .replace('#include <color_fragment>', '#include <color_fragment>\n{ float k = clamp((vPaint - 0.5) / max(fwidth(vPaint), 1e-4) + 0.5, 0.0, 1.0);\n  diffuseColor.rgb = mix(diffuseColor.rgb, daveClothes(vBind, diffuseColor.rgb), k); }');
+    };
+    m.material.needsUpdate = true;
+  }
+
   function loadModel(scene) {
     if (!PN.loadGLB) { G.man.visible = true; return; }
     PN.loadGLB('art/geezer/dave.glb').then((g) => {
       G.bones = g.bones; G.rest = {};
       for (const k in g.bones) G.rest[k] = g.bones[k].quaternion.clone();
-      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; paintClothes(o); } });
       g.scale.setScalar(MS);
       const pivot = G.model = new T.Group(); pivot.position.copy(SEAT); pivot.add(g);
       scene.add(pivot);

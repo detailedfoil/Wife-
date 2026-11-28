@@ -53,7 +53,7 @@ let best = cost(A); console.log('cost0', best);
 const steps = { s: 0.03, dx: 0.01, dy: 0.02, dz: 0.03, pitch: 0.08 };
 for (let round = 0; round < 5; round++) { for (const k of Object.keys(steps)) for (const dir of [1, -1]) { for (let tries = 0; tries < 6; tries++) { const B = { ...A, [k]: A[k] + dir * steps[k] }; const c = cost(B); if (c < best) { best = c; A = B; } else break; } } for (const k in steps) steps[k] /= 2; }
 console.log('cost', best, A);
-const C = new Float32Array(n * 3), FALL = { skin: [0.94, 0.62, 0.47], vest: [0.93, 0.92, 0.9], grey: [0.42, 0.41, 0.44], sock: [0.95, 0.95, 0.95], stripe: [0.2, 0.35, 0.75] };
+const PAINT = new Float32Array(n), C = new Float32Array(n * 3), FALL = { skin: [0.94, 0.62, 0.47], vest: [0.93, 0.92, 0.9], grey: [0.42, 0.41, 0.44], sock: [0.95, 0.95, 0.95], stripe: [0.2, 0.35, 0.75] };
 const lf = jpos[J_('LeftFoot')], rf = jpos[J_('RightFoot')];
 let hits = 0;
 const SKINC = [0.94, 0.66, 0.5];
@@ -66,8 +66,9 @@ for (let i = 0; i < n; i++) {
   if (y > 1.24 && !isArm) {
     const j = nearest(toOld(x, y, z), 0.05);
     if (j >= 0) { col = samp(OUV[j * 2], OUV[j * 2 + 1]); hits++; } else col = SKINC;
+    if (y < 1.3 && Math.min(...col) > 0.75) col = SKINC;   // bits of the old vest caught under the chin
   } else if (isArm && (ax > 0.31 || (ax > 0.24 && y > 1.05))) col = process.env.DBG2 ? [1,0,1] : SKINC;
-  else if (y - fy < 0.09 && y < 0.4) { const h = y - fy; col = (h > 0.03 && h < 0.045) || (h > 0.06 && h < 0.075) ? FALL.stripe : FALL.sock; }
+  else if ((PAINT[i] = 1) && y - fy < 0.09 && y < 0.4) { const h = y - fy; col = (h > 0.03 && h < 0.045) || (h > 0.06 && h < 0.075) ? FALL.stripe : FALL.sock; }
   else if (y < waist) col = (front && ax < 0.025 && y > 0.7 && z > 0.05) ? [0.96, 0.96, 0.96] : (y > waist - 0.03 ? [0.36, 0.35, 0.38] : FALL.grey);
   else {
     // torso: bare belly under the vest at the front, a vest with a scoop neck and armholes
@@ -83,6 +84,8 @@ for (let i = 0; i < n; i++) {
   C.set(col.map((v) => Math.pow(v, 2.2)), i * 3);   // vertex colours are linear in glTF
 }
 console.log('transferred', hits, 'of', n);
+// _PAINT = 1 where the game paints the clothes per pixel from the bind pose (crisp edges), 0 for head and arms
+prim.setAttribute('_PAINT', doc.createAccessor().setType('SCALAR').setArray(PAINT).setBuffer(doc.getRoot().listBuffers()[0]));
 prim.setAttribute('COLOR_0', doc.createAccessor().setType('VEC3').setArray(C).setBuffer(doc.getRoot().listBuffers()[0]));
 const mat = doc.createMaterial('dave').setBaseColorFactor([1, 1, 1, 1]).setMetallicFactor(0).setRoughnessFactor(0.8);
 prim.setMaterial(mat);
