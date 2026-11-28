@@ -923,7 +923,7 @@
     'No milk': 'Ei maitoa', 'Oat': 'Kaura', 'Coconut': 'Kookos', 'Almond': 'Manteli',
     'No syrup': 'Ei siirappia', 'Vanilla': 'Vanilja', 'Caramel': 'Karamelli', 'Hazelnut': 'Hasselpähkinä', 'Mint': 'Minttu',
     'Extra shot': 'Lisäshotti', 'Cinnamon': 'Kaneli', 'Choc sprinkles': 'Suklaarouhe', 'Whipped cream': 'Kermavaahto',
-    'Tap the tiles in order as they slide down and play the tune. It gets faster. Miss one and it is over.': 'Napauta laattoja järjestyksessä, kun ne liukuvat alas, ja soita sävelmä. Tahti kiihtyy. Yksi virhe, ja peli päättyy.',
+    'Tap the musical tiles as they slide down the screen.': 'Napauta musiikkilaattoja, kun ne liukuvat alas ruudulla.',
     'Tiles': 'Laatat',
     'Tap the Start tile, then every tile in order.': 'Napauta Aloita-laattaa ja sitten jokaista laattaa järjestyksessä.',
     'Start': 'Aloita',
