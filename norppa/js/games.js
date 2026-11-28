@@ -27,7 +27,7 @@
      Seal Seat Shuffle has its own two-bus tutorial in arcade.js. */
   const TUTORIALS = {
     ball: {
-      start: { do: 'swipe', demo: 'swipe', at: 'top', lines: ['Slide your finger left or right to move the seal.', 'Get under the ball and keep it bouncing on her nose!'] },
+      start: { do: 'swipe', demo: 'swipe', at: 'top', lines: ['Slide your finger left or right to move the seal.', 'Get under the ball and keep it bouncing on {seal}\'s nose!'] },
       bounce: { at: 'top', lines: ["Nice bounce! That's a point.", 'Hit it off-centre to send it sideways. It falls faster the longer you go.'] },
     },
     catch: {
@@ -57,7 +57,7 @@
       start: { do: 'tap', target: '#tyBox', demo: 'tap', at: 'bottom', lines: ['Tap the box to start typing.', 'The first word comes with a quick 3, 2, 1. After that each word starts the moment it appears, unless you made a typo. Type it before the bar runs out. No Enter needed.'] },
       first: { do: 'tap', at: 'top', lines: ['Got it! Every word you finish catches a fish.', 'The word stays on screen, so you can read it once and then just type. Tap to go on.'] },
       typo: { do: 'tap', at: 'top', lines: ['A typo costs a heart, and so does running out of time.', 'The word starts over with a new 3, 2, 1. You have three hearts, and when they are gone the run is over. Tap to go on.'] },
-      streak: { do: 'tap', at: 'top', lines: ['Words without a typo build a streak, and the faster you go the harder she smashes.', 'Tap to go on.'] },
+      streak: { do: 'tap', at: 'top', lines: ['Words without a typo build a streak, and the faster you go the harder {seal} smashes.', 'Tap to go on.'] },
       shrink: { do: 'tap', at: 'top', lines: ['Careful: the time you get for each word shrinks as you go.', 'The run never ends if you can keep up. Tap to go on.'] },
     },
     toss: {
@@ -81,11 +81,11 @@
       slide: { do: 'tap', target: '.bj-slide', demo: 'swipe', at: 'top', lines: ['You can bet more now! Slide to choose how much to bet.', 'The most you can bet is a third of your tokens.'] },
     },
     sauna: {
-      start: { at: 'top', lines: ['Welcome to the sauna! Watch the heat bar fill up on the right.', 'She cooks as it rises. Get her out when the bar is on the gold line.'] },
-      gold: { do: 'drag', demo: 'drag', at: 'bottom', lines: ['Perfect temperature! The bar stops the moment she leaves the sauna.', 'Hold her by the head and drag her down out of it.'] },
-      out: { at: 'top', lines: ['Well done!', 'Now dunk her in the ice water to cool her down and reset the bar.'] },
-      cool: { at: 'top', lines: ['Lovely and cool! Drag her back up into the sauna for the next round.'] },
-      solo: { at: 'top', lines: ["That's the guide done. From now on you're on your own.", 'Pull her out on the gold line, dunk her to reset, and go again until she is squeaky clean.'] },
+      start: { at: 'top', lines: ['Welcome to the sauna! Watch the heat bar fill up on the right.', '{seal} cooks as it rises. Pull {seal} out when the bar is on the gold line.'] },
+      gold: { do: 'drag', demo: 'drag', at: 'bottom', lines: ['Perfect temperature! The bar stops the moment {seal} leaves the sauna.', 'Hold {seal} by the head and drag down out of it.'] },
+      out: { at: 'top', lines: ['Well done!', 'Now dunk {seal} in the ice water to cool off and reset the bar.'] },
+      cool: { at: 'top', lines: ['Lovely and cool! Drag {seal} back up into the sauna for the next round.'] },
+      solo: { at: 'top', lines: ["That's the guide done. From now on you're on your own.", 'Pull {seal} out on the gold line, dunk to reset, and go again until {seal} is squeaky clean.'] },
     },
     coffee: {
       start: { at: 'top', lines: ['Customers leave their order on a receipt.', 'Remember it, then make the drink from memory.'] },

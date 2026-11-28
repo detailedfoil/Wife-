@@ -17,10 +17,10 @@
   const hasDecal = (d) => d.decal !== 'none';
   const TABS = {
     create: [
-      ['Coat', [sw('coat', 'Coat colour'), sw('belly', 'Belly colour'), hint('A pup starts out pale and fluffy. Her colours and markings grow in as she grows up.')]],
+      ['Coat', [sw('coat', 'Coat colour'), sw('belly', 'Belly colour'), hint('A pup starts out pale and fluffy. The colours and markings grow in as the pup grows up.')]],
       ['Markings', [ch('pattern', 'Back pattern'), sl('patternSize', 'Pattern size'), sl('patternOpacity', 'Pattern intensity'), sw('marking', 'Marking colour')]],
       ['Face', [sw('eye', 'Eye colour'), sl('eyeSize', 'Eye size'), sl('eyeSpacing', 'Eye spacing'), sw('nose', 'Nose colour'), sl('noseSize', 'Nose size')]],
-      ['Shape', [sl('headSize', 'Head size'), sl('bodyWidth', 'Body width'), sl('bodyLength', 'Body length'), hint('She will grow by herself. Bigger changes, and her overall size, are for Plastic Sturgeon later on.')]],
+      ['Shape', [sl('headSize', 'Head size'), sl('bodyWidth', 'Body width'), sl('bodyLength', 'Body length'), hint('Growing happens by itself. Bigger changes, and overall size, are for Plastic Sturgeon later on.')]],
     ],
     clinic: [
       ['Coat', [sw('coat', 'Coat colour', 'Natural coats: 2,500. Dream colours: 10,000.'), sw('belly', 'Belly colour', 'Natural colours: 2,500. Dream colours: 6,000.'),
@@ -79,14 +79,14 @@
     const tabs = TABS[opts.mode];
     const root = document.createElement('div'); root.className = 'clinic-overlay' + (creating ? ' creating' : '');
     root.innerHTML = '<section class="clinic" role="dialog" aria-modal="true" aria-labelledby="clinic-title">'
-      + '<header class="clinic-header"><div><span class="clinic-eyebrow">✦ ' + tr(opts.mock ? 'Developer test: nothing here is saved.' : creating ? 'Choose her natural look. Her pups can take after it.' : 'Preview for free. Pay only when you love it.') + '</span><h2 id="clinic-title">' + (creating ? tr(opts.legacy ? 'Her natural look' : 'Your kuutti') : 'Plastic Sturgeon') + '</h2></div>'
-      + (creating && !opts.legacy && !opts.mock ? '' : '<button class="round" data-c="close" aria-label="' + tr(opts.mock ? 'Close' : creating ? 'Keep her as she is' : 'Close clinic') + '">' + UI.ic('close') + '</button>') + '</header>'
+      + '<header class="clinic-header"><div><span class="clinic-eyebrow">✦ ' + tr(opts.mock ? 'Developer test: nothing here is saved.' : creating ? 'Choose a natural look. Pups can take after it.' : 'Preview for free. Pay only when you love it.') + '</span><h2 id="clinic-title">' + (creating ? tr(opts.legacy ? 'Natural look' : 'Your kuutti') : 'Plastic Sturgeon') + '</h2></div>'
+      + (creating && !opts.legacy && !opts.mock ? '' : '<button class="round" data-c="close" aria-label="' + tr(opts.mock ? 'Close' : creating ? 'Keep it as it is' : 'Close clinic') + '">' + UI.ic('close') + '</button>') + '</header>'
       + '<div class="clinic-preview">' + (creating ? '' : '<div class="clinic-target"><label for="clinic-seal">' + tr('Choose seal') + '</label><select id="clinic-seal"></select><label class="clinic-outfit"><input type="checkbox" id="clinic-outfit">' + tr('Outfit') + '</label></div>')
       + '<div class="clinic-stage" aria-label="' + tr('Drag to turn') + '"></div><div class="clinic-turn"><span>' + tr('Drag to turn, pinch to zoom') + '</span><button data-c="zoomout" aria-label="' + tr('Zoom out') + '">−</button><button data-c="zoomin" aria-label="' + tr('Zoom in') + '">+</button><button data-c="turn" aria-label="' + tr('Turn your seal') + '">↻</button></div>'
       + '<div class="clinic-compare">' + views.map(([v, t], i) => '<button data-view="' + v + '" aria-pressed="' + !i + '">' + tr(t) + '</button>').join('') + '</div></div>'
       + '<div class="clinic-editor"><nav class="clinic-tabs" aria-label="' + tr(creating ? 'Your kuutti' : 'Plastic Sturgeon') + '">' + tabs.map(([t], i) => '<button data-tab="' + t + '" aria-pressed="' + !i + '">' + tr(t) + '</button>').join('') + '</nav><div class="clinic-controls"></div></div>'
       + '<footer class="clinic-footer">' + (creating
-        ? '<div class="clinic-actions"><button class="btn ghost small" data-c="surprise">' + tr('Surprise me') + '</button><button class="btn" data-c="done">' + tr('That is her') + '</button></div>' + (opts.legacy ? '<button class="clinic-keep" data-c="close">' + tr('Keep her as she is') + '</button>' : '')
+        ? '<div class="clinic-actions"><button class="btn ghost small" data-c="surprise">' + tr('Surprise me') + '</button><button class="btn" data-c="done">' + tr('That is the one') + '</button></div>' + (opts.legacy ? '<button class="clinic-keep" data-c="close">' + tr('Keep it as it is') + '</button>' : '')
         : '<div class="clinic-bill"></div><div class="clinic-actions"><button class="btn ghost small" data-c="reset">' + tr('Reset preview') + '</button><button class="btn" data-c="buy"></button></div>')
       + '<p class="clinic-message" role="status" aria-live="polite"></p></footer></section>';
     document.body.append(root);

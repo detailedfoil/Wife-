@@ -2669,7 +2669,7 @@
      The physics runs in a flat plane (x across, y up) and she moves toward the camera as she goes through the door. Five rounds, up to 3 points each. */
   const sauna = (() => {
     let need = 5;   // rounds in this go
-    const HINT = 'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.';
+    const HINT = 'Hold {seal} by the head. When the bar is on the gold line, drag down out of the sauna and into the ice hole.';
     const GRAV = 8, GP = 3.2, BENCH = 0.5, HALF = 0.29, ZIN = -0.8, TUB = { x: -0.07, z: 3.0, r: 0.95 }, ZOUT = TUB.z, OUTX = 1.02, HEADOUT = 0.2, LEN = 1.5, ROLL = -PI / 2, CH = 3.1;   // CH: how tall the cabin is
     let view = null, layer = null, targetEl = null, fillEl = null, rag = null, door = null, lamp = null, stonesMat = null, steam = null, splash = null, sparks = null, ripple = null, rippleMat = null;
     let rollG = null, roll = 0, phi = 0, phiV = 0;   // phi: how far her head is tilted off her body, in the screen plane
@@ -2868,7 +2868,7 @@
       K.big(tr(pts === 3 ? 'Perfect!' : pts === 2 ? 'Good' : pts === 1 ? 'Nearly' : bar < target ? 'Too cold' : 'Too hot'), 1.3);
       A.play(pts ? 'match' : 'nope'); actor.gesture(pts >= 2 ? 'happy' : pts ? 'surprise' : 'sad', true);
       if (pts === 3) sparks.emit(head.x, head.y, z + 0.3, 16, 2.2, 0.05, 0.8, 4);
-      mode = 'out'; zone = 'out'; doorT = 1.2; outAt = clockT; K.hint(tr('Down into the ice hole with her!'));
+      mode = 'out'; zone = 'out'; doorT = 1.2; outAt = clockT; K.hint(tr('Down into the ice hole with {seal}!'));
       if (tutRound) K.beat('out');
     }
     function dunk() {
@@ -2877,7 +2877,7 @@
       if (!tutRound) round++;
       if (round >= need) { held = false; live = false; mode = 'done'; K.over(tr(score >= need ? 'Squeaky clean!' : 'All done!')); return; }
       // she stays in the water, cooled off: pull her out again and put her back in the sauna when you like
-      mode = 'dunked'; draining = true; newTarget(); heat();   // the bar runs down on its own, not all at once K.hint(tr('Cooled! Drag her back up into the sauna.'));
+      mode = 'dunked'; draining = true; newTarget(); heat();   // the bar runs down on its own, not all at once K.hint(tr('Cooled! Drag {seal} back up into the sauna.'));
       if (tutRound) K.beat('cool');
     }
     /* the screen is split in two: above this line (the foot of the cabin) she is inside the sauna, below it she is outside. Crossing it takes her through the door by itself. */
