@@ -317,14 +317,28 @@
   const SIT = [['LeftUpLeg', [1, 0, 0], -1.25], ['RightUpLeg', [1, 0, 0], -1.25], ['LeftUpLeg', [0, 1, 0], 0.3], ['RightUpLeg', [0, 1, 0], -0.3],
     ['LeftLeg', [1, 0, 0], 1.05], ['RightLeg', [1, 0, 0], 1.05], ['Spine', [1, 0, 0], -0.12],
     ['LeftArm', [0, 0, 1], -0.55], ['RightArm', [0, 0, 1], 0.55], ['LeftForeArm', [1, 0, 0], -1.4], ['RightForeArm', [1, 0, 0], -1.4]];
-  const SIP = [['RightArm', [1, 0, 0], -0.6], ['RightForeArm', [0, 1, 0], 1.2], ['RightForeArm', [1, 0, 0], -0.8], ['Head', [1, 0, 0], -0.25]];
-  const CHEER = [['LeftArm', [0, 0, 1], 2.3], ['RightArm', [0, 0, 1], -2.3]];
+  const X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1];
+  const SIP = [
+    ['Spine1', Y, .09], ['Spine1', Z, .045], ['Spine2', X, .10],
+    ['RightShoulder', Z, -.29], ['RightShoulder', Y, .35],
+    ['RightArm', X, -1.58], ['RightArm', Y, -.032], ['RightArm', Z, -1.025],
+    ['RightForeArm', Y, -.20], ['RightForeArm', X, -.22],
+    ['RightHand', Z, .67], ['RightHand', X, .77],
+    ['Head', Z, .075], ['Head', Y, -.13], ['Head', X, -.075],
+  ];
+  const CHEER = [
+    ['Spine1', X, .13], ['Spine2', X, -.20], ['Spine2', Y, .08],
+    ['LeftShoulder', Z, .40], ['RightShoulder', Z, -.43],
+    ['LeftShoulder', Y, -.12], ['RightShoulder', Y, .17],
+    ['LeftArm', Z, 1.68], ['RightArm', Z, -1.76],
+    ['LeftForeArm', X, -.68], ['RightForeArm', X, -.57],
+  ];
   const qa = new T.Quaternion(), qb = new T.Quaternion(), va = new T.Vector3();
   function turn(name, axis, ang) {
     const b = G.bones['mixamorig:' + name]; if (!b || !ang) return;
-    b.parent.updateMatrixWorld(true); b.parent.getWorldQuaternion(qa);
+    b.parent.getWorldQuaternion(qa);
     va.fromArray(axis).applyQuaternion(qa.invert()).normalize();
-    b.quaternion.premultiply(qb.setFromAxisAngle(va, ang)); b.updateMatrixWorld(true);
+    b.quaternion.premultiply(qb.setFromAxisAngle(va, ang));
   }
   function pose(list, k) { if (k) for (const p of list) turn(p[0], p[1], p[2] * k); }
 
@@ -419,10 +433,17 @@
     }).catch((e) => { console.warn('dave.glb', e); G.man.visible = true; });
   }
   /* Put every bone back to the A-pose, sit him down, then add the moves. */
-  G.pose = function (sip, cheer, nod, look) {
+  G.pose = function (sip, cheer, nod, look, breath = 0, pump = 0) {
     if (!G.bones) return;
     for (const k in G.bones) G.bones[k].quaternion.copy(G.rest[k]);
-    pose(SIT, 1); pose(SIP, sip); pose(CHEER, cheer);
+    pose(SIT, 1);
+    turn('Spine2', X, breath * .021);
+    turn('LeftShoulder', Z, breath * .022);
+    turn('RightShoulder', Z, -breath * .022);
+    pose(SIP, sip); pose(CHEER, cheer);
+    turn('Spine1', X, nod * .035 + pump * .05);
+    turn('LeftArm', Z, pump * .13); turn('RightArm', Z, -pump * .16);
+    turn('Neck', X, nod * .09 - pump * .035);
     turn('Head', [1, 0, 0], nod * 0.25); turn('Head', [0, 1, 0], look);
   };
 
@@ -440,7 +461,16 @@
 
   /* Idle life and the little acts the dock buttons trigger. */
   let act = null, actT = 0, blinkT = 2, blinkOn = 0;
-  G.act = function (name) { act = name; actT = 0; };
+  function actionEnvelope(t, rise, hold, end) {
+    const k = Math.max(0, Math.min(1, t / rise, (end - t) / (end - hold)));
+    return k * k * (3 - 2 * k);
+  }
+  const motion = { sip: 0, nod: 0, cheer: 0, pump: 0 };
+  const previousMotion = { ...motion };
+  G.act = function (name) {
+    Object.assign(previousMotion, motion);
+    act = name; actT = 0;
+  };
   G.update = function (dt, time) {
     if (!G.scene) return;
     const br = Math.sin(time * 1.7);
@@ -453,21 +483,25 @@
     G.lids.scale.y = blinkOn > 0 ? 1.9 : 1;
     G.lids.position.y = blinkOn > 0 ? -0.03 : 0;
     actT += dt;
-    let sip = 0, nod = 0, cheer = 0;
-    if (act === 'sip') { sip = actT < 1.6 ? Math.sin(Math.min(1, actT / 1.6) * Math.PI) : 0; if (actT > 1.6) act = null; }
-    else if (act === 'nod') { nod = actT < 0.8 ? Math.sin(actT / 0.8 * TAU) : 0; if (actT > 0.8) act = null; }
-    else if (act === 'telly') { cheer = actT < 2.4 ? Math.sin(Math.min(1, actT / 2.4) * Math.PI) : 0; if (actT > 2.4) act = null; }
+    const sipTarget = act === 'sip' ? actionEnvelope(actT, .61, .92, 1.6) : 0;
+    const cheerTarget = act === 'telly' ? actionEnvelope(actT, .69, 1.52, 2.4) : 0;
+    const nodTarget = act === 'nod' && actT < .8 ? Math.sin(actT / .8 * TAU) : 0;
+    // Start each interruption from the pose currently on screen, including mid-pump.
+    const t = Math.min(1, actT / .26);
+    const blend = t * t * (3 - 2 * t);
+    const sip = motion.sip = T.MathUtils.lerp(previousMotion.sip, sipTarget, blend);
+    const cheer = motion.cheer = T.MathUtils.lerp(previousMotion.cheer, cheerTarget, blend);
+    const nod = motion.nod = T.MathUtils.lerp(previousMotion.nod, nodTarget, blend);
+    motion.pump = T.MathUtils.lerp(previousMotion.pump, cheerTarget * Math.sin(actT * 12), blend);
     G.armR.rotation.set(-sip * 1.2 - cheer * 2.2, 0, sip * 0.45 - cheer * 0.3);
     G.elbowR.rotation.set(-sip * 1.1, sip * 0.6, 0);
     G.armL.rotation.set(-cheer * 2.0, 0, cheer * 0.3);
     G.head.rotation.set(sip * -0.35 + nod * 0.12, Math.sin(time * 0.31) * 0.08 + cheer * 0.3, 0);
     if (G.model) {
-      G.model.position.y = SEAT.y + cheer * 0.04 * Math.abs(Math.sin(actT * 9));
-      G.model.scale.set(1 + br * 0.006, 1 + br * 0.01, 1 + br * 0.008);
-      const pump = cheer * (0.85 + 0.15 * Math.sin(actT * 12));
-      G.pose(sip, pump, nod, Math.sin(time * 0.31) * 0.12 + cheer * 0.25);
+      const look = Math.sin(time * .31) * .12 * (1 - sip) + cheer * .16;
+      G.pose(sip, cheer, nod, look, br * (1 - sip), motion.pump);
     }
-    const flick = act === 'telly' ? 0.6 + Math.random() * 1.6 : 0.95 + 0.35 * Math.sin(time * 5.3) * Math.sin(time * 1.9);
+    const flick = act === 'telly' && actT < 2.4 ? 0.6 + Math.random() * 1.6 : 0.95 + 0.35 * Math.sin(time * 5.3) * Math.sin(time * 1.9);
     G.tellyLight.intensity = flick;
     G.screen.material.color.setHSL(0.58 + 0.05 * Math.sin(time * 2.2), 0.7, 0.62 + 0.1 * Math.sin(time * 3.1));
   };

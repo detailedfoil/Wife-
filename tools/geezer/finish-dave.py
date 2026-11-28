@@ -90,6 +90,20 @@ for row, factor in zip(np.nonzero(waist)[0], remaining_weight):
     slots = np.argsort(-w)[:4]
     ji[row], sw[row] = slots, w[slots] / w[slots].sum()
 torso_weight = np.sum((ji < 4) * sw, axis=1)
+# Spread clavicle motion from the deltoid across the armpit and upper ribs.
+# The vest is cut from these same weights so the armholes follow the shoulder.
+joints = doc['skins'][0]['joints']
+slots_by_name = {doc['nodes'][node]['name']: slot for slot, node in enumerate(joints)}
+lateral = abs(mesh_pos[:, 0])
+lift = (clothing.smooth(.08, .23, lateral) * (1 - clothing.smooth(.30, .43, lateral))
+        * clothing.smooth(.87, 1.18, mesh_pos[:, 1]) * .78)
+for row in np.flatnonzero(lift):
+    side = 'Left' if mesh_pos[row, 0] > 0 else 'Right'
+    shoulder = slots_by_name['mixamorig:' + side + 'Shoulder']
+    weights = np.bincount(ji[row], weights=sw[row] * (1 - lift[row]), minlength=len(joints))
+    weights[shoulder] += lift[row]
+    slots = np.argsort(-weights)[:4]
+    ji[row], sw[row] = slots, weights[slots] / weights[slots].sum()
 shirt, hem = clothing.vest(mesh_pos, mesh_normal, indices.reshape(-1, 3), ji, sw, torso_weight)
 sculpt = clothing.torso(mesh_pos, torso_weight)
 arm_x = abs(mesh_pos[:, 0])
