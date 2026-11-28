@@ -985,7 +985,7 @@
     'Reset to before developer mode': 'Palauta tila ennen kehittäjätilaa',
     'Put back the save from just before developer mode was turned on.': 'Palauttaa tallennuksen, joka oli juuri ennen kehittäjätilan käynnistämistä.',
     'Fill energy': 'Täytä energia',
-    'Pull her out of the sauna when the heat is just right, then dunk her in the ice hole to cool off.': 'Nosta hänet saunasta, kun löyly on juuri sopiva, ja kasta hänet sitten avantoon viilenemään.',
+    'Pull {0} out of the sauna when the heat is just right.': 'Nosta {0} ulos saunasta, kun löyly on juuri sopiva.',
     'Hold her by the head. When the bar is on the gold line, drag her down out of the sauna and into the ice hole.': 'Pidä hänestä kiinni päästä. Kun palkki on kultaisella viivalla, vedä hänet alas saunasta avantoon.',
     'Down into the ice hole with her!': 'Avantoon hänet!',
     'Cooled! Drag her back up into the sauna.': 'Viilentynyt! Vedä hänet takaisin saunaan.',
